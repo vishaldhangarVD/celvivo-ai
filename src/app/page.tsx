@@ -60,6 +60,7 @@ export default function LandingPage() {
 
   const handleFileUpload = () => {
     setIsUploading(true);
+    // Simulation of file processing
     setTimeout(() => {
       setIsUploading(false);
       setUploadedFile("RESUME_SIMULATED_2025.pdf");
@@ -131,7 +132,7 @@ export default function LandingPage() {
               </motion.div>
             </div>
 
-            {/* Right Side: Virtual HR Manager Card (Kept exactly same design) */}
+            {/* Right Side: Virtual HR Manager Card */}
             <div className="lg:w-1/2 w-full">
               <motion.div
                 initial={{ opacity: 0, x: 50 }}
@@ -338,7 +339,7 @@ export default function LandingPage() {
         )}
       </AnimatePresence>
 
-      {/* Standard Sections (Features Preview) */}
+      {/* Standard Sections */}
       <section className="py-40 bg-white/[0.01] border-t border-white/5">
         <div className="container mx-auto px-4 text-center">
           <Badge className="bg-white/5 text-white/40 mb-12 border-none px-6 py-1.5 font-bold tracking-[0.4em] text-[10px] uppercase">

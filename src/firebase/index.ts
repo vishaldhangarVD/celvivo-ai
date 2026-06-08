@@ -5,13 +5,9 @@ import { firebaseConfig } from './config';
 
 /**
  * Initializes Firebase App, Firestore, and Auth instances.
- * Ensures that the app is only initialized once.
+ * This should be called only in a client-side context (e.g., within useMemo in ClientProvider).
  */
 export function initializeFirebase() {
-  if (!firebaseConfig.projectId || firebaseConfig.projectId === 'placeholder-project-id') {
-    throw new Error("Firebase Project ID is missing. Please check your environment variables or config.ts.");
-  }
-
   const firebaseApp = !getApps().length
     ? initializeApp(firebaseConfig)
     : getApp();

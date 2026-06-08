@@ -141,6 +141,7 @@ export default function InterviewSession() {
     const interviewsRef = collection(db, 'users', user.uid, 'interviews');
     addDoc(interviewsRef, interviewData)
       .then(() => {
+        // Update user stats
         const userRef = doc(db, 'users', user.uid);
         updateDoc(userRef, {
           totalInterviews: increment(1)
