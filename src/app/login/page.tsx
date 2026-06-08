@@ -1,21 +1,22 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Command, ArrowLeft, Chrome, Loader2 } from 'lucide-react';
+import { Command, ArrowLeft, Chrome, Loader2, AlertCircle } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useAuth } from '@/firebase';
+import { useAuth, useUser } from '@/firebase';
 import { signInWithEmailAndPassword, signInWithPopup, GoogleAuthProvider, sendPasswordResetEmail } from 'firebase/auth';
 import { useToast } from '@/hooks/use-toast';
 
 export default function LoginPage() {
   const router = useRouter();
   const auth = useAuth();
+  const { user, loading: authLoading } = useUser();
   const { toast } = useToast();
   
   const [email, setEmail] = useState('');
@@ -23,9 +24,26 @@ export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [isResetting, setIsResetting] = useState(false);
 
+  // Redirect if already logged in
+  useEffect(() => {
+    if (user && !authLoading) {
+      router.push('/dashboard');
+    }
+  }, [user, authLoading, router]);
+
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!auth || !email || !password) return;
+    
+    if (!auth) {
+      toast({
+        variant: "destructive",
+        title: "System Error",
+        description: "Authentication service is unavailable. Please try again later.",
+      });
+      return;
+    }
+
+    if (!email || !password) return;
 
     setIsLoading(true);
     try {
@@ -46,6 +64,7 @@ export default function LoginPage() {
     if (!auth) return;
     const provider = new GoogleAuthProvider();
     try {
+      setIsLoading(true);
       await signInWithPopup(auth, provider);
       router.push('/dashboard');
     } catch (error: any) {
@@ -54,6 +73,8 @@ export default function LoginPage() {
         title: "Google Login Failed",
         description: error.message,
       });
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -85,6 +106,14 @@ export default function LoginPage() {
     }
   };
 
+  if (authLoading) {
+    return (
+      <div className="min-h-screen bg-[#050816] flex items-center justify-center">
+        <Loader2 className="w-12 h-12 text-accent animate-spin" />
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-[#050816] flex items-center justify-center p-6 relative">
       <div className="particles-bg" />
@@ -109,10 +138,18 @@ export default function LoginPage() {
 
         <Card className="premium-card bg-white/[0.02] border-white/5 p-8">
           <CardContent className="space-y-8 p-0">
+            {!auth && (
+              <div className="flex items-center gap-3 p-4 bg-red-500/10 border border-red-500/20 rounded-2xl text-red-400 text-xs font-bold uppercase tracking-widest">
+                <AlertCircle className="w-4 h-4" />
+                Service initializing...
+              </div>
+            )}
+
             <div className="grid grid-cols-1 gap-4">
               <Button 
                 variant="outline" 
                 onClick={handleGoogleLogin}
+                disabled={!auth || isLoading}
                 className="h-14 rounded-2xl glass border-white/10 hover:bg-white/5 flex gap-3"
               >
                 <Chrome className="w-5 h-5 text-accent" />
@@ -145,7 +182,7 @@ export default function LoginPage() {
                   <button 
                     type="button" 
                     onClick={handleForgotPassword}
-                    disabled={isResetting}
+                    disabled={isResetting || !auth}
                     className="text-[10px] font-bold uppercase tracking-widest text-accent hover:opacity-80 disabled:opacity-50"
                   >
                     {isResetting ? "Sending..." : "Forgot?"}
@@ -162,7 +199,7 @@ export default function LoginPage() {
               </div>
               <Button 
                 type="submit" 
-                disabled={isLoading}
+                disabled={isLoading || !auth}
                 className="w-full h-16 btn-premium text-xs font-bold tracking-[0.2em] uppercase mt-4"
               >
                 {isLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : "Access System"}

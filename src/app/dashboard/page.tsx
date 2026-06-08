@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useMemo, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import Navbar from '@/components/layout/Navbar';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
@@ -23,6 +23,7 @@ import {
   CheckCircle2
 } from 'lucide-react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { useUser, useFirestore, useCollection, useDoc } from '@/firebase';
 import { collection, query, orderBy, limit, doc } from 'firebase/firestore';
 
@@ -40,8 +41,16 @@ const itemVariants = {
 };
 
 export default function Dashboard() {
+  const router = useRouter();
   const { user, loading: authLoading } = useUser();
   const db = useFirestore();
+
+  // Redirect to login if not authenticated
+  useEffect(() => {
+    if (!user && !authLoading) {
+      router.push('/login');
+    }
+  }, [user, authLoading, router]);
 
   // Fetch User Profile
   const userProfileRef = useMemo(() => {
