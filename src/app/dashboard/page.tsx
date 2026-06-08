@@ -52,13 +52,6 @@ export default function Dashboard() {
     }
   }, [user, authLoading, router]);
 
-  // Fetch User Profile
-  const userProfileRef = useMemo(() => {
-    if (!db || !user?.uid) return null;
-    return doc(db, 'users', user.uid);
-  }, [db, user?.uid]);
-  const { data: profile, loading: profileLoading } = useDoc(userProfileRef);
-
   // Fetch Interviews
   const interviewsQuery = useMemo(() => {
     if (!db || !user?.uid) return null;
@@ -155,7 +148,7 @@ export default function Dashboard() {
           >
             <div>
               <Badge className="bg-accent/20 text-accent mb-4 border-none px-4 py-1 font-bold tracking-[0.3em] text-[10px]">OPERATIONAL CLEARANCE: GRANTED</Badge>
-              <h1 className="text-6xl md:text-7xl font-bold tracking-tighter text-premium">Command Center</h1>
+              <h1 className="text-6xl md:text-8xl font-bold tracking-tighter text-premium">Command Center</h1>
               <p className="text-muted-foreground mt-4 font-light tracking-wide">Welcome back, {user.displayName || 'Operator'}. System ready for session initialization.</p>
             </div>
             <div className="flex gap-4">
@@ -219,7 +212,7 @@ export default function Dashboard() {
                       <Loader2 className="w-8 h-8 animate-spin text-accent" />
                     </div>
                   ) : interviews && interviews.length > 0 ? (
-                    interviews.map((session: any, i) => (
+                    interviews.map((session: any) => (
                       <div key={session.id} className="flex items-center justify-between p-8 glass rounded-[2.5rem] border-white/5 hover:bg-white/[0.04] transition-all group">
                         <div className="flex items-center gap-6">
                           <div className="w-12 h-12 glass rounded-2xl flex items-center justify-center text-accent">
@@ -305,28 +298,6 @@ export default function Dashboard() {
                   ) : (
                     <p className="text-xs text-center text-muted-foreground p-6">No resumes analyzed yet.</p>
                   )}
-                </CardContent>
-              </Card>
-
-              <Card className="premium-card bg-white/[0.01] border-white/5">
-                <CardHeader>
-                  <CardTitle className="text-xl font-bold">System Integrity</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-8">
-                  <div className="space-y-3">
-                    <div className="flex justify-between text-xs font-bold uppercase tracking-widest text-muted-foreground">
-                      <span>Neural Calibration</span>
-                      <span>{averageScore > 0 ? averageScore : 85}%</span>
-                    </div>
-                    <Progress value={averageScore > 0 ? averageScore : 85} className="h-2 bg-white/5" />
-                  </div>
-                  <div className="space-y-3">
-                    <div className="flex justify-between text-xs font-bold uppercase tracking-widest text-muted-foreground">
-                      <span>Data Sync Status</span>
-                      <span className="text-green-400">Stable</span>
-                    </div>
-                    <Progress value={100} className="h-2 bg-green-500/20" />
-                  </div>
                 </CardContent>
               </Card>
             </div>
