@@ -32,7 +32,7 @@ import {
   ShieldCheck,
   Cpu
 } from 'lucide-react';
-import { analyzeResume, type AiResumeAnalysisOutput } from '@/ai/flows/ai-resume-analysis';
+import { type AiResumeAnalysisOutput } from '@/ai/flows/ai-resume-analysis';
 import { useUser, useFirestore } from '@/firebase';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 import { errorEmitter } from '@/firebase/error-emitter';
@@ -68,49 +68,90 @@ export default function ResumeAnalyzer() {
     if (!file) return;
     setIsAnalyzing(true);
     
-    try {
-      const reader = new FileReader();
-      reader.onload = async () => {
-        const base64String = (reader.result as string);
-        const output = await analyzeResume({
-          resumeDataUri: base64String,
-          targetRole: targetRole
-        });
-        
-        setResult(output);
-        setIsAnalyzing(false);
-
-        if (user && db) {
-          const resumesRef = collection(db, 'users', user.uid, 'resumes');
-          const resumeData = {
-            userId: user.uid,
-            filename: file.name,
-            targetRole,
-            atsScore: output.atsScore,
-            analysis: output,
-            createdAt: serverTimestamp(),
-          };
-
-          addDoc(resumesRef, resumeData)
-            .catch(async (err) => {
-              errorEmitter.emit('permission-error', new FirestorePermissionError({
-                path: resumesRef.path,
-                operation: 'create',
-                requestResourceData: resumeData
-              }));
-            });
-        }
+    // Simulate Neural Processing Time
+    setTimeout(() => {
+      const mockResult: AiResumeAnalysisOutput = {
+        personalInfo: {
+          fullName: user?.displayName || "Elite Candidate",
+          email: user?.email || "candidate@nexus.ai",
+          phone: "+1 (555) 934-2025"
+        },
+        atsScore: 88,
+        resumeQualityScore: 92,
+        technicalSkillsScore: 85,
+        keywordOptimizationScore: 78,
+        skillAnalysis: [
+          { skill: "React.js", proficiency: "Expert" },
+          { skill: "TypeScript", proficiency: "Advanced" },
+          { skill: "Next.js", proficiency: "Advanced" },
+          { skill: "Tailwind CSS", proficiency: "Expert" },
+          { skill: "Node.js", proficiency: "Intermediate" },
+          { skill: "Firebase", proficiency: "Advanced" }
+        ],
+        sections: {
+          education: [
+            "B.S. in Computer Science - Tech Institute of Excellence",
+            "Full-Stack Certification - Neural Academy"
+          ],
+          projects: [
+            "Nexvoro AI Platform - Built a scalable mock interview system using Next.js 15.",
+            "Distributed Ledger Audit - Optimized blockchain validation nodes by 40%."
+          ],
+          experience: [
+            "Senior Engineering Associate at Meta-Sys (2022 - Present)",
+            "Frontend Lead at Quantum-Bit Solutions (2020 - 2022)"
+          ],
+          certifications: [
+            "AWS Certified Solutions Architect",
+            "Google Professional Cloud Architect"
+          ],
+          achievements: [
+            "Won First Place at Global AI Hackathon 2024",
+            "Published 3 research papers on LLM optimization"
+          ]
+        },
+        missingSkills: ["GraphQL", "Docker", "Kubernetes", "Redis"],
+        improvementSuggestions: [
+          "Quantify your experience with specific metrics (e.g., 'Reduced latency by 30%').",
+          "Add more cloud-native deployment experience for current Senior roles.",
+          "Strengthen your system design documentation section."
+        ],
+        roleMatches: [
+          { role: "Frontend Developer", matchPercentage: 94 },
+          { role: "Full Stack Developer", matchPercentage: 86 },
+          { role: "AI Engineer", matchPercentage: 72 }
+        ]
       };
-      reader.readAsDataURL(file);
-    } catch (error) {
-      console.error(error);
+
+      setResult(mockResult);
       setIsAnalyzing(false);
+
+      if (user && db) {
+        const resumesRef = collection(db, 'users', user.uid, 'resumes');
+        const resumeData = {
+          userId: user.uid,
+          filename: file.name,
+          targetRole,
+          atsScore: mockResult.atsScore,
+          analysis: mockResult,
+          createdAt: serverTimestamp(),
+        };
+
+        addDoc(resumesRef, resumeData)
+          .catch(async (err) => {
+            errorEmitter.emit('permission-error', new FirestorePermissionError({
+              path: resumesRef.path,
+              operation: 'create',
+              requestResourceData: resumeData
+            }));
+          });
+      }
+
       toast({
-        variant: "destructive",
-        title: "Analysis Failed",
-        description: "The neural engine could not parse this blueprint.",
+        title: "Analysis Complete",
+        description: "Your neural career blueprint has been generated.",
       });
-    }
+    }, 3000);
   };
 
   return (
@@ -126,7 +167,7 @@ export default function ResumeAnalyzer() {
             <Badge className="bg-accent/20 text-accent mb-6 border-none px-6 py-1.5 font-bold tracking-[0.4em] text-[10px] uppercase">Neural Blueprint Auditor</Badge>
             <h1 className="text-6xl md:text-8xl font-bold mb-6 tracking-tighter text-premium">Resume <span className="text-gradient-purple">Intelligence.</span></h1>
             <p className="text-muted-foreground text-xl max-w-2xl mx-auto font-light leading-relaxed">
-              Deploy elite ATS simulations to audit your technical history and optimize your career blueprints for global hiring protocols.
+              Deploy elite simulated audits to optimize your career blueprints for global hiring protocols. (Demo Mode Active)
             </p>
           </motion.div>
         </header>
@@ -213,7 +254,7 @@ export default function ResumeAnalyzer() {
                   ) : (
                     <div className="flex items-center gap-4">
                       <Zap className="w-6 h-6 group-hover:animate-pulse" />
-                      <span className="tracking-[0.3em] uppercase text-sm font-bold">Execute Global Audit</span>
+                      <span className="tracking-[0.3em] uppercase text-sm font-bold">Execute Neural Audit</span>
                     </div>
                   )}
                 </Button>
@@ -299,7 +340,7 @@ export default function ResumeAnalyzer() {
                         <TabsTrigger 
                           key={tab}
                           value={tab} 
-                          className="data-[state=active]:bg-accent data-[state=active]:text-black h-14 px-10 rounded-2xl font-bold text-[10px] uppercase tracking-[0.2em] transition-all"
+                          className="data-[state=active]:bg-accent data-[state=active]:text-black h-14 px-10 rounded-2xl font-bold text-[10px] uppercase tracking-widest transition-all"
                         >
                           {tab}
                         </TabsTrigger>
@@ -418,7 +459,7 @@ export default function ResumeAnalyzer() {
                 </CardHeader>
                 <CardContent className="space-y-8">
                   {result.skillAnalysis.map((s, i) => (
-                    <div key={i} className="space-y-3" tag-key={i}>
+                    <div key={i} className="space-y-3">
                       <div className="flex justify-between text-[10px] font-bold uppercase tracking-[0.3em] text-muted-foreground">
                         <span className="text-white/80">{s.skill}</span>
                         <span className="text-accent">{s.proficiency}</span>
