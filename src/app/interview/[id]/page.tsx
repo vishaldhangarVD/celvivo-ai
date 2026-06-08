@@ -28,10 +28,16 @@ import {
 } from 'lucide-react';
 import { aiMockInterview, type AiMockInterviewOutput } from '@/ai/flows/ai-mock-interview';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
+import { useUser, useFirestore } from '@/firebase';
+import { collection, addDoc, serverTimestamp, doc, updateDoc, increment } from 'firebase/firestore';
+import { errorEmitter } from '@/firebase/error-emitter';
+import { FirestorePermissionError } from '@/firebase/errors';
 
 export default function InterviewSession() {
   const searchParams = useSearchParams();
   const router = useRouter();
+  const { user } = useUser();
+  const db = useFirestore();
   const role = searchParams.get('role') || 'Software Engineer';
   const exp = searchParams.get('exp') || 'Senior';
 
@@ -42,20 +48,26 @@ export default function InterviewSession() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [timer, setTimer] = useState(0);
   const [isComplete, setIsComplete] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
 
   const chatEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const startInterview = async () => {
       setIsProcessing(true);
-      const output = await aiMockInterview({
-        role,
-        experienceLevel: exp,
-        currentMainQuestionIndex: 0,
-        history: [],
-      });
-      setNextOutput(output);
-      setIsProcessing(false);
+      try {
+        const output = await aiMockInterview({
+          role,
+          experienceLevel: exp,
+          currentMainQuestionIndex: 0,
+          history: [],
+        });
+        setNextOutput(output);
+      } catch (e) {
+        console.error(e);
+      } finally {
+        setIsProcessing(false);
+      }
     };
     startInterview();
 
@@ -84,20 +96,24 @@ export default function InterviewSession() {
     const nextIdx = nextOutput?.questionType === 'main' ? currentQuestionIndex + 1 : currentQuestionIndex;
     if (nextOutput?.questionType === 'main') setCurrentQuestionIndex(nextIdx);
 
-    const output = await aiMockInterview({
-      role,
-      experienceLevel: exp,
-      currentMainQuestionIndex: nextIdx,
-      history: newHistory,
-      lastQuestionAsked: nextOutput?.nextQuestion,
-      userAnswer: currentAnswer
-    });
+    try {
+      const output = await aiMockInterview({
+        role,
+        experienceLevel: exp,
+        currentMainQuestionIndex: nextIdx,
+        history: newHistory,
+        lastQuestionAsked: nextOutput?.nextQuestion,
+        userAnswer: currentAnswer
+      });
 
-    setNextOutput(output);
-    setIsProcessing(false);
-
-    if (output.isInterviewComplete) {
-      setIsComplete(true);
+      setNextOutput(output);
+      if (output.isInterviewComplete) {
+        setIsComplete(true);
+      }
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setIsProcessing(false);
     }
   };
 
@@ -107,8 +123,46 @@ export default function InterviewSession() {
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
-  const finishInterview = () => {
-    router.push(`/feedback/last?role=${role}&exp=${exp}&data=${encodeURIComponent(JSON.stringify(history))}`);
+  const finishInterview = async () => {
+    if (!user || !db) return;
+    setIsSaving(true);
+
+    // Save Interview Session
+    const interviewData = {
+      userId: user.uid,
+      role,
+      experienceLevel: exp,
+      history,
+      duration: timer,
+      createdAt: serverTimestamp(),
+      overallScore: 0, // Will be updated by feedback flow later, or we can placeholder
+    };
+
+    const interviewsRef = collection(db, 'users', user.uid, 'interviews');
+    addDoc(interviewsRef, interviewData)
+      .then(() => {
+        // Update user profile aggregate
+        const userRef = doc(db, 'users', user.uid);
+        updateDoc(userRef, {
+          totalInterviews: increment(1)
+        }).catch(async (err) => {
+          errorEmitter.emit('permission-error', new FirestorePermissionError({
+            path: userRef.path,
+            operation: 'update',
+            requestResourceData: { totalInterviews: increment(1) }
+          }));
+        });
+
+        router.push(`/feedback/last?role=${role}&exp=${exp}&data=${encodeURIComponent(JSON.stringify(history))}`);
+      })
+      .catch(async (err) => {
+        setIsSaving(false);
+        errorEmitter.emit('permission-error', new FirestorePermissionError({
+          path: interviewsRef.path,
+          operation: 'create',
+          requestResourceData: interviewData
+        }));
+      });
   };
 
   return (
@@ -145,7 +199,7 @@ export default function InterviewSession() {
       {/* Main Full-screen Split Interface */}
       <main className="flex-1 flex overflow-hidden">
         
-        {/* Left Side: Large AI HR Avatar in Corporate Setting */}
+        {/* Left Side: AI HR Avatar */}
         <section className="w-[45%] relative border-r border-white/5 overflow-hidden">
           <div className="absolute inset-0 z-0">
             <Image 
@@ -171,11 +225,9 @@ export default function InterviewSession() {
                 alt="AI Interviewer"
                 fill
                 className="object-cover opacity-90 brightness-110"
-                data-ai-hint="professional businessman suit"
               />
               <div className="absolute inset-0 bg-gradient-to-t from-[#050816] via-transparent to-transparent"></div>
               
-              {/* Speech Bubble Overlay for current question */}
               <AnimatePresence>
                 {nextOutput?.nextQuestion && !isProcessing && (
                   <motion.div 
@@ -196,7 +248,6 @@ export default function InterviewSession() {
                 )}
               </AnimatePresence>
 
-              {/* Speaker Analysis Waves */}
               <div className="absolute bottom-12 left-1/2 -translate-x-1/2 flex items-end gap-2 h-16">
                 {[...Array(16)].map((_, i) => (
                   <motion.div 
@@ -223,18 +274,16 @@ export default function InterviewSession() {
           </div>
         </section>
 
-        {/* Right Side: Interview Dashboard & Performance Metrics */}
+        {/* Right Side: Dashboard & Interaction */}
         <section className="flex-1 flex flex-col bg-[#050816]/40 backdrop-blur-md">
-          
-          {/* Dashboard HUD */}
           <div className="px-12 py-10 border-b border-white/5 flex items-center justify-between bg-white/[0.01]">
             <div className="flex items-center gap-12 flex-1">
               <div className="space-y-3 flex-1 max-w-md">
                 <div className="flex justify-between items-end mb-2">
                   <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Simulation Velocity</span>
-                  <span className="text-xs font-bold tabular-nums text-accent">{currentQuestionIndex + 1} / 10</span>
+                  <span className="text-xs font-bold tabular-nums text-accent">{currentQuestionIndex + 1} / 5</span>
                 </div>
-                <Progress value={((currentQuestionIndex + 1) / 10) * 100} className="h-2 bg-white/5" />
+                <Progress value={((currentQuestionIndex + 1) / 5) * 100} className="h-2 bg-white/5" />
               </div>
               <div className="w-px h-12 bg-white/10"></div>
               <div className="flex gap-12">
@@ -250,7 +299,6 @@ export default function InterviewSession() {
             </div>
           </div>
 
-          {/* Interaction Feed */}
           <div className="flex-1 overflow-y-auto px-12 py-16 space-y-16 custom-scrollbar">
             <AnimatePresence mode="popLayout">
               {history.map((turn, i) => (
@@ -311,9 +359,14 @@ export default function InterviewSession() {
                       Simulation complete. Comprehensive performance audit initialized.
                     </p>
                   </div>
-                  <Button onClick={finishInterview} size="lg" className="h-20 px-16 btn-premium text-lg font-bold uppercase tracking-[0.3em]">
-                    Access Neural Audit
-                    <ChevronRight className="ml-3 w-6 h-6" />
+                  <Button 
+                    onClick={finishInterview} 
+                    disabled={isSaving}
+                    size="lg" 
+                    className="h-20 px-16 btn-premium text-lg font-bold uppercase tracking-[0.3em]"
+                  >
+                    {isSaving ? <Loader2 className="w-6 h-6 animate-spin mr-3" /> : "Access Neural Audit"}
+                    {!isSaving && <ChevronRight className="ml-3 w-6 h-6" />}
                   </Button>
                 </motion.div>
               )}
@@ -321,7 +374,6 @@ export default function InterviewSession() {
             <div ref={chatEndRef} className="h-40" />
           </div>
 
-          {/* User Input Cockpit */}
           {!isComplete && (
             <footer className="p-12 glass border-t-0 shrink-0 z-50">
               <div className="max-w-5xl mx-auto space-y-8">
@@ -337,7 +389,7 @@ export default function InterviewSession() {
                           handleSend();
                         }
                       }}
-                      placeholder="Input technical insight or logical framework..."
+                      placeholder="Input technical insight..."
                       rows={1}
                       className="flex-1 bg-transparent border-none focus:ring-0 resize-none py-6 px-10 text-xl font-light max-h-48 placeholder:text-white/20 custom-scrollbar"
                     />
@@ -354,20 +406,6 @@ export default function InterviewSession() {
                       </Button>
                     </div>
                   </div>
-                </div>
-                <div className="flex justify-between items-center px-6">
-                  <div className="flex items-center gap-4">
-                    <Badge variant="outline" className="border-white/10 text-white/40 text-[10px] uppercase font-bold tracking-widest px-4 py-1">Shift+Enter for newline</Badge>
-                  </div>
-                  <Button 
-                    onClick={handleSend}
-                    disabled={!userAnswer.trim() || isProcessing}
-                    variant="link" 
-                    className="text-xs font-bold text-accent uppercase tracking-[0.3em] p-0 h-auto flex items-center gap-3 group"
-                  >
-                    Transmit Logic
-                    <ChevronRight className="w-5 h-5 group-hover:translate-x-2 transition-transform" />
-                  </Button>
                 </div>
               </div>
             </footer>

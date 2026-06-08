@@ -17,8 +17,14 @@ import {
   Trash2
 } from 'lucide-react';
 import { analyzeResume, type AiResumeAnalysisOutput } from '@/ai/flows/ai-resume-analysis';
+import { useUser, useFirestore } from '@/firebase';
+import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import { errorEmitter } from '@/firebase/error-emitter';
+import { FirestorePermissionError } from '@/firebase/errors';
 
 export default function ResumeAnalyzer() {
+  const { user } = useUser();
+  const db = useFirestore();
   const [file, setFile] = useState<File | null>(null);
   const [targetRole, setTargetRole] = useState("Frontend Developer");
   const [isAnalyzing, setIsAnalyzing] = useState(false);
@@ -42,8 +48,31 @@ export default function ResumeAnalyzer() {
           resumeDataUri: base64String,
           targetRole: targetRole
         });
+        
         setResult(output);
         setIsAnalyzing(false);
+
+        // Persist analysis result
+        if (user && db) {
+          const resumesRef = collection(db, 'users', user.uid, 'resumes');
+          const resumeData = {
+            userId: user.uid,
+            filename: file.name,
+            targetRole,
+            atsScore: output.atsScore,
+            analysis: output,
+            createdAt: serverTimestamp(),
+          };
+
+          addDoc(resumesRef, resumeData)
+            .catch(async (err) => {
+              errorEmitter.emit('permission-error', new FirestorePermissionError({
+                path: resumesRef.path,
+                operation: 'create',
+                requestResourceData: resumeData
+              }));
+            });
+        }
       };
       reader.readAsDataURL(file);
     } catch (error) {
@@ -53,30 +82,32 @@ export default function ResumeAnalyzer() {
   };
 
   return (
-    <div className="min-h-screen pb-20">
+    <div className="min-h-screen bg-[#050816] pb-20">
+      <div className="particles-bg" />
       <Navbar />
-      <div className="container mx-auto px-4 py-12">
-        <header className="mb-12 text-center">
-          <h1 className="text-4xl md:text-5xl font-bold mb-4">AI Resume <span className="text-gradient">Analyzer</span></h1>
-          <p className="text-muted-foreground text-lg max-w-2xl mx-auto">
-            Get an instant ATS score and detailed feedback to optimize your resume for your dream job.
+      <div className="container mx-auto px-4 py-32">
+        <header className="mb-20 text-center">
+          <Badge className="bg-accent/20 text-accent mb-6 border-none px-6 py-1.5 font-bold tracking-[0.4em] text-[10px] uppercase">Neural Blueprint Auditor</Badge>
+          <h1 className="text-6xl md:text-7xl font-bold mb-6 tracking-tighter text-premium">Resume <span className="text-gradient-purple">Intelligence.</span></h1>
+          <p className="text-muted-foreground text-xl max-w-2xl mx-auto font-light">
+            Deploy elite ATS simulation to audit your technical history and optimize your career blueprints.
           </p>
         </header>
 
-        <div className="grid lg:grid-cols-2 gap-12">
+        <div className="grid lg:grid-cols-2 gap-16 max-w-7xl mx-auto">
           {/* Upload Section */}
           <section className="space-y-8">
-            <Card className="glass-card border-white/10">
+            <Card className="premium-card bg-white/[0.01] border-white/5">
               <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Upload className="w-5 h-5 text-primary" />
-                  Upload Your Resume
+                <CardTitle className="flex items-center gap-4 text-2xl">
+                  <Upload className="w-8 h-8 text-accent" />
+                  Blueprint Upload
                 </CardTitle>
               </CardHeader>
-              <CardContent>
+              <CardContent className="space-y-10">
                 <div 
-                  className={`border-2 border-dashed rounded-2xl p-12 text-center transition-all cursor-pointer ${
-                    file ? 'border-primary/50 bg-primary/5' : 'border-white/10 hover:border-primary/30'
+                  className={`border-2 border-dashed rounded-[2.5rem] p-16 text-center transition-all cursor-pointer group ${
+                    file ? 'border-accent bg-accent/5' : 'border-white/10 hover:border-accent/30 hover:bg-white/[0.02]'
                   }`}
                   onClick={() => document.getElementById('resume-upload')?.click()}
                 >
@@ -88,59 +119,62 @@ export default function ResumeAnalyzer() {
                     onChange={handleFileChange}
                   />
                   {!file ? (
-                    <>
-                      <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-4">
-                        <FileText className="w-8 h-8 text-primary" />
+                    <div className="space-y-6">
+                      <div className="w-20 h-20 rounded-3xl bg-accent/10 flex items-center justify-center mx-auto transition-colors group-hover:bg-accent/20">
+                        <FileText className="w-10 h-10 text-accent" />
                       </div>
-                      <p className="text-lg font-semibold mb-2">Click to select or drag and drop</p>
-                      <p className="text-sm text-muted-foreground">PDF, DOCX, or TXT (Max 5MB)</p>
-                    </>
+                      <div>
+                        <p className="text-xl font-bold mb-2">Initialize Career Scan</p>
+                        <p className="text-xs text-muted-foreground uppercase tracking-widest font-bold">PDF, DOCX, or TXT • Enterprise Grade Parsing</p>
+                      </div>
+                    </div>
                   ) : (
-                    <div className="flex items-center justify-center gap-4">
-                      <FileText className="w-10 h-10 text-primary" />
-                      <div className="text-left">
-                        <p className="font-semibold">{file.name}</p>
-                        <p className="text-xs text-muted-foreground">{(file.size / 1024 / 1024).toFixed(2)} MB</p>
+                    <div className="flex items-center justify-center gap-8">
+                      <FileText className="w-12 h-12 text-accent" />
+                      <div className="text-left flex-1">
+                        <p className="font-bold text-lg truncate max-w-[200px]">{file.name}</p>
+                        <p className="text-[10px] text-muted-foreground uppercase tracking-widest font-bold">{(file.size / 1024 / 1024).toFixed(2)} MB • READY</p>
                       </div>
                       <Button 
                         variant="ghost" 
                         size="icon" 
                         onClick={(e) => { e.stopPropagation(); setFile(null); }}
-                        className="ml-4 hover:bg-destructive/20 hover:text-destructive"
+                        className="rounded-xl hover:bg-red-500/10 hover:text-red-400"
                       >
-                        <Trash2 className="w-5 h-5" />
+                        <Trash2 className="w-6 h-6" />
                       </Button>
                     </div>
                   )}
                 </div>
 
-                <div className="mt-8 space-y-4">
-                  <label className="text-sm font-medium text-muted-foreground">Target Role</label>
+                <div className="space-y-4">
+                  <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground ml-2">Target Neural Track</label>
                   <select 
                     value={targetRole}
                     onChange={(e) => setTargetRole(e.target.value)}
-                    className="w-full h-12 rounded-xl bg-white/5 border border-white/10 px-4 focus:outline-none focus:border-primary transition-all"
+                    className="w-full h-16 rounded-2xl glass border-white/10 bg-transparent px-6 focus:outline-none focus:border-accent transition-all text-white font-medium"
                   >
-                    <option value="Frontend Developer">Frontend Developer</option>
-                    <option value="Backend Developer">Backend Developer</option>
-                    <option value="Full Stack Developer">Full Stack Developer</option>
-                    <option value="Data Scientist">Data Scientist</option>
-                    <option value="DevOps Engineer">DevOps Engineer</option>
+                    <option className="bg-[#050816]" value="Frontend Developer">Frontend Developer</option>
+                    <option className="bg-[#050816]" value="Backend Developer">Backend Developer</option>
+                    <option className="bg-[#050816]" value="Full Stack Developer">Full Stack Developer</option>
+                    <option className="bg-[#050816]" value="Data Scientist">Data Scientist</option>
+                    <option className="bg-[#050816]" value="DevOps Engineer">DevOps Engineer</option>
+                    <option className="bg-[#050816]" value="AI Engineer">AI Engineer</option>
                   </select>
                 </div>
 
                 <Button 
                   onClick={runAnalysis}
                   disabled={!file || isAnalyzing}
-                  className="w-full mt-8 h-12 text-lg bg-gradient-premium hover:opacity-90"
+                  className="w-full h-20 text-lg btn-premium"
                 >
                   {isAnalyzing ? (
                     <>
-                      <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                      Analyzing Resume...
+                      <Loader2 className="mr-3 h-6 w-6 animate-spin" />
+                      <span className="tracking-[0.2em] uppercase text-sm font-bold">Analyzing Neural Blueprint...</span>
                     </>
                   ) : (
-                    'Run Analysis'
+                    <span className="tracking-[0.2em] uppercase text-sm font-bold">Execute Audit</span>
                   )}
                 </Button>
               </CardContent>
@@ -150,93 +184,71 @@ export default function ResumeAnalyzer() {
           {/* Results Section */}
           <section>
             {result ? (
-              <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-500">
-                <Card className="glass-card border-white/10">
-                  <CardHeader className="flex flex-row items-center justify-between">
-                    <CardTitle className="text-xl">Analysis Results</CardTitle>
-                    <Badge variant="secondary" className="bg-primary/20 text-primary border-primary/20 px-3 py-1">
-                      {targetRole}
+              <div className="space-y-8 animate-in fade-in slide-in-from-right-4 duration-700">
+                <Card className="premium-card bg-white/[0.02] border-white/5 relative overflow-hidden">
+                  <div className="absolute top-0 right-0 p-8">
+                    <Badge variant="outline" className="border-accent/30 text-accent px-4 py-1 text-[10px] tracking-widest uppercase font-bold">
+                      {targetRole} Verified
                     </Badge>
+                  </div>
+                  <CardHeader className="pb-12 border-b border-white/5 mb-12">
+                    <CardTitle className="text-3xl font-bold">Audit Intelligence</CardTitle>
                   </CardHeader>
-                  <CardContent className="space-y-8">
-                    {/* ATS Score */}
-                    <div className="text-center">
-                      <div className="relative inline-flex items-center justify-center mb-4">
-                        <svg className="w-32 h-32 transform -rotate-90">
-                          <circle
-                            className="text-white/5"
-                            strokeWidth="8"
-                            stroke="currentColor"
-                            fill="transparent"
-                            r="58"
-                            cx="64"
-                            cy="64"
-                          />
-                          <circle
-                            className="text-primary"
-                            strokeWidth="8"
-                            strokeDasharray={364}
-                            strokeDashoffset={364 - (364 * result.atsScore) / 100}
-                            strokeLinecap="round"
-                            stroke="currentColor"
-                            fill="transparent"
-                            r="58"
-                            cx="64"
-                            cy="64"
-                          />
+                  <CardContent className="space-y-16">
+                    <div className="flex flex-col items-center gap-6">
+                      <div className="relative w-48 h-48 flex items-center justify-center">
+                        <svg className="w-full h-full transform -rotate-90">
+                          <circle className="text-white/5" strokeWidth="8" stroke="currentColor" fill="transparent" r="88" cx="96" cy="96" />
+                          <circle className="text-accent" strokeWidth="8" strokeDasharray={552} strokeDashoffset={552 - (552 * result.atsScore) / 100} strokeLinecap="round" stroke="currentColor" fill="transparent" r="88" cx="96" cy="96" />
                         </svg>
-                        <span className="absolute text-4xl font-bold">{result.atsScore}</span>
+                        <span className="absolute text-5xl font-bold tracking-tighter tabular-nums">{result.atsScore}</span>
                       </div>
-                      <p className="text-lg font-semibold">ATS Compatibility Score</p>
+                      <p className="text-xs uppercase tracking-[0.4em] font-bold text-muted-foreground">ATS Compatibility Index</p>
                     </div>
 
-                    <div className="grid sm:grid-cols-2 gap-4">
-                      {/* Skill Analysis */}
-                      <div className="glass-card p-5 rounded-2xl border-white/5">
-                        <h4 className="flex items-center gap-2 font-bold mb-4">
-                          <Search className="w-4 h-4 text-blue-400" />
-                          Found Skills
+                    <div className="grid sm:grid-cols-2 gap-8">
+                      <div className="glass p-8 rounded-[2rem] border-white/5 bg-white/[0.01]">
+                        <h4 className="flex items-center gap-3 font-bold text-sm uppercase tracking-widest mb-6">
+                          <Search className="w-5 h-5 text-blue-400" />
+                          Detected Nodes
+                        </h4>
+                        <div className="space-y-4">
+                          {result.skillAnalysis.slice(0, 5).map((s, i) => (
+                            <div key={i} className="space-y-2">
+                              <div className="flex justify-between text-[10px] font-bold uppercase tracking-wider">
+                                <span>{s.skill}</span>
+                                <span className="text-accent">{s.proficiency}</span>
+                              </div>
+                              <Progress value={s.proficiency === 'Expert' ? 100 : s.proficiency === 'Advanced' ? 80 : 50} className="h-1 bg-white/5" />
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+
+                      <div className="glass p-8 rounded-[2rem] border-white/5 bg-white/[0.01]">
+                        <h4 className="flex items-center gap-3 font-bold text-sm uppercase tracking-widest mb-6">
+                          <AlertCircle className="w-5 h-5 text-orange-400" />
+                          Delta Gaps
                         </h4>
                         <div className="flex flex-wrap gap-2">
-                          {result.skillAnalysis.map((s, i) => (
-                            <div key={i} className="flex flex-col gap-1 p-2 bg-white/5 rounded-lg border border-white/5 w-full">
-                              <span className="text-xs font-semibold">{s.skill}</span>
-                              <div className="flex items-center justify-between">
-                                <span className="text-[10px] text-muted-foreground uppercase">{s.proficiency}</span>
-                                <div className="h-1 bg-primary w-1/2 rounded-full"></div>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-
-                      {/* Missing Skills */}
-                      <div className="glass-card p-5 rounded-2xl border-white/5">
-                        <h4 className="flex items-center gap-2 font-bold mb-4">
-                          <AlertCircle className="w-4 h-4 text-orange-400" />
-                          Missing Skills
-                        </h4>
-                        <div className="space-y-2">
                           {result.missingSkills.map((s, i) => (
-                            <div key={i} className="flex items-center gap-2 text-sm text-muted-foreground">
-                              <span className="w-1.5 h-1.5 rounded-full bg-orange-400"></span>
+                            <Badge key={i} variant="outline" className="border-orange-500/20 text-orange-400/70 text-[10px] font-bold uppercase py-1.5 px-3">
                               {s}
-                            </div>
+                            </Badge>
                           ))}
                         </div>
                       </div>
                     </div>
 
-                    {/* Improvement Suggestions */}
-                    <div className="glass-card p-6 rounded-2xl border-white/5">
-                      <h4 className="flex items-center gap-2 font-bold mb-4">
-                        <Lightbulb className="w-5 h-5 text-yellow-400" />
-                        Actionable Suggestions
+                    <div className="glass p-10 rounded-[2.5rem] border-accent/10 bg-accent/[0.02]">
+                      <h4 className="flex items-center gap-4 font-bold text-lg mb-8">
+                        <Lightbulb className="w-6 h-6 text-yellow-400" />
+                        Neural Optimization Strategy
                       </h4>
-                      <div className="space-y-4">
+                      <div className="space-y-6">
                         {result.improvementSuggestions.map((suggestion, i) => (
-                          <div key={i} className="flex gap-3 text-sm leading-relaxed">
-                            <CheckCircle2 className="w-4 h-4 text-primary shrink-0 mt-0.5" />
+                          <div key={i} className="flex gap-4 text-sm font-light leading-relaxed text-white/80">
+                            <CheckCircle2 className="w-5 h-5 text-accent shrink-0" />
                             {suggestion}
                           </div>
                         ))}
@@ -246,13 +258,13 @@ export default function ResumeAnalyzer() {
                 </Card>
               </div>
             ) : (
-              <div className="h-full min-h-[400px] rounded-3xl border border-white/5 bg-white/5 flex flex-col items-center justify-center text-center p-8">
-                <div className="w-20 h-20 rounded-full bg-white/5 flex items-center justify-center mb-6">
-                  <Search className="w-10 h-10 text-muted-foreground/50" />
+              <div className="h-full min-h-[600px] rounded-[3rem] border border-white/5 bg-white/[0.01] glass flex flex-col items-center justify-center text-center p-12">
+                <div className="w-32 h-32 rounded-full bg-white/5 flex items-center justify-center mb-10 border border-white/5">
+                  <Search className="w-16 h-16 text-muted-foreground/20 animate-pulse" />
                 </div>
-                <h3 className="text-xl font-bold mb-2">No Analysis Yet</h3>
-                <p className="text-muted-foreground max-w-sm">
-                  Upload your resume and click "Run Analysis" to see your results and optimization tips.
+                <h3 className="text-2xl font-bold mb-4 tracking-tight">Audit Standby</h3>
+                <p className="text-muted-foreground max-w-sm font-light leading-relaxed">
+                  Initialize a career scan to deploy our neural engine and audit your career blueprints.
                 </p>
               </div>
             )}

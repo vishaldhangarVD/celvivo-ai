@@ -1,5 +1,6 @@
 'use client';
 
+import { useMemo } from 'react';
 import { motion } from 'framer-motion';
 import Navbar from '@/components/layout/Navbar';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
@@ -16,9 +17,13 @@ import {
   ArrowUpRight,
   TrendingUp,
   Clock,
-  Briefcase
+  Briefcase,
+  Loader2,
+  ShieldAlert
 } from 'lucide-react';
 import Link from 'next/link';
+import { useUser, useFirestore, useCollection, useDoc } from '@/firebase';
+import { collection, query, orderBy, limit, doc } from 'firebase/firestore';
 
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -34,6 +39,90 @@ const itemVariants = {
 };
 
 export default function Dashboard() {
+  const { user, loading: authLoading } = useUser();
+  const db = useFirestore();
+
+  // Fetch User Profile
+  const userProfileRef = useMemo(() => {
+    if (!db || !user?.uid) return null;
+    return doc(db, 'users', user.uid);
+  }, [db, user?.uid]);
+  const { data: profile, loading: profileLoading } = useDoc(userProfileRef);
+
+  // Fetch Recent Interviews
+  const interviewsQuery = useMemo(() => {
+    if (!db || !user?.uid) return null;
+    return query(
+      collection(db, 'users', user.uid, 'interviews'),
+      orderBy('createdAt', 'desc'),
+      limit(5)
+    );
+  }, [db, user?.uid]);
+  const { data: interviews, loading: interviewsLoading } = useCollection(interviewsQuery);
+
+  // Fetch Recent Resumes
+  const resumesQuery = useMemo(() => {
+    if (!db || !user?.uid) return null;
+    return query(
+      collection(db, 'users', user.uid, 'resumes'),
+      orderBy('createdAt', 'desc'),
+      limit(5)
+    );
+  }, [db, user?.uid]);
+  const { data: resumes, loading: resumesLoading } = useCollection(resumesQuery);
+
+  if (authLoading) {
+    return (
+      <div className="min-h-screen bg-[#050816] flex items-center justify-center">
+        <Loader2 className="w-12 h-12 text-accent animate-spin" />
+      </div>
+    );
+  }
+
+  if (!user) {
+    return (
+      <div className="min-h-screen bg-[#050816] flex flex-col items-center justify-center p-6 text-center">
+        <ShieldAlert className="w-20 h-20 text-red-500 mb-6" />
+        <h1 className="text-4xl font-bold mb-4">Unauthorized Access</h1>
+        <p className="text-muted-foreground mb-8">Please login to access your neural command center.</p>
+        <Link href="/login">
+          <Button className="btn-premium px-12 h-14">Return to Login</Button>
+        </Link>
+      </div>
+    );
+  }
+
+  const stats = [
+    { 
+      label: "Job Readiness", 
+      val: profile?.jobReadinessScore ? `${Math.round(profile.jobReadinessScore)}%` : "0%", 
+      icon: Trophy, 
+      color: "text-yellow-400", 
+      change: "Live Tracking" 
+    },
+    { 
+      label: "Avg Precision", 
+      val: profile?.technicalScore ? `${Math.round(profile.technicalScore)}%` : "0%", 
+      icon: BrainCircuit, 
+      color: "text-blue-400", 
+      change: "Neural Rating" 
+    },
+    { 
+      label: "Mock Sessions", 
+      val: profile?.totalInterviews?.toString() || "0", 
+      icon: Activity, 
+      color: "text-purple-400", 
+      change: "Sessions Logged" 
+    },
+    { 
+      label: "Resumes Audited", 
+      val: resumes?.length.toString() || "0", 
+      icon: FileText, 
+      color: "text-green-400", 
+      change: "Active Reports" 
+    }
+  ];
+
   return (
     <div className="min-h-screen bg-[#050816] pb-32">
       <div className="particles-bg" />
@@ -50,6 +139,7 @@ export default function Dashboard() {
             <div>
               <Badge className="bg-accent/20 text-accent mb-4 border-none px-4 py-1 font-bold tracking-[0.3em] text-[10px]">OPERATIONAL CLEARANCE: GRANTED</Badge>
               <h1 className="text-6xl md:text-7xl font-bold tracking-tighter text-premium">Command Center</h1>
+              <p className="text-muted-foreground mt-4 font-light tracking-wide">Welcome back, {user.displayName || 'Operator'}. System ready for session initialization.</p>
             </div>
             <div className="flex gap-4">
               <Link href="/interview">
@@ -65,12 +155,7 @@ export default function Dashboard() {
             animate="visible"
             className="grid md:grid-cols-4 gap-8 mb-16"
           >
-            {[
-              { label: "Job Readiness", val: "84%", icon: Trophy, color: "text-yellow-400", change: "+4.2%" },
-              { label: "Neural Precision", val: "92%", icon: BrainCircuit, color: "text-blue-400", change: "+1.5%" },
-              { label: "Mock Sessions", val: "12", icon: Activity, color: "text-purple-400", change: "2 active" },
-              { label: "Skill Delta", val: "-14%", icon: Target, color: "text-green-400", change: "Decreasing" }
-            ].map((stat, i) => (
+            {stats.map((stat, i) => (
               <motion.div key={i} variants={itemVariants} className="premium-card p-10 bg-white/[0.02] border-white/5">
                 <div className="flex justify-between items-start mb-8">
                   <div className={`w-14 h-14 glass rounded-2xl flex items-center justify-center ${stat.color} bg-white/5`}>
@@ -88,56 +173,66 @@ export default function Dashboard() {
             {/* Main Content */}
             <div className="lg:col-span-8 space-y-12">
               {/* Performance Chart Placeholder */}
-              <Card className="premium-card bg-white/[0.01] border-white/5 h-full">
+              <Card className="premium-card bg-white/[0.01] border-white/5">
                 <CardHeader className="pb-12 border-b border-white/5 mb-12">
                   <CardTitle className="text-2xl font-bold flex items-center gap-4">
                     <TrendingUp className="w-8 h-8 text-accent" />
                     Neural Progression
                   </CardTitle>
                 </CardHeader>
-                <CardContent className="h-[400px] flex items-center justify-center relative">
+                <CardContent className="h-[300px] flex items-center justify-center relative">
                   <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.02)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.02)_1px,transparent_1px)] bg-[size:40px_40px]"></div>
                   <div className="text-center z-10">
                     <Zap className="w-16 h-16 text-white/10 mx-auto mb-6 animate-pulse" />
-                    <p className="text-muted-foreground font-light tracking-widest uppercase text-xs">Awaiting real-time sync data...</p>
+                    <p className="text-muted-foreground font-light tracking-widest uppercase text-xs">
+                      {interviews?.length ? "Aggregating performance nodes..." : "Awaiting first session data..."}
+                    </p>
                   </div>
                 </CardContent>
               </Card>
 
-              {/* History */}
+              {/* Session History */}
               <Card className="premium-card bg-white/[0.01] border-white/5">
                 <CardHeader className="mb-8">
-                  <CardTitle className="text-2xl font-bold">Session Logs</CardTitle>
+                  <CardTitle className="text-2xl font-bold">Recent Session Logs</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-6">
-                  {[
-                    { role: "Backend Architect", date: "2 hours ago", score: "92%", type: "Verified" },
-                    { role: "Staff Engineer", date: "Yesterday", score: "78%", type: "Incomplete" },
-                    { role: "Data Scientist", date: "3 days ago", score: "88%", type: "Verified" }
-                  ].map((session, i) => (
-                    <div key={i} className="flex items-center justify-between p-8 glass rounded-[2.5rem] border-white/5 hover:bg-white/[0.04] transition-all group">
-                      <div className="flex items-center gap-6">
-                        <div className="w-12 h-12 glass rounded-2xl flex items-center justify-center text-accent">
-                          <Briefcase className="w-6 h-6" />
-                        </div>
-                        <div>
-                          <h4 className="font-bold text-lg">{session.role}</h4>
-                          <p className="text-xs text-muted-foreground flex items-center gap-2">
-                            <Clock className="w-3 h-3" /> {session.date}
-                          </p>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-12">
-                        <div className="text-right">
-                          <div className="text-xl font-bold text-accent">{session.score}</div>
-                          <div className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest">{session.type}</div>
-                        </div>
-                        <Button variant="ghost" size="icon" className="group-hover:text-accent group-hover:bg-accent/10 rounded-xl">
-                          <ArrowUpRight className="w-6 h-6" />
-                        </Button>
-                      </div>
+                  {interviewsLoading ? (
+                    <div className="flex justify-center p-12">
+                      <Loader2 className="w-8 h-8 animate-spin text-accent" />
                     </div>
-                  ))}
+                  ) : interviews && interviews.length > 0 ? (
+                    interviews.map((session: any, i) => (
+                      <div key={session.id} className="flex items-center justify-between p-8 glass rounded-[2.5rem] border-white/5 hover:bg-white/[0.04] transition-all group">
+                        <div className="flex items-center gap-6">
+                          <div className="w-12 h-12 glass rounded-2xl flex items-center justify-center text-accent">
+                            <Briefcase className="w-6 h-6" />
+                          </div>
+                          <div>
+                            <h4 className="font-bold text-lg">{session.role}</h4>
+                            <p className="text-xs text-muted-foreground flex items-center gap-2">
+                              <Clock className="w-3 h-3" /> {new Date(session.createdAt?.seconds * 1000).toLocaleDateString()}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-12">
+                          <div className="text-right">
+                            <div className="text-xl font-bold text-accent">{session.overallScore}%</div>
+                            <div className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest">Efficiency</div>
+                          </div>
+                          <Link href={`/feedback/${session.id}`}>
+                            <Button variant="ghost" size="icon" className="group-hover:text-accent group-hover:bg-accent/10 rounded-xl">
+                              <ArrowUpRight className="w-6 h-6" />
+                            </Button>
+                          </Link>
+                        </div>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="text-center p-12 border border-dashed border-white/10 rounded-[2.5rem]">
+                      <p className="text-muted-foreground">No sessions recorded. Initialize your first simulation to begin.</p>
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             </div>
@@ -164,7 +259,7 @@ export default function Dashboard() {
                       Start Mock
                     </Button>
                   </Link>
-                  <Button variant="outline" className="w-full h-16 rounded-2xl glass border-white/10 hover:bg-white/10 justify-start gap-4 px-6 text-base font-bold opacity-50 cursor-not-allowed">
+                  <Button disabled variant="outline" className="w-full h-16 rounded-2xl glass border-white/10 opacity-50 justify-start gap-4 px-6 text-base font-bold cursor-not-allowed">
                     <BrainCircuit className="w-6 h-6 text-blue-400" />
                     Skill Gap Map (Beta)
                   </Button>
@@ -173,22 +268,47 @@ export default function Dashboard() {
 
               <Card className="premium-card bg-white/[0.01] border-white/5">
                 <CardHeader>
-                  <CardTitle className="text-xl font-bold">Active Challenges</CardTitle>
+                  <CardTitle className="text-xl font-bold">Recent Resume Audits</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  {resumesLoading ? (
+                    <div className="flex justify-center p-6">
+                      <Loader2 className="w-6 h-6 animate-spin text-accent" />
+                    </div>
+                  ) : resumes && resumes.length > 0 ? (
+                    resumes.map((resume: any) => (
+                      <div key={resume.id} className="p-4 glass rounded-2xl border-white/5 flex items-center justify-between">
+                        <div>
+                          <p className="font-bold text-sm truncate max-w-[150px]">{resume.filename || 'Resume_Report.pdf'}</p>
+                          <p className="text-[10px] text-muted-foreground uppercase">{resume.targetRole}</p>
+                        </div>
+                        <Badge className="bg-accent/10 text-accent border-accent/20">ATS: {resume.atsScore}</Badge>
+                      </div>
+                    ))
+                  ) : (
+                    <p className="text-xs text-center text-muted-foreground p-6">No resumes analyzed yet.</p>
+                  )}
+                </CardContent>
+              </Card>
+
+              <Card className="premium-card bg-white/[0.01] border-white/5">
+                <CardHeader>
+                  <CardTitle className="text-xl font-bold">System Integrity</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-8">
                   <div className="space-y-3">
                     <div className="flex justify-between text-xs font-bold uppercase tracking-widest text-muted-foreground">
-                      <span>System Design Elite</span>
-                      <span>3/5</span>
+                      <span>Neural Calibration</span>
+                      <span>85%</span>
                     </div>
-                    <Progress value={60} className="h-2 bg-white/5" />
+                    <Progress value={85} className="h-2 bg-white/5" />
                   </div>
                   <div className="space-y-3">
                     <div className="flex justify-between text-xs font-bold uppercase tracking-widest text-muted-foreground">
-                      <span>Nuanced Comm Protocols</span>
-                      <span>8/10</span>
+                      <span>Data Sync Status</span>
+                      <span className="text-green-400">Stable</span>
                     </div>
-                    <Progress value={80} className="h-2 bg-white/5" />
+                    <Progress value={100} className="h-2 bg-green-500/20" />
                   </div>
                 </CardContent>
               </Card>
