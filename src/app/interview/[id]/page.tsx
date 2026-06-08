@@ -6,7 +6,7 @@ import Image from 'next/image';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
-import { Card, CardContent } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
 import { 
   Mic, 
   Send, 
@@ -14,7 +14,6 @@ import {
   Clock, 
   User, 
   Bot, 
-  AlertCircle,
   Loader2,
   LogOut,
   Sparkles,
@@ -23,11 +22,12 @@ import {
   BrainCircuit,
   Command,
   MessageSquare,
-  BarChart3,
+  ShieldCheck,
   TrendingUp,
   Award
 } from 'lucide-react';
 import { aiMockInterview, type AiMockInterviewOutput } from '@/ai/flows/ai-mock-interview';
+import { PlaceHolderImages } from '@/lib/placeholder-images';
 
 export default function InterviewSession() {
   const searchParams = useSearchParams();
@@ -122,10 +122,10 @@ export default function InterviewSession() {
             <Command className="text-white w-5 h-5" />
           </div>
           <div>
-            <h1 className="text-base font-bold tracking-tight">{role} Simulation</h1>
+            <h1 className="text-base font-bold tracking-tight">{role} Session</h1>
             <div className="flex items-center gap-2">
               <span className="w-1.5 h-1.5 rounded-full bg-accent animate-pulse"></span>
-              <p className="text-[10px] text-accent uppercase tracking-[0.2em] font-bold">Neural Engine v4.2 Active</p>
+              <p className="text-[10px] text-accent uppercase tracking-[0.2em] font-bold">Neural Protocol v4.2 Active</p>
             </div>
           </div>
         </div>
@@ -137,21 +137,22 @@ export default function InterviewSession() {
           </div>
           <Button variant="ghost" size="sm" onClick={() => router.push('/dashboard')} className="text-[10px] font-bold tracking-widest uppercase hover:bg-white/5 transition-all">
             <LogOut className="w-4 h-4 mr-2" />
-            Abort Session
+            Abort Simulation
           </Button>
         </div>
       </header>
 
-      {/* Main Layout */}
+      {/* Main Full-screen Split Interface */}
       <main className="flex-1 flex overflow-hidden">
+        
         {/* Left Side: Large AI HR Avatar in Corporate Setting */}
-        <section className="w-[45%] relative border-r border-white/5 overflow-hidden group">
+        <section className="w-[45%] relative border-r border-white/5 overflow-hidden">
           <div className="absolute inset-0 z-0">
             <Image 
-              src="https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&q=80"
+              src={PlaceHolderImages.find(img => img.id === 'office-bg')?.imageUrl || ''}
               alt="Corporate Office"
               fill
-              className="object-cover opacity-20"
+              className="object-cover opacity-30"
               priority
             />
             <div className="absolute inset-0 bg-gradient-to-t from-[#050816] via-transparent to-[#050816]/50"></div>
@@ -160,14 +161,13 @@ export default function InterviewSession() {
           <div className="relative h-full flex flex-col items-center justify-center p-12 z-10">
             <motion.div 
               animate={{ 
-                scale: isProcessing ? [1, 1.02, 1] : 1,
-                y: isProcessing ? [0, -5, 0] : 0
+                scale: isProcessing ? [1, 1.01, 1] : 1,
               }}
-              transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
-              className="relative w-full max-w-md aspect-[4/5] rounded-[3rem] overflow-hidden border border-white/10 shadow-[0_0_100px_rgba(147,51,234,0.15)] bg-white/[0.02] glass"
+              transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
+              className="relative w-full max-w-md aspect-[4/5] rounded-[3.5rem] overflow-hidden border border-white/10 shadow-[0_0_100px_rgba(147,51,234,0.15)] bg-white/[0.02] glass"
             >
               <Image 
-                src="https://picsum.photos/seed/elite_hr/800/1000"
+                src={PlaceHolderImages.find(img => img.id === 'ai-hr-interviewer')?.imageUrl || ''}
                 alt="AI Interviewer"
                 fill
                 className="object-cover opacity-90 brightness-110"
@@ -175,20 +175,20 @@ export default function InterviewSession() {
               />
               <div className="absolute inset-0 bg-gradient-to-t from-[#050816] via-transparent to-transparent"></div>
               
-              {/* Speech Bubble Overlay */}
+              {/* Speech Bubble Overlay for current question */}
               <AnimatePresence>
                 {nextOutput?.nextQuestion && !isProcessing && (
                   <motion.div 
                     initial={{ opacity: 0, y: 20, scale: 0.9 }}
                     animate={{ opacity: 1, y: 0, scale: 1 }}
-                    className="absolute top-12 right-12 left-12"
+                    className="absolute top-12 left-12 right-12"
                   >
-                    <div className="glass p-6 rounded-[2rem] rounded-tl-none border-accent/30 bg-accent/5 backdrop-blur-xl shadow-2xl">
-                      <div className="flex gap-3 items-start mb-2">
+                    <div className="glass p-8 rounded-[2.5rem] rounded-tl-none border-accent/40 bg-accent/5 backdrop-blur-2xl shadow-2xl">
+                      <div className="flex gap-3 items-center mb-4">
                         <MessageSquare className="w-4 h-4 text-accent" />
-                        <span className="text-[10px] font-bold text-accent uppercase tracking-widest">Neural Directives</span>
+                        <span className="text-[10px] font-bold text-accent uppercase tracking-[0.2em]">Neural Directives</span>
                       </div>
-                      <p className="text-base font-light leading-relaxed tracking-tight text-white/90">
+                      <p className="text-lg font-light leading-relaxed tracking-tight text-white/95">
                         {nextOutput.nextQuestion}
                       </p>
                     </div>
@@ -196,122 +196,138 @@ export default function InterviewSession() {
                 )}
               </AnimatePresence>
 
-              {/* Speaker Waves */}
-              <div className="absolute bottom-8 left-1/2 -translate-x-1/2 flex items-end gap-1.5 h-12">
-                {[...Array(12)].map((_, i) => (
+              {/* Speaker Analysis Waves */}
+              <div className="absolute bottom-12 left-1/2 -translate-x-1/2 flex items-end gap-2 h-16">
+                {[...Array(16)].map((_, i) => (
                   <motion.div 
                     key={i} 
                     animate={{ 
-                      height: isProcessing ? ["20%", "80%", "20%"] : "20%" 
+                      height: isProcessing ? ["20%", "90%", "20%"] : "20%" 
                     }}
                     transition={{ 
-                      duration: 0.5 + Math.random(), 
+                      duration: 0.6 + Math.random(), 
                       repeat: Infinity,
-                      delay: i * 0.1
+                      delay: i * 0.05
                     }}
-                    className="w-1.5 bg-accent/60 rounded-full"
+                    className="w-1.5 bg-accent/40 rounded-full"
                   />
                 ))}
               </div>
             </motion.div>
 
             <div className="mt-12 text-center">
-              <Badge className="bg-white/5 text-white/40 border-white/10 px-6 py-1.5 font-bold tracking-[0.3em] text-[10px] uppercase">
-                Synchronizing Neural Logic
+              <Badge className="bg-white/5 text-white/40 border-white/10 px-8 py-2 font-bold tracking-[0.4em] text-[10px] uppercase">
+                Neural Sync Verified
               </Badge>
             </div>
           </div>
         </section>
 
-        {/* Right Side: Performance Dashboard & Chat */}
-        <section className="flex-1 flex flex-col bg-[#050816]/40">
-          <div className="px-10 py-8 border-b border-white/5 flex items-center justify-between">
-            <div className="flex items-center gap-8 flex-1">
-              <div className="space-y-2 flex-1">
+        {/* Right Side: Interview Dashboard & Performance Metrics */}
+        <section className="flex-1 flex flex-col bg-[#050816]/40 backdrop-blur-md">
+          
+          {/* Dashboard HUD */}
+          <div className="px-12 py-10 border-b border-white/5 flex items-center justify-between bg-white/[0.01]">
+            <div className="flex items-center gap-12 flex-1">
+              <div className="space-y-3 flex-1 max-w-md">
                 <div className="flex justify-between items-end mb-2">
-                  <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Session Progress</span>
-                  <span className="text-xs font-bold tabular-nums text-accent">{currentQuestionIndex} / 5</span>
+                  <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Simulation Velocity</span>
+                  <span className="text-xs font-bold tabular-nums text-accent">{currentQuestionIndex + 1} / 10</span>
                 </div>
-                <Progress value={(currentQuestionIndex / 5) * 100} className="h-1.5 bg-white/5" />
+                <Progress value={((currentQuestionIndex + 1) / 10) * 100} className="h-2 bg-white/5" />
               </div>
-              <div className="w-px h-10 bg-white/5"></div>
-              <div className="flex gap-8">
+              <div className="w-px h-12 bg-white/10"></div>
+              <div className="flex gap-12">
                 <div className="text-center">
                   <p className="text-[10px] text-muted-foreground uppercase tracking-widest font-bold mb-1">Confidence</p>
-                  <p className="text-xl font-bold text-accent">92%</p>
+                  <p className="text-2xl font-bold text-accent">94%</p>
                 </div>
                 <div className="text-center">
-                  <p className="text-[10px] text-muted-foreground uppercase tracking-widest font-bold mb-1">Accuracy</p>
-                  <p className="text-xl font-bold text-purple-400">88%</p>
+                  <p className="text-[10px] text-muted-foreground uppercase tracking-widest font-bold mb-1">Logic Rank</p>
+                  <p className="text-2xl font-bold text-purple-400">Top 5%</p>
                 </div>
               </div>
             </div>
           </div>
 
-          <div className="flex-1 overflow-y-auto px-10 py-12 space-y-12">
+          {/* Interaction Feed */}
+          <div className="flex-1 overflow-y-auto px-12 py-16 space-y-16 custom-scrollbar">
             <AnimatePresence mode="popLayout">
               {history.map((turn, i) => (
                 <motion.div 
                   key={i}
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
-                  className="space-y-8"
+                  className="space-y-10"
                 >
-                  <div className="flex flex-row-reverse gap-6">
-                    <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-purple-600 to-blue-600 flex items-center justify-center shrink-0">
-                      <User className="w-5 h-5 text-white" />
+                  <div className="flex flex-row-reverse gap-8">
+                    <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-purple-600 to-blue-600 flex items-center justify-center shadow-xl shrink-0">
+                      <User className="w-6 h-6 text-white" />
                     </div>
-                    <div className="bg-white/[0.03] p-8 rounded-[2rem] rounded-tr-none border border-white/5 flex-1 max-w-[80%] text-right">
-                      <p className="text-base leading-relaxed font-light">{turn.answer}</p>
+                    <div className="premium-card p-10 rounded-tr-none border-white/10 bg-white/[0.03] flex-1 max-w-[85%] text-right shadow-2xl">
+                      <p className="text-lg leading-relaxed font-light text-white/90">{turn.answer}</p>
                     </div>
                   </div>
+                  
+                  {turn.aiFeedback && (
+                    <div className="flex gap-8 items-start">
+                      <div className="w-12 h-12 glass rounded-2xl flex items-center justify-center text-accent shrink-0">
+                        <Sparkles className="w-6 h-6" />
+                      </div>
+                      <div className="glass p-8 rounded-[2.5rem] rounded-tl-none border-accent/20 bg-accent/5 max-w-[85%]">
+                        <p className="text-sm font-light leading-relaxed text-accent/80 italic">
+                          " {turn.aiFeedback} "
+                        </p>
+                      </div>
+                    </div>
+                  )}
                 </motion.div>
               ))}
 
               {isProcessing && (
-                <div className="flex gap-6 items-center">
-                  <div className="w-10 h-10 glass rounded-xl flex items-center justify-center animate-pulse">
-                    <Cpu className="w-5 h-5 text-accent" />
+                <div className="flex gap-8 items-center">
+                  <div className="w-12 h-12 glass rounded-2xl flex items-center justify-center animate-pulse">
+                    <BrainCircuit className="w-6 h-6 text-accent" />
                   </div>
-                  <div className="flex items-center gap-4 p-4 glass rounded-full border-white/5">
-                    <Loader2 className="w-4 h-4 animate-spin text-accent" />
-                    <span className="text-[10px] font-bold tracking-widest text-muted-foreground uppercase">Analyzing Neural Data...</span>
+                  <div className="flex items-center gap-6 p-6 glass rounded-[2rem] border-white/10 bg-white/[0.02]">
+                    <Loader2 className="w-5 h-5 animate-spin text-accent" />
+                    <span className="text-xs font-bold tracking-[0.2em] text-muted-foreground uppercase">Analyzing Neural Logic...</span>
                   </div>
                 </div>
               )}
 
               {isComplete && (
                 <motion.div 
-                  initial={{ scale: 0.9, opacity: 0 }}
+                  initial={{ scale: 0.95, opacity: 0 }}
                   animate={{ scale: 1, opacity: 1 }}
-                  className="premium-card p-16 text-center space-y-8 border-accent/20 bg-accent/[0.02]"
+                  className="premium-card p-20 text-center space-y-10 border-accent/30 bg-accent/[0.02] shadow-[0_0_80px_rgba(34,211,238,0.1)]"
                 >
-                  <div className="w-20 h-20 rounded-full bg-accent/20 flex items-center justify-center mx-auto shadow-2xl border border-accent/30">
-                    <Sparkles className="w-10 h-10 text-accent" />
+                  <div className="w-24 h-24 rounded-full bg-accent/20 flex items-center justify-center mx-auto shadow-2xl border border-accent/30">
+                    <ShieldCheck className="w-12 h-12 text-accent" />
                   </div>
                   <div className="space-y-4">
-                    <h2 className="text-4xl font-bold tracking-tight">Session Concluded.</h2>
-                    <p className="text-muted-foreground font-light max-w-sm mx-auto uppercase tracking-widest text-xs">
-                      All protocols completed. Performance audit generated.
+                    <h2 className="text-5xl font-bold tracking-tighter">Protocol Terminated.</h2>
+                    <p className="text-muted-foreground font-light max-w-sm mx-auto uppercase tracking-[0.3em] text-xs">
+                      Simulation complete. Comprehensive performance audit initialized.
                     </p>
                   </div>
-                  <Button onClick={finishInterview} size="lg" className="h-16 px-12 btn-premium text-base font-bold uppercase tracking-widest">
+                  <Button onClick={finishInterview} size="lg" className="h-20 px-16 btn-premium text-lg font-bold uppercase tracking-[0.3em]">
                     Access Neural Audit
-                    <ChevronRight className="ml-2 w-5 h-5" />
+                    <ChevronRight className="ml-3 w-6 h-6" />
                   </Button>
                 </motion.div>
               )}
             </AnimatePresence>
-            <div ref={chatEndRef} className="h-32" />
+            <div ref={chatEndRef} className="h-40" />
           </div>
 
-          {/* Footer Interface */}
+          {/* User Input Cockpit */}
           {!isComplete && (
-            <footer className="p-10 glass border-t-0 shrink-0 z-50">
-              <div className="max-w-4xl mx-auto space-y-6">
+            <footer className="p-12 glass border-t-0 shrink-0 z-50">
+              <div className="max-w-5xl mx-auto space-y-8">
                 <div className="relative group">
-                  <div className="absolute -inset-1 bg-gradient-to-r from-purple-600/30 to-accent/30 rounded-[2.5rem] opacity-0 group-focus-within:opacity-100 transition-opacity blur-xl"></div>
-                  <div className="relative flex items-end gap-6 glass p-2.5 rounded-[2.5rem] border-white/10 bg-white/[0.01]">
+                  <div className="absolute -inset-1 bg-gradient-to-r from-purple-600/30 to-accent/30 rounded-[3rem] opacity-0 group-focus-within:opacity-100 transition-opacity blur-2xl"></div>
+                  <div className="relative flex items-end gap-8 glass p-4 rounded-[3rem] border-white/20 bg-[#0b0e1a]/80 shadow-2xl backdrop-blur-3xl">
                     <textarea
                       value={userAnswer}
                       onChange={(e) => setUserAnswer(e.target.value)}
@@ -321,34 +337,36 @@ export default function InterviewSession() {
                           handleSend();
                         }
                       }}
-                      placeholder="Input your technical insight..."
+                      placeholder="Input technical insight or logical framework..."
                       rows={1}
-                      className="flex-1 bg-transparent border-none focus:ring-0 resize-none py-5 px-8 text-lg font-light max-h-40 placeholder:text-white/20 custom-scrollbar"
+                      className="flex-1 bg-transparent border-none focus:ring-0 resize-none py-6 px-10 text-xl font-light max-h-48 placeholder:text-white/20 custom-scrollbar"
                     />
-                    <div className="flex items-center gap-3 pb-2.5 pr-2.5">
-                      <Button variant="ghost" size="icon" className="rounded-2xl w-14 h-14 hover:bg-white/5 transition-all group/btn">
-                        <Mic className="w-6 h-6 text-muted-foreground group-hover/btn:text-accent transition-colors" />
+                    <div className="flex items-center gap-4 pb-4 pr-4">
+                      <Button variant="ghost" size="icon" className="rounded-3xl w-16 h-16 hover:bg-white/10 transition-all group/btn">
+                        <Mic className="w-8 h-8 text-muted-foreground group-hover/btn:text-accent transition-colors" />
                       </Button>
                       <Button 
                         onClick={handleSend} 
                         disabled={!userAnswer.trim() || isProcessing}
-                        className="btn-premium rounded-2xl w-14 h-14 flex items-center justify-center"
+                        className="btn-premium rounded-3xl w-16 h-16 flex items-center justify-center shadow-2xl"
                       >
-                        <Send className="w-6 h-6" />
+                        <Send className="w-8 h-8" />
                       </Button>
                     </div>
                   </div>
                 </div>
-                <div className="flex justify-between items-center px-4">
-                  <p className="text-[10px] text-muted-foreground uppercase tracking-[0.3em] font-bold">Shift+Enter for newline</p>
+                <div className="flex justify-between items-center px-6">
+                  <div className="flex items-center gap-4">
+                    <Badge variant="outline" className="border-white/10 text-white/40 text-[10px] uppercase font-bold tracking-widest px-4 py-1">Shift+Enter for newline</Badge>
+                  </div>
                   <Button 
                     onClick={handleSend}
                     disabled={!userAnswer.trim() || isProcessing}
                     variant="link" 
-                    className="text-xs font-bold text-accent uppercase tracking-widest p-0 h-auto flex items-center gap-2 group"
+                    className="text-xs font-bold text-accent uppercase tracking-[0.3em] p-0 h-auto flex items-center gap-3 group"
                   >
-                    Next Question
-                    <ChevronRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+                    Transmit Logic
+                    <ChevronRight className="w-5 h-5 group-hover:translate-x-2 transition-transform" />
                   </Button>
                 </div>
               </div>
