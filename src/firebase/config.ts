@@ -1,10 +1,10 @@
 'use client';
 
 export const firebaseConfig = {
-  apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY || 'placeholder-api-key',
-  authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN || 'nexvoroai.firebaseapp.com',
-  projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || 'nexvoroai',
-  storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET || 'nexvoroai.firebasestorage.app',
-  messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID || 'placeholder-sender-id',
-  appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID || 'placeholder-app-id',
+  apiKey: 'AIzaSyCxUg934d4CMTDuKE_6tr9qNVvtO5m7srA',
+  authDomain: 'nexvoroai.firebaseapp.com',
+  projectId: 'nexvoroai',
+  storageBucket: 'nexvoroai.firebasestorage.app',
+  messagingSenderId: '684828315361',
+  appId: '1:684828315361:web:513c1f4ee40101ed8ff1a0',
 };

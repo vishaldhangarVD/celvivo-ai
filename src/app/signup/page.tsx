@@ -9,13 +9,15 @@ import { Label } from '@/components/ui/label';
 import { Command, ArrowLeft, ShieldCheck, Loader2 } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useAuth } from '@/firebase';
+import { useAuth, useFirestore } from '@/firebase';
 import { createUserWithEmailAndPassword, updateProfile } from 'firebase/auth';
+import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 
 export default function SignupPage() {
   const router = useRouter();
   const auth = useAuth();
+  const db = useFirestore();
   const { toast } = useToast();
 
   const [name, setName] = useState('');
@@ -25,13 +27,29 @@ export default function SignupPage() {
 
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!auth || !email || !password || !name) return;
+    if (!auth || !db || !email || !password || !name) return;
 
     setIsLoading(true);
     try {
+      // 1. Create Auth User
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+      
+      // 2. Update Auth Profile
       await updateProfile(userCredential.user, { displayName: name });
       
+      // 3. Create Firestore Profile
+      const userProfile = {
+        uid: userCredential.user.uid,
+        displayName: name,
+        email: email,
+        photoURL: null,
+        jobReadinessScore: 0,
+        totalInterviews: 0,
+        createdAt: serverTimestamp(),
+      };
+      
+      await setDoc(doc(db, 'users', userCredential.user.uid), userProfile);
+
       toast({
         title: "Account Created",
         description: "Welcome to Nexvoro AI. Your identity has been initialized.",

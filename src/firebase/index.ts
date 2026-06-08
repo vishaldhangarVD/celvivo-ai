@@ -4,14 +4,10 @@ import { getAuth, Auth } from 'firebase/auth';
 import { firebaseConfig } from './config';
 
 /**
- * Initializes Firebase App, Firestore, and Auth instances.
+ * Initializes Firebase App, Firestore, and Auth instances as singletons.
  * This should be called only in a client-side context.
  */
-export function initializeFirebase(): { firebaseApp: FirebaseApp | null; firestore: Firestore | null; auth: Auth | null } {
-  if (typeof window === 'undefined') {
-    return { firebaseApp: null, firestore: null, auth: null };
-  }
-
+export function initializeFirebase(): { firebaseApp: FirebaseApp; firestore: Firestore; auth: Auth } {
   const firebaseApp = !getApps().length
     ? initializeApp(firebaseConfig)
     : getApp();
