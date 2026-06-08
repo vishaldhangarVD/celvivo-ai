@@ -3,14 +3,19 @@ import { getFirestore } from 'firebase/firestore';
 import { getAuth } from 'firebase/auth';
 import { firebaseConfig } from './config';
 
+/**
+ * Initializes Firebase App, Firestore, and Auth instances.
+ * Ensures that the app is only initialized once.
+ */
 export function initializeFirebase() {
-  // Only initialize if we have a valid project ID to avoid initialization errors
-  const isValidConfig = firebaseConfig.projectId && firebaseConfig.projectId !== "placeholder-project-id";
-  
-  const firebaseApp = !getApps().length 
-    ? initializeApp(firebaseConfig) 
+  if (!firebaseConfig.projectId || firebaseConfig.projectId === 'placeholder-project-id') {
+    throw new Error("Firebase Project ID is missing. Please check your environment variables or config.ts.");
+  }
+
+  const firebaseApp = !getApps().length
+    ? initializeApp(firebaseConfig)
     : getApp();
-    
+
   const firestore = getFirestore(firebaseApp);
   const auth = getAuth(firebaseApp);
 
