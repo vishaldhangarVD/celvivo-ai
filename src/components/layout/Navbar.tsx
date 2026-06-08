@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
-import { Command, LogIn, Menu, X, LogOut, LayoutDashboard } from 'lucide-react';
+import { Command, LogIn, Menu, X, LogOut, LayoutDashboard, History } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useState } from 'react';
 import { useUser, useAuth } from '@/firebase';
@@ -41,10 +41,16 @@ export default function Navbar() {
           <Link href="/features" className="hover:text-white transition-colors">Features</Link>
           <Link href="/pricing" className="hover:text-white transition-colors">Pricing</Link>
           {user && (
-            <Link href="/dashboard" className="hover:text-white transition-colors flex items-center gap-2">
-              <LayoutDashboard className="w-3 h-3" />
-              Dashboard
-            </Link>
+            <>
+              <Link href="/dashboard" className="hover:text-white transition-colors flex items-center gap-2">
+                <LayoutDashboard className="w-3 h-3" />
+                Control
+              </Link>
+              <Link href="/user-dashboard" className="hover:text-white transition-colors flex items-center gap-2 text-accent">
+                <History className="w-3 h-3" />
+                Dashboard
+              </Link>
+            </>
           )}
         </div>
 
@@ -102,7 +108,12 @@ export default function Navbar() {
           >
             <Link href="/features" onClick={() => setIsOpen(false)} className="text-sm font-bold tracking-widest uppercase text-white/70">Features</Link>
             <Link href="/pricing" onClick={() => setIsOpen(false)} className="text-sm font-bold tracking-widest uppercase text-white/70">Pricing</Link>
-            {user && <Link href="/dashboard" onClick={() => setIsOpen(false)} className="text-sm font-bold tracking-widest uppercase text-white/70">Dashboard</Link>}
+            {user && (
+              <>
+                <Link href="/dashboard" onClick={() => setIsOpen(false)} className="text-sm font-bold tracking-widest uppercase text-white/70">Control Center</Link>
+                <Link href="/user-dashboard" onClick={() => setIsOpen(false)} className="text-sm font-bold tracking-widest uppercase text-accent">User Dashboard</Link>
+              </>
+            )}
             
             <div className="pt-6 border-t border-white/5 flex flex-col gap-4">
               {user ? (
