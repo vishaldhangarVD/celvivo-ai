@@ -1,3 +1,16 @@
 {
-  "placeholderImages": []
+  "placeholderImages": [
+    {
+      "id": "ai-interviewer",
+      "description": "Professional AI Interviewer Avatar",
+      "imageUrl": "https://picsum.photos/seed/nexvoro1/600/600",
+      "imageHint": "ai robot avatar"
+    },
+    {
+      "id": "hero-dashboard",
+      "description": "Application Dashboard Mockup",
+      "imageUrl": "https://picsum.photos/seed/nexvoro2/1200/800",
+      "imageHint": "dashboard software"
+    }
+  ]
 }
