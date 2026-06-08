@@ -1,16 +1,22 @@
 {
   "placeholderImages": [
     {
-      "id": "ai-interviewer",
-      "description": "Professional AI Interviewer Avatar",
-      "imageUrl": "https://picsum.photos/seed/nexvoro1/600/600",
-      "imageHint": "ai robot avatar"
+      "id": "ai-hr-interviewer",
+      "description": "Professional AI HR Interviewer in a sharp business suit",
+      "imageUrl": "https://picsum.photos/seed/nexvoro_hr/800/800",
+      "imageHint": "professional businessman suit"
     },
     {
       "id": "hero-dashboard",
-      "description": "Application Dashboard Mockup",
-      "imageUrl": "https://picsum.photos/seed/nexvoro2/1200/800",
-      "imageHint": "dashboard software"
+      "description": "Premium Analytics Dashboard",
+      "imageUrl": "https://picsum.photos/seed/nexvoro_dash/1200/800",
+      "imageHint": "modern interface dashboard"
+    },
+    {
+      "id": "demo-preview",
+      "description": "Live Interview Demo Interface",
+      "imageUrl": "https://picsum.photos/seed/nexvoro_demo/1000/600",
+      "imageHint": "software ui interface"
     }
   ]
 }
