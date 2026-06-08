@@ -24,7 +24,8 @@ import {
   MessageSquare,
   ShieldCheck,
   TrendingUp,
-  Award
+  Award,
+  Target
 } from 'lucide-react';
 import { aiMockInterview, type AiMockInterviewOutput } from '@/ai/flows/ai-mock-interview';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
@@ -127,7 +128,6 @@ export default function InterviewSession() {
     if (!user || !db) return;
     setIsSaving(true);
 
-    // Save Interview Session
     const interviewData = {
       userId: user.uid,
       role,
@@ -135,13 +135,12 @@ export default function InterviewSession() {
       history,
       duration: timer,
       createdAt: serverTimestamp(),
-      overallScore: 0, // Will be updated by feedback flow later, or we can placeholder
+      overallScore: 0, // Placeholder, updated in reports
     };
 
     const interviewsRef = collection(db, 'users', user.uid, 'interviews');
     addDoc(interviewsRef, interviewData)
       .then(() => {
-        // Update user profile aggregate
         const userRef = doc(db, 'users', user.uid);
         updateDoc(userRef, {
           totalInterviews: increment(1)
@@ -153,7 +152,7 @@ export default function InterviewSession() {
           }));
         });
 
-        router.push(`/feedback/last?role=${role}&exp=${exp}&data=${encodeURIComponent(JSON.stringify(history))}`);
+        router.push(`/feedback/last?role=${encodeURIComponent(role)}&exp=${exp}&data=${encodeURIComponent(JSON.stringify(history))}`);
       })
       .catch(async (err) => {
         setIsSaving(false);
@@ -196,10 +195,10 @@ export default function InterviewSession() {
         </div>
       </header>
 
-      {/* Main Full-screen Split Interface */}
+      {/* Main split interface */}
       <main className="flex-1 flex overflow-hidden">
         
-        {/* Left Side: AI HR Avatar */}
+        {/* Left: AI HR Avatar */}
         <section className="w-[45%] relative border-r border-white/5 overflow-hidden">
           <div className="absolute inset-0 z-0">
             <Image 
@@ -274,7 +273,7 @@ export default function InterviewSession() {
           </div>
         </section>
 
-        {/* Right Side: Dashboard & Interaction */}
+        {/* Right: Interaction Dashboard */}
         <section className="flex-1 flex flex-col bg-[#050816]/40 backdrop-blur-md">
           <div className="px-12 py-10 border-b border-white/5 flex items-center justify-between bg-white/[0.01]">
             <div className="flex items-center gap-12 flex-1">
