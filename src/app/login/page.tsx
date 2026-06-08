@@ -1,14 +1,90 @@
 'use client';
 
+import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Command, ArrowLeft, Github, Chrome } from 'lucide-react';
+import { Command, ArrowLeft, Chrome, Loader2 } from 'lucide-react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { useAuth } from '@/firebase';
+import { signInWithEmailAndPassword, signInWithPopup, GoogleAuthProvider, sendPasswordResetEmail } from 'firebase/auth';
+import { useToast } from '@/hooks/use-toast';
 
 export default function LoginPage() {
+  const router = useRouter();
+  const auth = useAuth();
+  const { toast } = useToast();
+  
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [isResetting, setIsResetting] = useState(false);
+
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!auth || !email || !password) return;
+
+    setIsLoading(true);
+    try {
+      await signInWithEmailAndPassword(auth, email, password);
+      router.push('/dashboard');
+    } catch (error: any) {
+      toast({
+        variant: "destructive",
+        title: "Login Failed",
+        description: error.message || "Invalid email or password.",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleGoogleLogin = async () => {
+    if (!auth) return;
+    const provider = new GoogleAuthProvider();
+    try {
+      await signInWithPopup(auth, provider);
+      router.push('/dashboard');
+    } catch (error: any) {
+      toast({
+        variant: "destructive",
+        title: "Google Login Failed",
+        description: error.message,
+      });
+    }
+  };
+
+  const handleForgotPassword = async () => {
+    if (!auth || !email) {
+      toast({
+        variant: "destructive",
+        title: "Missing Information",
+        description: "Please enter your email address first.",
+      });
+      return;
+    }
+
+    setIsResetting(true);
+    try {
+      await sendPasswordResetEmail(auth, email);
+      toast({
+        title: "Reset Link Sent",
+        description: "Please check your inbox for password reset instructions.",
+      });
+    } catch (error: any) {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: error.message,
+      });
+    } finally {
+      setIsResetting(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-[#050816] flex items-center justify-center p-6 relative">
       <div className="particles-bg" />
@@ -33,14 +109,14 @@ export default function LoginPage() {
 
         <Card className="premium-card bg-white/[0.02] border-white/5 p-8">
           <CardContent className="space-y-8 p-0">
-            <div className="grid grid-cols-2 gap-4">
-              <Button variant="outline" className="h-14 rounded-2xl glass border-white/10 hover:bg-white/5 flex gap-3">
-                <Chrome className="w-5 h-5" />
-                <span className="text-[10px] font-bold uppercase tracking-widest">Google</span>
-              </Button>
-              <Button variant="outline" className="h-14 rounded-2xl glass border-white/10 hover:bg-white/5 flex gap-3">
-                <Github className="w-5 h-5" />
-                <span className="text-[10px] font-bold uppercase tracking-widest">Github</span>
+            <div className="grid grid-cols-1 gap-4">
+              <Button 
+                variant="outline" 
+                onClick={handleGoogleLogin}
+                className="h-14 rounded-2xl glass border-white/10 hover:bg-white/5 flex gap-3"
+              >
+                <Chrome className="w-5 h-5 text-accent" />
+                <span className="text-[10px] font-bold uppercase tracking-widest">Sign in with Google</span>
               </Button>
             </div>
 
@@ -51,20 +127,45 @@ export default function LoginPage() {
               </div>
             </div>
 
-            <form className="space-y-6">
+            <form onSubmit={handleLogin} className="space-y-6">
               <div className="space-y-2">
                 <Label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Identification</Label>
-                <Input placeholder="email@domain.com" className="h-14 rounded-2xl glass border-white/10 bg-transparent focus:border-accent transition-all text-white px-6" />
+                <Input 
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="email@domain.com" 
+                  className="h-14 rounded-2xl glass border-white/10 bg-transparent focus:border-accent transition-all text-white px-6" 
+                  required
+                />
               </div>
               <div className="space-y-2">
                 <div className="flex justify-between items-center">
                   <Label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Encryption Key</Label>
-                  <Link href="#" className="text-[10px] font-bold uppercase tracking-widest text-accent hover:opacity-80">Forgot?</Link>
+                  <button 
+                    type="button" 
+                    onClick={handleForgotPassword}
+                    disabled={isResetting}
+                    className="text-[10px] font-bold uppercase tracking-widest text-accent hover:opacity-80 disabled:opacity-50"
+                  >
+                    {isResetting ? "Sending..." : "Forgot?"}
+                  </button>
                 </div>
-                <Input type="password" placeholder="••••••••" className="h-14 rounded-2xl glass border-white/10 bg-transparent focus:border-accent transition-all text-white px-6" />
+                <Input 
+                  type="password" 
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="••••••••" 
+                  className="h-14 rounded-2xl glass border-white/10 bg-transparent focus:border-accent transition-all text-white px-6" 
+                  required
+                />
               </div>
-              <Button type="button" className="w-full h-16 btn-premium text-xs font-bold tracking-[0.2em] uppercase mt-4">
-                Access System
+              <Button 
+                type="submit" 
+                disabled={isLoading}
+                className="w-full h-16 btn-premium text-xs font-bold tracking-[0.2em] uppercase mt-4"
+              >
+                {isLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : "Access System"}
               </Button>
             </form>
 

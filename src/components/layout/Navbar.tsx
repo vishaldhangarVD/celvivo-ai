@@ -2,12 +2,24 @@
 
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
-import { Command, LogIn, Menu, X } from 'lucide-react';
+import { Command, LogIn, Menu, X, LogOut, LayoutDashboard } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useState } from 'react';
+import { useUser, useAuth } from '@/firebase';
+import { signOut } from 'firebase/auth';
+import { useRouter } from 'next/navigation';
 
 export default function Navbar() {
   const [isOpen, setIsOpen] = useState(false);
+  const { user, loading } = useUser();
+  const auth = useAuth();
+  const router = useRouter();
+
+  const handleSignOut = async () => {
+    if (!auth) return;
+    await signOut(auth);
+    router.push('/');
+  };
 
   return (
     <nav className="fixed top-0 z-[100] w-full border-b border-white/5 bg-[#050816]/50 backdrop-blur-2xl">
@@ -19,7 +31,7 @@ export default function Navbar() {
           >
             <Command className="text-white w-6 h-6" />
           </motion.div>
-          <span className="font-headline font-bold text-2xl tracking-tighter">
+          <span className="font-headline font-bold text-2xl tracking-tighter uppercase">
             NEXVORO<span className="text-accent">AI</span>
           </span>
         </Link>
@@ -28,21 +40,49 @@ export default function Navbar() {
         <div className="hidden md:flex items-center gap-12 text-[10px] font-bold uppercase tracking-[0.3em] text-white/50">
           <Link href="/features" className="hover:text-white transition-colors">Features</Link>
           <Link href="/pricing" className="hover:text-white transition-colors">Pricing</Link>
-          <Link href="/dashboard" className="hover:text-white transition-colors">Dashboard</Link>
+          {user && (
+            <Link href="/dashboard" className="hover:text-white transition-colors flex items-center gap-2">
+              <LayoutDashboard className="w-3 h-3" />
+              Dashboard
+            </Link>
+          )}
         </div>
 
         <div className="hidden md:flex items-center gap-6">
-          <Link href="/login">
-            <Button variant="ghost" className="items-center gap-3 text-[10px] font-bold tracking-[0.2em] uppercase text-white/70">
-              <LogIn className="w-4 h-4" />
-              Access
-            </Button>
-          </Link>
-          <Link href="/interview">
-            <Button className="btn-premium h-12 px-8 text-[10px] tracking-[0.2em] uppercase">
-              Begin Session
-            </Button>
-          </Link>
+          {!loading && (
+            <>
+              {user ? (
+                <div className="flex items-center gap-6">
+                  <div className="flex flex-col items-end">
+                    <span className="text-[10px] font-bold uppercase tracking-widest text-white/80">{user.displayName || 'Operator'}</span>
+                    <span className="text-[8px] font-bold uppercase tracking-widest text-accent">Verified Track</span>
+                  </div>
+                  <Button 
+                    variant="ghost" 
+                    onClick={handleSignOut}
+                    className="items-center gap-3 text-[10px] font-bold tracking-[0.2em] uppercase text-white/40 hover:text-red-400"
+                  >
+                    <LogOut className="w-4 h-4" />
+                    Sign Out
+                  </Button>
+                </div>
+              ) : (
+                <>
+                  <Link href="/login">
+                    <Button variant="ghost" className="items-center gap-3 text-[10px] font-bold tracking-[0.2em] uppercase text-white/70">
+                      <LogIn className="w-4 h-4" />
+                      Access
+                    </Button>
+                  </Link>
+                  <Link href="/signup">
+                    <Button className="btn-premium h-12 px-8 text-[10px] tracking-[0.2em] uppercase">
+                      Begin Session
+                    </Button>
+                  </Link>
+                </>
+              )}
+            </>
+          )}
         </div>
 
         {/* Mobile Toggle */}
@@ -62,14 +102,27 @@ export default function Navbar() {
           >
             <Link href="/features" onClick={() => setIsOpen(false)} className="text-sm font-bold tracking-widest uppercase text-white/70">Features</Link>
             <Link href="/pricing" onClick={() => setIsOpen(false)} className="text-sm font-bold tracking-widest uppercase text-white/70">Pricing</Link>
-            <Link href="/dashboard" onClick={() => setIsOpen(false)} className="text-sm font-bold tracking-widest uppercase text-white/70">Dashboard</Link>
+            {user && <Link href="/dashboard" onClick={() => setIsOpen(false)} className="text-sm font-bold tracking-widest uppercase text-white/70">Dashboard</Link>}
+            
             <div className="pt-6 border-t border-white/5 flex flex-col gap-4">
-              <Link href="/login" onClick={() => setIsOpen(false)}>
-                <Button variant="outline" className="w-full h-14 rounded-2xl glass border-white/10 font-bold uppercase tracking-widest text-xs">Login</Button>
-              </Link>
-              <Link href="/interview" onClick={() => setIsOpen(false)}>
-                <Button className="w-full h-14 btn-premium font-bold uppercase tracking-widest text-xs">Start Session</Button>
-              </Link>
+              {user ? (
+                <Button 
+                  variant="outline" 
+                  onClick={() => { handleSignOut(); setIsOpen(false); }}
+                  className="w-full h-14 rounded-2xl glass border-white/10 font-bold uppercase tracking-widest text-xs text-red-400"
+                >
+                  Sign Out
+                </Button>
+              ) : (
+                <>
+                  <Link href="/login" onClick={() => setIsOpen(false)}>
+                    <Button variant="outline" className="w-full h-14 rounded-2xl glass border-white/10 font-bold uppercase tracking-widest text-xs">Login</Button>
+                  </Link>
+                  <Link href="/signup" onClick={() => setIsOpen(false)}>
+                    <Button className="w-full h-14 btn-premium font-bold uppercase tracking-widest text-xs">Start Session</Button>
+                  </Link>
+                </>
+              )}
             </div>
           </motion.div>
         )}

@@ -1,0 +1,66 @@
+{
+  "entities": {
+    "UserProfile": {
+      "title": "User Profile",
+      "description": "User account details and aggregate performance metrics.",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "displayName": { "type": "string" },
+        "email": { "type": "string" },
+        "photoURL": { "type": "string" },
+        "jobReadinessScore": { "type": "number" },
+        "totalInterviews": { "type": "number" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "email"]
+    },
+    "InterviewSession": {
+      "title": "Interview Session",
+      "description": "A single mock interview attempt with transcript and feedback.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "role": { "type": "string" },
+        "experienceLevel": { "type": "string" },
+        "overallScore": { "type": "number" },
+        "technicalScore": { "type": "number" },
+        "communicationScore": { "type": "number" },
+        "confidenceScore": { "type": "number" },
+        "history": { "type": "array" },
+        "feedback": { "type": "object" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      }
+    },
+    "ResumeAnalysis": {
+      "title": "Resume Analysis",
+      "description": "Results of a resume audit.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "filename": { "type": "string" },
+        "atsScore": { "type": "number" },
+        "targetRole": { "type": "string" },
+        "analysis": { "type": "object" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      }
+    }
+  },
+  "auth": {
+    "providers": ["google", "password"]
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "#/entities/UserProfile",
+      "description": "Stores user profile and aggregate stats."
+    },
+    "/users/{userId}/interviews/{interviewId}": {
+      "schema": "#/entities/InterviewSession",
+      "description": "Stores individual mock interview records."
+    },
+    "/users/{userId}/resumes/{resumeId}": {
+      "schema": "#/entities/ResumeAnalysis",
+      "description": "Stores resume analysis reports."
+    }
+  }
+}

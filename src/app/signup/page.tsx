@@ -1,14 +1,54 @@
 'use client';
 
+import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Command, ArrowLeft, ShieldCheck } from 'lucide-react';
+import { Command, ArrowLeft, ShieldCheck, Loader2 } from 'lucide-react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { useAuth } from '@/firebase';
+import { createUserWithEmailAndPassword, updateProfile } from 'firebase/auth';
+import { useToast } from '@/hooks/use-toast';
 
 export default function SignupPage() {
+  const router = useRouter();
+  const auth = useAuth();
+  const { toast } = useToast();
+
+  const [name, setName] = useState('');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+
+  const handleSignup = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!auth || !email || !password || !name) return;
+
+    setIsLoading(true);
+    try {
+      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+      await updateProfile(userCredential.user, { displayName: name });
+      
+      toast({
+        title: "Account Created",
+        description: "Welcome to Nexvoro AI. Your identity has been initialized.",
+      });
+      
+      router.push('/dashboard');
+    } catch (error: any) {
+      toast({
+        variant: "destructive",
+        title: "Registration Failed",
+        description: error.message,
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-[#050816] flex items-center justify-center p-6 relative">
       <div className="particles-bg" />
@@ -33,22 +73,47 @@ export default function SignupPage() {
 
         <Card className="premium-card bg-white/[0.02] border-white/5 p-12">
           <CardContent className="space-y-10 p-0">
-            <form className="grid md:grid-cols-2 gap-8">
+            <form onSubmit={handleSignup} className="grid md:grid-cols-2 gap-8">
               <div className="space-y-2">
                 <Label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Full Name</Label>
-                <Input placeholder="John Doe" className="h-14 rounded-2xl glass border-white/10 bg-transparent focus:border-accent transition-all text-white px-6" />
+                <Input 
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder="John Doe" 
+                  className="h-14 rounded-2xl glass border-white/10 bg-transparent focus:border-accent transition-all text-white px-6" 
+                  required
+                />
               </div>
               <div className="space-y-2">
                 <Label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Identity Email</Label>
-                <Input placeholder="email@domain.com" className="h-14 rounded-2xl glass border-white/10 bg-transparent focus:border-accent transition-all text-white px-6" />
+                <Input 
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="email@domain.com" 
+                  className="h-14 rounded-2xl glass border-white/10 bg-transparent focus:border-accent transition-all text-white px-6" 
+                  required
+                />
               </div>
               <div className="space-y-2">
                 <Label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Security Token</Label>
-                <Input type="password" placeholder="••••••••" className="h-14 rounded-2xl glass border-white/10 bg-transparent focus:border-accent transition-all text-white px-6" />
+                <Input 
+                  type="password" 
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="••••••••" 
+                  className="h-14 rounded-2xl glass border-white/10 bg-transparent focus:border-accent transition-all text-white px-6" 
+                  required
+                />
               </div>
               <div className="space-y-2">
                 <Label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Confirm Token</Label>
-                <Input type="password" placeholder="••••••••" className="h-14 rounded-2xl glass border-white/10 bg-transparent focus:border-accent transition-all text-white px-6" />
+                <Input 
+                  type="password" 
+                  placeholder="••••••••" 
+                  className="h-14 rounded-2xl glass border-white/10 bg-transparent focus:border-accent transition-all text-white px-6" 
+                  required
+                />
               </div>
               
               <div className="md:col-span-2 flex items-start gap-4 p-6 glass rounded-2xl border-white/5">
@@ -58,8 +123,12 @@ export default function SignupPage() {
                 </p>
               </div>
 
-              <Button type="button" className="md:col-span-2 h-16 btn-premium text-xs font-bold tracking-[0.2em] uppercase mt-4">
-                Initialize Personal Protocol
+              <Button 
+                type="submit" 
+                disabled={isLoading}
+                className="md:col-span-2 h-16 btn-premium text-xs font-bold tracking-[0.2em] uppercase mt-4"
+              >
+                {isLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : "Initialize Personal Protocol"}
               </Button>
             </form>
 
