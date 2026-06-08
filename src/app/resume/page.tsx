@@ -48,6 +48,7 @@ export default function ResumeAnalyzer() {
   const [targetRole, setTargetRole] = useState("Frontend Developer");
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [result, setResult] = useState<AiResumeAnalysisOutput | null>(null);
+  const [activeTab, setActiveTab] = useState("experience");
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
@@ -334,7 +335,7 @@ export default function ResumeAnalyzer() {
                     ))}
                   </div>
 
-                  <Tabs defaultValue="experience" className="w-full">
+                  <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
                     <TabsList className="glass border-white/5 p-2 rounded-[2rem] h-auto mb-12 bg-white/[0.01]">
                       {['experience', 'projects', 'education', 'certifications'].map((tab) => (
                         <TabsTrigger 
@@ -348,51 +349,83 @@ export default function ResumeAnalyzer() {
                     </TabsList>
                     
                     <AnimatePresence mode="wait">
-                      <TabsContent value="experience" className="space-y-6">
-                        {result.sections.experience.map((exp, i) => (
-                          <motion.div 
-                            key={i} 
-                            initial={{ opacity: 0, y: 10 }} 
-                            animate={{ opacity: 1, y: 0 }}
-                            transition={{ delay: i * 0.1 }}
-                            className="glass p-8 rounded-[2.5rem] border-white/5 flex gap-6 group hover:bg-white/[0.04] transition-all"
-                          >
-                            <Briefcase className="w-6 h-6 text-accent shrink-0 mt-1" />
-                            <p className="text-lg font-light leading-relaxed text-white/80">{exp}</p>
-                          </motion.div>
-                        ))}
-                      </TabsContent>
-                      <TabsContent value="projects" className="space-y-6">
-                        {result.sections.projects.map((proj, i) => (
-                          <motion.div 
-                            key={i} 
-                            initial={{ opacity: 0, y: 10 }} 
-                            animate={{ opacity: 1, y: 0 }}
-                            className="glass p-8 rounded-[2.5rem] border-white/5 flex gap-6 group hover:bg-white/[0.04] transition-all"
-                          >
-                            <Zap className="w-6 h-6 text-purple-400 shrink-0 mt-1" />
-                            <p className="text-lg font-light leading-relaxed text-white/80">{proj}</p>
-                          </motion.div>
-                        ))}
-                      </TabsContent>
-                      <TabsContent value="education" className="space-y-6">
-                        {result.sections.education.map((edu, i) => (
-                          <motion.div key={i} className="glass p-8 rounded-[2.5rem] border-white/5 flex gap-6">
-                            <GraduationCap className="w-6 h-6 text-blue-400 shrink-0 mt-1" />
-                            <p className="text-lg font-light leading-relaxed text-white/80">{edu}</p>
-                          </motion.div>
-                        ))}
-                      </TabsContent>
-                      <TabsContent value="certifications" className="space-y-6">
-                        {result.sections.certifications.length > 0 ? result.sections.certifications.map((cert, i) => (
-                          <motion.div key={i} className="glass p-8 rounded-[2.5rem] border-white/5 flex gap-6">
-                            <ShieldCheck className="w-6 h-6 text-green-400 shrink-0 mt-1" />
-                            <p className="text-lg font-light leading-relaxed text-white/80">{cert}</p>
-                          </motion.div>
-                        )) : (
-                          <p className="text-center text-muted-foreground p-12 italic">No certifications detected in the neural scan.</p>
-                        )}
-                      </TabsContent>
+                      {activeTab === 'experience' && (
+                        <TabsContent key="experience-tab" value="experience" className="space-y-6">
+                          {result.sections.experience.map((exp, i) => (
+                            <motion.div 
+                              key={`exp-${i}`} 
+                              initial={{ opacity: 0, y: 10 }} 
+                              animate={{ opacity: 1, y: 0 }}
+                              exit={{ opacity: 0, y: -10 }}
+                              transition={{ delay: i * 0.1 }}
+                              className="glass p-8 rounded-[2.5rem] border-white/5 flex gap-6 group hover:bg-white/[0.04] transition-all"
+                            >
+                              <Briefcase className="w-6 h-6 text-accent shrink-0 mt-1" />
+                              <p className="text-lg font-light leading-relaxed text-white/80">{exp}</p>
+                            </motion.div>
+                          ))}
+                        </TabsContent>
+                      )}
+                      {activeTab === 'projects' && (
+                        <TabsContent key="projects-tab" value="projects" className="space-y-6">
+                          {result.sections.projects.map((proj, i) => (
+                            <motion.div 
+                              key={`proj-${i}`} 
+                              initial={{ opacity: 0, y: 10 }} 
+                              animate={{ opacity: 1, y: 0 }}
+                              exit={{ opacity: 0, y: -10 }}
+                              transition={{ delay: i * 0.1 }}
+                              className="glass p-8 rounded-[2.5rem] border-white/5 flex gap-6 group hover:bg-white/[0.04] transition-all"
+                            >
+                              <Zap className="w-6 h-6 text-purple-400 shrink-0 mt-1" />
+                              <p className="text-lg font-light leading-relaxed text-white/80">{proj}</p>
+                            </motion.div>
+                          ))}
+                        </TabsContent>
+                      )}
+                      {activeTab === 'education' && (
+                        <TabsContent key="education-tab" value="education" className="space-y-6">
+                          {result.sections.education.map((edu, i) => (
+                            <motion.div 
+                              key={`edu-${i}`}
+                              initial={{ opacity: 0, y: 10 }} 
+                              animate={{ opacity: 1, y: 0 }}
+                              exit={{ opacity: 0, y: -10 }}
+                              transition={{ delay: i * 0.1 }}
+                              className="glass p-8 rounded-[2.5rem] border-white/5 flex gap-6"
+                            >
+                              <GraduationCap className="w-6 h-6 text-blue-400 shrink-0 mt-1" />
+                              <p className="text-lg font-light leading-relaxed text-white/80">{edu}</p>
+                            </motion.div>
+                          ))}
+                        </TabsContent>
+                      )}
+                      {activeTab === 'certifications' && (
+                        <TabsContent key="certifications-tab" value="certifications" className="space-y-6">
+                          {result.sections.certifications.length > 0 ? result.sections.certifications.map((cert, i) => (
+                            <motion.div 
+                              key={`cert-${i}`}
+                              initial={{ opacity: 0, y: 10 }} 
+                              animate={{ opacity: 1, y: 0 }}
+                              exit={{ opacity: 0, y: -10 }}
+                              transition={{ delay: i * 0.1 }}
+                              className="glass p-8 rounded-[2.5rem] border-white/5 flex gap-6"
+                            >
+                              <ShieldCheck className="w-6 h-6 text-green-400 shrink-0 mt-1" />
+                              <p className="text-lg font-light leading-relaxed text-white/80">{cert}</p>
+                            </motion.div>
+                          )) : (
+                            <motion.p 
+                              key="no-certs"
+                              initial={{ opacity: 0 }}
+                              animate={{ opacity: 1 }}
+                              className="text-center text-muted-foreground p-12 italic"
+                            >
+                              No certifications detected in the neural scan.
+                            </motion.p>
+                          )}
+                        </TabsContent>
+                      )}
                     </AnimatePresence>
                   </Tabs>
                 </CardContent>
