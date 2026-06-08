@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
@@ -24,9 +24,11 @@ import {
   Search,
   X,
   FileSearch,
-  Check
+  Check,
+  Loader2
 } from 'lucide-react';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
+import { useUser } from '@/firebase';
 
 const ROLES = [
   "Frontend Developer", "Backend Developer", "Full Stack Developer", "Software Engineer",
@@ -47,6 +49,7 @@ const ROLES = [
 
 export default function LandingPage() {
   const router = useRouter();
+  const { user, loading: authLoading } = useUser();
   const [isWizardOpen, setIsWizardOpen] = useState(false);
   const [step, setStep] = useState(1);
   const [selectedRole, setSelectedRole] = useState("");
@@ -54,13 +57,19 @@ export default function LandingPage() {
   const [isUploading, setIsUploading] = useState(false);
   const [uploadedFile, setUploadedFile] = useState<string | null>(null);
 
+  // Mandatory Gate: Redirect to login if not authenticated
+  useEffect(() => {
+    if (!authLoading && !user) {
+      router.push('/login');
+    }
+  }, [user, authLoading, router]);
+
   const filteredRoles = ROLES.filter(role => 
     role.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   const handleFileUpload = () => {
     setIsUploading(true);
-    // Simulation of file processing
     setTimeout(() => {
       setIsUploading(false);
       setUploadedFile("RESUME_SIMULATED_2025.pdf");
@@ -72,6 +81,16 @@ export default function LandingPage() {
     const sessionId = Math.random().toString(36).substring(7);
     router.push(`/interview/${sessionId}?role=${encodeURIComponent(selectedRole)}&exp=Senior`);
   };
+
+  if (authLoading) {
+    return (
+      <div className="min-h-screen bg-[#050816] flex items-center justify-center">
+        <Loader2 className="w-12 h-12 text-accent animate-spin" />
+      </div>
+    );
+  }
+
+  if (!user) return null;
 
   return (
     <div className="flex flex-col min-h-screen relative overflow-hidden bg-[#050816]">
@@ -132,7 +151,7 @@ export default function LandingPage() {
               </motion.div>
             </div>
 
-            {/* Right Side: Virtual HR Manager Card */}
+            {/* Right Side */}
             <div className="lg:w-1/2 w-full">
               <motion.div
                 initial={{ opacity: 0, x: 50 }}
@@ -178,7 +197,7 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* Premium Onboarding Wizard Modal */}
+      {/* Wizard Modal */}
       <AnimatePresence>
         {isWizardOpen && (
           <div className="fixed inset-0 z-[200] flex items-center justify-center p-6">
@@ -339,55 +358,15 @@ export default function LandingPage() {
         )}
       </AnimatePresence>
 
-      {/* Standard Sections */}
-      <section className="py-40 bg-white/[0.01] border-t border-white/5">
-        <div className="container mx-auto px-4 text-center">
-          <Badge className="bg-white/5 text-white/40 mb-12 border-none px-6 py-1.5 font-bold tracking-[0.4em] text-[10px] uppercase">
-            Platform Capabilities
-          </Badge>
-          <div className="grid md:grid-cols-3 lg:grid-cols-5 gap-8">
-            {[
-              { icon: BrainCircuit, title: "AI Mock Interview", desc: "60+ specialized technical tracks." },
-              { icon: FileText, title: "Resume Analyzer", desc: "ATS compatibility & gap analysis." },
-              { icon: Target, title: "Readiness Score", desc: "Industry benchmark comparison." },
-              { icon: Award, title: "Feedback Report", desc: "Micro-expression & logic audit." },
-              { icon: Zap, title: "Neural Roadmap", desc: "Personalized learning pathways." }
-            ].map((item, i) => (
-              <motion.div 
-                key={i}
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ delay: i * 0.1 }}
-                className="premium-card p-8 bg-white/[0.01] border-white/5 hover:bg-white/[0.03] transition-all group"
-              >
-                <div className="w-12 h-12 glass rounded-xl flex items-center justify-center mx-auto mb-6 group-hover:bg-accent/10 transition-colors">
-                  <item.icon className="w-6 h-6 text-accent" />
-                </div>
-                <h4 className="text-sm font-bold mb-3 tracking-tight">{item.title}</h4>
-                <p className="text-[10px] text-muted-foreground leading-relaxed uppercase tracking-widest font-bold">{item.desc}</p>
-              </motion.div>
-            ))}
-          </div>
-        </div>
-      </section>
-
       <footer className="py-24 border-t border-white/5 bg-white/[0.01]">
-        <div className="container mx-auto px-4">
-          <div className="flex flex-col md:flex-row justify-between items-center gap-16 mb-24">
-            <div className="flex items-center gap-4">
+        <div className="container mx-auto px-4 text-center">
+           <div className="flex items-center justify-center gap-4 mb-12">
               <div className="w-14 h-14 glass rounded-2xl flex items-center justify-center">
                 <Sparkles className="text-accent w-8 h-8" />
               </div>
               <span className="font-headline font-bold text-3xl tracking-tighter uppercase">NEXVORO</span>
             </div>
-            <div className="flex gap-16 text-xs font-bold tracking-[0.4em] uppercase text-white/40">
-              <Link href="/features" className="hover:text-white transition-colors">Protocols</Link>
-              <Link href="/pricing" className="hover:text-white transition-colors">Economics</Link>
-              <Link href="/dashboard" className="hover:text-white transition-colors">Command</Link>
-            </div>
-          </div>
-          <p className="text-center text-[10px] font-bold tracking-[0.3em] uppercase text-white/20">
+          <p className="text-[10px] font-bold tracking-[0.3em] uppercase text-white/20">
             © 2025 NEXVORO SYSTEMS. WORLDWIDE OPERATIONAL CLEARANCE.
           </p>
         </div>

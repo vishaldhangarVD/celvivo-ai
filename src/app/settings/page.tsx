@@ -1,5 +1,8 @@
 'use client';
 
+import { useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import { useUser } from '@/firebase';
 import { motion } from 'framer-motion';
 import Navbar from '@/components/layout/Navbar';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
@@ -12,13 +15,23 @@ import {
   Shield, 
   CreditCard, 
   Bell, 
-  LogOut,
   Camera,
   Trash2,
-  Lock
+  Lock,
+  Loader2
 } from 'lucide-react';
 
 export default function SettingsPage() {
+  const router = useRouter();
+  const { user, loading } = useUser();
+
+  useEffect(() => {
+    if (!loading && !user) router.push('/login');
+  }, [user, loading, router]);
+
+  if (loading) return <div className="min-h-screen bg-[#050816] flex items-center justify-center"><Loader2 className="w-12 h-12 text-accent animate-spin" /></div>;
+  if (!user) return null;
+
   return (
     <div className="min-h-screen bg-[#050816]">
       <div className="particles-bg" />
@@ -58,15 +71,15 @@ export default function SettingsPage() {
                       <div className="flex items-center gap-8">
                         <div className="relative group">
                           <div className="w-32 h-32 rounded-3xl bg-gradient-to-br from-purple-600 to-blue-600 flex items-center justify-center text-5xl font-bold shadow-2xl">
-                            JD
+                            {user.displayName?.substring(0, 2).toUpperCase() || 'OP'}
                           </div>
                           <button className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity rounded-3xl flex items-center justify-center">
                             <Camera className="w-8 h-8 text-white" />
                           </button>
                         </div>
                         <div className="space-y-2">
-                          <h3 className="text-xl font-bold">John Doe</h3>
-                          <p className="text-sm text-muted-foreground">Standardized Identity v4.2</p>
+                          <h3 className="text-xl font-bold">{user.displayName || 'Operator'}</h3>
+                          <p className="text-sm text-muted-foreground">{user.email}</p>
                           <Button variant="outline" size="sm" className="h-10 rounded-xl glass border-white/10 text-xs font-bold uppercase tracking-widest">Update Avatar</Button>
                         </div>
                       </div>
@@ -74,15 +87,11 @@ export default function SettingsPage() {
                       <div className="grid md:grid-cols-2 gap-8">
                         <div className="space-y-2">
                           <Label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Preferred Name</Label>
-                          <Input defaultValue="John Doe" className="h-14 rounded-2xl glass border-white/10 bg-transparent text-white px-6" />
+                          <Input defaultValue={user.displayName || ""} className="h-14 rounded-2xl glass border-white/10 bg-transparent text-white px-6" />
                         </div>
                         <div className="space-y-2">
                           <Label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Professional Email</Label>
-                          <Input defaultValue="john.doe@tech-nexus.com" className="h-14 rounded-2xl glass border-white/10 bg-transparent text-white px-6" />
-                        </div>
-                        <div className="md:col-span-2 space-y-2">
-                          <Label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Neural Bio</Label>
-                          <textarea className="w-full min-h-[120px] rounded-2xl glass border-white/10 bg-transparent text-white p-6 text-sm resize-none" defaultValue="Senior Backend Architect focused on distributed neural systems." />
+                          <Input defaultValue={user.email || ""} disabled className="h-14 rounded-2xl glass border-white/10 bg-transparent text-white/50 px-6 cursor-not-allowed" />
                         </div>
                       </div>
 
@@ -103,10 +112,6 @@ export default function SettingsPage() {
                       <div className="p-6 glass rounded-2xl border-white/5 space-y-2">
                         <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Account Type</p>
                         <p className="text-lg font-bold text-accent">Elite Protocol</p>
-                      </div>
-                      <div className="p-6 glass rounded-2xl border-white/5 space-y-2">
-                        <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Member Since</p>
-                        <p className="text-lg font-bold">October 2024</p>
                       </div>
                       <Button variant="destructive" className="w-full h-14 rounded-2xl text-xs font-bold uppercase tracking-widest bg-red-500/10 text-red-400 hover:bg-red-500/20 border-red-500/20">
                         <Trash2 className="w-4 h-4 mr-3" /> Deactivate Identity
@@ -137,17 +142,6 @@ export default function SettingsPage() {
                       </div>
                     </div>
                     <Button className="h-14 px-8 rounded-2xl glass border-white/10 text-xs font-bold uppercase tracking-widest hover:bg-white/5 transition-all">Update Security Token</Button>
-                  </div>
-
-                  <div className="pt-12 border-t border-white/5">
-                    <h3 className="text-xl font-bold mb-6">Multi-Factor Authentication</h3>
-                    <div className="flex justify-between items-center p-8 glass rounded-[2rem] border-white/5">
-                      <div className="space-y-1">
-                        <p className="text-lg font-bold">Biometric Security</p>
-                        <p className="text-sm text-muted-foreground font-light">Use system-level biometrics for session authorization.</p>
-                      </div>
-                      <Button className="h-12 px-8 rounded-xl bg-accent text-[#050816] font-bold text-xs uppercase tracking-widest">Enabled</Button>
-                    </div>
                   </div>
                 </CardContent>
               </Card>
