@@ -1,10 +1,13 @@
+
+'use client';
+
 import Link from 'next/link';
 import Image from 'next/image';
+import { motion } from 'framer-motion';
 import Navbar from '@/components/layout/Navbar';
 import { Button } from '@/components/ui/button';
 import { 
   FileText, 
-  Mic, 
   Target, 
   BarChart3, 
   ShieldCheck, 
@@ -12,187 +15,259 @@ import {
   Smartphone,
   CheckCircle2,
   ArrowRight,
-  Sparkles
+  Sparkles,
+  Zap,
+  Cpu,
+  Globe
 } from 'lucide-react';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
 
 const ROLES = [
-  "Frontend Developer", "Backend Developer", "Full Stack Developer", "Software Engineer",
-  "Data Analyst", "Data Scientist", "Machine Learning Engineer", "AI Engineer",
-  "DevOps Engineer", "Cloud Engineer", "Cyber Security Analyst", "QA Engineer", "UI/UX Designer"
+  "Frontend Engineer", "Backend Architect", "Full Stack Developer", "AI Specialist",
+  "Data Scientist", "ML Operations", "DevOps Strategist", "Security Analyst"
 ];
+
+const containerVariants = {
+  hidden: { opacity: 0 },
+  visible: {
+    opacity: 1,
+    transition: { staggerChildren: 0.1 }
+  }
+};
+
+const itemVariants = {
+  hidden: { y: 20, opacity: 0 },
+  visible: { y: 0, opacity: 1 }
+};
 
 export default function LandingPage() {
   return (
-    <div className="flex flex-col min-h-screen">
+    <div className="flex flex-col min-h-screen relative overflow-hidden">
+      <div className="particles-bg" />
       <Navbar />
       
       {/* Hero Section */}
-      <section className="relative pt-20 pb-32 overflow-hidden">
-        <div className="container mx-auto px-4 text-center">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full glass-card mb-6 animate-fade-in">
-            <span className="relative flex h-2 w-2">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
-              <span className="relative inline-flex rounded-full h-2 w-2 bg-primary"></span>
-            </span>
-            <span className="text-xs font-medium tracking-wider uppercase text-muted-foreground">Next-Gen Interview Prep</span>
-          </div>
+      <section className="relative min-h-[90vh] flex items-center justify-center pt-20 pb-32">
+        <div className="container mx-auto px-4 text-center z-10">
+          <motion.div 
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 0.8 }}
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-full glass mb-8"
+          >
+            <Sparkles className="w-4 h-4 text-accent" />
+            <span className="text-xs font-bold tracking-[0.2em] uppercase text-white/70">Trusted by Fortune 500 Leaders</span>
+          </motion.div>
           
-          <h1 className="text-6xl md:text-8xl font-bold mb-6 tracking-tighter animate-in slide-in-from-bottom-4 duration-700">
-            Ace Your Technical <br />
-            <span className="text-gradient">Interviews with AI</span>
-          </h1>
+          <motion.h1 
+            initial={{ y: 30, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            transition={{ duration: 0.8, delay: 0.2 }}
+            className="text-7xl md:text-9xl font-bold mb-8 tracking-tighter leading-[0.9]"
+          >
+            Intelligence <br />
+            <span className="text-gradient-purple">Perfected.</span>
+          </motion.h1>
           
-          <p className="max-w-2xl mx-auto text-lg md:text-xl text-muted-foreground mb-10 leading-relaxed animate-in slide-in-from-bottom-6 duration-1000">
-            Practice real technical interviews, get instant feedback, improve confidence, and increase your chances of getting hired.
-          </p>
+          <motion.p 
+            initial={{ y: 20, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            transition={{ duration: 0.8, delay: 0.4 }}
+            className="max-w-3xl mx-auto text-xl md:text-2xl text-muted-foreground mb-12 font-light leading-relaxed"
+          >
+            Nexvoro AI deploy enterprise-grade neural simulation to prepare top-tier candidates for high-stakes technical environments.
+          </motion.p>
           
-          <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
+          <motion.div 
+            initial={{ y: 20, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            transition={{ duration: 0.8, delay: 0.6 }}
+            className="flex flex-col sm:flex-row gap-6 justify-center items-center"
+          >
             <Link href="/interview">
-              <Button size="lg" className="h-14 px-8 text-lg bg-gradient-premium hover:opacity-90 transition-all rounded-full group">
-                Start Interview
-                <ArrowRight className="ml-2 w-5 h-5 group-hover:translate-x-1 transition-transform" />
+              <Button size="lg" className="h-16 px-12 text-lg btn-premium group">
+                Initialize Session
+                <Zap className="ml-2 w-5 h-5 group-hover:animate-pulse" />
               </Button>
             </Link>
             <Link href="/resume">
-              <Button size="lg" variant="outline" className="h-14 px-8 text-lg rounded-full border-white/10 hover:bg-white/5 backdrop-blur-md">
+              <Button size="lg" variant="outline" className="h-16 px-12 text-lg rounded-full glass border-white/5 hover:bg-white/10">
                 <FileText className="mr-2 w-5 h-5" />
-                Upload Resume
+                Audit Resume
               </Button>
             </Link>
-          </div>
+          </motion.div>
+        </div>
+
+        {/* Hero Background Elements */}
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full h-full max-w-7xl pointer-events-none opacity-30">
+          <div className="absolute top-0 left-0 w-[500px] h-[500px] bg-purple-600/20 blur-[150px] rounded-full animate-float"></div>
+          <div className="absolute bottom-0 right-0 w-[400px] h-[400px] bg-blue-600/20 blur-[150px] rounded-full animate-float" style={{ animationDelay: '2s' }}></div>
         </div>
       </section>
 
-      {/* Stats/Logos Bar */}
-      <section className="py-12 glass-card border-x-0">
+      {/* Enterprise Stats */}
+      <section className="py-20 border-y border-white/5 bg-white/[0.02] backdrop-blur-md">
         <div className="container mx-auto px-4">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-8 text-center items-center">
-            <div>
-              <div className="text-3xl font-bold font-headline mb-1">10k+</div>
-              <div className="text-sm text-muted-foreground uppercase tracking-widest">Interviews Conducted</div>
-            </div>
-            <div>
-              <div className="text-3xl font-bold font-headline mb-1">98%</div>
-              <div className="text-sm text-muted-foreground uppercase tracking-widest">Success Rate</div>
-            </div>
-            <div>
-              <div className="text-3xl font-bold font-headline mb-1">13+</div>
-              <div className="text-sm text-muted-foreground uppercase tracking-widest">Tech Roles</div>
-            </div>
-            <div>
-              <div className="text-3xl font-bold font-headline mb-1">24/7</div>
-              <div className="text-sm text-muted-foreground uppercase tracking-widest">AI Availability</div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Meet Your AI Interviewer */}
-      <section className="py-24" id="features">
-        <div className="container mx-auto px-4">
-          <div className="grid md:grid-cols-2 gap-16 items-center">
-            <div className="relative">
-              <div className="absolute inset-0 bg-primary/20 blur-[100px] -z-10 rounded-full"></div>
-              <div className="glass-card p-8 rounded-3xl overflow-hidden relative">
-                <Image 
-                  src={PlaceHolderImages.find(img => img.id === 'ai-interviewer')?.imageUrl || ''}
-                  alt="AI Interviewer"
-                  width={600}
-                  height={600}
-                  className="rounded-2xl object-cover"
-                  data-ai-hint="ai robot avatar"
-                />
-                <div className="absolute bottom-12 left-12 right-12 glass-card p-6 rounded-2xl flex items-center gap-4">
-                  <div className="w-3 h-3 rounded-full bg-green-500 animate-pulse"></div>
-                  <div className="flex-1">
-                    <p className="text-sm font-semibold">AI Interviewer Active</p>
-                    <p className="text-xs text-muted-foreground italic">"Tell me about your experience with React..."</p>
-                  </div>
-                  <Mic className="text-primary w-5 h-5" />
-                </div>
-              </div>
-            </div>
-            <div>
-              <h2 className="text-4xl md:text-5xl font-bold mb-6">
-                Meet Your Personal <br />
-                <span className="text-gradient">AI Career Coach</span>
-              </h2>
-              <p className="text-lg text-muted-foreground mb-8">
-                Nexvoro AI simulates high-pressure technical interviews tailored to your exact role. It asks follow-up questions, probes for deep knowledge, and evaluates your responses in real-time.
-              </p>
-              <ul className="space-y-4">
-                {[
-                  "Natural Conversational Flow",
-                  "Adaptive Questioning Engine",
-                  "Real-time Sentiment Analysis",
-                  "Industry-standard Rubrics"
-                ].map((item, idx) => (
-                  <li key={idx} className="flex items-center gap-3">
-                    <CheckCircle2 className="text-primary w-6 h-6" />
-                    <span className="text-lg font-medium">{item}</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Select Interview Role */}
-      <section className="py-24 bg-white/5" id="roles">
-        <div className="container mx-auto px-4 text-center mb-16">
-          <h2 className="text-4xl md:text-5xl font-bold mb-4">Choose Your Path</h2>
-          <p className="text-muted-foreground text-lg">Select from over 13 industry-relevant roles and start practicing.</p>
-        </div>
-        <div className="container mx-auto px-4">
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-            {ROLES.map((role, idx) => (
-              <Link key={idx} href={`/interview?role=${encodeURIComponent(role)}`}>
-                <div className="glass-card p-6 rounded-2xl flex flex-col items-center justify-center text-center gap-4 group cursor-pointer hover:bg-white/10 transition-all border-transparent hover:border-primary/50">
-                  <div className="w-12 h-12 rounded-xl bg-white/5 flex items-center justify-center group-hover:bg-primary/20 transition-colors">
-                    {idx % 4 === 0 ? <Terminal className="w-6 h-6" /> : 
-                     idx % 4 === 1 ? <Target className="w-6 h-6" /> :
-                     idx % 4 === 2 ? <ShieldCheck className="w-6 h-6" /> : 
-                     <Smartphone className="w-6 h-6" />}
-                  </div>
-                  <span className="font-semibold text-sm group-hover:text-primary transition-colors">{role}</span>
-                </div>
-              </Link>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-12 text-center">
+            {[
+              { label: "Sessions", val: "250K+" },
+              { label: "Precision", val: "99.9%" },
+              { label: "Placements", val: "15K+" },
+              { label: "Enterprise", val: "120+" }
+            ].map((stat, i) => (
+              <motion.div 
+                key={i}
+                initial={{ opacity: 0 }}
+                whileInView={{ opacity: 1 }}
+                viewport={{ once: true }}
+                transition={{ delay: i * 0.1 }}
+              >
+                <div className="text-4xl font-bold text-premium mb-2">{stat.val}</div>
+                <div className="text-xs uppercase tracking-[0.3em] text-muted-foreground">{stat.label}</div>
+              </motion.div>
             ))}
           </div>
         </div>
       </section>
 
-      {/* Final CTA */}
-      <section className="py-24 relative overflow-hidden">
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-primary/10 blur-[120px] rounded-full -z-10"></div>
-        <div className="container mx-auto px-4 text-center">
-          <div className="max-w-3xl mx-auto glass-card p-12 md:p-20 rounded-[4rem] border-white/20">
-            <h2 className="text-4xl md:text-6xl font-bold mb-6">Ready to Get Hired?</h2>
-            <p className="text-xl text-muted-foreground mb-10">
-              Join thousands of job seekers who improved their performance with Nexvoro AI.
-            </p>
-            <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Button size="lg" className="h-16 px-10 text-xl bg-gradient-premium hover:opacity-90 rounded-2xl">
-                Get Started Free
-              </Button>
+      {/* Feature Section: The Neural Engine */}
+      <section className="py-32" id="features">
+        <div className="container mx-auto px-4">
+          <div className="flex flex-col lg:flex-row items-center gap-24">
+            <motion.div 
+              initial={{ x: -50, opacity: 0 }}
+              whileInView={{ x: 0, opacity: 1 }}
+              viewport={{ once: true }}
+              className="lg:w-1/2 relative"
+            >
+              <div className="premium-card relative group overflow-hidden">
+                <div className="absolute inset-0 bg-gradient-to-br from-purple-500/20 to-cyan-500/10 opacity-0 group-hover:opacity-100 transition-opacity duration-700"></div>
+                <Image 
+                  src={PlaceHolderImages.find(img => img.id === 'ai-interviewer')?.imageUrl || ''}
+                  alt="Neural Engine"
+                  width={800}
+                  height={800}
+                  className="rounded-3xl object-cover scale-105 group-hover:scale-110 transition-transform duration-1000"
+                  data-ai-hint="luxury ai robot"
+                />
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <div className="w-32 h-32 glass rounded-full flex items-center justify-center animate-pulse shadow-[0_0_50px_rgba(147,51,234,0.3)]">
+                    <Cpu className="w-12 h-12 text-accent" />
+                  </div>
+                </div>
+              </div>
+            </motion.div>
+            
+            <div className="lg:w-1/2 space-y-10">
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+              >
+                <h2 className="text-5xl md:text-6xl font-bold mb-6 text-premium">The Neural <br /> Advantage.</h2>
+                <p className="text-xl text-muted-foreground font-light leading-relaxed">
+                  Our proprietary engine simulates not just the questions, but the intellectual intensity of top-tier technical assessments.
+                </p>
+              </motion.div>
+
+              <div className="grid gap-8">
+                {[
+                  { icon: Globe, title: "Global Benchmarking", desc: "Compare results against the top 1% of silicon valley engineers." },
+                  { icon: ShieldCheck, title: "Contextual Privacy", desc: "Enterprise-grade encryption for all candidate simulation data." },
+                  { icon: Terminal, title: "Advanced Rubrics", desc: "Granular scoring based on system design, logic, and efficiency." }
+                ].map((item, i) => (
+                  <motion.div 
+                    key={i}
+                    initial={{ opacity: 0, x: 20 }}
+                    whileInView={{ opacity: 1, x: 0 }}
+                    viewport={{ once: true }}
+                    transition={{ delay: i * 0.2 }}
+                    className="flex gap-6 items-start"
+                  >
+                    <div className="w-14 h-14 glass rounded-2xl flex items-center justify-center shrink-0">
+                      <item.icon className="w-6 h-6 text-accent" />
+                    </div>
+                    <div>
+                      <h4 className="text-lg font-bold mb-1">{item.title}</h4>
+                      <p className="text-muted-foreground text-sm font-light">{item.desc}</p>
+                    </div>
+                  </motion.div>
+                ))}
+              </div>
             </div>
           </div>
         </div>
       </section>
 
-      <footer className="py-12 border-t border-white/10">
-        <div className="container mx-auto px-4 flex flex-col md:flex-row justify-between items-center gap-8">
-          <div className="flex items-center gap-2">
-            <Sparkles className="text-primary w-6 h-6" />
-            <span className="font-headline font-bold text-xl">Nexvoro AI</span>
+      {/* Role Selector Section */}
+      <section className="py-32 bg-white/[0.01]" id="roles">
+        <div className="container mx-auto px-4 text-center mb-20">
+          <h2 className="text-5xl md:text-6xl font-bold mb-6 text-premium">Elite Tracks</h2>
+          <p className="text-muted-foreground text-xl font-light">Select your discipline to begin simulation.</p>
+        </div>
+        <div className="container mx-auto px-4">
+          <motion.div 
+            variants={containerVariants}
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true }}
+            className="grid grid-cols-2 md:grid-cols-4 gap-6"
+          >
+            {ROLES.map((role, idx) => (
+              <motion.div key={idx} variants={itemVariants}>
+                <Link href={`/interview?role=${encodeURIComponent(role)}`}>
+                  <div className="glass p-8 rounded-[2rem] text-center group cursor-pointer hover:bg-white/[0.08] hover:border-accent/30 transition-all duration-500 border-white/5 h-full flex flex-col items-center justify-center gap-6">
+                    <div className="w-16 h-16 glass rounded-2xl flex items-center justify-center group-hover:bg-accent/20 transition-colors shadow-xl group-hover:shadow-accent/10">
+                      <Target className="w-8 h-8 text-accent" />
+                    </div>
+                    <span className="font-bold text-sm tracking-widest uppercase group-hover:text-accent transition-colors">{role}</span>
+                  </div>
+                </Link>
+              </motion.div>
+            ))}
+          </motion.div>
+        </div>
+      </section>
+
+      {/* Call to Action */}
+      <section className="py-40 relative">
+        <div className="container mx-auto px-4 text-center">
+          <motion.div 
+            initial={{ scale: 0.95, opacity: 0 }}
+            whileInView={{ scale: 1, opacity: 1 }}
+            viewport={{ once: true }}
+            className="max-w-5xl mx-auto glass p-24 rounded-[4rem] border-white/10 relative overflow-hidden"
+          >
+            <div className="absolute inset-0 bg-gradient-to-br from-purple-600/10 to-transparent"></div>
+            <h2 className="text-5xl md:text-8xl font-bold mb-8 text-premium tracking-tighter">Accelerate Your <br /> Future.</h2>
+            <p className="text-2xl text-muted-foreground mb-12 font-light max-w-2xl mx-auto">
+              Deployment ready? Start your elite technical simulation today.
+            </p>
+            <Link href="/interview">
+              <Button size="lg" className="h-20 px-16 text-xl btn-premium">
+                Launch System
+                <ArrowRight className="ml-2 w-6 h-6" />
+              </Button>
+            </Link>
+          </motion.div>
+        </div>
+      </section>
+
+      <footer className="py-20 border-t border-white/5">
+        <div className="container mx-auto px-4 flex flex-col md:flex-row justify-between items-center gap-12">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 glass rounded-xl flex items-center justify-center">
+              <Sparkles className="text-accent w-6 h-6" />
+            </div>
+            <span className="font-headline font-bold text-2xl tracking-tighter">NEXVORO</span>
           </div>
-          <p className="text-muted-foreground text-sm">© 2024 Nexvoro AI. All rights reserved.</p>
-          <div className="flex gap-6 text-sm text-muted-foreground">
-            <Link href="#" className="hover:text-primary transition-colors">Privacy Policy</Link>
-            <Link href="#" className="hover:text-primary transition-colors">Terms of Service</Link>
+          <div className="flex gap-12 text-sm text-muted-foreground font-light tracking-widest uppercase">
+            <Link href="#" className="hover:text-white transition-colors">Architecture</Link>
+            <Link href="#" className="hover:text-white transition-colors">Privacy</Link>
+            <Link href="#" className="hover:text-white transition-colors">Network</Link>
           </div>
+          <p className="text-muted-foreground text-sm font-light">© 2025 NEXVORO SYSTEMS. ALL RIGHTS RESERVED.</p>
         </div>
       </footer>
     </div>
