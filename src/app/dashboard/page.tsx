@@ -19,7 +19,8 @@ import {
   Clock,
   Briefcase,
   Loader2,
-  ShieldAlert
+  ShieldAlert,
+  CheckCircle2
 } from 'lucide-react';
 import Link from 'next/link';
 import { useUser, useFirestore, useCollection, useDoc } from '@/firebase';
@@ -49,13 +50,12 @@ export default function Dashboard() {
   }, [db, user?.uid]);
   const { data: profile, loading: profileLoading } = useDoc(userProfileRef);
 
-  // Fetch Recent Interviews
+  // Fetch Interviews
   const interviewsQuery = useMemo(() => {
     if (!db || !user?.uid) return null;
     return query(
       collection(db, 'users', user.uid, 'interviews'),
-      orderBy('createdAt', 'desc'),
-      limit(5)
+      orderBy('createdAt', 'desc')
     );
   }, [db, user?.uid]);
   const { data: interviews, loading: interviewsLoading } = useCollection(interviewsQuery);
@@ -70,6 +70,14 @@ export default function Dashboard() {
     );
   }, [db, user?.uid]);
   const { data: resumes, loading: resumesLoading } = useCollection(resumesQuery);
+
+  // Calculations
+  const totalInterviews = interviews?.length || 0;
+  const completedInterviews = interviews?.filter((i: any) => i.overallScore > 0).length || 0;
+  const averageScore = totalInterviews > 0 
+    ? Math.round(interviews.reduce((acc: number, curr: any) => acc + (curr.overallScore || 0), 0) / totalInterviews) 
+    : 0;
+  const latestResumeScore = resumes?.[0]?.atsScore || 0;
 
   if (authLoading) {
     return (
@@ -94,32 +102,32 @@ export default function Dashboard() {
 
   const stats = [
     { 
-      label: "Job Readiness", 
-      val: profile?.jobReadinessScore ? `${Math.round(profile.jobReadinessScore)}%` : "0%", 
-      icon: Trophy, 
-      color: "text-yellow-400", 
-      change: "Live Tracking" 
+      label: "Total Interviews", 
+      val: totalInterviews.toString(), 
+      icon: Activity, 
+      color: "text-blue-400", 
+      change: "All Sessions" 
     },
     { 
-      label: "Avg Precision", 
-      val: profile?.technicalScore ? `${Math.round(profile.technicalScore)}%` : "0%", 
-      icon: BrainCircuit, 
-      color: "text-blue-400", 
+      label: "Completed", 
+      val: completedInterviews.toString(), 
+      icon: CheckCircle2, 
+      color: "text-green-400", 
+      change: "Finalized" 
+    },
+    { 
+      label: "Average Score", 
+      val: `${averageScore}%`, 
+      icon: Trophy, 
+      color: "text-yellow-400", 
       change: "Neural Rating" 
     },
     { 
-      label: "Mock Sessions", 
-      val: profile?.totalInterviews?.toString() || "0", 
-      icon: Activity, 
-      color: "text-purple-400", 
-      change: "Sessions Logged" 
-    },
-    { 
-      label: "Resumes Audited", 
-      val: resumes?.length.toString() || "0", 
+      label: "Resume ATS Score", 
+      val: latestResumeScore.toString(), 
       icon: FileText, 
-      color: "text-green-400", 
-      change: "Active Reports" 
+      color: "text-purple-400", 
+      change: "Latest Audit" 
     }
   ];
 
@@ -194,7 +202,7 @@ export default function Dashboard() {
               {/* Session History */}
               <Card className="premium-card bg-white/[0.01] border-white/5">
                 <CardHeader className="mb-8">
-                  <CardTitle className="text-2xl font-bold">Recent Session Logs</CardTitle>
+                  <CardTitle className="text-2xl font-bold">Session Logs History</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-6">
                   {interviewsLoading ? (
@@ -211,7 +219,7 @@ export default function Dashboard() {
                           <div>
                             <h4 className="font-bold text-lg">{session.role}</h4>
                             <p className="text-xs text-muted-foreground flex items-center gap-2">
-                              <Clock className="w-3 h-3" /> {new Date(session.createdAt?.seconds * 1000).toLocaleDateString()}
+                              <Clock className="w-3 h-3" /> {session.createdAt?.seconds ? new Date(session.createdAt.seconds * 1000).toLocaleDateString() : 'Pending'}
                             </p>
                           </div>
                         </div>
@@ -299,9 +307,9 @@ export default function Dashboard() {
                   <div className="space-y-3">
                     <div className="flex justify-between text-xs font-bold uppercase tracking-widest text-muted-foreground">
                       <span>Neural Calibration</span>
-                      <span>85%</span>
+                      <span>{averageScore > 0 ? averageScore : 85}%</span>
                     </div>
-                    <Progress value={85} className="h-2 bg-white/5" />
+                    <Progress value={averageScore > 0 ? averageScore : 85} className="h-2 bg-white/5" />
                   </div>
                   <div className="space-y-3">
                     <div className="flex justify-between text-xs font-bold uppercase tracking-widest text-muted-foreground">
