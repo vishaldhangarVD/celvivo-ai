@@ -1,8 +1,5 @@
 'use client';
 
-import { useEffect } from 'react';
-import { useRouter } from 'next/navigation';
-import { useUser } from '@/firebase';
 import { motion } from 'framer-motion';
 import Navbar from '@/components/layout/Navbar';
 import { 
@@ -15,6 +12,7 @@ import {
   Loader2
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
+import { useUser } from '@/firebase';
 
 const features = [
   {
@@ -56,15 +54,9 @@ const features = [
 ];
 
 export default function FeaturesPage() {
-  const router = useRouter();
-  const { user, loading } = useUser();
+  const { loading: authLoading } = useUser();
 
-  useEffect(() => {
-    if (!loading && !user) router.push('/login');
-  }, [user, loading, router]);
-
-  if (loading) return <div className="min-h-screen bg-[#050816] flex items-center justify-center"><Loader2 className="w-12 h-12 text-accent animate-spin" /></div>;
-  if (!user) return null;
+  if (authLoading) return <div className="min-h-screen bg-[#050816] flex items-center justify-center"><Loader2 className="w-12 h-12 text-accent animate-spin" /></div>;
 
   return (
     <div className="min-h-screen bg-[#050816]">

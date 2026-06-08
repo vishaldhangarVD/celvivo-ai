@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -8,13 +8,14 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Command, ArrowLeft, Chrome, Loader2, AlertCircle } from 'lucide-react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth, useUser } from '@/firebase';
 import { signInWithEmailAndPassword, signInWithPopup, GoogleAuthProvider, sendPasswordResetEmail } from 'firebase/auth';
 import { useToast } from '@/hooks/use-toast';
 
-export default function LoginPage() {
+function LoginContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const auth = useAuth();
   const { user, loading: authLoading } = useUser();
   const { toast } = useToast();
@@ -24,12 +25,14 @@ export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [isResetting, setIsResetting] = useState(false);
 
+  const redirectTo = searchParams.get('redirectTo') || '/dashboard';
+
   // Redirect if already logged in
   useEffect(() => {
     if (user && !authLoading) {
-      router.push('/dashboard');
+      router.push(redirectTo);
     }
-  }, [user, authLoading, router]);
+  }, [user, authLoading, router, redirectTo]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -48,7 +51,7 @@ export default function LoginPage() {
     setIsLoading(true);
     try {
       await signInWithEmailAndPassword(auth, email, password);
-      router.push('/dashboard');
+      router.push(redirectTo);
     } catch (error: any) {
       toast({
         variant: "destructive",
@@ -66,7 +69,7 @@ export default function LoginPage() {
     try {
       setIsLoading(true);
       await signInWithPopup(auth, provider);
-      router.push('/dashboard');
+      router.push(redirectTo);
     } catch (error: any) {
       toast({
         variant: "destructive",
@@ -207,11 +210,19 @@ export default function LoginPage() {
             </form>
 
             <p className="text-center text-[10px] font-bold tracking-widest uppercase text-muted-foreground pt-4">
-              New to the platform? <Link href="/signup" className="text-accent hover:underline">Register Session</Link>
+              New to the platform? <Link href={`/signup?redirectTo=${encodeURIComponent(redirectTo)}`} className="text-accent hover:underline">Register Session</Link>
             </p>
           </CardContent>
         </Card>
       </motion.div>
     </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-[#050816] flex items-center justify-center"><Loader2 className="w-12 h-12 text-accent animate-spin" /></div>}>
+      <LoginContent />
+    </Suspense>
   );
 }

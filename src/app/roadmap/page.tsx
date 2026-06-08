@@ -1,8 +1,5 @@
 'use client';
 
-import { useEffect } from 'react';
-import { useRouter } from 'next/navigation';
-import { useUser } from '@/firebase';
 import { motion } from 'framer-motion';
 import Navbar from '@/components/layout/Navbar';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
@@ -13,10 +10,13 @@ import {
   BrainCircuit,
   Rocket,
   ArrowRight,
-  Loader2
+  Loader2,
+  Lock
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
+import { useUser } from '@/firebase';
+import { useRouter } from 'next/navigation';
 
 const steps = [
   {
@@ -44,14 +44,16 @@ const steps = [
 
 export default function CareerRoadmap() {
   const router = useRouter();
-  const { user, loading } = useUser();
+  const { user, loading: authLoading } = useUser();
 
-  useEffect(() => {
-    if (!loading && !user) router.push('/login');
-  }, [user, loading, router]);
+  const handleLockedAction = () => {
+    if (!user) {
+      router.push('/login?redirectTo=/roadmap');
+      return;
+    }
+  };
 
-  if (loading) return <div className="min-h-screen bg-[#050816] flex items-center justify-center"><Loader2 className="w-12 h-12 text-accent animate-spin" /></div>;
-  if (!user) return null;
+  if (authLoading) return <div className="min-h-screen bg-[#050816] flex items-center justify-center"><Loader2 className="w-12 h-12 text-accent animate-spin" /></div>;
 
   return (
     <div className="min-h-screen bg-[#050816]">
@@ -71,7 +73,20 @@ export default function CareerRoadmap() {
           <div className="relative">
             <div className="absolute left-8 md:left-1/2 top-0 bottom-0 w-px bg-white/5 hidden md:block"></div>
             
-            <div className="space-y-12">
+            {!user && (
+              <div className="absolute inset-0 z-20 flex items-center justify-center backdrop-blur-sm bg-black/40 rounded-[3rem]">
+                <Card className="premium-card p-12 text-center max-w-md border-accent/20">
+                  <Lock className="w-16 h-16 text-accent mx-auto mb-6" />
+                  <h3 className="text-2xl font-bold mb-4">Neural Gate Active</h3>
+                  <p className="text-muted-foreground mb-8 text-sm">Authentication required to access personalized growth metrics and career pathways.</p>
+                  <Link href="/login?redirectTo=/roadmap">
+                    <Button className="btn-premium px-12 h-14 w-full">Access Personal Protocol</Button>
+                  </Link>
+                </Card>
+              </div>
+            )}
+
+            <div className={`space-y-12 ${!user ? 'opacity-20 pointer-events-none' : ''}`}>
               {steps.map((step, i) => (
                 <motion.div 
                   key={i}
@@ -119,12 +134,16 @@ export default function CareerRoadmap() {
               <div className="relative z-10 space-y-8">
                 <Award className="w-20 h-20 text-accent mx-auto" />
                 <h2 className="text-4xl font-bold tracking-tight">System Ready for Acceleration</h2>
-                <p className="text-muted-foreground font-light max-w-xl mx-auto">Complete 3 more simulations to unlock the Executive Tier credentials and partner hiring network.</p>
-                <Link href="/interview">
-                  <Button className="h-16 px-12 btn-premium group">
-                    Begin Next Simulation <ArrowRight className="ml-3 w-5 h-5 group-hover:translate-x-1 transition-transform" />
-                  </Button>
-                </Link>
+                <p className="text-muted-foreground font-light max-w-xl mx-auto">Complete more simulations to unlock the Executive Tier credentials and partner hiring network.</p>
+                <Button 
+                  onClick={() => {
+                    if (!user) router.push('/login?redirectTo=/interview');
+                    else router.push('/interview');
+                  }}
+                  className="h-16 px-12 btn-premium group"
+                >
+                  Begin Next Simulation <ArrowRight className="ml-3 w-5 h-5 group-hover:translate-x-1 transition-transform" />
+                </Button>
               </div>
             </Card>
           </div>

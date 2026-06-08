@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, Suspense } from 'react';
 import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -8,14 +8,15 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Command, ArrowLeft, ShieldCheck, Loader2 } from 'lucide-react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth, useFirestore } from '@/firebase';
 import { createUserWithEmailAndPassword, updateProfile } from 'firebase/auth';
 import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 
-export default function SignupPage() {
+function SignupContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const auth = useAuth();
   const db = useFirestore();
   const { toast } = useToast();
@@ -24,6 +25,8 @@ export default function SignupPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+
+  const redirectTo = searchParams.get('redirectTo') || '/dashboard';
 
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -55,7 +58,7 @@ export default function SignupPage() {
         description: "Welcome to Nexvoro AI. Your identity has been initialized.",
       });
       
-      router.push('/dashboard');
+      router.push(redirectTo);
     } catch (error: any) {
       toast({
         variant: "destructive",
@@ -151,11 +154,19 @@ export default function SignupPage() {
             </form>
 
             <p className="text-center text-[10px] font-bold tracking-widest uppercase text-muted-foreground">
-              Already verified? <Link href="/login" className="text-accent hover:underline">Access Dashboard</Link>
+              Already verified? <Link href={`/login?redirectTo=${encodeURIComponent(redirectTo)}`} className="text-accent hover:underline">Access Dashboard</Link>
             </p>
           </CardContent>
         </Card>
       </motion.div>
     </div>
+  );
+}
+
+export default function SignupPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-[#050816] flex items-center justify-center"><Loader2 className="w-12 h-12 text-accent animate-spin" /></div>}>
+      <SignupContent />
+    </Suspense>
   );
 }

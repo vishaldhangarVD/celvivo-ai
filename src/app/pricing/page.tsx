@@ -1,14 +1,12 @@
 'use client';
 
-import { useEffect } from 'react';
-import { useRouter } from 'next/navigation';
-import { useUser } from '@/firebase';
 import { motion } from 'framer-motion';
 import Navbar from '@/components/layout/Navbar';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Check, Loader2 } from 'lucide-react';
-import Link from 'next/link';
+import { useUser } from '@/firebase';
+import { useRouter } from 'next/navigation';
 
 const tiers = [
   {
@@ -56,14 +54,17 @@ const tiers = [
 
 export default function PricingPage() {
   const router = useRouter();
-  const { user, loading } = useUser();
+  const { user, loading: authLoading } = useUser();
 
-  useEffect(() => {
-    if (!loading && !user) router.push('/login');
-  }, [user, loading, router]);
+  const handleAction = (tier: any) => {
+    if (!user) {
+      router.push(`/login?redirectTo=/pricing`);
+      return;
+    }
+    // Logic for actual subscription can go here
+  };
 
-  if (loading) return <div className="min-h-screen bg-[#050816] flex items-center justify-center"><Loader2 className="w-12 h-12 text-accent animate-spin" /></div>;
-  if (!user) return null;
+  if (authLoading) return <div className="min-h-screen bg-[#050816] flex items-center justify-center"><Loader2 className="w-12 h-12 text-accent animate-spin" /></div>;
 
   return (
     <div className="min-h-screen bg-[#050816]">
@@ -116,7 +117,10 @@ export default function PricingPage() {
                 ))}
               </div>
 
-              <Button className={`w-full h-16 rounded-2xl text-xs font-bold tracking-[0.2em] uppercase transition-all ${tier.highlight ? 'btn-premium' : 'glass border-white/10 hover:bg-white/10'}`}>
+              <Button 
+                onClick={() => handleAction(tier)}
+                className={`w-full h-16 rounded-2xl text-xs font-bold tracking-[0.2em] uppercase transition-all ${tier.highlight ? 'btn-premium' : 'glass border-white/10 hover:bg-white/10'}`}
+              >
                 {tier.button}
               </Button>
             </motion.div>

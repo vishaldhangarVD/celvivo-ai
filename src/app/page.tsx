@@ -57,16 +57,26 @@ export default function LandingPage() {
   const [isUploading, setIsUploading] = useState(false);
   const [uploadedFile, setUploadedFile] = useState<string | null>(null);
 
-  // Mandatory Gate: Redirect to login if not authenticated
-  useEffect(() => {
-    if (!authLoading && !user) {
-      router.push('/login');
-    }
-  }, [user, authLoading, router]);
-
   const filteredRoles = ROLES.filter(role => 
     role.toLowerCase().includes(searchQuery.toLowerCase())
   );
+
+  const handleStartVirtualInterview = () => {
+    if (!user) {
+      router.push('/login?redirectTo=/interview');
+      return;
+    }
+    setIsWizardOpen(true);
+    setStep(1);
+  };
+
+  const handleAnalyzeResumeDirect = () => {
+    if (!user) {
+      router.push('/login?redirectTo=/resume');
+      return;
+    }
+    router.push('/resume');
+  };
 
   const handleFileUpload = () => {
     setIsUploading(true);
@@ -89,8 +99,6 @@ export default function LandingPage() {
       </div>
     );
   }
-
-  if (!user) return null;
 
   return (
     <div className="flex flex-col min-h-screen relative overflow-hidden bg-[#050816]">
@@ -136,18 +144,21 @@ export default function LandingPage() {
                 className="flex flex-wrap gap-6"
               >
                 <Button 
-                  onClick={() => { setIsWizardOpen(true); setStep(1); }}
+                  onClick={handleStartVirtualInterview}
                   size="lg" 
                   className="h-16 px-10 text-lg btn-premium group"
                 >
                   Start Virtual Interview
                   <Zap className="ml-3 w-5 h-5 group-hover:animate-pulse" />
                 </Button>
-                <Link href="/resume">
-                  <Button size="lg" variant="outline" className="h-16 px-10 text-lg rounded-full glass border-white/10 hover:bg-white/10">
-                    Analyze Resume
-                  </Button>
-                </Link>
+                <Button 
+                  onClick={handleAnalyzeResumeDirect}
+                  size="lg" 
+                  variant="outline" 
+                  className="h-16 px-10 text-lg rounded-full glass border-white/10 hover:bg-white/10"
+                >
+                  Analyze Resume
+                </Button>
               </motion.div>
             </div>
 
@@ -184,7 +195,7 @@ export default function LandingPage() {
                       </div>
                     </div>
                     <Button 
-                      onClick={() => { setIsWizardOpen(true); setStep(1); }}
+                      onClick={handleStartVirtualInterview}
                       className="w-full h-16 btn-premium text-sm font-bold tracking-[0.2em] uppercase"
                     >
                       Initialize Simulation
