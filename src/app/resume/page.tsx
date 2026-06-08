@@ -418,7 +418,7 @@ export default function ResumeAnalyzer() {
                 </CardHeader>
                 <CardContent className="space-y-8">
                   {result.skillAnalysis.map((s, i) => (
-                    <div key={i} className="space-y-3">
+                    <div key={i} className="space-y-3" tag-key={i}>
                       <div className="flex justify-between text-[10px] font-bold uppercase tracking-[0.3em] text-muted-foreground">
                         <span className="text-white/80">{s.skill}</span>
                         <span className="text-accent">{s.proficiency}</span>
@@ -467,7 +467,7 @@ export default function ResumeAnalyzer() {
                   Reset System Scan
                 </Button>
               </div>
-            </div>
+            </motion.div>
           </div>
         )}
       </div>
