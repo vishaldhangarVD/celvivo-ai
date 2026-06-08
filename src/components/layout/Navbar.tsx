@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
-import { Command, LogIn, Menu, X, LogOut, LayoutDashboard, History } from 'lucide-react';
+import { Command, LogIn, Menu, X, LogOut, LayoutDashboard, History, Settings, ShieldCheck } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useState } from 'react';
 import { useUser, useAuth } from '@/firebase';
@@ -37,18 +37,22 @@ export default function Navbar() {
         </Link>
 
         {/* Desktop Nav */}
-        <div className="hidden md:flex items-center gap-12 text-[10px] font-bold uppercase tracking-[0.3em] text-white/50">
-          <Link href="/features" className="hover:text-white transition-colors">Features</Link>
-          <Link href="/pricing" className="hover:text-white transition-colors">Pricing</Link>
+        <div className="hidden md:flex items-center gap-10 text-[10px] font-bold uppercase tracking-[0.3em] text-white/50">
+          <Link href="/features" className="hover:text-white transition-colors">Protocols</Link>
+          <Link href="/pricing" className="hover:text-white transition-colors">Economics</Link>
           {user && (
             <>
               <Link href="/dashboard" className="hover:text-white transition-colors flex items-center gap-2">
                 <LayoutDashboard className="w-3 h-3" />
-                Control
+                Command
               </Link>
               <Link href="/user-dashboard" className="hover:text-white transition-colors flex items-center gap-2 text-accent">
                 <History className="w-3 h-3" />
-                Dashboard
+                Pulse
+              </Link>
+              <Link href="/roadmap" className="hover:text-white transition-colors flex items-center gap-2">
+                <ShieldCheck className="w-3 h-3" />
+                Roadmap
               </Link>
             </>
           )}
@@ -63,20 +67,19 @@ export default function Navbar() {
                     <span className="text-[10px] font-bold uppercase tracking-widest text-white/80">{user.displayName || 'Operator'}</span>
                     <span className="text-[8px] font-bold uppercase tracking-widest text-accent">Verified Track</span>
                   </div>
+                  <div className="w-px h-8 bg-white/10"></div>
                   <Button 
                     variant="ghost" 
                     onClick={handleSignOut}
-                    className="items-center gap-3 text-[10px] font-bold tracking-[0.2em] uppercase text-white/40 hover:text-red-400"
+                    className="items-center gap-3 text-[10px] font-bold tracking-[0.2em] uppercase text-white/40 hover:text-red-400 px-0"
                   >
                     <LogOut className="w-4 h-4" />
-                    Sign Out
                   </Button>
                 </div>
               ) : (
                 <>
                   <Link href="/login">
                     <Button variant="ghost" className="items-center gap-3 text-[10px] font-bold tracking-[0.2em] uppercase text-white/70">
-                      <LogIn className="w-4 h-4" />
                       Access
                     </Button>
                   </Link>
@@ -104,33 +107,34 @@ export default function Navbar() {
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -20 }}
-            className="absolute top-20 left-0 w-full bg-[#050816] border-b border-white/5 p-8 flex flex-col gap-6 md:hidden z-50"
+            className="absolute top-20 left-0 w-full bg-[#050816] border-b border-white/5 p-12 flex flex-col gap-8 md:hidden z-50 min-h-screen"
           >
-            <Link href="/features" onClick={() => setIsOpen(false)} className="text-sm font-bold tracking-widest uppercase text-white/70">Features</Link>
-            <Link href="/pricing" onClick={() => setIsOpen(false)} className="text-sm font-bold tracking-widest uppercase text-white/70">Pricing</Link>
+            <Link href="/features" onClick={() => setIsOpen(false)} className="text-xl font-bold tracking-widest uppercase text-white/70">Protocols</Link>
+            <Link href="/pricing" onClick={() => setIsOpen(false)} className="text-xl font-bold tracking-widest uppercase text-white/70">Economics</Link>
             {user && (
               <>
-                <Link href="/dashboard" onClick={() => setIsOpen(false)} className="text-sm font-bold tracking-widest uppercase text-white/70">Control Center</Link>
-                <Link href="/user-dashboard" onClick={() => setIsOpen(false)} className="text-sm font-bold tracking-widest uppercase text-accent">User Dashboard</Link>
+                <Link href="/dashboard" onClick={() => setIsOpen(false)} className="text-xl font-bold tracking-widest uppercase text-white/70">Command Center</Link>
+                <Link href="/user-dashboard" onClick={() => setIsOpen(false)} className="text-xl font-bold tracking-widest uppercase text-accent">User Pulse</Link>
+                <Link href="/roadmap" onClick={() => setIsOpen(false)} className="text-xl font-bold tracking-widest uppercase text-white/70">Growth Roadmap</Link>
               </>
             )}
             
-            <div className="pt-6 border-t border-white/5 flex flex-col gap-4">
+            <div className="pt-12 border-t border-white/5 flex flex-col gap-6">
               {user ? (
                 <Button 
                   variant="outline" 
                   onClick={() => { handleSignOut(); setIsOpen(false); }}
-                  className="w-full h-14 rounded-2xl glass border-white/10 font-bold uppercase tracking-widest text-xs text-red-400"
+                  className="w-full h-16 rounded-2xl glass border-white/10 font-bold uppercase tracking-widest text-xs text-red-400"
                 >
-                  Sign Out
+                  Terminate Session
                 </Button>
               ) : (
                 <>
                   <Link href="/login" onClick={() => setIsOpen(false)}>
-                    <Button variant="outline" className="w-full h-14 rounded-2xl glass border-white/10 font-bold uppercase tracking-widest text-xs">Login</Button>
+                    <Button variant="outline" className="w-full h-16 rounded-2xl glass border-white/10 font-bold uppercase tracking-widest text-xs">Login</Button>
                   </Link>
                   <Link href="/signup" onClick={() => setIsOpen(false)}>
-                    <Button className="w-full h-14 btn-premium font-bold uppercase tracking-widest text-xs">Start Session</Button>
+                    <Button className="w-full h-16 btn-premium font-bold uppercase tracking-widest text-xs">Start Session</Button>
                   </Link>
                 </>
               )}
