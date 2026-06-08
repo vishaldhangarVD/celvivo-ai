@@ -3,7 +3,7 @@
     {
       "id": "ai-hr-interviewer",
       "description": "Professional AI HR Interviewer in a sharp business suit",
-      "imageUrl": "https://picsum.photos/seed/nexvoro_hr/800/800",
+      "imageUrl": "https://picsum.photos/seed/nexvoro_hr/800/1000",
       "imageHint": "professional businessman suit"
     },
     {
@@ -17,6 +17,12 @@
       "description": "Live Interview Demo Interface",
       "imageUrl": "https://picsum.photos/seed/nexvoro_demo/1000/600",
       "imageHint": "software ui interface"
+    },
+    {
+      "id": "office-bg",
+      "description": "Modern corporate office background",
+      "imageUrl": "https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&q=80",
+      "imageHint": "modern office"
     }
   ]
 }
