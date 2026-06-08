@@ -50,7 +50,7 @@ const mockInterviewPrompt = ai.definePrompt({
   name: 'mockInterviewPrompt',
   input: { schema: AiMockInterviewInputSchema },
   output: { schema: AiMockInterviewOutputSchema },
-  model: 'googleai/gemini-2.5-flash',
+  model: 'googleai/gemini-1.5-flash',
   prompt: `You are an AI technical interviewer for a {{role}} at a {{experienceLevel}} level.
 Your goal is to assess the candidate's technical knowledge, problem-solving skills, and communication.
 You will conduct a mock interview with a maximum of 5 main technical questions.
