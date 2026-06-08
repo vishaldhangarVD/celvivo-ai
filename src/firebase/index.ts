@@ -4,7 +4,13 @@ import { getAuth } from 'firebase/auth';
 import { firebaseConfig } from './config';
 
 export function initializeFirebase() {
-  const firebaseApp = !getApps().length ? initializeApp(firebaseConfig) : getApp();
+  // Only initialize if we have a valid project ID to avoid initialization errors
+  const isValidConfig = firebaseConfig.projectId && firebaseConfig.projectId !== "placeholder-project-id";
+  
+  const firebaseApp = !getApps().length 
+    ? initializeApp(firebaseConfig) 
+    : getApp();
+    
   const firestore = getFirestore(firebaseApp);
   const auth = getAuth(firebaseApp);
 
