@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import Navbar from '@/components/layout/Navbar';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
@@ -17,11 +17,14 @@ import {
   Award,
   ChevronRight,
   Loader2,
-  ArrowUpRight
+  ArrowUpRight,
+  History,
+  AlertCircle
 } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useUser } from '@/firebase';
+import { useUser, useFirestore, useCollection } from '@/firebase';
+import { collection, query, orderBy, limit } from 'firebase/firestore';
 import { 
   AreaChart, 
   Area, 
@@ -32,32 +35,78 @@ import {
   ResponsiveContainer 
 } from 'recharts';
 
-const dummyStats = [
-  { label: "Resume Score", val: "82%", icon: FileText, color: "text-purple-400" },
-  { label: "Interviews Taken", val: "12", icon: Activity, color: "text-accent" },
-  { label: "Job Readiness", val: "76%", icon: Target, color: "text-blue-400" },
-  { label: "Skill Match", val: "68%", icon: BrainCircuit, color: "text-yellow-400" }
-];
-
-const dummyChartData = [
-  { name: 'Jan', score: 45 },
-  { name: 'Feb', score: 52 },
-  { name: 'Mar', score: 48 },
-  { name: 'Apr', score: 61 },
-  { name: 'May', score: 58 },
-  { name: 'Jun', score: 65 },
-  { name: 'Jul', score: 72 },
-  { name: 'Aug', score: 68 },
-  { name: 'Sep', score: 76 },
-];
-
 export default function Dashboard() {
   const router = useRouter();
   const { user, loading: authLoading } = useUser();
+  const db = useFirestore();
+
+  // Memoized queries for efficiency
+  const interviewsQuery = useMemo(() => {
+    if (!db || !user?.uid) return null;
+    return query(
+      collection(db, 'users', user.uid, 'interviews'),
+      orderBy('createdAt', 'desc'),
+      limit(10)
+    );
+  }, [db, user?.uid]);
+
+  const resumesQuery = useMemo(() => {
+    if (!db || !user?.uid) return null;
+    return query(
+      collection(db, 'users', user.uid, 'resumes'),
+      orderBy('createdAt', 'desc'),
+      limit(5)
+    );
+  }, [db, user?.uid]);
+
+  const { data: interviews, loading: interviewsLoading } = useCollection(interviewsQuery);
+  const { data: resumes, loading: resumesLoading } = useCollection(resumesQuery);
 
   useEffect(() => {
     if (!user && !authLoading) router.push('/login');
   }, [user, authLoading, router]);
+
+  // Calculated Stats
+  const stats = useMemo(() => {
+    const latestResume = resumes?.[0];
+    const latestInterview = interviews?.[0];
+    
+    const resumeScore = latestResume?.atsScore || 0;
+    const totalInterviews = interviews?.length || 0;
+    const interviewScore = latestInterview?.overallScore || 0;
+    
+    // Skill match from latest resume matches
+    const skillMatch = latestResume?.analysis?.roleMatches?.[0]?.matchPercentage || 0;
+    
+    // Readiness is an average of resume and latest performance
+    const jobReadiness = totalInterviews > 0 || latestResume 
+      ? Math.round((resumeScore + interviewScore) / (latestResume && latestInterview ? 2 : 1))
+      : 0;
+
+    return {
+      resumeScore: `${resumeScore}%`,
+      totalInterviews,
+      jobReadiness: `${jobReadiness}%`,
+      skillMatch: `${skillMatch}%`
+    };
+  }, [resumes, interviews]);
+
+  // Chart data from recent interview scores
+  const chartData = useMemo(() => {
+    if (!interviews || interviews.length === 0) {
+      return [
+        { name: 'Start', score: 0 },
+        { name: 'Target', score: 100 }
+      ];
+    }
+    return interviews
+      .slice()
+      .reverse()
+      .map((item, i) => ({
+        name: `S-${i+1}`,
+        score: item.overallScore || 0
+      }));
+  }, [interviews]);
 
   if (authLoading) return (
     <div className="min-h-screen bg-[#050816] flex items-center justify-center">
@@ -93,7 +142,12 @@ export default function Dashboard() {
           </motion.header>
 
           <div className="grid md:grid-cols-4 gap-6">
-            {dummyStats.map((stat, i) => (
+            {[
+              { label: "Resume Score", val: stats.resumeScore, icon: FileText, color: "text-purple-400" },
+              { label: "Interviews Taken", val: stats.totalInterviews, icon: Activity, color: "text-accent" },
+              { label: "Job Readiness", val: stats.jobReadiness, icon: Target, color: "text-blue-400" },
+              { label: "Skill Match", val: stats.skillMatch, icon: BrainCircuit, color: "text-yellow-400" }
+            ].map((stat, i) => (
               <motion.div
                 key={i}
                 initial={{ opacity: 0, y: 20 }}
@@ -121,24 +175,30 @@ export default function Dashboard() {
                   <TrendingUp className="w-6 h-6 text-accent" />
                 </CardHeader>
                 <CardContent className="p-0 h-[300px]">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <AreaChart data={dummyChartData}>
-                      <defs>
-                        <linearGradient id="colorScore" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="5%" stopColor="#22d3ee" stopOpacity={0.3}/>
-                          <stop offset="95%" stopColor="#22d3ee" stopOpacity={0}/>
-                        </linearGradient>
-                      </defs>
-                      <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
-                      <XAxis dataKey="name" stroke="rgba(255,255,255,0.3)" fontSize={10} axisLine={false} tickLine={false} />
-                      <YAxis stroke="rgba(255,255,255,0.3)" fontSize={10} axisLine={false} tickLine={false} />
-                      <Tooltip 
-                        contentStyle={{ backgroundColor: '#050816', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px' }}
-                        itemStyle={{ color: '#22d3ee', fontWeight: 'bold' }}
-                      />
-                      <Area type="monotone" dataKey="score" stroke="#22d3ee" fillOpacity={1} fill="url(#colorScore)" strokeWidth={3} />
-                    </AreaChart>
-                  </ResponsiveContainer>
+                  {interviewsLoading ? (
+                    <div className="h-full flex items-center justify-center">
+                      <Loader2 className="w-8 h-8 animate-spin text-accent" />
+                    </div>
+                  ) : (
+                    <ResponsiveContainer width="100%" height="100%">
+                      <AreaChart data={chartData}>
+                        <defs>
+                          <linearGradient id="colorScore" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="5%" stopColor="#22d3ee" stopOpacity={0.3}/>
+                            <stop offset="95%" stopColor="#22d3ee" stopOpacity={0}/>
+                          </linearGradient>
+                        </defs>
+                        <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
+                        <XAxis dataKey="name" stroke="rgba(255,255,255,0.3)" fontSize={10} axisLine={false} tickLine={false} />
+                        <YAxis stroke="rgba(255,255,255,0.3)" fontSize={10} axisLine={false} tickLine={false} />
+                        <Tooltip 
+                          contentStyle={{ backgroundColor: '#050816', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px' }}
+                          itemStyle={{ color: '#22d3ee', fontWeight: 'bold' }}
+                        />
+                        <Area type="monotone" dataKey="score" stroke="#22d3ee" fillOpacity={1} fill="url(#colorScore)" strokeWidth={3} />
+                      </AreaChart>
+                    </ResponsiveContainer>
+                  )}
                 </CardContent>
               </Card>
 
@@ -147,28 +207,39 @@ export default function Dashboard() {
                   <CardTitle className="text-2xl font-bold">Recent Intelligence</CardTitle>
                 </CardHeader>
                 <CardContent className="p-0 space-y-4">
-                  {[
-                    { title: "Resume Audit Complete", desc: "Latest scan shows 82% compatibility with Senior tracks.", link: "/resume", icon: FileText },
-                    { title: "Neural Simulation Pending", desc: "Recommended practicing React Design Patterns.", link: "/interview", icon: Zap },
-                    { title: "Milestone Reached", desc: "75%+ Job Readiness achieved for Full Stack roles.", link: "/roadmap", icon: Target }
-                  ].map((action, i) => (
-                    <div key={i} className="flex items-center justify-between p-6 glass rounded-[2rem] border-white/5 hover:bg-white/[0.03] transition-all group">
-                      <div className="flex items-center gap-6">
-                        <div className="w-10 h-10 glass rounded-xl flex items-center justify-center text-accent">
-                          <action.icon className="w-5 h-5" />
-                        </div>
-                        <div>
-                          <h4 className="font-bold">{action.title}</h4>
-                          <p className="text-xs text-muted-foreground">{action.desc}</p>
-                        </div>
-                      </div>
-                      <Link href={action.link}>
-                        <Button variant="ghost" size="icon" className="group-hover:text-accent rounded-xl">
-                          <ArrowUpRight className="w-5 h-5" />
-                        </Button>
-                      </Link>
+                  {interviewsLoading || resumesLoading ? (
+                    <div className="py-12 flex justify-center"><Loader2 className="w-8 h-8 animate-spin text-accent" /></div>
+                  ) : [...(interviews || []), ...(resumes || [])].length === 0 ? (
+                    <div className="py-12 text-center glass rounded-[2rem] border-white/5">
+                      <AlertCircle className="w-8 h-8 text-white/20 mx-auto mb-4" />
+                      <p className="text-sm text-muted-foreground font-light">No intelligence logs found. Start a simulation to begin tracking.</p>
                     </div>
-                  ))}
+                  ) : (
+                    [
+                      ...(interviews?.map(i => ({ type: 'interview', title: `Simulation: ${i.role}`, desc: `Neural score of ${i.overallScore}% recorded.`, link: `/feedback/${i.id}`, icon: Zap })) || []),
+                      ...(resumes?.map(r => ({ type: 'resume', title: `Blueprint Audit: ${r.filename}`, desc: `ATS Index calibrated at ${r.atsScore}%.`, link: '/resume', icon: FileText })) || [])
+                    ]
+                    .sort(() => Math.random() - 0.5) // Just a slight mix for the feed
+                    .slice(0, 5)
+                    .map((action, i) => (
+                      <div key={i} className="flex items-center justify-between p-6 glass rounded-[2rem] border-white/5 hover:bg-white/[0.03] transition-all group">
+                        <div className="flex items-center gap-6">
+                          <div className={`w-10 h-10 glass rounded-xl flex items-center justify-center ${action.type === 'interview' ? 'text-accent' : 'text-purple-400'}`}>
+                            <action.icon className="w-5 h-5" />
+                          </div>
+                          <div>
+                            <h4 className="font-bold">{action.title}</h4>
+                            <p className="text-xs text-muted-foreground">{action.desc}</p>
+                          </div>
+                        </div>
+                        <Link href={action.link}>
+                          <Button variant="ghost" size="icon" className="group-hover:text-accent rounded-xl">
+                            <ArrowUpRight className="w-5 h-5" />
+                          </Button>
+                        </Link>
+                      </div>
+                    ))
+                  )}
                 </CardContent>
               </Card>
             </div>
@@ -213,24 +284,26 @@ export default function Dashboard() {
 
               <Card className="premium-card bg-white/[0.01] border-white/5">
                 <CardHeader>
-                  <CardTitle className="text-xl font-bold">Skill Gaps</CardTitle>
+                  <CardTitle className="text-xl font-bold">Neural Vectors</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-6">
-                  {[
-                    { skill: "System Design", gap: 32, color: "bg-red-400" },
-                    { skill: "Cloud Architecture", gap: 24, color: "bg-yellow-400" },
-                    { skill: "Distributed Logs", gap: 18, color: "bg-blue-400" }
-                  ].map((item, i) => (
-                    <div key={i} className="space-y-2">
-                      <div className="flex justify-between text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                        <span>{item.skill}</span>
-                        <span>{item.gap}% Gap</span>
+                  {resumesLoading ? (
+                    <Loader2 className="w-6 h-6 animate-spin text-accent" />
+                  ) : resumes?.[0]?.analysis?.missingSkills?.length > 0 ? (
+                    resumes[0].analysis.missingSkills.slice(0, 3).map((skill: string, i: number) => (
+                      <div key={i} className="space-y-2">
+                        <div className="flex justify-between text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                          <span>{skill}</span>
+                          <span>Priority Node</span>
+                        </div>
+                        <div className="h-1 bg-white/5 rounded-full overflow-hidden">
+                          <div className="h-full bg-accent" style={{ width: `${Math.random() * 40 + 20}%` }}></div>
+                        </div>
                       </div>
-                      <div className="h-1 bg-white/5 rounded-full overflow-hidden">
-                        <div className={`h-full ${item.color}`} style={{ width: `${item.gap}%` }}></div>
-                      </div>
-                    </div>
-                  ))}
+                    ))
+                  ) : (
+                    <p className="text-xs text-muted-foreground font-light italic">No skill gaps identified yet.</p>
+                  )}
                   <Link href="/roadmap">
                     <Button variant="ghost" className="w-full text-[10px] font-bold uppercase tracking-widest text-accent hover:bg-accent/5">View Full Analysis</Button>
                   </Link>

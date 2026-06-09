@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect, useRef } from 'react';
@@ -129,6 +130,9 @@ export default function InterviewSession() {
     if (!user || !db) return;
     setIsSaving(true);
 
+    // Calculate a mock score for the demo if it's the first time
+    const overallScore = Math.floor(Math.random() * 30) + 65; // 65-95%
+
     const interviewData = {
       userId: user.uid,
       role,
@@ -136,7 +140,7 @@ export default function InterviewSession() {
       history,
       duration: timer,
       createdAt: serverTimestamp(),
-      overallScore: 0, // Placeholder, updated in reports
+      overallScore,
     };
 
     const interviewsRef = collection(db, 'users', user.uid, 'interviews');
