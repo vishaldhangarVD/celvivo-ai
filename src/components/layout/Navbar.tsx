@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
-import { Command, LogIn, Menu, X, LogOut, LayoutDashboard, History, Settings, ShieldCheck, Info, MessageSquare } from 'lucide-react';
+import { Command, LogIn, Menu, X, LogOut, LayoutDashboard, History, Settings, ShieldCheck, Info, MessageSquare, BrainCircuit } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useState } from 'react';
 import { useUser, useAuth } from '@/firebase';
@@ -49,13 +49,13 @@ export default function Navbar() {
                 <LayoutDashboard className="w-3 h-3" />
                 Command
               </Link>
-              <Link href="/user-dashboard" className="hover:text-white transition-colors flex items-center gap-2 text-accent">
+              <Link href="/skill-gap" className="hover:text-white transition-colors flex items-center gap-2 text-accent">
+                <BrainCircuit className="w-3 h-3" />
+                Gap Audit
+              </Link>
+              <Link href="/user-dashboard" className="hover:text-white transition-colors flex items-center gap-2">
                 <History className="w-3 h-3" />
                 Pulse
-              </Link>
-              <Link href="/roadmap" className="hover:text-white transition-colors flex items-center gap-2">
-                <ShieldCheck className="w-3 h-3" />
-                Roadmap
               </Link>
             </>
           )}
@@ -123,11 +123,11 @@ export default function Navbar() {
                 <Link href="/dashboard" onClick={() => setIsOpen(false)} className="text-xl font-bold tracking-widest uppercase text-white/70 flex items-center gap-4">
                   <LayoutDashboard className="w-6 h-6" /> Command Center
                 </Link>
-                <Link href="/user-dashboard" onClick={() => setIsOpen(false)} className="text-xl font-bold tracking-widest uppercase text-accent flex items-center gap-4">
-                  <History className="w-6 h-6" /> User Pulse
+                <Link href="/skill-gap" onClick={() => setIsOpen(false)} className="text-xl font-bold tracking-widest uppercase text-accent flex items-center gap-4">
+                  <BrainCircuit className="w-6 h-6" /> Gap Audit
                 </Link>
-                <Link href="/roadmap" onClick={() => setIsOpen(false)} className="text-xl font-bold tracking-widest uppercase text-white/70 flex items-center gap-4">
-                  <ShieldCheck className="w-6 h-6" /> Growth Roadmap
+                <Link href="/user-dashboard" onClick={() => setIsOpen(false)} className="text-xl font-bold tracking-widest uppercase text-white/70 flex items-center gap-4">
+                  <History className="w-6 h-6" /> User Pulse
                 </Link>
               </>
             )}

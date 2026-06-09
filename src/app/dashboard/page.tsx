@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useEffect, useMemo } from 'react';
@@ -22,7 +21,8 @@ import {
   History,
   Star,
   FileSearch,
-  CheckCircle2
+  CheckCircle2,
+  Layers
 } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -67,8 +67,18 @@ export default function Dashboard() {
     );
   }, [db, user?.uid]);
 
+  const skillGapQuery = useMemo(() => {
+    if (!db || !user?.uid) return null;
+    return query(
+      collection(db, 'users', user.uid, 'skill_gap'),
+      orderBy('createdAt', 'desc'),
+      limit(1)
+    );
+  }, [db, user?.uid]);
+
   const { data: interviews, loading: interviewsLoading } = useCollection(interviewsQuery);
   const { data: resumes, loading: resumesLoading } = useCollection(resumesQuery);
+  const { data: latestGap } = useCollection(skillGapQuery);
 
   useEffect(() => {
     if (!user && !authLoading) router.push('/login');
@@ -78,6 +88,7 @@ export default function Dashboard() {
   const stats = useMemo(() => {
     const latestResume = resumes?.[0];
     const latestInterview = interviews?.[0];
+    const latestSkillMatch = latestGap?.[0]?.skillMatchPercentage || 0;
     
     const resumeScore = latestResume?.atsScore || profile?.resumeScore || 0;
     const totalInterviews = interviews?.length || 0;
@@ -98,9 +109,10 @@ export default function Dashboard() {
       totalResumes,
       latestScore: `${latestScore}%`,
       averageScore: `${averageScore}%`,
-      jobReadiness: `${jobReadiness}%`
+      jobReadiness: `${jobReadiness}%`,
+      skillMatch: `${latestSkillMatch}%`
     };
-  }, [resumes, interviews, profile]);
+  }, [resumes, interviews, profile, latestGap]);
 
   // Performance Chart Data
   const chartData = useMemo(() => {
@@ -151,10 +163,10 @@ export default function Dashboard() {
 
           <div className="grid md:grid-cols-4 gap-6">
             {[
-              { label: "Latest Interview", val: stats.latestScore, icon: Target, color: "text-accent" },
-              { label: "Latest ATS Score", val: stats.resumeScore, icon: FileSearch, color: "text-purple-400" },
-              { label: "Total Interviews", val: stats.totalInterviews, icon: Activity, color: "text-blue-400" },
-              { label: "Total Resume Audits", val: stats.totalResumes, icon: FileText, color: "text-yellow-400" }
+              { label: "Neural Readiness", val: stats.jobReadiness, icon: Target, color: "text-accent" },
+              { label: "Skill Vector Match", val: stats.skillMatch, icon: BrainCircuit, color: "text-purple-400" },
+              { label: "Resume ATS Index", val: stats.resumeScore, icon: FileSearch, color: "text-blue-400" },
+              { label: "Neural Efficiency", val: stats.averageScore, icon: Activity, color: "text-yellow-400" }
             ].map((stat, i) => (
               <motion.div
                 key={i}
@@ -216,6 +228,65 @@ export default function Dashboard() {
                 </CardContent>
               </Card>
 
+              {/* Skill Gap Analysis Summary */}
+              <Card className="premium-card bg-white/[0.01] border-white/5 p-10">
+                <CardHeader className="p-0 mb-10 border-b border-white/5 pb-8 flex justify-between items-center">
+                  <CardTitle className="text-2xl font-bold flex items-center gap-4">
+                    <BrainCircuit className="w-8 h-8 text-purple-400" />
+                    Neural Gap Audit
+                  </CardTitle>
+                  {latestGap?.[0] && (
+                    <Badge variant="outline" className="text-[10px] font-bold text-purple-400 border-purple-400/20">
+                      Track: {latestGap[0].role}
+                    </Badge>
+                  )}
+                </CardHeader>
+                <CardContent className="p-0">
+                  {!latestGap || latestGap.length === 0 ? (
+                    <div className="py-20 text-center glass rounded-[2rem] border-white/5 border-dashed">
+                      <Layers className="w-12 h-12 text-white/20 mx-auto mb-6" />
+                      <p className="text-lg font-light text-muted-foreground">No skill gap audits synchronized.</p>
+                      <Link href="/skill-gap" className="mt-8 block">
+                        <Button variant="outline" className="rounded-xl border-purple-400/20 text-purple-400 hover:bg-purple-400/5">Calibrate Skill Track</Button>
+                      </Link>
+                    </div>
+                  ) : (
+                    <div className="space-y-8">
+                      <div className="flex items-center justify-between">
+                        <div className="space-y-1">
+                          <p className="text-xs uppercase tracking-widest text-muted-foreground font-bold">Current Proficiency</p>
+                          <p className="text-4xl font-bold text-purple-400">{latestGap[0].skillMatchPercentage}%</p>
+                        </div>
+                        <Link href="/skill-gap">
+                          <Button variant="ghost" className="text-accent text-[10px] font-bold uppercase tracking-widest gap-2">
+                            View Full Analysis <ArrowUpRight className="w-4 h-4" />
+                          </Button>
+                        </Link>
+                      </div>
+                      
+                      <div className="grid md:grid-cols-2 gap-8">
+                        <div className="space-y-4">
+                          <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Critical Gaps</p>
+                          <div className="flex flex-wrap gap-2">
+                            {latestGap[0].criticalMissingSkills?.map((s: string, i: number) => (
+                              <Badge key={i} className="bg-red-400/10 text-red-400 border-red-400/20 px-4 py-2 rounded-xl text-[10px] font-bold uppercase tracking-widest">
+                                {s}
+                              </Badge>
+                            ))}
+                          </div>
+                        </div>
+                        <div className="space-y-4">
+                          <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Next Milestone</p>
+                          <div className="p-4 glass rounded-2xl border-white/5">
+                            <p className="text-sm font-light leading-relaxed">{latestGap[0].recommendedRoadmap?.[0]}</p>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+
               {/* Interview History */}
               <Card className="premium-card bg-white/[0.01] border-white/5 p-10">
                 <CardHeader className="p-0 mb-10">
@@ -261,50 +332,6 @@ export default function Dashboard() {
                   )}
                 </CardContent>
               </Card>
-
-              {/* Resume Audit History */}
-              <Card className="premium-card bg-white/[0.01] border-white/5 p-10">
-                <CardHeader className="p-0 mb-10">
-                  <CardTitle className="text-2xl font-bold flex items-center gap-4">
-                    <FileSearch className="w-8 h-8 text-purple-400" />
-                    Resume History
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="p-0 space-y-4">
-                  {resumesLoading ? (
-                    <div className="py-12 flex justify-center"><Loader2 className="w-8 h-8 animate-spin text-purple-400" /></div>
-                  ) : !resumes || resumes.length === 0 ? (
-                    <div className="py-20 text-center glass rounded-[2rem] border-white/5 border-dashed">
-                      <FileText className="w-12 h-12 text-white/20 mx-auto mb-6" />
-                      <p className="text-lg font-light text-muted-foreground">No resume audits recorded yet.</p>
-                      <Link href="/resume" className="mt-8 block">
-                        <Button variant="outline" className="rounded-xl border-purple-400/20 text-purple-400 hover:bg-purple-400/5">Analyze First Resume</Button>
-                      </Link>
-                    </div>
-                  ) : (
-                    resumes.slice(0, 5).map((resume: any, i) => (
-                      <div key={i} className="flex items-center justify-between p-6 glass rounded-[2rem] border-white/5 hover:bg-white/[0.03] transition-all group">
-                        <div className="flex items-center gap-6">
-                          <div className="w-10 h-10 glass rounded-xl flex items-center justify-center text-purple-400">
-                            <CheckCircle2 className="w-5 h-5" />
-                          </div>
-                          <div>
-                            <h4 className="font-bold">Audit: {resume.filename}</h4>
-                            <div className="flex items-center gap-3 text-xs text-muted-foreground mt-1">
-                              <span>ATS: {resume.atsScore}%</span>
-                              <span className="w-1 h-1 rounded-full bg-white/10"></span>
-                              <span>{resume.createdAt?.seconds ? new Date(resume.createdAt.seconds * 1000).toLocaleDateString() : 'Recent'}</span>
-                            </div>
-                          </div>
-                        </div>
-                        <Button variant="ghost" size="icon" className="group-hover:text-purple-400 rounded-xl">
-                          <ArrowUpRight className="w-5 h-5" />
-                        </Button>
-                      </div>
-                    ))
-                  )}
-                </CardContent>
-              </Card>
             </div>
 
             <div className="lg:col-span-4 space-y-8">
@@ -320,6 +347,15 @@ export default function Dashboard() {
                       <div className="flex items-center gap-4">
                         <FileText className="w-5 h-5 text-purple-400" />
                         <span className="font-bold text-sm">Resume Auditor Pro</span>
+                      </div>
+                      <ChevronRight className="w-4 h-4 text-white/30" />
+                    </Button>
+                  </Link>
+                  <Link href="/skill-gap">
+                    <Button variant="outline" className="w-full h-16 rounded-2xl glass border-white/10 hover:bg-white/10 justify-between px-6">
+                      <div className="flex items-center gap-4">
+                        <BrainCircuit className="w-5 h-5 text-accent" />
+                        <span className="font-bold text-sm">Skill Gap Analysis</span>
                       </div>
                       <ChevronRight className="w-4 h-4 text-white/30" />
                     </Button>

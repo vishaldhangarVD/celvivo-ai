@@ -1,4 +1,3 @@
-
 {
   "entities": {
     "UserProfile": {
@@ -49,6 +48,21 @@
         "keywords": { "type": "array", "items": { "type": "string" } },
         "createdAt": { "type": "string", "format": "date-time" }
       }
+    },
+    "SkillGapAnalysis": {
+      "title": "Skill Gap Analysis",
+      "description": "A comparative report between user skills and target role requirements.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "role": { "type": "string" },
+        "skillMatchPercentage": { "type": "number" },
+        "existingSkills": { "type": "array", "items": { "type": "string" } },
+        "missingSkills": { "type": "array", "items": { "type": "string" } },
+        "criticalMissingSkills": { "type": "array", "items": { "type": "string" } },
+        "recommendedRoadmap": { "type": "array", "items": { "type": "string" } },
+        "createdAt": { "type": "string", "format": "date-time" }
+      }
     }
   },
   "auth": {
@@ -66,6 +80,10 @@
     "/users/{userId}/resumes/{resumeId}": {
       "schema": "#/entities/ResumeAnalysis",
       "description": "Stores resume analysis reports."
+    },
+    "/users/{userId}/skill_gap/{gapId}": {
+      "schema": "#/entities/SkillGapAnalysis",
+      "description": "Stores individual skill gap analysis reports."
     }
   }
 }
