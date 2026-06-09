@@ -292,20 +292,15 @@ export default function LandingPage() {
                   </div>
 
                   {/* Right Avatar */}
-                  <div className="md:w-1/2 relative min-h-[400px] md:min-h-0 p-8 flex items-center justify-center">
+                  <div className="md:w-[45%] relative min-h-[500px] flex items-center justify-center p-8">
                     <div className="relative w-full h-full rounded-[2.5rem] overflow-hidden glass border-white/20 shadow-2xl">
                       <Image 
                         src="/images/hr-manager.jpg"
                         alt="Virtual HR Manager"
                         fill
-                        className="object-cover rounded-2xl opacity-90 group-hover:scale-105 transition-transform duration-[2s] brightness-110"
+                        className="object-cover rounded-2xl opacity-100 group-hover:scale-105 transition-transform duration-[2s] brightness-110"
+                        priority
                       />
-                      <div className="absolute inset-0 bg-gradient-to-t from-[#0b0e1a]/60 via-transparent to-transparent"></div>
-                    </div>
-                    
-                    {/* Floating Pulse Rings */}
-                    <div className="absolute bottom-12 right-12 z-20">
-                      <div className="w-4 h-4 rounded-full bg-accent animate-ping"></div>
                     </div>
                   </div>
                 </Card>

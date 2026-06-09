@@ -224,9 +224,9 @@ export default function InterviewSession() {
                 src="/images/hr-manager.jpg"
                 alt="Virtual HR Manager"
                 fill
-                className="object-cover rounded-2xl opacity-90 brightness-110"
+                className="object-cover rounded-2xl opacity-100 brightness-110"
+                priority
               />
-              <div className="absolute inset-0 bg-gradient-to-t from-[#050816] via-transparent to-transparent"></div>
               
               <AnimatePresence>
                 {nextOutput?.nextQuestion && !isProcessing && (
