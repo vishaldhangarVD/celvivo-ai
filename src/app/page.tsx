@@ -9,6 +9,7 @@ import Navbar from '@/components/layout/Navbar';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
+import { Card } from '@/components/ui/card';
 import { 
   FileText, 
   Target, 
