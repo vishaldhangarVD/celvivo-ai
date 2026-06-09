@@ -295,11 +295,10 @@ export default function LandingPage() {
                   <div className="md:w-1/2 relative min-h-[400px] md:min-h-0 p-8 flex items-center justify-center">
                     <div className="relative w-full h-full rounded-[2.5rem] overflow-hidden glass border-white/20 shadow-2xl">
                       <Image 
-                        src={PlaceHolderImages.find(img => img.id === 'ai-hr-interviewer')?.imageUrl || ''}
-                        alt="AI HR Interviewer"
+                        src="/images/hr-manager.jpg"
+                        alt="Virtual HR Manager"
                         fill
-                        className="object-cover opacity-90 group-hover:scale-105 transition-transform duration-[2s] brightness-110"
-                        data-ai-hint="professional businessman suit"
+                        className="object-cover rounded-2xl opacity-90 group-hover:scale-105 transition-transform duration-[2s] brightness-110"
                       />
                       <div className="absolute inset-0 bg-gradient-to-t from-[#0b0e1a]/60 via-transparent to-transparent"></div>
                     </div>
@@ -744,7 +743,7 @@ export default function LandingPage() {
                 <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-purple-600 to-blue-600 flex items-center justify-center shadow-2xl">
                   <Command className="text-white w-6 h-6" />
                 </div>
-                <span className="font-headline font-bold text-3xl tracking-tighter uppercase">NEXVORO<span className="text-accent">AI</span></span>
+                <span className="font-headline font-bold text-2xl tracking-tighter uppercase">NEXVORO<span className="text-accent">AI</span></span>
               </Link>
               <p className="text-muted-foreground font-light leading-relaxed max-w-sm">
                 The world's most advanced neural simulation platform for elite technical recruitment and career trajectory acceleration.

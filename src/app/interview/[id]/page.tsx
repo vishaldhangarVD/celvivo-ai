@@ -221,10 +221,10 @@ export default function InterviewSession() {
               className="relative w-full max-w-md aspect-[4/5] rounded-[3.5rem] overflow-hidden border border-white/10 shadow-[0_0_100px_rgba(147,51,234,0.15)] bg-white/[0.02] glass"
             >
               <Image 
-                src={PlaceHolderImages.find(img => img.id === 'ai-hr-interviewer')?.imageUrl || ''}
-                alt="AI Interviewer"
+                src="/images/hr-manager.jpg"
+                alt="Virtual HR Manager"
                 fill
-                className="object-cover opacity-90 brightness-110"
+                className="object-cover rounded-2xl opacity-90 brightness-110"
               />
               <div className="absolute inset-0 bg-gradient-to-t from-[#050816] via-transparent to-transparent"></div>
               
