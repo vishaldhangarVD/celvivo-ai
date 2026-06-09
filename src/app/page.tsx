@@ -252,18 +252,28 @@ export default function LandingPage() {
                 animate={{ opacity: 1, x: 0 }}
                 className="relative group"
               >
-                <Card className="premium-card border-glow-premium p-0 overflow-hidden border-white/10 bg-[#0b0e1a]/80 shadow-[0_0_100px_rgba(147,51,234,0.15)] flex flex-col md:flex-row min-h-[500px]">
+                <Card className="premium-card border-glow-premium p-0 overflow-hidden border-white/10 bg-[#0b0e1a]/80 shadow-[0_0_100px_rgba(147,51,234,0.15)] flex flex-col md:flex-row min-h-[550px]">
                   {/* Left Content */}
-                  <div className="flex-1 p-12 flex flex-col justify-between relative z-10">
+                  <div className="flex-1 p-10 md:p-12 flex flex-col justify-between relative z-10">
                     <div className="space-y-6">
                       <div className="flex justify-between items-start">
-                        <Badge className="bg-accent/20 text-accent border-none px-4 py-1.5 text-[10px] tracking-[0.3em] font-bold uppercase">Neural Agent v4.2</Badge>
-                        <Badge variant="outline" className="border-purple-500/30 text-purple-400 text-[10px] font-bold uppercase tracking-widest px-3">Premium Feature</Badge>
+                        <div className="space-y-1">
+                          <h2 className="text-3xl font-bold tracking-tighter text-premium">Virtual HR Manager</h2>
+                          <Badge className="bg-accent/20 text-accent border-none px-3 py-1 text-[8px] tracking-[0.2em] font-bold uppercase flex items-center gap-2 w-fit">
+                            <Star className="w-3 h-3 fill-accent" /> Premium Feature
+                          </Badge>
+                        </div>
+                        <div className="flex items-center gap-2 bg-black/40 px-3 py-1 rounded-full border border-white/5">
+                          <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>
+                          <span className="text-[10px] font-bold uppercase tracking-widest text-green-500">Live</span>
+                        </div>
                       </div>
                       
-                      <h2 className="text-5xl font-bold tracking-tighter text-premium">Virtual HR <br />Manager</h2>
+                      <p className="text-sm text-muted-foreground font-light leading-relaxed">
+                        Your AI-powered HR Manager is ready to conduct your strategic interview session.
+                      </p>
                       
-                      <div className="grid grid-cols-1 gap-6 pt-4">
+                      <div className="grid grid-cols-1 gap-6 pt-2">
                         {[
                           { val: "10 Free", label: "Questions", icon: MessageSquare, color: "text-blue-400" },
                           { val: "75+", label: "IT Job Roles", icon: Layers, color: "text-purple-400" },
@@ -292,15 +302,30 @@ export default function LandingPage() {
                   </div>
 
                   {/* Right Avatar */}
-                  <div className="md:w-[45%] relative min-h-[500px] flex items-center justify-center p-8 bg-black/20">
-                    <div className="relative w-full h-full min-h-[500px] rounded-[2.5rem] overflow-hidden border border-white/20 shadow-2xl glass">
+                  <div className="md:w-[48%] relative min-h-[550px] flex items-center justify-center p-6 md:p-8 bg-black/20">
+                    <div className="relative w-full h-full min-h-[450px] rounded-[2.5rem] overflow-hidden border border-white/20 shadow-2xl glass bg-white/[0.02]">
                       <Image 
                         src="/images/hr-manager.jpg"
                         alt="Virtual HR Manager"
                         fill
-                        className="object-cover rounded-3xl opacity-100 transition-all duration-[1s] z-10"
+                        className="object-cover rounded-3xl opacity-100 brightness-110 z-10 transition-all duration-700 group-hover:scale-105"
                         priority
                       />
+                      {/* Interaction Overlays to match screenshot */}
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-black/40 z-20"></div>
+                      <div className="absolute top-6 left-6 z-30">
+                        <Badge className="bg-white/10 backdrop-blur-md text-white border-white/20 px-4 py-1.5 text-[10px] tracking-widest font-bold uppercase rounded-xl">
+                          AI HR Manager
+                        </Badge>
+                      </div>
+                      <div className="absolute bottom-6 left-0 right-0 flex justify-center gap-4 z-30 px-6">
+                        <div className="flex items-center gap-3 bg-black/60 backdrop-blur-xl px-6 py-3 rounded-2xl border border-white/10">
+                          <div className="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center">
+                            <MessageSquare className="w-4 h-4 text-white" />
+                          </div>
+                          <span className="text-[10px] font-bold uppercase tracking-widest text-accent">Neural Sync Active</span>
+                        </div>
+                      </div>
                     </div>
                   </div>
                 </Card>
@@ -391,11 +416,10 @@ export default function LandingPage() {
               <div className="relative z-10 premium-card p-0 overflow-hidden border-white/10 shadow-[0_0_80px_rgba(34,211,238,0.1)]">
                 <Image 
                   src={PlaceHolderImages.find(img => img.id === 'candidate-prep')?.imageUrl || ''}
-                  alt="Candidate Preparing"
+                  alt="Candidate Prep"
                   width={800}
                   height={600}
                   className="w-full h-auto object-cover opacity-90 brightness-110"
-                  data-ai-hint="professional candidate preparing"
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-[#050816] via-transparent to-transparent"></div>
                 <div className="absolute bottom-10 left-10 right-10">
@@ -807,7 +831,6 @@ export default function LandingPage() {
   );
 }
 
-// Placeholder components for the footer icons
 function Twitter(props: any) { return <svg {...props} fill="currentColor" viewBox="0 0 24 24"><path d="M24 4.557c-.883.392-1.832.656-2.828.775 1.017-.609 1.798-1.574 2.165-2.724-.951.564-2.005.974-3.127 1.195-.897-.957-2.178-1.555-3.594-1.555-3.179 0-5.515 2.966-4.797 6.045-4.091-.205-7.719-2.165-10.148-5.144-1.29 2.213-.669 5.108 1.523 6.574-.806-.026-1.566-.247-2.229-.616-.054 2.281 1.581 4.415 3.949 4.89-.693.188-1.452.232-2.224.084.626 1.956 2.444 3.379 4.6 3.419-2.07 1.623-4.678 2.348-7.29 2.04 2.179 1.397 4.768 2.212 7.548 2.212 9.142 0 14.307-7.721 13.995-14.646.962-.695 1.797-1.562 2.457-2.549z"/></svg>; }
 function Linkedin(props: any) { return <svg {...props} fill="currentColor" viewBox="0 0 24 24"><path d="M19 0h-14c-2.761 0-5 2.239-5 5v14c0 2.761 2.239 5 5 5h14c2.762 0 5-2.239 5-5v-14c0-2.761-2.238-5-5-5zm-11 19h-3v-11h3v11zm-1.5-12.268c-.966 0-1.75-.79-1.75-1.764s.784-1.764 1.75-1.764 1.75.79 1.75 1.764-.783 1.764-1.75 1.764zm13.5 12.268h-3v-5.604c0-3.368-4-3.113-4 0v5.604h-3v-11h3v1.765c1.396-2.586 7-2.777 7 2.476v6.759z"/></svg>; }
 function Github(props: any) { return <svg {...props} fill="currentColor" viewBox="0 0 24 24"><path d="M12 .297c-6.63 0-12 5.373-12 12 0 5.303 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61C4.422 18.07 3.633 17.7 3.633 17.7c-1.087-.744.084-.729.084-.729 1.205.084 1.838 1.236 1.838 1.236 1.07 1.835 2.809 1.305 3.495.998.108-.776.417-1.305.76-1.605-2.665-.3-5.466-1.332-5.466-5.93 0-1.31.465-2.38 1.235-3.22-.135-.303-.54-1.523.105-3.176 0 0 1.005-.322 3.3 1.23.96-.267 1.98-.399 3-.405 1.02.006 2.04.138 3 .405 2.28-1.552 3.285-1.23 3.285-1.23.645 1.653.24 2.873.12 3.176.765.84 1.23 1.91 1.23 3.22 0 4.61-2.805 5.625-5.475 5.92.42.36.81 1.096.81 2.22 0 1.606-.015 2.896-.015 3.286 0 .315.21.69.825.57C20.565 22.092 24 17.592 24 12.297c0-6.627-5.373-12-12-12"/></svg>; }

@@ -25,7 +25,8 @@ import {
   ShieldCheck,
   TrendingUp,
   Award,
-  Target
+  Target,
+  Star
 } from 'lucide-react';
 import { aiMockInterview, type AiMockInterviewOutput } from '@/ai/flows/ai-mock-interview';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
