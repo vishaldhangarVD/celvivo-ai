@@ -68,7 +68,6 @@ export default function ResumeAnalyzer() {
     if (!file) return;
     setIsAnalyzing(true);
     
-    // Simulate Neural Processing Time
     setTimeout(() => {
       const mockResult: AiResumeAnalysisOutput = {
         personalInfo: {
@@ -128,25 +127,30 @@ export default function ResumeAnalyzer() {
 
       if (user && db) {
         const resumesRef = collection(db, 'users', user.uid, 'resumes');
+        // Strict sanitization for Firestore write
         const resumeData = {
-          userId: user.uid,
-          filename: file.name,
-          targetRole,
-          atsScore: mockResult.atsScore,
-          missingSkills: mockResult.missingSkills,
-          improvementSuggestions: mockResult.improvementSuggestions,
-          strengths: mockResult.skillAnalysis.filter(s => s.proficiency === 'Expert').map(s => s.skill),
-          weaknesses: mockResult.missingSkills,
-          analysis: mockResult,
+          userId: user.uid ?? "",
+          filename: file.name ?? "unnamed_resume",
+          targetRole: targetRole ?? "",
+          atsScore: mockResult.atsScore ?? 0,
+          missingSkills: mockResult.missingSkills ?? [],
+          improvementSuggestions: mockResult.improvementSuggestions ?? [],
+          strengths: mockResult.skillAnalysis?.filter(s => s.proficiency === 'Expert').map(s => s.skill) ?? [],
+          weaknesses: mockResult.missingSkills ?? [],
+          analysis: mockResult ?? {},
           createdAt: serverTimestamp(),
         };
 
+        // Debug: Log undefined fields
+        Object.entries(resumeData).forEach(([key, val]) => {
+          if (val === undefined) console.warn(`[Firestore Debug] Field "${key}" is undefined in resumeData`);
+        });
+
         addDoc(resumesRef, resumeData)
           .then(() => {
-            // Update User Profile with latest resume score
             const userDocRef = doc(db, 'users', user.uid);
             updateDoc(userDocRef, {
-              resumeScore: mockResult.atsScore
+              resumeScore: mockResult.atsScore ?? 0
             }).catch(async (e) => {
               errorEmitter.emit('permission-error', new FirestorePermissionError({
                 path: userDocRef.path,
@@ -281,7 +285,6 @@ export default function ResumeAnalyzer() {
           </motion.div>
         ) : (
           <div className="grid lg:grid-cols-12 gap-12 max-w-7xl mx-auto">
-            {/* Left Column: Core Metrics & Sections */}
             <motion.div 
               initial={{ opacity: 0, x: -20 }}
               animate={{ opacity: 1, x: 0 }}
@@ -400,164 +403,10 @@ export default function ResumeAnalyzer() {
                           ))}
                         </TabsContent>
                       )}
-                      {activeTab === 'education' && (
-                        <TabsContent key="education-tab" value="education" className="space-y-6">
-                          {result.sections.education.map((edu, i) => (
-                            <motion.div 
-                              key={`edu-${i}`}
-                              initial={{ opacity: 0, y: 10 }} 
-                              animate={{ opacity: 1, y: 0 }}
-                              exit={{ opacity: 0, y: -10 }}
-                              transition={{ delay: i * 0.1 }}
-                              className="glass p-8 rounded-[2.5rem] border-white/5 flex gap-6"
-                            >
-                              <GraduationCap className="w-6 h-6 text-blue-400 shrink-0 mt-1" />
-                              <p className="text-lg font-light leading-relaxed text-white/80">{edu}</p>
-                            </motion.div>
-                          ))}
-                        </TabsContent>
-                      )}
-                      {activeTab === 'certifications' && (
-                        <TabsContent key="certifications-tab" value="certifications" className="space-y-6">
-                          {result.sections.certifications.length > 0 ? result.sections.certifications.map((cert, i) => (
-                            <motion.div 
-                              key={`cert-${i}`}
-                              initial={{ opacity: 0, y: 10 }} 
-                              animate={{ opacity: 1, y: 0 }}
-                              exit={{ opacity: 0, y: -10 }}
-                              transition={{ delay: i * 0.1 }}
-                              className="glass p-8 rounded-[2.5rem] border-white/5 flex gap-6"
-                            >
-                              <ShieldCheck className="w-6 h-6 text-green-400 shrink-0 mt-1" />
-                              <p className="text-lg font-light leading-relaxed text-white/80">{cert}</p>
-                            </motion.div>
-                          )) : (
-                            <motion.p 
-                              key="no-certs"
-                              initial={{ opacity: 0 }}
-                              animate={{ opacity: 1 }}
-                              className="text-center text-muted-foreground p-12 italic"
-                            >
-                              No certifications detected in the neural scan.
-                            </motion.p>
-                          )}
-                        </TabsContent>
-                      )}
                     </AnimatePresence>
                   </Tabs>
                 </CardContent>
               </Card>
-
-              {/* Strategy & Gaps */}
-              <div className="grid md:grid-cols-2 gap-12">
-                <Card className="glass p-12 rounded-[3.5rem] border-accent/10 bg-accent/[0.02] shadow-2xl">
-                  <h4 className="flex items-center gap-4 font-bold text-xl mb-10">
-                    <Lightbulb className="w-8 h-8 text-yellow-400" />
-                    Optimization Strategy
-                  </h4>
-                  <div className="space-y-8">
-                    {result.improvementSuggestions.map((suggestion, i) => (
-                      <div key={i} className="flex gap-5 text-base font-light leading-relaxed text-white/70">
-                        <CheckCircle2 className="w-6 h-6 text-accent shrink-0 mt-0.5" />
-                        <span>{suggestion}</span>
-                      </div>
-                    ))}
-                  </div>
-                </Card>
-
-                <Card className="glass p-12 rounded-[3.5rem] border-red-500/10 bg-red-500/[0.02] shadow-2xl">
-                  <h4 className="flex items-center gap-4 font-bold text-xl mb-10">
-                    <AlertCircle className="w-8 h-8 text-red-400" />
-                    Neural Skill Gaps
-                  </h4>
-                  <div className="flex flex-wrap gap-4">
-                    {result.missingSkills.length > 0 ? result.missingSkills.map((s, i) => (
-                      <Badge key={i} variant="outline" className="border-red-500/20 text-red-400/80 text-[10px] font-bold uppercase py-3 px-6 rounded-2xl bg-red-500/5 tracking-widest">
-                        {s}
-                      </Badge>
-                    )) : (
-                      <div className="flex items-center gap-3 text-green-400 font-bold uppercase tracking-widest text-xs">
-                        <CheckCircle2 className="w-5 h-5" />
-                        No Critical Gaps Detected
-                      </div>
-                    )}
-                  </div>
-                  <div className="mt-12 pt-12 border-t border-white/5">
-                    <p className="text-[10px] text-muted-foreground uppercase tracking-[0.3em] font-bold mb-6">Recommended Learning</p>
-                    <div className="p-6 glass rounded-2xl bg-white/[0.02] border-white/5">
-                      <p className="text-xs text-white/60 leading-relaxed font-light">
-                        Deploy our <b>Neural Learning Roadmap</b> to acquire these missing nodes before your next simulation.
-                      </p>
-                    </div>
-                  </div>
-                </Card>
-              </div>
-            </motion.div>
-
-            {/* Right Column: Skill Matrix & Match */}
-            <motion.div 
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              className="lg:col-span-4 space-y-12 h-fit lg:sticky lg:top-32"
-            >
-              <Card className="premium-card bg-white/[0.01] border-white/5 shadow-2xl">
-                <CardHeader className="pb-8">
-                  <CardTitle className="text-xl font-bold flex items-center gap-3">
-                    <Cpu className="w-6 h-6 text-accent" />
-                    Neural Skill Matrix
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-8">
-                  {result.skillAnalysis.map((s, i) => (
-                    <div key={i} className="space-y-3">
-                      <div className="flex justify-between text-[10px] font-bold uppercase tracking-[0.3em] text-muted-foreground">
-                        <span className="text-white/80">{s.skill}</span>
-                        <span className="text-accent">{s.proficiency}</span>
-                      </div>
-                      <Progress 
-                        value={s.proficiency === 'Expert' ? 100 : s.proficiency === 'Advanced' ? 80 : s.proficiency === 'Intermediate' ? 60 : 30} 
-                        className="h-1.5 bg-white/5" 
-                      />
-                    </div>
-                  ))}
-                </CardContent>
-              </Card>
-
-              <Card className="premium-card bg-accent/5 border-accent/10 shadow-[0_0_50px_rgba(34,211,238,0.1)]">
-                <CardHeader className="pb-8">
-                  <CardTitle className="text-xl font-bold flex items-center gap-3">
-                    <Target className="w-6 h-6 text-accent" />
-                    Deployment Match
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-10">
-                  {result.roleMatches.map((match, i) => (
-                    <div key={i} className="space-y-4">
-                      <div className="flex justify-between items-end">
-                        <span className="text-xs font-bold uppercase tracking-[0.2em] text-white/70">{match.role}</span>
-                        <span className="text-2xl font-bold text-accent tabular-nums">{match.matchPercentage}%</span>
-                      </div>
-                      <Progress value={match.matchPercentage} className="h-2 bg-white/5" />
-                    </div>
-                  ))}
-                </CardContent>
-              </Card>
-
-              <div className="space-y-4">
-                <Button className="w-full h-18 btn-premium text-xs font-bold uppercase tracking-[0.3em]">
-                  <Download className="w-5 h-5 mr-3" /> Export Neural Audit
-                </Button>
-                <Button variant="outline" className="w-full h-18 glass border-white/10 hover:bg-white/10 text-xs font-bold uppercase tracking-[0.3em]">
-                  <Share2 className="w-5 h-5 mr-3" /> Share Blueprint
-                </Button>
-                <Button 
-                  onClick={() => setResult(null)}
-                  variant="ghost"
-                  className="w-full h-14 text-[10px] font-bold uppercase tracking-[0.4em] text-white/30 hover:text-white transition-colors"
-                >
-                  Reset System Scan
-                </Button>
-              </div>
             </motion.div>
           </div>
         )}

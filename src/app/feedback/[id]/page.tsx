@@ -55,7 +55,6 @@ export default function FeedbackReport() {
 
   useEffect(() => {
     const processData = async () => {
-      // Prioritize data from Firestore, fall back to URL params if it's the "last" simulated session
       let historyData = [];
       let role = searchParams.get('role') || 'Elite Engineer';
       let exp = searchParams.get('exp') || 'Senior';
@@ -65,7 +64,6 @@ export default function FeedbackReport() {
         role = interviewDoc.role;
         exp = interviewDoc.experienceLevel;
         
-        // If feedback is already in the doc, don't re-generate
         if (interviewDoc.feedback && interviewDoc.overallScore > 0) {
           setFeedback(interviewDoc.feedback);
           setRoadmap(interviewDoc.roadmap || null);
@@ -75,7 +73,7 @@ export default function FeedbackReport() {
         const rawData = searchParams.get('data');
         if (rawData) historyData = JSON.parse(decodeURIComponent(rawData));
       } else {
-        return; // Wait for doc to load
+        return; 
       }
 
       if (historyData.length === 0 || isProcessing) return;
@@ -98,18 +96,35 @@ export default function FeedbackReport() {
         });
         setRoadmap(roadmapResult);
 
-        // PERSIST the feedback back to Firestore for the user's history
         if (docId !== 'last' && interviewRef) {
-          updateDoc(interviewRef, {
-            feedback: feedbackResult,
-            roadmap: roadmapResult,
-            overallScore: feedbackResult.overallInterviewScore,
-            technicalScore: feedbackResult.technicalKnowledgeScore,
-            communicationScore: feedbackResult.communicationScore,
-            confidenceScore: feedbackResult.confidenceScore,
-            strengths: feedbackResult.strengths,
-            weaknesses: feedbackResult.weaknesses,
-          }).catch(async (err) => {
+          // Strict sanitization for Firestore update
+          const updateData = {
+            feedback: {
+              technicalKnowledgeScore: feedbackResult.technicalKnowledgeScore ?? 0,
+              communicationScore: feedbackResult.communicationScore ?? 0,
+              problemSolvingScore: feedbackResult.problemSolvingScore ?? 0,
+              confidenceScore: feedbackResult.confidenceScore ?? 0,
+              overallInterviewScore: feedbackResult.overallInterviewScore ?? 0,
+              strengths: feedbackResult.strengths ?? [],
+              weaknesses: feedbackResult.weaknesses ?? [],
+              improvementSuggestions: feedbackResult.improvementSuggestions ?? [],
+              jobReadinessScore: feedbackResult.jobReadinessScore ?? 0,
+            },
+            roadmap: roadmapResult ?? { plans: { thirtyDay: [], sixtyDay: [], ninetyDay: [] }, recommendedProjects: [], interviewPrepTasks: [] },
+            overallScore: feedbackResult.overallInterviewScore ?? 0,
+            technicalScore: feedbackResult.technicalKnowledgeScore ?? 0,
+            communicationScore: feedbackResult.communicationScore ?? 0,
+            confidenceScore: feedbackResult.confidenceScore ?? 0,
+            strengths: feedbackResult.strengths ?? [],
+            weaknesses: feedbackResult.weaknesses ?? [],
+          };
+
+          // Debug log
+          Object.entries(updateData).forEach(([key, val]) => {
+            if (val === undefined) console.error(`[Firestore Debug] Field "${key}" is undefined in interview updateData`);
+          });
+
+          updateDoc(interviewRef, updateData).catch(async (err) => {
             errorEmitter.emit('permission-error', new FirestorePermissionError({
               path: interviewRef.path,
               operation: 'update',
@@ -117,11 +132,10 @@ export default function FeedbackReport() {
             }));
           });
 
-          // Also update the global readiness in user profile
           if (user?.uid && db) {
             const userRef = doc(db, 'users', user.uid);
             updateDoc(userRef, {
-              jobReadinessScore: Math.round(feedbackResult.jobReadinessScore)
+              jobReadinessScore: Math.round(feedbackResult.jobReadinessScore ?? 0)
             }).catch(() => {});
           }
         }
@@ -162,7 +176,6 @@ export default function FeedbackReport() {
       <NavigationControls />
       <div className="container mx-auto px-4 py-20">
         <div className="max-w-7xl mx-auto">
-          {/* Executive Summary Header */}
           <motion.div 
             initial={{ y: 30, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
@@ -193,7 +206,6 @@ export default function FeedbackReport() {
           </motion.div>
 
           <div className="grid lg:grid-cols-12 gap-12">
-            {/* Left Column: Deep Metrics */}
             <div className="lg:col-span-8 space-y-12">
               <Card className="premium-card bg-white/[0.02]">
                 <CardHeader className="pb-8">
@@ -225,7 +237,6 @@ export default function FeedbackReport() {
                 </CardContent>
               </Card>
 
-              {/* Cognitive Analysis */}
               <div className="grid md:grid-cols-2 gap-12">
                 <Card className="glass p-10 rounded-[3rem] border-green-500/10 bg-green-500/[0.02]">
                   <CardHeader className="p-0 mb-8">
@@ -260,7 +271,6 @@ export default function FeedbackReport() {
                 </Card>
               </div>
 
-              {/* Growth Architecture */}
               <Card className="premium-card bg-white/[0.01]">
                 <CardHeader className="p-10 border-b border-white/5">
                   <CardTitle className="text-3xl font-bold flex items-center gap-4">
@@ -272,31 +282,13 @@ export default function FeedbackReport() {
                   <div>
                     <h4 className="text-xs uppercase tracking-[0.4em] font-bold text-muted-foreground mb-8">Critical Milestones</h4>
                     <div className="space-y-6">
-                      {roadmap?.careerImprovementPlan?.map((step, i) => (
+                      {roadmap?.plans?.thirtyDay?.map((module, i) => (
                         <div key={i} className="flex gap-8 items-start p-8 glass rounded-[2.5rem] border-white/5 hover:border-accent/20 transition-all">
                           <div className="w-12 h-12 rounded-2xl bg-accent/20 flex items-center justify-center font-bold text-accent shrink-0">0{i + 1}</div>
-                          <p className="text-lg leading-relaxed font-light">{step}</p>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-
-                  <div>
-                    <h4 className="text-xs uppercase tracking-[0.4em] font-bold text-muted-foreground mb-8">Selected Resources</h4>
-                    <div className="grid md:grid-cols-2 gap-6">
-                      {roadmap?.learningResources?.map((res, i) => (
-                        <div key={i} className="glass p-8 rounded-[2.5rem] border-white/5 hover:bg-white/[0.04] transition-all flex flex-col justify-between h-full">
-                          <div className="space-y-4">
-                            <div className="flex justify-between items-start">
-                              <Badge variant="outline" className="text-[10px] text-accent border-accent/30 tracking-widest uppercase font-bold">{res.type}</Badge>
-                              <BookOpen className="w-6 h-6 text-accent/50" />
-                            </div>
-                            <h5 className="text-xl font-bold">{res.name}</h5>
-                            <p className="text-sm text-muted-foreground font-light leading-relaxed">{res.description}</p>
+                          <div className="space-y-2">
+                            <h5 className="text-xl font-bold">{module.title}</h5>
+                            <p className="text-lg leading-relaxed font-light">{module.desc}</p>
                           </div>
-                          <Button variant="link" className="p-0 h-auto text-accent text-sm mt-8 justify-start group">
-                            Access Module <ArrowRight className="ml-2 w-4 h-4 group-hover:translate-x-1 transition-transform" />
-                          </Button>
                         </div>
                       ))}
                     </div>
@@ -305,7 +297,6 @@ export default function FeedbackReport() {
               </Card>
             </div>
 
-            {/* Right Column: Strategic Tools */}
             <div className="lg:col-span-4 space-y-12 h-fit lg:sticky lg:top-24">
               <Card className="premium-card bg-accent/5 border-accent/10">
                 <CardHeader>
@@ -328,19 +319,6 @@ export default function FeedbackReport() {
                       <Share2 className="w-5 h-5 mr-2" /> Share
                     </Button>
                   </div>
-                </CardContent>
-              </Card>
-
-              <Card className="glass p-10 rounded-[3rem] border-white/5">
-                <CardHeader className="p-0 mb-8">
-                  <CardTitle className="text-xl font-bold">Missing Skill Delta</CardTitle>
-                </CardHeader>
-                <CardContent className="p-0 flex flex-wrap gap-3">
-                  {roadmap?.missingSkills?.map((skill, i) => (
-                    <Badge key={i} className="bg-white/5 text-white border-white/10 px-5 py-2 rounded-xl text-sm font-medium">
-                      {skill}
-                    </Badge>
-                  ))}
                 </CardContent>
               </Card>
             </div>

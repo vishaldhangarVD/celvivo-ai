@@ -131,22 +131,31 @@ export default function InterviewSession() {
     if (!user || !db) return;
     setIsSaving(true);
 
+    // Strict sanitization to prevent "undefined" Firestore values
     const interviewData = {
-      userId: user.uid,
+      userId: user.uid ?? "",
       userName: user.displayName || 'Anonymous Operator',
-      role,
-      experienceLevel: exp,
-      history,
-      duration: timer,
+      role: role ?? "",
+      experienceLevel: exp ?? "",
+      history: history.map(h => ({
+        question: h.question ?? "",
+        answer: h.answer ?? "",
+        aiFeedback: h.aiFeedback ?? ""
+      })) ?? [],
+      duration: timer ?? 0,
       createdAt: serverTimestamp(),
-      overallScore: 0, // Placeholder, will be updated in feedback page
+      overallScore: 0,
     };
+
+    // Debug: Detect undefined fields before write
+    Object.entries(interviewData).forEach(([key, val]) => {
+      if (val === undefined) console.warn(`[Firestore Debug] Field "${key}" is undefined in interviewData. Firestore will error.`);
+    });
 
     const interviewsRef = collection(db, 'users', user.uid, 'interviews');
     
     addDoc(interviewsRef, interviewData)
       .then((docRef) => {
-        // Update user stats
         const userRef = doc(db, 'users', user.uid);
         updateDoc(userRef, {
           totalInterviews: increment(1)
@@ -175,7 +184,6 @@ export default function InterviewSession() {
       <div className="particles-bg" />
       <NavigationControls className="hidden md:flex top-24" />
       
-      {/* Header */}
       <header className="h-20 border-b border-white/5 glass backdrop-blur-3xl flex items-center justify-between px-10 shrink-0 z-50">
         <div className="flex items-center gap-6">
           <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-purple-600 to-blue-600 flex items-center justify-center shadow-lg">
@@ -202,10 +210,7 @@ export default function InterviewSession() {
         </div>
       </header>
 
-      {/* Main split interface */}
       <main className="flex-1 flex overflow-hidden">
-        
-        {/* Left: AI HR Avatar */}
         <section className="w-[45%] relative border-r border-white/5 overflow-hidden bg-black/40">
           <div className="absolute inset-0 z-0">
             <Image 
@@ -280,7 +285,6 @@ export default function InterviewSession() {
           </div>
         </section>
 
-        {/* Right: Interaction Dashboard */}
         <section className="flex-1 flex flex-col bg-[#050816]/40 backdrop-blur-md">
           <div className="px-12 py-10 border-b border-white/5 flex items-center justify-between bg-white/[0.01]">
             <div className="flex items-center gap-12 flex-1">

@@ -34,23 +34,25 @@ function SignupContent() {
 
     setIsLoading(true);
     try {
-      // 1. Create Auth User
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-      
-      // 2. Update Auth Profile
       await updateProfile(userCredential.user, { displayName: name });
       
-      // 3. Create Firestore Profile
+      // Strict sanitization for user profile
       const userProfile = {
-        uid: userCredential.user.uid,
-        displayName: name,
-        email: email,
+        uid: userCredential.user.uid ?? "",
+        displayName: name ?? "Operator",
+        email: email ?? "",
         photoURL: null,
         jobReadinessScore: 0,
         totalInterviews: 0,
         createdAt: serverTimestamp(),
       };
       
+      // Debug log
+      Object.entries(userProfile).forEach(([key, val]) => {
+        if (val === undefined) console.warn(`[Firestore Debug] Field "${key}" is undefined in userProfile`);
+      });
+
       await setDoc(doc(db, 'users', userCredential.user.uid), userProfile);
 
       toast({
@@ -73,7 +75,6 @@ function SignupContent() {
   return (
     <div className="min-h-screen bg-[#050816] flex items-center justify-center p-6 relative">
       <div className="particles-bg" />
-      
       <Link href="/" className="absolute top-12 left-12 flex items-center gap-3 text-xs font-bold tracking-widest uppercase text-white/40 hover:text-white transition-colors">
         <ArrowLeft className="w-4 h-4" />
         Back to Nexus
@@ -136,14 +137,12 @@ function SignupContent() {
                   required
                 />
               </div>
-              
               <div className="md:col-span-2 flex items-start gap-4 p-6 glass rounded-2xl border-white/5">
                 <ShieldCheck className="w-6 h-6 text-accent shrink-0 mt-1" />
                 <p className="text-[10px] font-medium leading-relaxed text-white/50 tracking-wider">
                   By initializing, you agree to our Neural Privacy Policy and Protocol Terms. Your data is encrypted and anonymized for neural training.
                 </p>
               </div>
-
               <Button 
                 type="submit" 
                 disabled={isLoading}
@@ -152,7 +151,6 @@ function SignupContent() {
                 {isLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : "Initialize Personal Protocol"}
               </Button>
             </form>
-
             <p className="text-center text-[10px] font-bold tracking-widest uppercase text-muted-foreground">
               Already verified? <Link href={`/login?redirectTo=${encodeURIComponent(redirectTo)}`} className="text-accent hover:underline">Access Dashboard</Link>
             </p>
