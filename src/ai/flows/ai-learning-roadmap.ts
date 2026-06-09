@@ -1,39 +1,35 @@
+
 'use server';
 /**
- * @fileOverview Genkit flow for generating a mock learning roadmap.
+ * @fileOverview Genkit flow for generating a structured multi-horizon career roadmap.
  * (MOCKED for testing)
  */
 
 import { ai } from '@/ai/genkit';
 import { z } from 'genkit';
 
+const RoadmapModuleSchema = z.object({
+  title: z.string(),
+  desc: z.string(),
+  tasks: z.array(z.string()),
+});
+
 const LearningRoadmapInputSchema = z.object({
   role: z.string(),
   experienceLevel: z.string(),
-  technicalKnowledgeScore: z.number(),
-  communicationScore: z.number(),
-  problemSolvingScore: z.number(),
-  confidenceScore: z.number(),
-  overallInterviewScore: z.number(),
-  strengths: z.array(z.string()),
-  weaknesses: z.array(z.string()),
-  improvementSuggestions: z.array(z.string()),
-  jobReadinessScore: z.number(),
+  existingSkills: z.array(z.string()).optional(),
+  missingSkills: z.array(z.string()).optional(),
 });
 export type LearningRoadmapInput = z.infer<typeof LearningRoadmapInputSchema>;
 
 const LearningRoadmapOutputSchema = z.object({
-  missingSkills: z.array(z.string()),
-  recommendedTechnologies: z.array(z.string()),
-  learningResources: z.array(
-    z.object({
-      name: z.string(),
-      type: z.string(),
-      url: z.string().url().optional(),
-      description: z.string(),
-    })
-  ),
-  careerImprovementPlan: z.array(z.string()),
+  plans: z.object({
+    thirtyDay: z.array(RoadmapModuleSchema),
+    sixtyDay: z.array(RoadmapModuleSchema),
+    ninetyDay: z.array(RoadmapModuleSchema),
+  }),
+  recommendedProjects: z.array(z.string()),
+  interviewPrepTasks: z.array(z.string()),
 });
 export type LearningRoadmapOutput = z.infer<typeof LearningRoadmapOutputSchema>;
 
@@ -48,26 +44,57 @@ const learningRoadmapFlow = ai.defineFlow(
     outputSchema: LearningRoadmapOutputSchema,
   },
   async (input) => {
+    // Simulated multi-horizon roadmap generation
+    const missing = input.missingSkills || ["System Design", "Cloud Infrastructure"];
+    
     return {
-      missingSkills: ["GraphQL", "Microservices Architecture", "Advanced SQL"],
-      recommendedTechnologies: ["Apollo Server", "Docker", "Kubernetes", "PostgreSQL"],
-      learningResources: [
-        {
-          name: "Full Stack Open - GraphQL Module",
-          type: "Online Course",
-          url: "https://fullstackopen.com/en/part8",
-          description: "Comprehensive guide to GraphQL and building schemas."
-        },
-        {
-          name: "Designing Data-Intensive Applications",
-          type: "Book",
-          description: "The definitive guide to architecture and scalability."
-        }
+      plans: {
+        thirtyDay: [
+          {
+            title: "Core Vector Acquisition",
+            desc: `Master the fundamental delta in ${input.role} architecture.`,
+            tasks: [`Complete training in ${missing[0] || 'Core Design'}`, "Quantify resume impact nodes"]
+          },
+          {
+            title: "Logic Refinement",
+            desc: "Daily session simulation to boost confidence vectors.",
+            tasks: ["Complete 5 technical simulations", "Analyze tone distribution reports"]
+          }
+        ],
+        sixtyDay: [
+          {
+            title: "Architectural Deep-Dive",
+            desc: `Scale your knowledge in ${missing[1] || 'Advanced Tooling'}.`,
+            tasks: [`Build proof-of-concept using ${missing[1] || 'Modern Stack'}`, "Study distributed system bottlenecks"]
+          },
+          {
+            title: "Executive Presence",
+            desc: "Calibrate behavioral archetypes for lead placements.",
+            tasks: ["Record and analyze soft-skill metrics", "Refine strategy presentation logic"]
+          }
+        ],
+        ninetyDay: [
+          {
+            title: "System Dominance",
+            desc: "Final readiness audit for top-tier corporate tracks.",
+            tasks: ["Execute full 1-hour simulation", "Complete cross-functional node analysis"]
+          },
+          {
+            title: "Direct Placement",
+            desc: "Market calibration and partner network initialization.",
+            tasks: ["Optimize global neural profile", "Connect with verified hiring nodes"]
+          }
+        ]
+      },
+      recommendedProjects: [
+        `Scalable ${input.role} Dashboard`,
+        "Distributed Event-Driven Service",
+        "AI-Integrated Knowledge Vault"
       ],
-      careerImprovementPlan: [
-        "Master GraphQL basics within 2 weeks",
-        "Build a small project using microservices architecture",
-        "Contribute to an open-source project in your tech stack"
+      interviewPrepTasks: [
+        "Master STAR behavioral logic",
+        "Study Big-O for distributed systems",
+        "Practice technical whiteboard simulation"
       ]
     };
   }

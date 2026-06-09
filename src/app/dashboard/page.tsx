@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useEffect, useMemo } from 'react';
@@ -22,7 +23,8 @@ import {
   Star,
   FileSearch,
   CheckCircle2,
-  Layers
+  Layers,
+  Map
 } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -76,9 +78,19 @@ export default function Dashboard() {
     );
   }, [db, user?.uid]);
 
+  const roadmapQuery = useMemo(() => {
+    if (!db || !user?.uid) return null;
+    return query(
+      collection(db, 'users', user.uid, 'roadmaps'),
+      orderBy('createdAt', 'desc'),
+      limit(1)
+    );
+  }, [db, user?.uid]);
+
   const { data: interviews, loading: interviewsLoading } = useCollection(interviewsQuery);
   const { data: resumes, loading: resumesLoading } = useCollection(resumesQuery);
   const { data: latestGap } = useCollection(skillGapQuery);
+  const { data: latestRoadmap } = useCollection(roadmapQuery);
 
   useEffect(() => {
     if (!user && !authLoading) router.push('/login');
@@ -278,7 +290,7 @@ export default function Dashboard() {
                         <div className="space-y-4">
                           <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Next Milestone</p>
                           <div className="p-4 glass rounded-2xl border-white/5">
-                            <p className="text-sm font-light leading-relaxed">{latestGap[0].recommendedRoadmap?.[0]}</p>
+                            <p className="text-sm font-light leading-relaxed">{latestRoadmap?.[0]?.plans?.thirtyDay?.[0]?.title || latestGap[0].recommendedRoadmap?.[0]}</p>
                           </div>
                         </div>
                       </div>
@@ -363,7 +375,7 @@ export default function Dashboard() {
                   <Link href="/roadmap">
                     <Button variant="outline" className="w-full h-16 rounded-2xl glass border-white/10 hover:bg-white/10 justify-between px-6">
                       <div className="flex items-center gap-4">
-                        <Target className="w-5 h-5 text-blue-400" />
+                        <Map className="w-5 h-5 text-blue-400" />
                         <span className="font-bold text-sm">Neural Roadmap</span>
                       </div>
                       <ChevronRight className="w-4 h-4 text-white/30" />
@@ -380,6 +392,28 @@ export default function Dashboard() {
                   </Link>
                 </CardContent>
               </Card>
+
+              {latestRoadmap?.[0] && (
+                <Card className="premium-card bg-white/[0.01] border-white/5">
+                  <CardHeader>
+                    <CardTitle className="text-xl font-bold flex items-center gap-3">
+                      <Target className="w-6 h-6 text-blue-400" />
+                      Active Protocol
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-6">
+                    <div className="p-4 glass rounded-2xl border-white/5 space-y-4">
+                      <p className="text-[10px] font-bold uppercase tracking-widest text-blue-400">Current Phase: 30 Day</p>
+                      <p className="text-sm font-light leading-relaxed">{latestRoadmap[0].plans.thirtyDay[0].title}</p>
+                      <Link href="/roadmap">
+                        <Button variant="link" className="p-0 h-auto text-accent text-xs uppercase tracking-widest font-bold">
+                          Resume Training <ChevronRight className="w-3 h-3 ml-1" />
+                        </Button>
+                      </Link>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
 
               <Card className="premium-card bg-white/[0.01] border-white/5">
                 <CardHeader>

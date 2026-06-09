@@ -1,3 +1,4 @@
+
 {
   "entities": {
     "UserProfile": {
@@ -63,6 +64,26 @@
         "recommendedRoadmap": { "type": "array", "items": { "type": "string" } },
         "createdAt": { "type": "string", "format": "date-time" }
       }
+    },
+    "CareerRoadmap": {
+      "title": "Career Roadmap",
+      "description": "A long-term strategic learning and preparation plan.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "role": { "type": "string" },
+        "plans": {
+          "type": "object",
+          "properties": {
+            "thirtyDay": { "type": "array", "items": { "type": "object" } },
+            "sixtyDay": { "type": "array", "items": { "type": "object" } },
+            "ninetyDay": { "type": "array", "items": { "type": "object" } }
+          }
+        },
+        "recommendedProjects": { "type": "array", "items": { "type": "string" } },
+        "interviewPrepTasks": { "type": "array", "items": { "type": "string" } },
+        "createdAt": { "type": "string", "format": "date-time" }
+      }
     }
   },
   "auth": {
@@ -84,6 +105,10 @@
     "/users/{userId}/skill_gap/{gapId}": {
       "schema": "#/entities/SkillGapAnalysis",
       "description": "Stores individual skill gap analysis reports."
+    },
+    "/users/{userId}/roadmaps/{roadmapId}": {
+      "schema": "#/entities/CareerRoadmap",
+      "description": "Stores generated career roadmaps."
     }
   }
 }
