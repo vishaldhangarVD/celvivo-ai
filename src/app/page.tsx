@@ -303,7 +303,7 @@ export default function LandingPage() {
 
                   {/* Right Avatar */}
                   <div className="md:w-[48%] relative min-h-[550px] flex items-center justify-center p-6 md:p-8 bg-black/20">
-                    <div className="relative w-full h-full min-h-[450px] rounded-[2.5rem] overflow-hidden border border-white/20 shadow-2xl glass bg-white/[0.02]">
+                    <div className="relative w-full h-full min-h-[450px] rounded-3xl overflow-hidden border border-white/20 shadow-2xl glass bg-white/[0.02]">
                       <Image 
                         src="/images/hr-manager.jpg"
                         alt="Virtual HR Manager"
@@ -311,7 +311,7 @@ export default function LandingPage() {
                         className="object-cover rounded-3xl opacity-100 brightness-110 z-10 transition-all duration-700 group-hover:scale-105"
                         priority
                       />
-                      {/* Interaction Overlays to match screenshot */}
+                      {/* Interaction Overlays */}
                       <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-black/40 z-20"></div>
                       <div className="absolute top-6 left-6 z-30">
                         <Badge className="bg-white/10 backdrop-blur-md text-white border-white/20 px-4 py-1.5 text-[10px] tracking-widest font-bold uppercase rounded-xl">
@@ -415,7 +415,7 @@ export default function LandingPage() {
               <div className="absolute inset-0 bg-accent/20 blur-[120px] rounded-full"></div>
               <div className="relative z-10 premium-card p-0 overflow-hidden border-white/10 shadow-[0_0_80px_rgba(34,211,238,0.1)]">
                 <Image 
-                  src={PlaceHolderImages.find(img => img.id === 'candidate-prep')?.imageUrl || ''}
+                  src="/images/candidate-prep.jpg"
                   alt="Candidate Prep"
                   width={800}
                   height={600}

@@ -204,7 +204,7 @@ export default function InterviewSession() {
         <section className="w-[45%] relative border-r border-white/5 overflow-hidden bg-black/40">
           <div className="absolute inset-0 z-0">
             <Image 
-              src={PlaceHolderImages.find(img => img.id === 'office-bg')?.imageUrl || ''}
+              src="/images/office-bg.jpg"
               alt="Corporate Office"
               fill
               className="object-cover opacity-30"
@@ -219,7 +219,7 @@ export default function InterviewSession() {
                 scale: isProcessing ? [1, 1.01, 1] : 1,
               }}
               transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
-              className="relative w-full max-w-md aspect-[4/5] rounded-[3.5rem] overflow-hidden border border-white/10 shadow-[0_0_100px_rgba(147,51,234,0.15)] bg-white/[0.02] glass"
+              className="relative w-full max-w-md aspect-[4/5] rounded-3xl overflow-hidden border border-white/10 shadow-[0_0_100px_rgba(147,51,234,0.15)] bg-white/[0.02] glass"
             >
               <Image 
                 src="/images/hr-manager.jpg"
