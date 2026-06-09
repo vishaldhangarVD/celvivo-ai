@@ -133,6 +133,10 @@ export default function ResumeAnalyzer() {
           filename: file.name,
           targetRole,
           atsScore: mockResult.atsScore,
+          missingSkills: mockResult.missingSkills,
+          improvementSuggestions: mockResult.improvementSuggestions,
+          strengths: mockResult.skillAnalysis.filter(s => s.proficiency === 'Expert').map(s => s.skill),
+          weaknesses: mockResult.missingSkills,
           analysis: mockResult,
           createdAt: serverTimestamp(),
         };

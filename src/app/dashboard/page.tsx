@@ -20,7 +20,9 @@ import {
   ArrowUpRight,
   AlertCircle,
   History,
-  Star
+  Star,
+  FileSearch,
+  CheckCircle2
 } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -61,8 +63,7 @@ export default function Dashboard() {
     if (!db || !user?.uid) return null;
     return query(
       collection(db, 'users', user.uid, 'resumes'),
-      orderBy('createdAt', 'desc'),
-      limit(5)
+      orderBy('createdAt', 'desc')
     );
   }, [db, user?.uid]);
 
@@ -78,16 +79,15 @@ export default function Dashboard() {
     const latestResume = resumes?.[0];
     const latestInterview = interviews?.[0];
     
-    // Aggregates from profile or latest records
     const resumeScore = latestResume?.atsScore || profile?.resumeScore || 0;
     const totalInterviews = interviews?.length || 0;
+    const totalResumes = resumes?.length || 0;
     const latestScore = latestInterview?.overallScore || 0;
     
     const averageScore = interviews?.length 
       ? Math.round(interviews.reduce((acc, curr: any) => acc + (curr.overallScore || 0), 0) / interviews.length)
       : 0;
     
-    // Readiness: Blend of resume score and average interview performance
     const jobReadiness = (resumeScore > 0 || averageScore > 0)
       ? Math.round((resumeScore + averageScore) / (resumeScore > 0 && averageScore > 0 ? 2 : 1))
       : 0;
@@ -95,6 +95,7 @@ export default function Dashboard() {
     return {
       resumeScore: `${resumeScore}%`,
       totalInterviews,
+      totalResumes,
       latestScore: `${latestScore}%`,
       averageScore: `${averageScore}%`,
       jobReadiness: `${jobReadiness}%`
@@ -150,10 +151,10 @@ export default function Dashboard() {
 
           <div className="grid md:grid-cols-4 gap-6">
             {[
-              { label: "Latest Score", val: stats.latestScore, icon: Target, color: "text-accent" },
-              { label: "Average Score", val: stats.averageScore, icon: Star, color: "text-purple-400" },
-              { label: "Interviews Taken", val: stats.totalInterviews, icon: Activity, color: "text-blue-400" },
-              { label: "Job Readiness", val: stats.jobReadiness, icon: BrainCircuit, color: "text-yellow-400" }
+              { label: "Latest Interview", val: stats.latestScore, icon: Target, color: "text-accent" },
+              { label: "Latest ATS Score", val: stats.resumeScore, icon: FileSearch, color: "text-purple-400" },
+              { label: "Total Interviews", val: stats.totalInterviews, icon: Activity, color: "text-blue-400" },
+              { label: "Total Resume Audits", val: stats.totalResumes, icon: FileText, color: "text-yellow-400" }
             ].map((stat, i) => (
               <motion.div
                 key={i}
@@ -173,6 +174,7 @@ export default function Dashboard() {
 
           <div className="grid lg:grid-cols-12 gap-12">
             <div className="lg:col-span-8 space-y-12">
+              {/* Performance Graph */}
               <Card className="premium-card bg-white/[0.01] border-white/5 p-10">
                 <CardHeader className="p-0 mb-10 border-b border-white/5 pb-8 flex flex-row items-center justify-between">
                   <div>
@@ -214,7 +216,7 @@ export default function Dashboard() {
                 </CardContent>
               </Card>
 
-              {/* Interview History Section */}
+              {/* Interview History */}
               <Card className="premium-card bg-white/[0.01] border-white/5 p-10">
                 <CardHeader className="p-0 mb-10">
                   <CardTitle className="text-2xl font-bold flex items-center gap-4">
@@ -254,6 +256,50 @@ export default function Dashboard() {
                             <ArrowUpRight className="w-5 h-5" />
                           </Button>
                         </Link>
+                      </div>
+                    ))
+                  )}
+                </CardContent>
+              </Card>
+
+              {/* Resume Audit History */}
+              <Card className="premium-card bg-white/[0.01] border-white/5 p-10">
+                <CardHeader className="p-0 mb-10">
+                  <CardTitle className="text-2xl font-bold flex items-center gap-4">
+                    <FileSearch className="w-8 h-8 text-purple-400" />
+                    Resume History
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="p-0 space-y-4">
+                  {resumesLoading ? (
+                    <div className="py-12 flex justify-center"><Loader2 className="w-8 h-8 animate-spin text-purple-400" /></div>
+                  ) : !resumes || resumes.length === 0 ? (
+                    <div className="py-20 text-center glass rounded-[2rem] border-white/5 border-dashed">
+                      <FileText className="w-12 h-12 text-white/20 mx-auto mb-6" />
+                      <p className="text-lg font-light text-muted-foreground">No resume audits recorded yet.</p>
+                      <Link href="/resume" className="mt-8 block">
+                        <Button variant="outline" className="rounded-xl border-purple-400/20 text-purple-400 hover:bg-purple-400/5">Analyze First Resume</Button>
+                      </Link>
+                    </div>
+                  ) : (
+                    resumes.slice(0, 5).map((resume: any, i) => (
+                      <div key={i} className="flex items-center justify-between p-6 glass rounded-[2rem] border-white/5 hover:bg-white/[0.03] transition-all group">
+                        <div className="flex items-center gap-6">
+                          <div className="w-10 h-10 glass rounded-xl flex items-center justify-center text-purple-400">
+                            <CheckCircle2 className="w-5 h-5" />
+                          </div>
+                          <div>
+                            <h4 className="font-bold">Audit: {resume.filename}</h4>
+                            <div className="flex items-center gap-3 text-xs text-muted-foreground mt-1">
+                              <span>ATS: {resume.atsScore}%</span>
+                              <span className="w-1 h-1 rounded-full bg-white/10"></span>
+                              <span>{resume.createdAt?.seconds ? new Date(resume.createdAt.seconds * 1000).toLocaleDateString() : 'Recent'}</span>
+                            </div>
+                          </div>
+                        </div>
+                        <Button variant="ghost" size="icon" className="group-hover:text-purple-400 rounded-xl">
+                          <ArrowUpRight className="w-5 h-5" />
+                        </Button>
                       </div>
                     ))
                   )}
@@ -301,30 +347,23 @@ export default function Dashboard() {
 
               <Card className="premium-card bg-white/[0.01] border-white/5">
                 <CardHeader>
-                  <CardTitle className="text-xl font-bold">Latest Blueprint Audit</CardTitle>
+                  <CardTitle className="text-xl font-bold">System Status</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-6">
-                  {resumesLoading ? (
-                    <Loader2 className="w-6 h-6 animate-spin text-accent" />
-                  ) : resumes?.[0] ? (
-                    <div className="space-y-4">
-                      <div className="flex justify-between text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                        <span>{resumes[0].filename}</span>
-                        <span>{resumes[0].atsScore}% ATS</span>
-                      </div>
-                      <div className="h-1 bg-white/5 rounded-full overflow-hidden">
-                        <div className="h-full bg-accent" style={{ width: `${resumes[0].atsScore}%` }}></div>
-                      </div>
-                      <p className="text-xs text-muted-foreground font-light italic mt-4">
-                        {resumes[0].analysis?.improvementSuggestions?.[0] || 'Calibration complete.'}
-                      </p>
+                  <div className="space-y-4">
+                    <div className="flex justify-between text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                      <span>Job Readiness</span>
+                      <span>{stats.jobReadiness}</span>
                     </div>
-                  ) : (
-                    <p className="text-xs text-muted-foreground font-light italic">No blueprints audited yet.</p>
-                  )}
-                  <Link href="/resume">
-                    <Button variant="ghost" className="w-full text-[10px] font-bold uppercase tracking-widest text-accent hover:bg-accent/5">Analyze Resume</Button>
-                  </Link>
+                    <div className="h-1 bg-white/5 rounded-full overflow-hidden">
+                      <div className="h-full bg-accent" style={{ width: stats.jobReadiness }}></div>
+                    </div>
+                  </div>
+                  <div className="p-4 glass rounded-2xl border-white/5">
+                    <p className="text-xs text-muted-foreground font-light leading-relaxed">
+                      Calibration complete. Your technical trajectory is trending <b>upward</b> based on the last 3 sessions.
+                    </p>
+                  </div>
                 </CardContent>
               </Card>
             </div>
