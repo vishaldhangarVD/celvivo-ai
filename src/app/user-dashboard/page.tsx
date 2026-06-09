@@ -404,8 +404,7 @@ export default function UserDashboard() {
                     <span className="text-xs font-bold text-green-400">Active</span>
                   </div>
                 </CardContent>
-
-              </div>
+              </Card>
             </div>
           </div>
         </div>
