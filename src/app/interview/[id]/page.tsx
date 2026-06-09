@@ -2,7 +2,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from 'react';
-import { useSearchParams, useRouter } from 'next/navigation';
+import { useSearchParams, useRouter, useParams } from 'next/navigation';
 import Image from 'next/image';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/button';
@@ -38,6 +38,7 @@ import { FirestorePermissionError } from '@/firebase/errors';
 
 export default function InterviewSession() {
   const searchParams = useSearchParams();
+  const params = useParams();
   const router = useRouter();
   const { user } = useUser();
   const db = useFirestore();
@@ -130,9 +131,6 @@ export default function InterviewSession() {
     if (!user || !db) return;
     setIsSaving(true);
 
-    // Calculate a mock score for the demo if it's the first time
-    const overallScore = Math.floor(Math.random() * 30) + 65; // 65-95%
-
     const interviewData = {
       userId: user.uid,
       role,
@@ -140,12 +138,13 @@ export default function InterviewSession() {
       history,
       duration: timer,
       createdAt: serverTimestamp(),
-      overallScore,
+      overallScore: 0, // Placeholder, will be updated in feedback page
     };
 
     const interviewsRef = collection(db, 'users', user.uid, 'interviews');
+    
     addDoc(interviewsRef, interviewData)
-      .then(() => {
+      .then((docRef) => {
         // Update user stats
         const userRef = doc(db, 'users', user.uid);
         updateDoc(userRef, {
@@ -158,7 +157,7 @@ export default function InterviewSession() {
           }));
         });
 
-        router.push(`/feedback/last?role=${encodeURIComponent(role)}&exp=${exp}&data=${encodeURIComponent(JSON.stringify(history))}`);
+        router.push(`/feedback/${docRef.id}`);
       })
       .catch(async (err) => {
         setIsSaving(false);

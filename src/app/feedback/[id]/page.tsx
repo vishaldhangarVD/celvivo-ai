@@ -1,8 +1,8 @@
 
 "use client";
 
-import { useState, useEffect } from 'react';
-import { useSearchParams } from 'next/navigation';
+import { useState, useEffect, useMemo } from 'react';
+import { useSearchParams, useParams } from 'next/navigation';
 import { motion } from 'framer-motion';
 import Navbar from '@/components/layout/Navbar';
 import { Button } from '@/components/ui/button';
@@ -24,28 +24,65 @@ import {
   Download,
   Share2,
   Activity,
-  Award
+  Award,
+  Loader2
 } from 'lucide-react';
 import { generateInterviewFeedback, type InterviewFeedbackOutput } from '@/ai/flows/ai-interview-feedback';
 import { generateLearningRoadmap, type LearningRoadmapOutput } from '@/ai/flows/ai-learning-roadmap';
+import { useUser, useFirestore, useDoc } from '@/firebase';
+import { doc, updateDoc } from 'firebase/firestore';
+import { errorEmitter } from '@/firebase/error-emitter';
+import { FirestorePermissionError } from '@/firebase/errors';
 
 export default function FeedbackReport() {
+  const params = useParams();
   const searchParams = useSearchParams();
-  const role = searchParams.get('role') || 'Elite Engineer';
-  const exp = searchParams.get('exp') || 'Senior';
-  const rawData = searchParams.get('data');
+  const { user } = useUser();
+  const db = useFirestore();
+  
+  const docId = params.id as string;
+  
+  const interviewRef = useMemo(() => {
+    if (!db || !user?.uid || !docId || docId === 'last') return null;
+    return doc(db, 'users', user.uid, 'interviews', docId);
+  }, [db, user?.uid, docId]);
+  
+  const { data: interviewDoc, loading: docLoading } = useDoc(interviewRef);
   
   const [feedback, setFeedback] = useState<InterviewFeedbackOutput | null>(null);
   const [roadmap, setRoadmap] = useState<LearningRoadmapOutput | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isProcessing, setIsProcessing] = useState(false);
 
   useEffect(() => {
     const processData = async () => {
-      if (!rawData) return;
-      setIsLoading(true);
+      // Prioritize data from Firestore, fall back to URL params if it's the "last" simulated session
+      let historyData = [];
+      let role = searchParams.get('role') || 'Elite Engineer';
+      let exp = searchParams.get('exp') || 'Senior';
+
+      if (docId !== 'last' && interviewDoc) {
+        historyData = interviewDoc.history || [];
+        role = interviewDoc.role;
+        exp = interviewDoc.experienceLevel;
+        
+        // If feedback is already in the doc, don't re-generate
+        if (interviewDoc.feedback && interviewDoc.overallScore > 0) {
+          setFeedback(interviewDoc.feedback);
+          setRoadmap(interviewDoc.roadmap || null);
+          return;
+        }
+      } else if (docId === 'last') {
+        const rawData = searchParams.get('data');
+        if (rawData) historyData = JSON.parse(decodeURIComponent(rawData));
+      } else {
+        return; // Wait for doc to load
+      }
+
+      if (historyData.length === 0 || isProcessing) return;
+
+      setIsProcessing(true);
       try {
-        const history = JSON.parse(decodeURIComponent(rawData));
-        const transcript = history.map((h: any) => `Q: ${h.question}\nA: ${h.answer}`).join('\n\n');
+        const transcript = historyData.map((h: any) => `Q: ${h.question}\nA: ${h.answer}`).join('\n\n');
         
         const feedbackResult = await generateInterviewFeedback({
           interviewTranscript: transcript,
@@ -60,16 +97,45 @@ export default function FeedbackReport() {
           experienceLevel: exp
         });
         setRoadmap(roadmapResult);
+
+        // PERSIST the feedback back to Firestore for the user's history
+        if (docId !== 'last' && interviewRef) {
+          updateDoc(interviewRef, {
+            feedback: feedbackResult,
+            roadmap: roadmapResult,
+            overallScore: feedbackResult.overallInterviewScore,
+            technicalScore: feedbackResult.technicalKnowledgeScore,
+            communicationScore: feedbackResult.communicationScore,
+            confidenceScore: feedbackResult.confidenceScore,
+          }).catch(async (err) => {
+            errorEmitter.emit('permission-error', new FirestorePermissionError({
+              path: interviewRef.path,
+              operation: 'update',
+              requestResourceData: { overallScore: feedbackResult.overallInterviewScore }
+            }));
+          });
+
+          // Also update the global readiness in user profile
+          if (user?.uid && db) {
+            const userRef = doc(db, 'users', user.uid);
+            updateDoc(userRef, {
+              jobReadinessScore: Math.round(feedbackResult.jobReadinessScore)
+            }).catch(() => {});
+          }
+        }
       } catch (e) {
         console.error(e);
       } finally {
-        setIsLoading(false);
+        setIsProcessing(false);
       }
     };
-    processData();
-  }, [rawData, role, exp]);
 
-  if (isLoading) {
+    if (!docLoading) {
+      processData();
+    }
+  }, [docId, interviewDoc, docLoading, searchParams, user?.uid, db, interviewRef]);
+
+  if (docLoading || isProcessing) {
     return (
       <div className="h-screen flex flex-col items-center justify-center bg-[#050816] space-y-8">
         <div className="relative">
@@ -83,6 +149,9 @@ export default function FeedbackReport() {
       </div>
     );
   }
+
+  const currentRole = interviewDoc?.role || searchParams.get('role') || 'Elite Engineer';
+  const currentExp = interviewDoc?.experienceLevel || searchParams.get('exp') || 'Senior';
 
   return (
     <div className="min-h-screen bg-[#050816] pb-32">
@@ -99,22 +168,22 @@ export default function FeedbackReport() {
             <div className="absolute inset-0 bg-gradient-to-br from-purple-600/10 to-transparent"></div>
             <div className="text-center lg:text-left z-10">
               <Badge className="bg-accent/20 text-accent mb-6 border-none px-4 py-1 font-bold tracking-widest text-[10px]">VERIFIED PERFORMANCE AUDIT</Badge>
-              <h1 className="text-6xl md:text-8xl font-bold mb-4 tracking-tighter text-premium">{role}</h1>
+              <h1 className="text-6xl md:text-8xl font-bold mb-4 tracking-tighter text-premium">{currentRole}</h1>
               <div className="flex items-center gap-4 text-muted-foreground font-light text-xl">
                 <span>Simulation Complete</span>
                 <span className="w-1.5 h-1.5 rounded-full bg-white/20"></span>
-                <span className="text-accent">{exp} Grade</span>
+                <span className="text-accent">{currentExp} Grade</span>
               </div>
             </div>
             
             <div className="flex items-center gap-12 z-10">
               <div className="text-center">
-                <div className="text-7xl font-bold text-gradient-purple mb-2">{feedback?.overallInterviewScore}%</div>
+                <div className="text-7xl font-bold text-gradient-purple mb-2">{feedback?.overallInterviewScore || 0}%</div>
                 <div className="text-[10px] uppercase tracking-[0.4em] text-muted-foreground font-bold">Efficiency Rating</div>
               </div>
               <div className="w-px h-24 bg-white/10 hidden md:block"></div>
               <div className="text-center">
-                <div className="text-7xl font-bold text-accent mb-2">{feedback?.jobReadinessScore}%</div>
+                <div className="text-7xl font-bold text-accent mb-2">{feedback?.jobReadinessScore || 0}%</div>
                 <div className="text-[10px] uppercase tracking-[0.4em] text-muted-foreground font-bold">Deployment Ready</div>
               </div>
             </div>
@@ -144,9 +213,9 @@ export default function FeedbackReport() {
                             <metric.icon className={`w-5 h-5 ${metric.color}`} />
                             {metric.label}
                           </span>
-                          <span className="text-2xl font-bold tabular-nums">{metric.score}%</span>
+                          <span className="text-2xl font-bold tabular-nums">{metric.score || 0}%</span>
                         </div>
-                        <Progress value={metric.score} className="h-2 bg-white/5" />
+                        <Progress value={metric.score || 0} className="h-2 bg-white/5" />
                       </div>
                     ))}
                   </div>
@@ -162,7 +231,7 @@ export default function FeedbackReport() {
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="p-0 space-y-6">
-                    {feedback?.strengths.map((s, i) => (
+                    {feedback?.strengths?.map((s, i) => (
                       <div key={i} className="flex gap-4 text-base font-light text-white/80 leading-relaxed">
                         <div className="w-2 h-2 rounded-full bg-green-400 mt-2 shrink-0"></div>
                         <span>{s}</span>
@@ -178,7 +247,7 @@ export default function FeedbackReport() {
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="p-0 space-y-6">
-                    {feedback?.weaknesses.map((w, i) => (
+                    {feedback?.weaknesses?.map((w, i) => (
                       <div key={i} className="flex gap-4 text-base font-light text-white/80 leading-relaxed">
                         <div className="w-2 h-2 rounded-full bg-red-400 mt-2 shrink-0"></div>
                         <span>{w}</span>
@@ -200,7 +269,7 @@ export default function FeedbackReport() {
                   <div>
                     <h4 className="text-xs uppercase tracking-[0.4em] font-bold text-muted-foreground mb-8">Critical Milestones</h4>
                     <div className="space-y-6">
-                      {roadmap?.careerImprovementPlan.map((step, i) => (
+                      {roadmap?.careerImprovementPlan?.map((step, i) => (
                         <div key={i} className="flex gap-8 items-start p-8 glass rounded-[2.5rem] border-white/5 hover:border-accent/20 transition-all">
                           <div className="w-12 h-12 rounded-2xl bg-accent/20 flex items-center justify-center font-bold text-accent shrink-0">0{i + 1}</div>
                           <p className="text-lg leading-relaxed font-light">{step}</p>
@@ -212,7 +281,7 @@ export default function FeedbackReport() {
                   <div>
                     <h4 className="text-xs uppercase tracking-[0.4em] font-bold text-muted-foreground mb-8">Selected Resources</h4>
                     <div className="grid md:grid-cols-2 gap-6">
-                      {roadmap?.learningResources.map((res, i) => (
+                      {roadmap?.learningResources?.map((res, i) => (
                         <div key={i} className="glass p-8 rounded-[2.5rem] border-white/5 hover:bg-white/[0.04] transition-all flex flex-col justify-between h-full">
                           <div className="space-y-4">
                             <div className="flex justify-between items-start">
@@ -243,7 +312,7 @@ export default function FeedbackReport() {
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-8">
-                  {feedback?.improvementSuggestions.map((tip, i) => (
+                  {feedback?.improvementSuggestions?.map((tip, i) => (
                     <div key={i} className="p-6 glass rounded-[2rem] border-white/5 text-base font-light leading-relaxed">
                       {tip}
                     </div>
@@ -264,7 +333,7 @@ export default function FeedbackReport() {
                   <CardTitle className="text-xl font-bold">Missing Skill Delta</CardTitle>
                 </CardHeader>
                 <CardContent className="p-0 flex flex-wrap gap-3">
-                  {roadmap?.missingSkills.map((skill, i) => (
+                  {roadmap?.missingSkills?.map((skill, i) => (
                     <Badge key={i} className="bg-white/5 text-white border-white/10 px-5 py-2 rounded-xl text-sm font-medium">
                       {skill}
                     </Badge>
