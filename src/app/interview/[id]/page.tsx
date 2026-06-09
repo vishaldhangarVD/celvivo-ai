@@ -200,7 +200,7 @@ export default function InterviewSession() {
       <main className="flex-1 flex overflow-hidden">
         
         {/* Left: AI HR Avatar */}
-        <section className="w-[45%] relative border-r border-white/5 overflow-hidden">
+        <section className="w-[45%] relative border-r border-white/5 overflow-hidden bg-black/40">
           <div className="absolute inset-0 z-0">
             <Image 
               src={PlaceHolderImages.find(img => img.id === 'office-bg')?.imageUrl || ''}
@@ -218,13 +218,13 @@ export default function InterviewSession() {
                 scale: isProcessing ? [1, 1.01, 1] : 1,
               }}
               transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
-              className="relative w-full max-w-md aspect-[4/5] rounded-[3.5rem] overflow-hidden border border-white/10 shadow-[0_0_100px_rgba(147,51,234,0.15)] bg-white/[0.02]"
+              className="relative w-full max-w-md aspect-[4/5] rounded-[3.5rem] overflow-hidden border border-white/10 shadow-[0_0_100px_rgba(147,51,234,0.15)] bg-white/[0.02] glass"
             >
               <Image 
                 src="/images/hr-manager.jpg"
                 alt="Virtual HR Manager"
                 fill
-                className="object-cover rounded-3xl opacity-100 brightness-110"
+                className="object-cover rounded-3xl opacity-100 brightness-110 z-10"
                 priority
               />
               
@@ -233,7 +233,7 @@ export default function InterviewSession() {
                   <motion.div 
                     initial={{ opacity: 0, y: 20, scale: 0.9 }}
                     animate={{ opacity: 1, y: 0, scale: 1 }}
-                    className="absolute top-12 left-12 right-12"
+                    className="absolute top-12 left-12 right-12 z-20"
                   >
                     <div className="glass p-8 rounded-[2.5rem] rounded-tl-none border-accent/40 bg-accent/5 backdrop-blur-2xl shadow-2xl">
                       <div className="flex gap-3 items-center mb-4">
@@ -248,7 +248,7 @@ export default function InterviewSession() {
                 )}
               </AnimatePresence>
 
-              <div className="absolute bottom-12 left-1/2 -translate-x-1/2 flex items-end gap-2 h-16">
+              <div className="absolute bottom-12 left-1/2 -translate-x-1/2 flex items-end gap-2 h-16 z-20">
                 {[...Array(16)].map((_, i) => (
                   <motion.div 
                     key={i} 

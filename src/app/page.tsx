@@ -245,7 +245,7 @@ export default function LandingPage() {
               </motion.div>
             </div>
 
-            {/* Right Side: Redesigned Virtual HR Manager Card */}
+            {/* Right Side: Virtual HR Manager Card */}
             <div className="lg:w-7/12 w-full">
               <motion.div
                 initial={{ opacity: 0, x: 50 }}
@@ -292,13 +292,13 @@ export default function LandingPage() {
                   </div>
 
                   {/* Right Avatar */}
-                  <div className="md:w-[45%] relative min-h-[500px] flex items-center justify-center p-8">
-                    <div className="relative w-full h-full min-h-[500px] rounded-[2.5rem] overflow-hidden border border-white/20 shadow-2xl">
+                  <div className="md:w-[45%] relative min-h-[500px] flex items-center justify-center p-8 bg-black/20">
+                    <div className="relative w-full h-full min-h-[500px] rounded-[2.5rem] overflow-hidden border border-white/20 shadow-2xl glass">
                       <Image 
                         src="/images/hr-manager.jpg"
                         alt="Virtual HR Manager"
                         fill
-                        className="object-cover rounded-3xl opacity-100 transition-all duration-[1s]"
+                        className="object-cover rounded-3xl opacity-100 transition-all duration-[1s] z-10"
                         priority
                       />
                     </div>
