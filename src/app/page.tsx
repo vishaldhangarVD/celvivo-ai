@@ -124,10 +124,10 @@ export default function LandingPage() {
               <motion.h1 
                 initial={{ y: 30, opacity: 0 }}
                 animate={{ y: 0, opacity: 1 }}
-                className="text-6xl md:text-[7rem] font-bold mb-10 tracking-tighter leading-[0.85] text-premium"
+                className="text-6xl md:text-[5.5rem] font-bold mb-10 tracking-tighter leading-[0.95] text-premium"
               >
-                Neural <br />
-                <span className="text-gradient-purple">Intelligence.</span>
+                Master Every IT <br />
+                <span className="text-gradient-purple">Interview with AI</span>
               </motion.h1>
               
               <motion.p 
@@ -135,7 +135,7 @@ export default function LandingPage() {
                 animate={{ y: 0, opacity: 1 }}
                 className="max-w-xl text-xl text-muted-foreground mb-16 font-light leading-relaxed"
               >
-                Deploy elite AI simulations to audit your technical performance, analyze your resume, and generate verified career roadmaps.
+                Analyze your resume, practice real-world interviews, identify skill gaps, and get personalized feedback to become job-ready faster.
               </motion.p>
               
               <motion.div 
