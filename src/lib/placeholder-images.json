@@ -23,6 +23,12 @@
       "description": "Modern corporate office background",
       "imageUrl": "https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&q=80",
       "imageHint": "modern office"
+    },
+    {
+      "id": "candidate-prep",
+      "description": "A professional candidate preparing for a technical interview with a laptop",
+      "imageUrl": "https://picsum.photos/seed/nexvoro_prep/800/600",
+      "imageHint": "professional candidate preparing"
     }
   ]
 }

@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -269,7 +270,7 @@ export default function LandingPage() {
               <motion.div
                 initial={{ opacity: 0, x: 50 }}
                 animate={{ opacity: 1, x: 0 }}
-                className="premium-card p-0 overflow-hidden border-white/5 bg-white/[0.02] shadow-[0_0_100px_rgba(147,51,234,0.1)] relative"
+                className="premium-card p-0 overflow-hidden border-white/5 bg-white/[0.02] shadow-[0_0_100px_rgba(147,51,234,0.15)] relative"
               >
                 <div className="absolute top-8 left-8 z-20">
                   <Badge className="bg-accent/20 text-accent mb-4 border-none px-4 py-1 text-[10px] tracking-widest font-bold">NEURAL AGENT v4.2</Badge>
@@ -310,6 +311,86 @@ export default function LandingPage() {
         </div>
       </section>
 
+      {/* NEW: Why Nexvoro AI Exists - Emotional Mission Section */}
+      <section className="py-32 relative overflow-hidden bg-white/[0.01]">
+        <div className="container mx-auto px-6">
+          <div className="grid lg:grid-cols-2 gap-24 items-center">
+            <motion.div 
+              initial={{ opacity: 0, x: -30 }}
+              whileInView={{ opacity: 1, x: 0 }}
+              viewport={{ once: true }}
+              className="space-y-12"
+            >
+              <div className="space-y-6">
+                <Badge className="bg-accent/20 text-accent border-none px-6 py-1.5 font-bold tracking-[0.4em] text-[10px] uppercase">Our Core Mission</Badge>
+                <h2 className="text-5xl md:text-6xl font-bold tracking-tighter text-premium">Why Nexvoro AI <br /><span className="text-gradient-purple">Exists.</span></h2>
+                <p className="text-2xl font-bold text-accent tracking-tight">Talent is everywhere. Opportunity should be too.</p>
+              </div>
+              
+              <div className="space-y-8 text-xl font-light text-muted-foreground leading-relaxed">
+                <p>
+                  Every year, thousands of talented students and IT professionals attend interviews but fail to secure jobs because they lack proper interview practice, confidence, and real-world preparation.
+                </p>
+                <p>
+                  Many candidates have strong technical skills, yet they struggle to perform under interview pressure. <span className="text-white font-medium">Nexvoro AI was created to solve this problem.</span>
+                </p>
+                <div className="p-10 glass rounded-[3.5rem] border-accent/20 bg-accent/[0.02] relative group">
+                  <div className="absolute -top-6 -left-6 w-16 h-16 rounded-[2rem] bg-accent flex items-center justify-center text-[#050816] shadow-[0_0_30px_rgba(34,211,238,0.4)]">
+                    <Quote className="w-8 h-8 fill-current" />
+                  </div>
+                  <p className="text-2xl text-white font-bold italic tracking-tight leading-snug">
+                    "Talent is everywhere. Opportunity should be too."
+                  </p>
+                </div>
+                <p>
+                  Our mission is to help candidates practice real interview scenarios, improve their resumes, identify skill gaps, build confidence, and become job-ready through AI-powered guidance.
+                </p>
+                <p className="text-white/90">
+                  We believe that talent should not be rejected because of a lack of preparation.
+                </p>
+                <div className="flex items-center gap-4 text-accent font-bold tracking-widest uppercase text-sm">
+                  <span>Practice smarter</span>
+                  <div className="w-1 h-1 rounded-full bg-white/20"></div>
+                  <span>Interview better</span>
+                  <div className="w-1 h-1 rounded-full bg-white/20"></div>
+                  <span>Get hired faster</span>
+                </div>
+              </div>
+            </motion.div>
+
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.9 }}
+              whileInView={{ opacity: 1, scale: 1 }}
+              viewport={{ once: true }}
+              className="relative"
+            >
+              <div className="absolute inset-0 bg-accent/20 blur-[120px] rounded-full"></div>
+              <div className="relative z-10 premium-card p-0 overflow-hidden border-white/10 shadow-[0_0_80px_rgba(34,211,238,0.1)]">
+                <Image 
+                  src={PlaceHolderImages.find(img => img.id === 'candidate-prep')?.imageUrl || ''}
+                  alt="Candidate Preparing"
+                  width={800}
+                  height={600}
+                  className="w-full h-auto object-cover opacity-90 brightness-110"
+                  data-ai-hint="professional candidate preparing"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-[#050816] via-transparent to-transparent"></div>
+                <div className="absolute bottom-10 left-10 right-10">
+                  <div className="glass p-6 rounded-2xl flex items-center gap-6 border-white/10">
+                    <div className="w-12 h-12 rounded-xl bg-accent/20 flex items-center justify-center text-accent">
+                      <Target className="w-6 h-6" />
+                    </div>
+                    <p className="text-xs font-bold uppercase tracking-widest leading-relaxed">
+                      Precision-engineered to simulate <br />high-stakes corporate environments.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </motion.div>
+          </div>
+        </div>
+      </section>
+
       {/* Statistics Section */}
       <section className="py-24 border-y border-white/5 bg-white/[0.01]">
         <div className="container mx-auto px-6">
@@ -320,6 +401,7 @@ export default function LandingPage() {
                 initial={{ opacity: 0, y: 20 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 transition={{ delay: i * 0.1 }}
+                viewport={{ once: true }}
                 className="text-center space-y-4"
               >
                 <div className="w-12 h-12 glass rounded-xl flex items-center justify-center mx-auto text-accent mb-6">
@@ -350,6 +432,7 @@ export default function LandingPage() {
                 initial={{ opacity: 0, y: 20 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 transition={{ delay: i * 0.1 }}
+                viewport={{ once: true }}
                 className="premium-card bg-white/[0.01] border-white/5 p-10 text-center relative z-10 group hover:bg-white/[0.03] transition-all"
               >
                 <div className="w-16 h-16 glass rounded-2xl flex items-center justify-center mx-auto mb-8 group-hover:bg-accent/10 transition-colors">
@@ -382,6 +465,7 @@ export default function LandingPage() {
                 initial={{ opacity: 0, y: 20 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 transition={{ delay: i * 0.1 }}
+                viewport={{ once: true }}
                 className="premium-card p-10 border-white/5 bg-white/[0.02] hover:bg-white/[0.04] transition-all group"
               >
                 <div className="w-14 h-14 glass rounded-2xl flex items-center justify-center mb-8 group-hover:bg-accent/10 transition-colors">
@@ -391,71 +475,6 @@ export default function LandingPage() {
                 <p className="text-muted-foreground font-light leading-relaxed">{feature.description}</p>
               </motion.div>
             ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Why Nexvoro AI Exists - Mission Section */}
-      <section className="py-32 relative overflow-hidden">
-        <div className="container mx-auto px-6">
-          <div className="grid lg:grid-cols-2 gap-24 items-center">
-            <motion.div 
-              initial={{ opacity: 0, x: -30 }}
-              whileInView={{ opacity: 1, x: 0 }}
-              className="space-y-10"
-            >
-              <div className="space-y-6">
-                <Badge className="bg-accent/20 text-accent border-none px-6 py-1.5 font-bold tracking-[0.4em] text-[10px] uppercase">Our Purpose</Badge>
-                <h2 className="text-5xl font-bold tracking-tighter text-premium">Why Nexvoro AI <br /><span className="text-gradient-purple">Exists.</span></h2>
-              </div>
-              
-              <div className="space-y-8 text-xl font-light text-muted-foreground leading-relaxed">
-                <p>
-                  Every year, thousands of talented students and IT professionals apply for jobs but struggle to clear interviews. 
-                  Many candidates have the skills, knowledge, and potential to succeed, yet they often miss opportunities because they lack interview practice, confidence, and personalized guidance.
-                </p>
-                <div className="p-8 glass rounded-[3rem] border-accent/20 bg-accent/[0.02] relative group">
-                  <div className="absolute -top-4 -left-4 w-12 h-12 rounded-2xl bg-accent flex items-center justify-center text-[#050816] shadow-xl">
-                    <Heart className="w-6 h-6 fill-current" />
-                  </div>
-                  <p className="text-white/90 font-medium italic">
-                    "Nexvoro AI was created to bridge that gap. Because talent deserves opportunity."
-                  </p>
-                </div>
-                <p>
-                  Our mission is to help job seekers prepare for real-world interviews, improve their resumes, identify skill gaps, and gain the confidence needed to succeed in today's competitive job market.
-                </p>
-                <p>
-                  With AI-powered interview simulations, resume intelligence, and personalized feedback, we aim to make every candidate interview-ready and career-ready.
-                </p>
-              </div>
-            </motion.div>
-
-            <motion.div 
-              initial={{ opacity: 0, scale: 0.9 }}
-              whileInView={{ opacity: 1, scale: 1 }}
-              className="relative"
-            >
-              <div className="absolute inset-0 bg-purple-500/20 blur-[120px] rounded-full"></div>
-              <Card className="premium-card p-12 bg-white/[0.01] border-white/5 relative z-10 overflow-hidden">
-                <div className="grid grid-cols-2 gap-8">
-                  {[
-                    { title: "Bridge Gaps", icon: Target, val: "Goal" },
-                    { title: "Gain Confidence", icon: Zap, val: "Ready" },
-                    { title: "Real-world Prep", icon: Briefcase, val: "Elite" },
-                    { title: "Talent First", icon: Heart, val: "Value" }
-                  ].map((item, i) => (
-                    <div key={i} className="p-8 glass rounded-[2.5rem] border-white/5 text-center space-y-4 group hover:bg-white/[0.04] transition-all">
-                      <div className="w-12 h-12 rounded-xl bg-accent/20 flex items-center justify-center mx-auto text-accent mb-2">
-                        <item.icon className="w-6 h-6" />
-                      </div>
-                      <h4 className="font-bold text-sm tracking-tight">{item.title}</h4>
-                      <Badge variant="outline" className="text-[8px] tracking-widest font-bold border-white/10 text-muted-foreground">{item.val}</Badge>
-                    </div>
-                  ))}
-                </div>
-              </Card>
-            </motion.div>
           </div>
         </div>
       </section>
@@ -475,6 +494,7 @@ export default function LandingPage() {
                 initial={{ opacity: 0, scale: 0.9 }}
                 whileInView={{ opacity: 1, scale: 1 }}
                 transition={{ delay: (i % 10) * 0.05 }}
+                viewport={{ once: true }}
                 className="px-6 py-3 glass rounded-2xl text-xs font-bold uppercase tracking-widest text-white/60 border-white/5 hover:text-white hover:border-accent/30 transition-all cursor-default"
               >
                 {role}
@@ -509,6 +529,7 @@ export default function LandingPage() {
                     initial={{ x: -20, opacity: 0 }}
                     whileInView={{ x: 0, opacity: 1 }}
                     transition={{ delay: i * 0.1 }}
+                    viewport={{ once: true }}
                     className="flex gap-6 items-start"
                   >
                     <div className="w-12 h-12 glass rounded-xl flex items-center justify-center shrink-0 text-accent">
@@ -528,6 +549,7 @@ export default function LandingPage() {
               <motion.div 
                 initial={{ scale: 0.9, opacity: 0 }}
                 whileInView={{ scale: 1, opacity: 1 }}
+                viewport={{ once: true }}
                 className="relative premium-card p-0 overflow-hidden border-white/10 shadow-2xl"
               >
                 <Image 
@@ -559,6 +581,7 @@ export default function LandingPage() {
                 initial={{ opacity: 0, y: 20 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 transition={{ delay: i * 0.1 }}
+                viewport={{ once: true }}
                 className="premium-card p-12 border-white/5 bg-white/[0.01] flex flex-col justify-between"
               >
                 <div className="space-y-8">
@@ -594,6 +617,7 @@ export default function LandingPage() {
           <motion.div 
             initial={{ scale: 0.95, opacity: 0 }}
             whileInView={{ scale: 1, opacity: 1 }}
+            viewport={{ once: true }}
             className="premium-card bg-[#0b0e1a] border-accent/20 p-24 text-center max-w-5xl mx-auto shadow-[0_0_100px_rgba(34,211,238,0.1)]"
           >
             <div className="w-20 h-20 bg-accent/20 rounded-3xl flex items-center justify-center mx-auto mb-10 border border-accent/30 shadow-2xl">
