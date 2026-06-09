@@ -37,7 +37,8 @@ import {
   Quote,
   ShieldCheck,
   Activity,
-  Command
+  Command,
+  Heart
 } from 'lucide-react';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
 import { useUser } from '@/firebase';
@@ -389,6 +390,71 @@ export default function LandingPage() {
                 <p className="text-muted-foreground font-light leading-relaxed">{feature.description}</p>
               </motion.div>
             ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Why Nexvoro AI Exists - Mission Section */}
+      <section className="py-32 relative overflow-hidden">
+        <div className="container mx-auto px-6">
+          <div className="grid lg:grid-cols-2 gap-24 items-center">
+            <motion.div 
+              initial={{ opacity: 0, x: -30 }}
+              whileInView={{ opacity: 1, x: 0 }}
+              className="space-y-10"
+            >
+              <div className="space-y-6">
+                <Badge className="bg-accent/20 text-accent border-none px-6 py-1.5 font-bold tracking-[0.4em] text-[10px] uppercase">Our Purpose</Badge>
+                <h2 className="text-5xl font-bold tracking-tighter text-premium">Why Nexvoro AI <br /><span className="text-gradient-purple">Exists.</span></h2>
+              </div>
+              
+              <div className="space-y-8 text-xl font-light text-muted-foreground leading-relaxed">
+                <p>
+                  Every year, thousands of talented students and IT professionals apply for jobs but struggle to clear interviews. 
+                  Many candidates have the skills, knowledge, and potential to succeed, yet they often miss opportunities because they lack interview practice, confidence, and personalized guidance.
+                </p>
+                <div className="p-8 glass rounded-[3rem] border-accent/20 bg-accent/[0.02] relative group">
+                  <div className="absolute -top-4 -left-4 w-12 h-12 rounded-2xl bg-accent flex items-center justify-center text-[#050816] shadow-xl">
+                    <Heart className="w-6 h-6 fill-current" />
+                  </div>
+                  <p className="text-white/90 font-medium italic">
+                    "Nexvoro AI was created to bridge that gap. Because talent deserves opportunity."
+                  </p>
+                </div>
+                <p>
+                  Our mission is to help job seekers prepare for real-world interviews, improve their resumes, identify skill gaps, and gain the confidence needed to succeed in today's competitive job market.
+                </p>
+                <p>
+                  With AI-powered interview simulations, resume intelligence, and personalized feedback, we aim to make every candidate interview-ready and career-ready.
+                </p>
+              </div>
+            </motion.div>
+
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.9 }}
+              whileInView={{ opacity: 1, scale: 1 }}
+              className="relative"
+            >
+              <div className="absolute inset-0 bg-purple-500/20 blur-[120px] rounded-full"></div>
+              <Card className="premium-card p-12 bg-white/[0.01] border-white/5 relative z-10 overflow-hidden">
+                <div className="grid grid-cols-2 gap-8">
+                  {[
+                    { title: "Bridge Gaps", icon: Target, val: "Goal" },
+                    { title: "Gain Confidence", icon: Zap, val: "Ready" },
+                    { title: "Real-world Prep", icon: Briefcase, val: "Elite" },
+                    { title: "Talent First", icon: Heart, val: "Value" }
+                  ].map((item, i) => (
+                    <div key={i} className="p-8 glass rounded-[2.5rem] border-white/5 text-center space-y-4 group hover:bg-white/[0.04] transition-all">
+                      <div className="w-12 h-12 rounded-xl bg-accent/20 flex items-center justify-center mx-auto text-accent mb-2">
+                        <item.icon className="w-6 h-6" />
+                      </div>
+                      <h4 className="font-bold text-sm tracking-tight">{item.title}</h4>
+                      <Badge variant="outline" className="text-[8px] tracking-widest font-bold border-white/10 text-muted-foreground">{item.val}</Badge>
+                    </div>
+                  ))}
+                </div>
+              </Card>
+            </motion.div>
           </div>
         </div>
       </section>
