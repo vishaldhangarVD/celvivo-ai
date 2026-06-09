@@ -218,13 +218,13 @@ export default function InterviewSession() {
                 scale: isProcessing ? [1, 1.01, 1] : 1,
               }}
               transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
-              className="relative w-full max-w-md aspect-[4/5] rounded-[3.5rem] overflow-hidden border border-white/10 shadow-[0_0_100px_rgba(147,51,234,0.15)] bg-white/[0.02] glass"
+              className="relative w-full max-w-md aspect-[4/5] rounded-[3.5rem] overflow-hidden border border-white/10 shadow-[0_0_100px_rgba(147,51,234,0.15)] bg-white/[0.02]"
             >
               <Image 
                 src="/images/hr-manager.jpg"
                 alt="Virtual HR Manager"
                 fill
-                className="object-cover rounded-2xl opacity-100 brightness-110"
+                className="object-cover rounded-3xl opacity-100 brightness-110"
                 priority
               />
               

@@ -293,12 +293,12 @@ export default function LandingPage() {
 
                   {/* Right Avatar */}
                   <div className="md:w-[45%] relative min-h-[500px] flex items-center justify-center p-8">
-                    <div className="relative w-full h-full rounded-[2.5rem] overflow-hidden glass border-white/20 shadow-2xl">
+                    <div className="relative w-full h-full min-h-[500px] rounded-[2.5rem] overflow-hidden border border-white/20 shadow-2xl">
                       <Image 
                         src="/images/hr-manager.jpg"
                         alt="Virtual HR Manager"
                         fill
-                        className="object-cover rounded-2xl opacity-100 group-hover:scale-105 transition-transform duration-[2s] brightness-110"
+                        className="object-cover rounded-3xl opacity-100 transition-all duration-[1s]"
                         priority
                       />
                     </div>
