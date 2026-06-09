@@ -25,7 +25,16 @@ import {
   X,
   FileSearch,
   Check,
-  Loader2
+  Loader2,
+  Layers,
+  MessageSquare,
+  TrendingUp,
+  UserCheck,
+  Globe,
+  Lock,
+  Code2,
+  Star,
+  Quote
 } from 'lucide-react';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
 import { useUser } from '@/firebase';
@@ -46,6 +55,94 @@ const ROLES = [
   "Project Manager", "Scrum Master", "Technical Support Engineer", "IT Support Engineer",
   "Blockchain Developer", "AR/VR Developer", "Game Developer", "Embedded Engineer", "IoT Engineer"
 ].sort();
+
+const HOW_IT_WORKS = [
+  {
+    step: "01",
+    title: "Neural Scan",
+    description: "Upload your resume for a deep-dive career blueprint audit using our neural parsing engine.",
+    icon: FileSearch
+  },
+  {
+    step: "02",
+    title: "Track Calibration",
+    description: "Select from 60+ specialized technical tracks to calibrate the simulation's difficulty and focus.",
+    icon: Settings
+  },
+  {
+    step: "03",
+    title: "Arena Entry",
+    description: "Step into the virtual arena for a high-fidelity, real-time interview with our AI HR agent.",
+    icon: Zap
+  },
+  {
+    step: "04",
+    title: "Intelligence Audit",
+    description: "Receive an executive-grade performance report with skill gap mapping and a growth roadmap.",
+    icon: Award
+  }
+];
+
+const FEATURES = [
+  {
+    title: "Real-time Tone Analysis",
+    description: "Our engine analyzes your communication strategic patterns and confidence levels in real-time.",
+    icon: MessageSquare
+  },
+  {
+    title: "Industry Benchmarking",
+    description: "Compare your results against anonymized performance nodes from senior engineers at Big Tech.",
+    icon: TrendingUp
+  },
+  {
+    title: "Skill Gap Mapping",
+    description: "Visualize your technical landscape and identify exactly which nodes require reinforcement.",
+    icon: BrainCircuit
+  },
+  {
+    title: "Automated Roadmap",
+    description: "Get a personalized learning path with certification recommendations to bridge your gaps.",
+    icon: Target
+  },
+  {
+    title: "Code Logic Audit",
+    description: "Verify your technical precision with simulated architectural and coding challenges.",
+    icon: Code2
+  },
+  {
+    title: "Executive Presence",
+    description: "Refine your leadership archetypes and strategic delivery for high-stakes positions.",
+    icon: UserCheck
+  }
+];
+
+const STATS = [
+  { label: "Successful Placements", value: "12k+", icon: Globe },
+  { label: "Accuracy Rate", value: "98.4%", icon: Cpu },
+  { label: "Technical Tracks", value: "60+", icon: Layers },
+  { label: "Avg. Readiness Boost", value: "45%", icon: Zap }
+];
+
+const TESTIMONIALS = [
+  {
+    name: "Sarah Chen",
+    role: "Senior Frontend Engineer @ Meta",
+    content: "The neural simulation was hyper-realistic. It identified gaps in my system design knowledge that I hadn't even considered.",
+    avatar: "https://picsum.photos/seed/sarah/100/100"
+  },
+  {
+    name: "Marcus Thorne",
+    role: "DevOps Architect @ Google",
+    content: "Nexvoro's ATS audit is a game-changer. I optimized my career blueprint and saw a 3x increase in interview requests.",
+    avatar: "https://picsum.photos/seed/marcus/100/100"
+  },
+  {
+    name: "Elena Rodriguez",
+    role: "AI Researcher @ OpenAI",
+    content: "The feedback loops are incredibly precise. It doesn't just tell you what's wrong; it tells you exactly how to fix the logic.",
+    avatar: "https://picsum.photos/seed/elena/100/100"
+  }
+];
 
 export default function LandingPage() {
   const router = useRouter();
@@ -205,6 +302,255 @@ export default function LandingPage() {
               </motion.div>
             </div>
           </div>
+        </div>
+      </section>
+
+      {/* Statistics Section */}
+      <section className="py-24 border-y border-white/5 bg-white/[0.01]">
+        <div className="container mx-auto px-6">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-12">
+            {STATS.map((stat, i) => (
+              <motion.div 
+                key={i}
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                transition={{ delay: i * 0.1 }}
+                className="text-center space-y-4"
+              >
+                <div className="w-12 h-12 glass rounded-xl flex items-center justify-center mx-auto text-accent mb-6">
+                  <stat.icon className="w-6 h-6" />
+                </div>
+                <div className="text-5xl font-bold tracking-tighter tabular-nums text-premium">{stat.value}</div>
+                <div className="text-[10px] uppercase tracking-[0.3em] font-bold text-muted-foreground">{stat.label}</div>
+              </motion.div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* How It Works Section */}
+      <section className="py-32 relative">
+        <div className="container mx-auto px-6">
+          <div className="text-center max-w-3xl mx-auto mb-24">
+            <Badge className="bg-accent/20 text-accent mb-6 border-none px-6 py-1.5 font-bold tracking-[0.4em] text-[10px] uppercase">Operational Sequence</Badge>
+            <h2 className="text-5xl md:text-6xl font-bold tracking-tighter mb-8 text-premium">How the Protocol <br /><span className="text-gradient-purple">Initializes.</span></h2>
+            <p className="text-xl text-muted-foreground font-light">From neural scan to executive readiness in four streamlined phases.</p>
+          </div>
+
+          <div className="grid md:grid-cols-4 gap-8 relative">
+            <div className="absolute top-1/2 left-0 right-0 h-px bg-gradient-to-r from-transparent via-white/10 to-transparent hidden md:block"></div>
+            {HOW_IT_WORKS.map((step, i) => (
+              <motion.div 
+                key={i}
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                transition={{ delay: i * 0.1 }}
+                className="premium-card bg-white/[0.01] border-white/5 p-10 text-center relative z-10 group hover:bg-white/[0.03] transition-all"
+              >
+                <div className="w-16 h-16 glass rounded-2xl flex items-center justify-center mx-auto mb-8 group-hover:bg-accent/10 transition-colors">
+                  <step.icon className="w-8 h-8 text-accent" />
+                </div>
+                <div className="text-xs font-bold text-accent mb-4 tracking-[0.2em]">{step.step}</div>
+                <h3 className="text-2xl font-bold mb-4">{step.title}</h3>
+                <p className="text-muted-foreground font-light leading-relaxed text-sm">{step.description}</p>
+              </motion.div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Features Section */}
+      <section className="py-32 bg-white/[0.01] relative">
+        <div className="container mx-auto px-6">
+          <div className="flex flex-col lg:flex-row items-end justify-between mb-24 gap-8">
+            <div className="max-w-2xl">
+              <Badge className="bg-purple-500/20 text-purple-400 mb-6 border-none px-6 py-1.5 font-bold tracking-[0.4em] text-[10px] uppercase">Protocol Capabilities</Badge>
+              <h2 className="text-5xl md:text-6xl font-bold tracking-tighter text-premium">Engineered for <br /><span className="text-gradient-purple">Elite Technical Mastery.</span></h2>
+            </div>
+            <p className="text-xl text-muted-foreground font-light max-w-sm">Deploying advanced neural models to bridge the gap between potential and reality.</p>
+          </div>
+
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+            {FEATURES.map((feature, i) => (
+              <motion.div 
+                key={i}
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                transition={{ delay: i * 0.1 }}
+                className="premium-card p-10 border-white/5 bg-white/[0.02] hover:bg-white/[0.04] transition-all group"
+              >
+                <div className="w-14 h-14 glass rounded-2xl flex items-center justify-center mb-8 group-hover:bg-accent/10 transition-colors">
+                  <feature.icon className="w-6 h-6 text-accent" />
+                </div>
+                <h3 className="text-2xl font-bold mb-4">{feature.title}</h3>
+                <p className="text-muted-foreground font-light leading-relaxed">{feature.description}</p>
+              </motion.div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Supported Roles Section */}
+      <section className="py-32 relative overflow-hidden">
+        <div className="container mx-auto px-6">
+          <div className="text-center max-w-3xl mx-auto mb-24">
+            <Badge className="bg-accent/20 text-accent mb-6 border-none px-6 py-1.5 font-bold tracking-[0.4em] text-[10px] uppercase">Specialization Library</Badge>
+            <h2 className="text-5xl font-bold tracking-tighter text-premium">60+ Neural Simulation <br /><span className="text-gradient-purple">Tracks Available.</span></h2>
+          </div>
+
+          <div className="flex flex-wrap justify-center gap-4 max-w-5xl mx-auto">
+            {ROLES.slice(0, 30).map((role, i) => (
+              <motion.div 
+                key={i}
+                initial={{ opacity: 0, scale: 0.9 }}
+                whileInView={{ opacity: 1, scale: 1 }}
+                transition={{ delay: (i % 10) * 0.05 }}
+                className="px-6 py-3 glass rounded-2xl text-xs font-bold uppercase tracking-widest text-white/60 border-white/5 hover:text-white hover:border-accent/30 transition-all cursor-default"
+              >
+                {role}
+              </motion.div>
+            ))}
+            <div className="px-6 py-3 glass rounded-2xl text-xs font-bold uppercase tracking-widest text-accent border-accent/20">
+              & 30+ more tracks
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Why Choose Nexvoro AI */}
+      <section className="py-32 bg-white/[0.02]">
+        <div className="container mx-auto px-6">
+          <div className="grid lg:grid-cols-2 gap-24 items-center">
+            <div className="space-y-12">
+              <div className="space-y-6">
+                <Badge className="bg-accent/20 text-accent border-none px-6 py-1.5 font-bold tracking-[0.4em] text-[10px] uppercase">The Competitive Edge</Badge>
+                <h2 className="text-5xl font-bold tracking-tighter text-premium">Why Elite Candidates Choose <br /><span className="text-gradient-purple">Nexvoro Protocol.</span></h2>
+              </div>
+              
+              <div className="space-y-8">
+                {[
+                  { title: "Hyper-Realistic Agents", desc: "Our AI HR agents simulate real human bias, pressure, and technical follow-ups.", icon: UserCheck },
+                  { title: "Enterprise Grade Privacy", desc: "Your data is encrypted and anonymized. We never sell your career blueprint.", icon: ShieldCheck },
+                  { title: "Global Hiring Standards", desc: "Our questions are calibrated against hiring benchmarks from the Fortune 500.", icon: Globe },
+                  { title: "Continuous Calibration", desc: "Neural tracks are updated weekly to reflect current market requirements.", icon: Activity }
+                ].map((item, i) => (
+                  <motion.div 
+                    key={i}
+                    initial={{ x: -20, opacity: 0 }}
+                    whileInView={{ x: 0, opacity: 1 }}
+                    transition={{ delay: i * 0.1 }}
+                    className="flex gap-6 items-start"
+                  >
+                    <div className="w-12 h-12 glass rounded-xl flex items-center justify-center shrink-0 text-accent">
+                      <item.icon className="w-6 h-6" />
+                    </div>
+                    <div>
+                      <h4 className="text-xl font-bold mb-2">{item.title}</h4>
+                      <p className="text-muted-foreground font-light leading-relaxed">{item.desc}</p>
+                    </div>
+                  </motion.div>
+                ))}
+              </div>
+            </div>
+
+            <div className="relative">
+              <div className="absolute inset-0 bg-accent/20 blur-[120px] rounded-full"></div>
+              <motion.div 
+                initial={{ scale: 0.9, opacity: 0 }}
+                whileInView={{ scale: 1, opacity: 1 }}
+                className="relative premium-card p-0 overflow-hidden border-white/10 shadow-2xl"
+              >
+                <Image 
+                  src={PlaceHolderImages.find(img => img.id === 'demo-preview')?.imageUrl || ''}
+                  alt="Interface Preview"
+                  width={1000}
+                  height={600}
+                  className="w-full h-auto opacity-80"
+                  data-ai-hint="software interface"
+                />
+              </motion.div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Testimonials Section */}
+      <section className="py-32 relative">
+        <div className="container mx-auto px-6">
+          <div className="text-center max-w-3xl mx-auto mb-24">
+            <Badge className="bg-purple-500/20 text-purple-400 mb-6 border-none px-6 py-1.5 font-bold tracking-[0.4em] text-[10px] uppercase">Neural Network Feedback</Badge>
+            <h2 className="text-5xl font-bold tracking-tighter text-premium">Voices from the <br /><span className="text-gradient-purple">Arena.</span></h2>
+          </div>
+
+          <div className="grid md:grid-cols-3 gap-8">
+            {TESTIMONIALS.map((t, i) => (
+              <motion.div 
+                key={i}
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                transition={{ delay: i * 0.1 }}
+                className="premium-card p-12 border-white/5 bg-white/[0.01] flex flex-col justify-between"
+              >
+                <div className="space-y-8">
+                  <div className="flex justify-between items-center">
+                    <Quote className="w-10 h-10 text-accent/20" />
+                    <div className="flex gap-1">
+                      {[...Array(5)].map((_, j) => (
+                        <Star key={j} className="w-3 h-3 text-yellow-500 fill-yellow-500" />
+                      ))}
+                    </div>
+                  </div>
+                  <p className="text-lg font-light leading-relaxed italic text-white/80">"{t.content}"</p>
+                </div>
+                <div className="flex items-center gap-4 mt-12 pt-12 border-t border-white/5">
+                  <div className="w-12 h-12 rounded-full overflow-hidden border border-white/10">
+                    <Image src={t.avatar} alt={t.name} width={48} height={48} className="object-cover" />
+                  </div>
+                  <div>
+                    <h5 className="font-bold text-sm">{t.name}</h5>
+                    <p className="text-[10px] uppercase tracking-widest text-muted-foreground font-bold">{t.role}</p>
+                  </div>
+                </div>
+              </motion.div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Final CTA Section */}
+      <section className="py-32 relative overflow-hidden">
+        <div className="absolute inset-0 bg-gradient-to-t from-accent/10 to-transparent"></div>
+        <div className="container mx-auto px-6 relative z-10">
+          <motion.div 
+            initial={{ scale: 0.95, opacity: 0 }}
+            whileInView={{ scale: 1, opacity: 1 }}
+            className="premium-card bg-[#0b0e1a] border-accent/20 p-24 text-center max-w-5xl mx-auto shadow-[0_0_100px_rgba(34,211,238,0.1)]"
+          >
+            <div className="w-20 h-20 bg-accent/20 rounded-3xl flex items-center justify-center mx-auto mb-10 border border-accent/30 shadow-2xl">
+              <Zap className="w-10 h-10 text-accent" />
+            </div>
+            <h2 className="text-5xl md:text-7xl font-bold tracking-tighter text-premium mb-8">Ready to Accelerate your <br /><span className="text-gradient-purple">Technical Trajectory?</span></h2>
+            <p className="text-xl text-muted-foreground font-light max-w-2xl mx-auto mb-16">
+              Initialize your first neural simulation today and benchmark your skills against global hiring standards.
+            </p>
+            <div className="flex flex-wrap justify-center gap-8">
+              <Button 
+                onClick={handleStartVirtualInterview}
+                size="lg" 
+                className="h-20 px-16 text-lg btn-premium shadow-[0_0_60px_rgba(147,51,234,0.3)]"
+              >
+                Initialize Arena Simulation
+              </Button>
+              <Button 
+                onClick={handleAnalyzeResumeDirect}
+                size="lg" 
+                variant="outline" 
+                className="h-20 px-12 rounded-full glass border-white/10 hover:bg-white/10 text-lg"
+              >
+                Audit Career Blueprint
+              </Button>
+            </div>
+          </motion.div>
         </div>
       </section>
 
@@ -369,19 +715,87 @@ export default function LandingPage() {
         )}
       </AnimatePresence>
 
-      <footer className="py-24 border-t border-white/5 bg-white/[0.01]">
-        <div className="container mx-auto px-4 text-center">
-           <div className="flex items-center justify-center gap-4 mb-12">
-              <div className="w-14 h-14 glass rounded-2xl flex items-center justify-center">
-                <Sparkles className="text-accent w-8 h-8" />
+      {/* Professional Footer */}
+      <footer className="pt-32 pb-16 border-t border-white/5 bg-black/50 backdrop-blur-3xl relative z-10">
+        <div className="container mx-auto px-6">
+          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-12 mb-24">
+            <div className="col-span-2 space-y-8">
+              <Link href="/" className="flex items-center gap-4 group">
+                <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-purple-600 to-blue-600 flex items-center justify-center shadow-2xl">
+                  <Command className="text-white w-6 h-6" />
+                </div>
+                <span className="font-headline font-bold text-3xl tracking-tighter uppercase">NEXVORO<span className="text-accent">AI</span></span>
+              </Link>
+              <p className="text-muted-foreground font-light leading-relaxed max-w-sm">
+                The world's most advanced neural simulation platform for elite technical recruitment and career trajectory acceleration.
+              </p>
+              <div className="flex gap-4">
+                {[Globe, Twitter, Linkedin, Github].map((Icon, i) => (
+                  <button key={i} className="w-10 h-10 glass rounded-xl flex items-center justify-center hover:bg-white/10 transition-colors text-white/40 hover:text-white">
+                    <Icon className="w-4 h-4" />
+                  </button>
+                ))}
               </div>
-              <span className="font-headline font-bold text-3xl tracking-tighter uppercase">NEXVORO</span>
             </div>
-          <p className="text-[10px] font-bold tracking-[0.3em] uppercase text-white/20">
-            © 2025 NEXVORO SYSTEMS. WORLDWIDE OPERATIONAL CLEARANCE.
-          </p>
+
+            <div className="space-y-6">
+              <h5 className="text-[10px] uppercase tracking-[0.4em] font-bold text-premium">Protocols</h5>
+              <ul className="space-y-4 text-sm font-light text-muted-foreground">
+                <li><Link href="/interview" className="hover:text-accent transition-colors">Neural Arena</Link></li>
+                <li><Link href="/resume" className="hover:text-accent transition-colors">Blueprint Auditor</Link></li>
+                <li><Link href="/roadmap" className="hover:text-accent transition-colors">Growth Pathways</Link></li>
+                <li><Link href="/features" className="hover:text-accent transition-colors">Capabilities</Link></li>
+              </ul>
+            </div>
+
+            <div className="space-y-6">
+              <h5 className="text-[10px] uppercase tracking-[0.4em] font-bold text-premium">Ecosystem</h5>
+              <ul className="space-y-4 text-sm font-light text-muted-foreground">
+                <li><Link href="/pricing" className="hover:text-accent transition-colors">Economics</Link></li>
+                <li><Link href="/about" className="hover:text-accent transition-colors">Neural Team</Link></li>
+                <li><Link href="/partners" className="hover:text-accent transition-colors">Hiring Partners</Link></li>
+                <li><Link href="/careers" className="hover:text-accent transition-colors">Internal Ops</Link></li>
+              </ul>
+            </div>
+
+            <div className="space-y-6">
+              <h5 className="text-[10px] uppercase tracking-[0.4em] font-bold text-premium">Support</h5>
+              <ul className="space-y-4 text-sm font-light text-muted-foreground">
+                <li><Link href="/docs" className="hover:text-accent transition-colors">Documentation</Link></li>
+                <li><Link href="/api" className="hover:text-accent transition-colors">Neural API</Link></li>
+                <li><Link href="/status" className="hover:text-accent transition-colors">System Status</Link></li>
+                <li><Link href="/contact" className="hover:text-accent transition-colors">Encrypted Support</Link></li>
+              </ul>
+            </div>
+
+            <div className="space-y-6">
+              <h5 className="text-[10px] uppercase tracking-[0.4em] font-bold text-premium">Legal</h5>
+              <ul className="space-y-4 text-sm font-light text-muted-foreground">
+                <li><Link href="/privacy" className="hover:text-accent transition-colors">Privacy Protocol</Link></li>
+                <li><Link href="/terms" className="hover:text-accent transition-colors">Terms of Op</Link></li>
+                <li><Link href="/security" className="hover:text-accent transition-colors">Encryption Audit</Link></li>
+              </ul>
+            </div>
+          </div>
+
+          <div className="pt-12 border-t border-white/5 flex flex-col md:flex-row justify-between items-center gap-8">
+            <p className="text-[10px] font-bold tracking-[0.3em] uppercase text-white/20">
+              © 2025 NEXVORO SYSTEMS. WORLDWIDE OPERATIONAL CLEARANCE.
+            </p>
+            <div className="flex items-center gap-3">
+              <div className="w-2 h-2 rounded-full bg-green-400 animate-pulse"></div>
+              <span className="text-[8px] font-bold uppercase tracking-[0.2em] text-green-400/60">All Neural Nodes Operational</span>
+            </div>
+          </div>
         </div>
       </footer>
     </div>
   );
 }
+
+// Placeholder components for the footer icons
+function Twitter(props: any) { return <svg {...props} fill="currentColor" viewBox="0 0 24 24"><path d="M24 4.557c-.883.392-1.832.656-2.828.775 1.017-.609 1.798-1.574 2.165-2.724-.951.564-2.005.974-3.127 1.195-.897-.957-2.178-1.555-3.594-1.555-3.179 0-5.515 2.966-4.797 6.045-4.091-.205-7.719-2.165-10.148-5.144-1.29 2.213-.669 5.108 1.523 6.574-.806-.026-1.566-.247-2.229-.616-.054 2.281 1.581 4.415 3.949 4.89-.693.188-1.452.232-2.224.084.626 1.956 2.444 3.379 4.6 3.419-2.07 1.623-4.678 2.348-7.29 2.04 2.179 1.397 4.768 2.212 7.548 2.212 9.142 0 14.307-7.721 13.995-14.646.962-.695 1.797-1.562 2.457-2.549z"/></svg>; }
+function Linkedin(props: any) { return <svg {...props} fill="currentColor" viewBox="0 0 24 24"><path d="M19 0h-14c-2.761 0-5 2.239-5 5v14c0 2.761 2.239 5 5 5h14c2.762 0 5-2.239 5-5v-14c0-2.761-2.238-5-5-5zm-11 19h-3v-11h3v11zm-1.5-12.268c-.966 0-1.75-.79-1.75-1.764s.784-1.764 1.75-1.764 1.75.79 1.75 1.764-.783 1.764-1.75 1.764zm13.5 12.268h-3v-5.604c0-3.368-4-3.113-4 0v5.604h-3v-11h3v1.765c1.396-2.586 7-2.777 7 2.476v6.759z"/></svg>; }
+function Github(props: any) { return <svg {...props} fill="currentColor" viewBox="0 0 24 24"><path d="M12 .297c-6.63 0-12 5.373-12 12 0 5.303 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61C4.422 18.07 3.633 17.7 3.633 17.7c-1.087-.744.084-.729.084-.729 1.205.084 1.838 1.236 1.838 1.236 1.07 1.835 2.809 1.305 3.495.998.108-.776.417-1.305.76-1.605-2.665-.3-5.466-1.332-5.466-5.93 0-1.31.465-2.38 1.235-3.22-.135-.303-.54-1.523.105-3.176 0 0 1.005-.322 3.3 1.23.96-.267 1.98-.399 3-.405 1.02.006 2.04.138 3 .405 2.28-1.552 3.285-1.23 3.285-1.23.645 1.653.24 2.873.12 3.176.765.84 1.23 1.91 1.23 3.22 0 4.61-2.805 5.625-5.475 5.92.42.36.81 1.096.81 2.22 0 1.606-.015 2.896-.015 3.286 0 .315.21.69.825.57C20.565 22.092 24 17.592 24 12.297c0-6.627-5.373-12-12-12"/></svg>; }
+function Settings(props: any) { return <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>; }
+function Activity(props: any) { return <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>; }
