@@ -57,7 +57,8 @@ export default function Dashboard() {
     if (!db || !user?.uid) return null;
     return query(
       collection(db, 'users', user.uid, 'interviews'),
-      orderBy('createdAt', 'desc')
+      orderBy('createdAt', 'desc'),
+      limit(5)
     );
   }, [db, user?.uid]);
   const { data: interviews, loading: interviewsLoading } = useCollection(interviewsQuery);
@@ -68,7 +69,7 @@ export default function Dashboard() {
     return query(
       collection(db, 'users', user.uid, 'resumes'),
       orderBy('createdAt', 'desc'),
-      limit(5)
+      limit(3)
     );
   }, [db, user?.uid]);
   const { data: resumes, loading: resumesLoading } = useCollection(resumesQuery);
@@ -204,7 +205,7 @@ export default function Dashboard() {
               {/* Session History */}
               <Card className="premium-card bg-white/[0.01] border-white/5">
                 <CardHeader className="mb-8">
-                  <CardTitle className="text-2xl font-bold">Session Logs History</CardTitle>
+                  <CardTitle className="text-2xl font-bold">Recent Session Logs</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-6">
                   {interviewsLoading ? (
