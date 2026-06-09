@@ -133,6 +133,7 @@ export default function InterviewSession() {
 
     const interviewData = {
       userId: user.uid,
+      userName: user.displayName || 'Anonymous Operator',
       role,
       experienceLevel: exp,
       history,

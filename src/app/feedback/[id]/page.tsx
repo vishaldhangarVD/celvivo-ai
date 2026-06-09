@@ -107,6 +107,8 @@ export default function FeedbackReport() {
             technicalScore: feedbackResult.technicalKnowledgeScore,
             communicationScore: feedbackResult.communicationScore,
             confidenceScore: feedbackResult.confidenceScore,
+            strengths: feedbackResult.strengths,
+            weaknesses: feedbackResult.weaknesses,
           }).catch(async (err) => {
             errorEmitter.emit('permission-error', new FirestorePermissionError({
               path: interviewRef.path,

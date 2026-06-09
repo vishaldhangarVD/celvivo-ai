@@ -1,5 +1,5 @@
 
-'use client';
+"use client";
 
 import { useEffect, useMemo } from 'react';
 import { motion } from 'framer-motion';
@@ -18,7 +18,9 @@ import {
   ChevronRight,
   Loader2,
   ArrowUpRight,
-  AlertCircle
+  AlertCircle,
+  History,
+  Star
 } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -51,8 +53,7 @@ export default function Dashboard() {
     if (!db || !user?.uid) return null;
     return query(
       collection(db, 'users', user.uid, 'interviews'),
-      orderBy('createdAt', 'desc'),
-      limit(10)
+      orderBy('createdAt', 'desc')
     );
   }, [db, user?.uid]);
 
@@ -79,22 +80,24 @@ export default function Dashboard() {
     
     // Aggregates from profile or latest records
     const resumeScore = latestResume?.atsScore || profile?.resumeScore || 0;
-    const totalInterviews = profile?.totalInterviews || 0;
-    const interviewScore = latestInterview?.overallScore || 0;
+    const totalInterviews = interviews?.length || 0;
+    const latestScore = latestInterview?.overallScore || 0;
     
-    // Skill match from latest resume analysis
-    const skillMatch = latestResume?.analysis?.roleMatches?.[0]?.matchPercentage || 0;
+    const averageScore = interviews?.length 
+      ? Math.round(interviews.reduce((acc, curr: any) => acc + (curr.overallScore || 0), 0) / interviews.length)
+      : 0;
     
-    // Readiness: Blend of resume score and latest performance
-    const jobReadiness = (resumeScore > 0 || interviewScore > 0)
-      ? Math.round((resumeScore + interviewScore) / (resumeScore > 0 && interviewScore > 0 ? 2 : 1))
+    // Readiness: Blend of resume score and average interview performance
+    const jobReadiness = (resumeScore > 0 || averageScore > 0)
+      ? Math.round((resumeScore + averageScore) / (resumeScore > 0 && averageScore > 0 ? 2 : 1))
       : 0;
 
     return {
       resumeScore: `${resumeScore}%`,
       totalInterviews,
-      jobReadiness: `${jobReadiness}%`,
-      skillMatch: `${skillMatch}%`
+      latestScore: `${latestScore}%`,
+      averageScore: `${averageScore}%`,
+      jobReadiness: `${jobReadiness}%`
     };
   }, [resumes, interviews, profile]);
 
@@ -104,9 +107,9 @@ export default function Dashboard() {
       return [{ name: 'S-0', score: 0 }];
     }
     return interviews
-      .slice()
+      .slice(0, 7)
       .reverse()
-      .map((item, i) => ({
+      .map((item: any, i) => ({
         name: `S-${i+1}`,
         score: item.overallScore || 0
       }));
@@ -147,10 +150,10 @@ export default function Dashboard() {
 
           <div className="grid md:grid-cols-4 gap-6">
             {[
-              { label: "Resume Score", val: stats.resumeScore, icon: FileText, color: "text-purple-400" },
-              { label: "Interviews Taken", val: stats.totalInterviews, icon: Activity, color: "text-accent" },
-              { label: "Job Readiness", val: stats.jobReadiness, icon: Target, color: "text-blue-400" },
-              { label: "Skill Match", val: stats.skillMatch, icon: BrainCircuit, color: "text-yellow-400" }
+              { label: "Latest Score", val: stats.latestScore, icon: Target, color: "text-accent" },
+              { label: "Average Score", val: stats.averageScore, icon: Star, color: "text-purple-400" },
+              { label: "Interviews Taken", val: stats.totalInterviews, icon: Activity, color: "text-blue-400" },
+              { label: "Job Readiness", val: stats.jobReadiness, icon: BrainCircuit, color: "text-yellow-400" }
             ].map((stat, i) => (
               <motion.div
                 key={i}
@@ -211,37 +214,42 @@ export default function Dashboard() {
                 </CardContent>
               </Card>
 
+              {/* Interview History Section */}
               <Card className="premium-card bg-white/[0.01] border-white/5 p-10">
                 <CardHeader className="p-0 mb-10">
-                  <CardTitle className="text-2xl font-bold">Recent Intelligence</CardTitle>
+                  <CardTitle className="text-2xl font-bold flex items-center gap-4">
+                    <History className="w-8 h-8 text-accent" />
+                    Interview History
+                  </CardTitle>
                 </CardHeader>
                 <CardContent className="p-0 space-y-4">
-                  {interviewsLoading || resumesLoading ? (
+                  {interviewsLoading ? (
                     <div className="py-12 flex justify-center"><Loader2 className="w-8 h-8 animate-spin text-accent" /></div>
-                  ) : [...(interviews || []), ...(resumes || [])].length === 0 ? (
-                    <div className="py-12 text-center glass rounded-[2rem] border-white/5">
-                      <AlertCircle className="w-8 h-8 text-white/20 mx-auto mb-4" />
-                      <p className="text-sm text-muted-foreground font-light">No intelligence logs found. Start a simulation to begin tracking.</p>
+                  ) : !interviews || interviews.length === 0 ? (
+                    <div className="py-20 text-center glass rounded-[2rem] border-white/5 border-dashed">
+                      <AlertCircle className="w-12 h-12 text-white/20 mx-auto mb-6" />
+                      <p className="text-lg font-light text-muted-foreground">No interview history available yet.</p>
+                      <Link href="/interview" className="mt-8 block">
+                        <Button variant="outline" className="rounded-xl border-accent/20 text-accent hover:bg-accent/5">Start First Session</Button>
+                      </Link>
                     </div>
                   ) : (
-                    [
-                      ...(interviews?.map(i => ({ type: 'interview', title: `Simulation: ${i.role}`, desc: `Neural score of ${i.overallScore}% recorded.`, link: `/feedback/last?role=${encodeURIComponent(i.role)}&exp=${i.experienceLevel}&data=${encodeURIComponent(JSON.stringify(i.history))}`, icon: Zap, date: i.createdAt })) || []),
-                      ...(resumes?.map(r => ({ type: 'resume', title: `Blueprint Audit: ${r.filename}`, desc: `ATS Index calibrated at ${r.atsScore}%.`, link: '/resume', icon: FileText, date: r.createdAt })) || [])
-                    ]
-                    .sort((a, b) => (b.date?.seconds || 0) - (a.date?.seconds || 0))
-                    .slice(0, 5)
-                    .map((action, i) => (
+                    interviews.slice(0, 5).map((session: any, i) => (
                       <div key={i} className="flex items-center justify-between p-6 glass rounded-[2rem] border-white/5 hover:bg-white/[0.03] transition-all group">
                         <div className="flex items-center gap-6">
-                          <div className={`w-10 h-10 glass rounded-xl flex items-center justify-center ${action.type === 'interview' ? 'text-accent' : 'text-purple-400'}`}>
-                            <action.icon className="w-5 h-5" />
+                          <div className="w-10 h-10 glass rounded-xl flex items-center justify-center text-accent">
+                            <Zap className="w-5 h-5" />
                           </div>
                           <div>
-                            <h4 className="font-bold">{action.title}</h4>
-                            <p className="text-xs text-muted-foreground">{action.desc}</p>
+                            <h4 className="font-bold">Simulation: {session.role}</h4>
+                            <div className="flex items-center gap-3 text-xs text-muted-foreground mt-1">
+                              <span>Score: {session.overallScore}%</span>
+                              <span className="w-1 h-1 rounded-full bg-white/10"></span>
+                              <span>{session.createdAt?.seconds ? new Date(session.createdAt.seconds * 1000).toLocaleDateString() : 'Recent'}</span>
+                            </div>
                           </div>
                         </div>
-                        <Link href={action.link}>
+                        <Link href={`/feedback/${session.id}`}>
                           <Button variant="ghost" size="icon" className="group-hover:text-accent rounded-xl">
                             <ArrowUpRight className="w-5 h-5" />
                           </Button>
@@ -293,28 +301,29 @@ export default function Dashboard() {
 
               <Card className="premium-card bg-white/[0.01] border-white/5">
                 <CardHeader>
-                  <CardTitle className="text-xl font-bold">Neural Vectors</CardTitle>
+                  <CardTitle className="text-xl font-bold">Latest Blueprint Audit</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-6">
                   {resumesLoading ? (
                     <Loader2 className="w-6 h-6 animate-spin text-accent" />
-                  ) : resumes?.[0]?.analysis?.missingSkills?.length > 0 ? (
-                    resumes[0].analysis.missingSkills.slice(0, 3).map((skill: string, i: number) => (
-                      <div key={i} className="space-y-2">
-                        <div className="flex justify-between text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                          <span>{skill}</span>
-                          <span>Priority Node</span>
-                        </div>
-                        <div className="h-1 bg-white/5 rounded-full overflow-hidden">
-                          <div className="h-full bg-accent" style={{ width: `${Math.random() * 40 + 20}%` }}></div>
-                        </div>
+                  ) : resumes?.[0] ? (
+                    <div className="space-y-4">
+                      <div className="flex justify-between text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                        <span>{resumes[0].filename}</span>
+                        <span>{resumes[0].atsScore}% ATS</span>
                       </div>
-                    ))
+                      <div className="h-1 bg-white/5 rounded-full overflow-hidden">
+                        <div className="h-full bg-accent" style={{ width: `${resumes[0].atsScore}%` }}></div>
+                      </div>
+                      <p className="text-xs text-muted-foreground font-light italic mt-4">
+                        {resumes[0].analysis?.improvementSuggestions?.[0] || 'Calibration complete.'}
+                      </p>
+                    </div>
                   ) : (
-                    <p className="text-xs text-muted-foreground font-light italic">No skill gaps identified yet.</p>
+                    <p className="text-xs text-muted-foreground font-light italic">No blueprints audited yet.</p>
                   )}
-                  <Link href="/roadmap">
-                    <Button variant="ghost" className="w-full text-[10px] font-bold uppercase tracking-widest text-accent hover:bg-accent/5">View Full Analysis</Button>
+                  <Link href="/resume">
+                    <Button variant="ghost" className="w-full text-[10px] font-bold uppercase tracking-widest text-accent hover:bg-accent/5">Analyze Resume</Button>
                   </Link>
                 </CardContent>
               </Card>
