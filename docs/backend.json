@@ -1,3 +1,4 @@
+
 {
   "entities": {
     "UserProfile": {
@@ -10,7 +11,9 @@
         "email": { "type": "string" },
         "photoURL": { "type": "string" },
         "jobReadinessScore": { "type": "number" },
+        "resumeScore": { "type": "number" },
         "totalInterviews": { "type": "number" },
+        "missingSkills": { "type": "array", "items": { "type": "string" } },
         "createdAt": { "type": "string", "format": "date-time" }
       },
       "required": ["uid", "email"]
@@ -29,6 +32,7 @@
         "confidenceScore": { "type": "number" },
         "history": { "type": "array" },
         "feedback": { "type": "object" },
+        "duration": { "type": "number" },
         "createdAt": { "type": "string", "format": "date-time" }
       }
     },
@@ -42,6 +46,7 @@
         "atsScore": { "type": "number" },
         "targetRole": { "type": "string" },
         "analysis": { "type": "object" },
+        "keywords": { "type": "array", "items": { "type": "string" } },
         "createdAt": { "type": "string", "format": "date-time" }
       }
     }
