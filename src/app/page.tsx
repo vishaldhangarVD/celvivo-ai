@@ -130,27 +130,6 @@ const STATS = [
   { label: "Avg. Readiness Boost", value: "45%", icon: Zap }
 ];
 
-const TESTIMONIALS = [
-  {
-    name: "Sarah Chen",
-    role: "Senior Frontend Engineer @ Meta",
-    content: "The neural simulation was hyper-realistic. It identified gaps in my system design knowledge that I hadn't even considered.",
-    avatar: "https://picsum.photos/seed/sarah/100/100"
-  },
-  {
-    name: "Marcus Thorne",
-    role: "DevOps Architect @ Google",
-    content: "Nexvoro's ATS audit is a game-changer. I optimized my career blueprint and saw a 3x increase in interview requests.",
-    avatar: "https://picsum.photos/seed/marcus/100/100"
-  },
-  {
-    name: "Elena Rodriguez",
-    role: "AI Researcher @ OpenAI",
-    content: "The feedback loops are incredibly precise. It doesn't just tell you what's wrong; it tells you exactly how to fix the logic.",
-    avatar: "https://picsum.photos/seed/elena/100/100"
-  }
-];
-
 export default function LandingPage() {
   const router = useRouter();
   const { user, loading: authLoading } = useUser();
@@ -313,18 +292,20 @@ export default function LandingPage() {
                   </div>
 
                   {/* Right Avatar */}
-                  <div className="md:w-1/2 relative min-h-[400px] md:min-h-0 border-l border-white/5 overflow-hidden">
-                    <Image 
-                      src={PlaceHolderImages.find(img => img.id === 'ai-hr-interviewer')?.imageUrl || ''}
-                      alt="AI HR Interviewer"
-                      fill
-                      className="object-cover opacity-90 group-hover:scale-105 transition-transform duration-[2s] brightness-110"
-                      data-ai-hint="professional businessman suit"
-                    />
-                    <div className="absolute inset-0 bg-gradient-to-t from-[#0b0e1a] via-transparent to-transparent md:bg-gradient-to-l md:from-transparent md:via-[#0b0e1a]/20 md:to-[#0b0e1a]"></div>
+                  <div className="md:w-1/2 relative min-h-[400px] md:min-h-0 p-8 flex items-center justify-center">
+                    <div className="relative w-full h-full rounded-[2.5rem] overflow-hidden glass border-white/20 shadow-2xl">
+                      <Image 
+                        src={PlaceHolderImages.find(img => img.id === 'ai-hr-interviewer')?.imageUrl || ''}
+                        alt="AI HR Interviewer"
+                        fill
+                        className="object-cover opacity-90 group-hover:scale-105 transition-transform duration-[2s] brightness-110"
+                        data-ai-hint="professional businessman suit"
+                      />
+                      <div className="absolute inset-0 bg-gradient-to-t from-[#0b0e1a]/60 via-transparent to-transparent"></div>
+                    </div>
                     
                     {/* Floating Pulse Rings */}
-                    <div className="absolute bottom-12 right-12">
+                    <div className="absolute bottom-12 right-12 z-20">
                       <div className="w-4 h-4 rounded-full bg-accent animate-ping"></div>
                     </div>
                   </div>
