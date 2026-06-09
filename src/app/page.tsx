@@ -39,7 +39,9 @@ import {
   ShieldCheck,
   Activity,
   Command,
-  Heart
+  Heart,
+  Trophy,
+  Map
 } from 'lucide-react';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
 import { useUser } from '@/firebase';
