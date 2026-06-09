@@ -1,10 +1,10 @@
-
 "use client";
 
 import { useState, useEffect, useRef } from 'react';
 import { useSearchParams, useRouter, useParams } from 'next/navigation';
 import Image from 'next/image';
 import { motion, AnimatePresence } from 'framer-motion';
+import NavigationControls from '@/components/NavigationControls';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
@@ -171,8 +171,9 @@ export default function InterviewSession() {
   };
 
   return (
-    <div className="flex flex-col h-screen bg-[#050816] overflow-hidden text-white font-body">
+    <div className="flex flex-col h-screen bg-[#050816] overflow-hidden text-white font-body relative">
       <div className="particles-bg" />
+      <NavigationControls className="hidden md:flex top-24" />
       
       {/* Header */}
       <header className="h-20 border-b border-white/5 glass backdrop-blur-3xl flex items-center justify-between px-10 shrink-0 z-50">

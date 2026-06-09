@@ -2,6 +2,7 @@
 
 import { motion } from 'framer-motion';
 import Navbar from '@/components/layout/Navbar';
+import NavigationControls from '@/components/NavigationControls';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Check, Loader2, Zap, Star, ShieldCheck, Crown } from 'lucide-react';
@@ -87,6 +88,7 @@ export default function PricingPage() {
     <div className="min-h-screen bg-[#050816]">
       <div className="particles-bg" />
       <Navbar />
+      <NavigationControls />
       
       <main className="container mx-auto px-6 pt-40 pb-32">
         <div className="max-w-4xl mx-auto text-center mb-24">

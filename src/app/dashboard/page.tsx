@@ -1,9 +1,9 @@
-
 "use client";
 
 import { useEffect, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import Navbar from '@/components/layout/Navbar';
+import NavigationControls from '@/components/NavigationControls';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -152,6 +152,7 @@ export default function Dashboard() {
     <div className="min-h-screen bg-[#050816] pb-32">
       <div className="particles-bg" />
       <Navbar />
+      <NavigationControls />
       
       <main className="container mx-auto px-6 pt-32">
         <div className="max-w-7xl mx-auto space-y-12">

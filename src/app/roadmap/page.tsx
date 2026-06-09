@@ -1,9 +1,9 @@
-
 'use client';
 
 import { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Navbar from '@/components/layout/Navbar';
+import NavigationControls from '@/components/NavigationControls';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { 
@@ -110,6 +110,7 @@ export default function CareerRoadmap() {
     <div className="min-h-screen bg-[#050816] pb-32">
       <div className="particles-bg" />
       <Navbar />
+      <NavigationControls />
       
       <main className="container mx-auto px-6 pt-32">
         <div className="max-w-6xl mx-auto space-y-16">

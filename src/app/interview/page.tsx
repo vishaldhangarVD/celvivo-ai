@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Navbar from '@/components/layout/Navbar';
+import NavigationControls from '@/components/NavigationControls';
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -36,34 +37,36 @@ export default function InterviewSetup() {
   };
 
   return (
-    <div className="min-h-screen">
+    <div className="min-h-screen bg-[#050816]">
+      <div className="particles-bg" />
       <Navbar />
-      <div className="container mx-auto px-4 py-16">
+      <NavigationControls />
+      <div className="container mx-auto px-4 py-32">
         <div className="max-w-4xl mx-auto">
           <header className="text-center mb-12">
-            <h1 className="text-4xl md:text-5xl font-bold mb-4">Interview <span className="text-gradient">Setup</span></h1>
-            <p className="text-muted-foreground text-lg">Configure your session and step into the arena.</p>
+            <h1 className="text-4xl md:text-5xl font-bold mb-4">Interview <span className="text-gradient-purple">Setup</span></h1>
+            <p className="text-muted-foreground text-lg font-light">Configure your session and step into the arena.</p>
           </header>
 
           <div className="grid md:grid-cols-5 gap-8">
             <div className="md:col-span-3 space-y-8">
-              <Card className="glass-card border-white/10 overflow-hidden">
-                <CardHeader className="bg-white/5 border-b border-white/10">
-                  <CardTitle className="flex items-center gap-2">
-                    <Briefcase className="w-5 h-5 text-primary" />
+              <Card className="premium-card bg-white/[0.01] border-white/5 overflow-hidden p-0">
+                <CardHeader className="bg-white/5 border-b border-white/10 p-8">
+                  <CardTitle className="flex items-center gap-2 text-xl">
+                    <Briefcase className="w-5 h-5 text-accent" />
                     Target Role
                   </CardTitle>
                 </CardHeader>
-                <CardContent className="p-6">
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <CardContent className="p-8">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     {ROLES.map((role) => (
                       <button
                         key={role}
                         onClick={() => setSelectedRole(role)}
-                        className={`text-left px-4 py-3 rounded-xl border transition-all text-sm font-medium ${
+                        className={`text-left px-6 py-4 rounded-xl border transition-all text-sm font-medium ${
                           selectedRole === role 
-                            ? 'bg-primary/20 border-primary text-primary shadow-lg shadow-primary/10' 
-                            : 'bg-white/5 border-white/5 hover:bg-white/10 text-muted-foreground'
+                            ? 'bg-accent/20 border-accent text-accent shadow-lg shadow-accent/10' 
+                            : 'glass border-white/5 hover:bg-white/5 text-muted-foreground hover:text-white'
                         }`}
                       >
                         {role}
@@ -73,23 +76,23 @@ export default function InterviewSetup() {
                 </CardContent>
               </Card>
 
-              <Card className="glass-card border-white/10">
-                <CardHeader className="bg-white/5 border-b border-white/10">
-                  <CardTitle className="flex items-center gap-2">
+              <Card className="premium-card bg-white/[0.01] border-white/5 p-0 overflow-hidden">
+                <CardHeader className="bg-white/5 border-b border-white/10 p-8">
+                  <CardTitle className="flex items-center gap-2 text-xl">
                     <GraduationCap className="w-5 h-5 text-accent" />
                     Experience Level
                   </CardTitle>
                 </CardHeader>
-                <CardContent className="p-6">
+                <CardContent className="p-8">
                   <div className="flex gap-4">
                     {EXPERIENCE_LEVELS.map((level) => (
                       <button
                         key={level}
                         onClick={() => setSelectedExp(level)}
-                        className={`flex-1 py-4 rounded-2xl border transition-all font-bold ${
+                        className={`flex-1 py-5 rounded-2xl border transition-all font-bold tracking-widest uppercase text-xs ${
                           selectedExp === level
                             ? 'bg-accent/20 border-accent text-accent shadow-lg shadow-accent/10'
-                            : 'bg-white/5 border-white/5 hover:bg-white/10 text-muted-foreground'
+                            : 'glass border-white/5 hover:bg-white/5 text-muted-foreground hover:text-white'
                         }`}
                       >
                         {level}
@@ -101,46 +104,42 @@ export default function InterviewSetup() {
             </div>
 
             <div className="md:col-span-2 space-y-6">
-              <Card className="glass-card border-white/10 h-fit sticky top-24">
-                <CardHeader>
-                  <CardTitle>Session Preview</CardTitle>
+              <Card className="premium-card bg-accent/5 border-accent/10 h-fit sticky top-32">
+                <CardHeader className="p-8">
+                  <CardTitle className="text-xl font-bold">Session Preview</CardTitle>
                 </CardHeader>
-                <CardContent className="space-y-6">
+                <CardContent className="p-8 pt-0 space-y-8">
                   <div className="space-y-4">
-                    <div className="flex items-center justify-between p-4 bg-white/5 rounded-2xl">
-                      <div className="flex items-center gap-3">
-                        <Layers className="w-5 h-5 text-primary" />
-                        <span className="text-sm font-medium">Structure</span>
+                    {[
+                      { icon: Layers, label: "Structure", val: "5 Main Questions" },
+                      { icon: Clock, label: "Estimated Time", val: "15-20 Minutes" },
+                      { icon: Trophy, label: "Feedback", val: "Detailed Audit", badge: true }
+                    ].map((item, i) => (
+                      <div key={i} className="flex items-center justify-between p-4 glass rounded-2xl border-white/5">
+                        <div className="flex items-center gap-3">
+                          <item.icon className="w-4 h-4 text-accent" />
+                          <span className="text-xs font-medium text-white/70">{item.label}</span>
+                        </div>
+                        {item.badge ? (
+                          <Badge className="bg-accent/20 text-accent border-none text-[10px] uppercase font-bold tracking-widest">Detailed</Badge>
+                        ) : (
+                          <span className="text-xs text-white font-bold">{item.val}</span>
+                        )}
                       </div>
-                      <span className="text-sm text-muted-foreground">5 Main Questions</span>
-                    </div>
-                    <div className="flex items-center justify-between p-4 bg-white/5 rounded-2xl">
-                      <div className="flex items-center gap-3">
-                        <Clock className="w-5 h-5 text-primary" />
-                        <span className="text-sm font-medium">Estimated Time</span>
-                      </div>
-                      <span className="text-sm text-muted-foreground">15-20 Minutes</span>
-                    </div>
-                    <div className="flex items-center justify-between p-4 bg-white/5 rounded-2xl">
-                      <div className="flex items-center gap-3">
-                        <Trophy className="w-5 h-5 text-primary" />
-                        <span className="text-sm font-medium">Feedback</span>
-                      </div>
-                      <Badge variant="secondary" className="bg-primary/20 text-primary border-none">Detailed</Badge>
-                    </div>
+                    ))}
                   </div>
 
-                  <div className="pt-6 border-t border-white/10">
-                    <div className="mb-6">
-                      <p className="text-xs uppercase tracking-widest text-muted-foreground mb-1">Current Settings</p>
-                      <p className="text-lg font-bold">{selectedRole} • {selectedExp}</p>
+                  <div className="pt-8 border-t border-white/10">
+                    <div className="mb-8">
+                      <p className="text-[10px] uppercase tracking-widest text-muted-foreground font-bold mb-2">Current Configuration</p>
+                      <p className="text-lg font-bold text-premium">{selectedRole} • {selectedExp}</p>
                     </div>
                     <Button 
                       onClick={startInterview}
-                      className="w-full h-14 text-lg bg-gradient-premium hover:opacity-90 rounded-2xl shadow-xl shadow-primary/20 group"
+                      className="w-full h-16 text-xs btn-premium uppercase tracking-[0.3em]"
                     >
                       Enter Interview Room
-                      <Play className="ml-2 w-5 h-5 group-hover:fill-current" />
+                      <Play className="ml-3 w-4 h-4 fill-current" />
                     </Button>
                   </div>
                 </CardContent>

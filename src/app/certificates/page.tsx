@@ -1,8 +1,8 @@
-
 'use client';
 
 import { motion } from 'framer-motion';
 import Navbar from '@/components/layout/Navbar';
+import NavigationControls from '@/components/NavigationControls';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { 
@@ -19,6 +19,7 @@ import { Button } from '@/components/ui/button';
 import { useUser, useFirestore, useCollection } from '@/firebase';
 import { collection, query, orderBy, where } from 'firebase/firestore';
 import { useMemo } from 'react';
+import Link from 'next/link';
 
 export default function CertificatesPage() {
   const { user, loading: authLoading } = useUser();
@@ -40,6 +41,7 @@ export default function CertificatesPage() {
     <div className="min-h-screen bg-[#050816] pb-32">
       <div className="particles-bg" />
       <Navbar />
+      <NavigationControls />
       
       <main className="container mx-auto px-6 pt-32">
         <div className="max-w-6xl mx-auto space-y-16">

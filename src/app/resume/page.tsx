@@ -1,8 +1,8 @@
-
 "use client";
 
 import { useState } from 'react';
 import Navbar from '@/components/layout/Navbar';
+import NavigationControls from '@/components/NavigationControls';
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
@@ -175,6 +175,7 @@ export default function ResumeAnalyzer() {
     <div className="min-h-screen bg-[#050816] pb-32">
       <div className="particles-bg" />
       <Navbar />
+      <NavigationControls />
       <div className="container mx-auto px-4 py-32">
         <header className="mb-20 text-center">
           <motion.div

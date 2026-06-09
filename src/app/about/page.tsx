@@ -2,6 +2,7 @@
 
 import { motion } from 'framer-motion';
 import Navbar from '@/components/layout/Navbar';
+import NavigationControls from '@/components/NavigationControls';
 import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
 import { 
@@ -49,6 +50,7 @@ export default function AboutPage() {
     <div className="min-h-screen bg-[#050816]">
       <div className="particles-bg" />
       <Navbar />
+      <NavigationControls />
 
       <main className="container mx-auto px-6 pt-40 pb-32">
         {/* Hero Section */}

@@ -3,6 +3,7 @@
 import { useMemo } from 'react';
 import { motion } from 'framer-motion';
 import Navbar from '@/components/layout/Navbar';
+import NavigationControls from '@/components/NavigationControls';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
@@ -125,6 +126,7 @@ export default function UserDashboard() {
     <div className="min-h-screen bg-[#050816] pb-32">
       <div className="particles-bg" />
       <Navbar />
+      <NavigationControls />
       
       <main className="container mx-auto px-4 pt-32">
         <div className="max-w-7xl mx-auto space-y-12">
@@ -402,8 +404,8 @@ export default function UserDashboard() {
                     <span className="text-xs font-bold text-green-400">Active</span>
                   </div>
                 </CardContent>
-              </Card>
 
+              </div>
             </div>
           </div>
         </div>
