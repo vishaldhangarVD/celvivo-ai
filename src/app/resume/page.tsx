@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState } from 'react';
@@ -13,7 +14,6 @@ import {
   FileText, 
   CheckCircle2, 
   AlertCircle, 
-  Search, 
   Lightbulb,
   Loader2,
   Trash2,
@@ -28,13 +28,12 @@ import {
   BarChart3,
   Download,
   Share2,
-  ArrowRight,
   ShieldCheck,
   Cpu
 } from 'lucide-react';
 import { type AiResumeAnalysisOutput } from '@/ai/flows/ai-resume-analysis';
 import { useUser, useFirestore } from '@/firebase';
-import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import { collection, addDoc, serverTimestamp, doc, updateDoc } from 'firebase/firestore';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
 import { useToast } from '@/hooks/use-toast';
@@ -118,7 +117,7 @@ export default function ResumeAnalyzer() {
           "Strengthen your system design documentation section."
         ],
         roleMatches: [
-          { role: "Frontend Developer", matchPercentage: 94 },
+          { role: targetRole, matchPercentage: 94 },
           { role: "Full Stack Developer", matchPercentage: 86 },
           { role: "AI Engineer", matchPercentage: 72 }
         ]
@@ -139,6 +138,19 @@ export default function ResumeAnalyzer() {
         };
 
         addDoc(resumesRef, resumeData)
+          .then(() => {
+            // Update User Profile with latest resume score
+            const userDocRef = doc(db, 'users', user.uid);
+            updateDoc(userDocRef, {
+              resumeScore: mockResult.atsScore
+            }).catch(async (e) => {
+              errorEmitter.emit('permission-error', new FirestorePermissionError({
+                path: userDocRef.path,
+                operation: 'update',
+                requestResourceData: { resumeScore: mockResult.atsScore }
+              }));
+            });
+          })
           .catch(async (err) => {
             errorEmitter.emit('permission-error', new FirestorePermissionError({
               path: resumesRef.path,

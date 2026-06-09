@@ -18,13 +18,12 @@ import {
   ChevronRight,
   Loader2,
   ArrowUpRight,
-  History,
   AlertCircle
 } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useUser, useFirestore, useCollection } from '@/firebase';
-import { collection, query, orderBy, limit } from 'firebase/firestore';
+import { useUser, useFirestore, useCollection, useDoc } from '@/firebase';
+import { collection, query, orderBy, limit, doc } from 'firebase/firestore';
 import { 
   AreaChart, 
   Area, 
@@ -40,7 +39,14 @@ export default function Dashboard() {
   const { user, loading: authLoading } = useUser();
   const db = useFirestore();
 
-  // Memoized queries for efficiency
+  // Fetch User Profile for aggregate stats
+  const userRef = useMemo(() => {
+    if (!db || !user?.uid) return null;
+    return doc(db, 'users', user.uid);
+  }, [db, user?.uid]);
+  const { data: profile } = useDoc(userRef);
+
+  // Memoized queries for intelligence lists
   const interviewsQuery = useMemo(() => {
     if (!db || !user?.uid) return null;
     return query(
@@ -66,21 +72,22 @@ export default function Dashboard() {
     if (!user && !authLoading) router.push('/login');
   }, [user, authLoading, router]);
 
-  // Calculated Stats
+  // Dynamic Metrics Calculation
   const stats = useMemo(() => {
     const latestResume = resumes?.[0];
     const latestInterview = interviews?.[0];
     
-    const resumeScore = latestResume?.atsScore || 0;
-    const totalInterviews = interviews?.length || 0;
+    // Aggregates from profile or latest records
+    const resumeScore = latestResume?.atsScore || profile?.resumeScore || 0;
+    const totalInterviews = profile?.totalInterviews || 0;
     const interviewScore = latestInterview?.overallScore || 0;
     
-    // Skill match from latest resume matches
+    // Skill match from latest resume analysis
     const skillMatch = latestResume?.analysis?.roleMatches?.[0]?.matchPercentage || 0;
     
-    // Readiness is an average of resume and latest performance
-    const jobReadiness = totalInterviews > 0 || latestResume 
-      ? Math.round((resumeScore + interviewScore) / (latestResume && latestInterview ? 2 : 1))
+    // Readiness: Blend of resume score and latest performance
+    const jobReadiness = (resumeScore > 0 || interviewScore > 0)
+      ? Math.round((resumeScore + interviewScore) / (resumeScore > 0 && interviewScore > 0 ? 2 : 1))
       : 0;
 
     return {
@@ -89,15 +96,12 @@ export default function Dashboard() {
       jobReadiness: `${jobReadiness}%`,
       skillMatch: `${skillMatch}%`
     };
-  }, [resumes, interviews]);
+  }, [resumes, interviews, profile]);
 
-  // Chart data from recent interview scores
+  // Performance Chart Data
   const chartData = useMemo(() => {
     if (!interviews || interviews.length === 0) {
-      return [
-        { name: 'Start', score: 0 },
-        { name: 'Target', score: 100 }
-      ];
+      return [{ name: 'S-0', score: 0 }];
     }
     return interviews
       .slice()
@@ -179,7 +183,7 @@ export default function Dashboard() {
                     <div className="h-full flex items-center justify-center">
                       <Loader2 className="w-8 h-8 animate-spin text-accent" />
                     </div>
-                  ) : (
+                  ) : chartData.length > 1 ? (
                     <ResponsiveContainer width="100%" height="100%">
                       <AreaChart data={chartData}>
                         <defs>
@@ -190,7 +194,7 @@ export default function Dashboard() {
                         </defs>
                         <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
                         <XAxis dataKey="name" stroke="rgba(255,255,255,0.3)" fontSize={10} axisLine={false} tickLine={false} />
-                        <YAxis stroke="rgba(255,255,255,0.3)" fontSize={10} axisLine={false} tickLine={false} />
+                        <YAxis stroke="rgba(255,255,255,0.3)" fontSize={10} axisLine={false} tickLine={false} domain={[0, 100]} />
                         <Tooltip 
                           contentStyle={{ backgroundColor: '#050816', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px' }}
                           itemStyle={{ color: '#22d3ee', fontWeight: 'bold' }}
@@ -198,6 +202,11 @@ export default function Dashboard() {
                         <Area type="monotone" dataKey="score" stroke="#22d3ee" fillOpacity={1} fill="url(#colorScore)" strokeWidth={3} />
                       </AreaChart>
                     </ResponsiveContainer>
+                  ) : (
+                    <div className="h-full flex flex-col items-center justify-center text-center opacity-40">
+                      <TrendingUp className="w-12 h-12 mb-4" />
+                      <p className="text-xs uppercase tracking-widest font-bold">Insufficient Data Nodes</p>
+                    </div>
                   )}
                 </CardContent>
               </Card>
@@ -216,10 +225,10 @@ export default function Dashboard() {
                     </div>
                   ) : (
                     [
-                      ...(interviews?.map(i => ({ type: 'interview', title: `Simulation: ${i.role}`, desc: `Neural score of ${i.overallScore}% recorded.`, link: `/feedback/${i.id}`, icon: Zap })) || []),
-                      ...(resumes?.map(r => ({ type: 'resume', title: `Blueprint Audit: ${r.filename}`, desc: `ATS Index calibrated at ${r.atsScore}%.`, link: '/resume', icon: FileText })) || [])
+                      ...(interviews?.map(i => ({ type: 'interview', title: `Simulation: ${i.role}`, desc: `Neural score of ${i.overallScore}% recorded.`, link: `/feedback/last?role=${encodeURIComponent(i.role)}&exp=${i.experienceLevel}&data=${encodeURIComponent(JSON.stringify(i.history))}`, icon: Zap, date: i.createdAt })) || []),
+                      ...(resumes?.map(r => ({ type: 'resume', title: `Blueprint Audit: ${r.filename}`, desc: `ATS Index calibrated at ${r.atsScore}%.`, link: '/resume', icon: FileText, date: r.createdAt })) || [])
                     ]
-                    .sort(() => Math.random() - 0.5) // Just a slight mix for the feed
+                    .sort((a, b) => (b.date?.seconds || 0) - (a.date?.seconds || 0))
                     .slice(0, 5)
                     .map((action, i) => (
                       <div key={i} className="flex items-center justify-between p-6 glass rounded-[2rem] border-white/5 hover:bg-white/[0.03] transition-all group">
