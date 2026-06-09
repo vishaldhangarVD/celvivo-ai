@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
-import { Command, LogIn, Menu, X, LogOut, LayoutDashboard, History, Settings, ShieldCheck } from 'lucide-react';
+import { Command, LogIn, Menu, X, LogOut, LayoutDashboard, History, Settings, ShieldCheck, Info, MessageSquare } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useState } from 'react';
 import { useUser, useAuth } from '@/firebase';
@@ -31,7 +31,7 @@ export default function Navbar() {
           >
             <Command className="text-white w-6 h-6" />
           </motion.div>
-          <span className="font-headline font-bold text-2xl tracking-tighter uppercase">
+          <span className="font-headline font-bold text-2xl tracking-tighter uppercase text-premium">
             NEXVORO<span className="text-accent">AI</span>
           </span>
         </Link>
@@ -40,8 +40,11 @@ export default function Navbar() {
         <div className="hidden md:flex items-center gap-10 text-[10px] font-bold uppercase tracking-[0.3em] text-white/50">
           <Link href="/features" className="hover:text-white transition-colors">Protocols</Link>
           <Link href="/pricing" className="hover:text-white transition-colors">Economics</Link>
+          <Link href="/about" className="hover:text-white transition-colors">About</Link>
+          <Link href="/contact" className="hover:text-white transition-colors">Contact</Link>
           {user && (
             <>
+              <div className="w-px h-4 bg-white/10"></div>
               <Link href="/dashboard" className="hover:text-white transition-colors flex items-center gap-2">
                 <LayoutDashboard className="w-3 h-3" />
                 Command
@@ -71,7 +74,7 @@ export default function Navbar() {
                   <Button 
                     variant="ghost" 
                     onClick={handleSignOut}
-                    className="items-center gap-3 text-[10px] font-bold tracking-[0.2em] uppercase text-white/40 hover:text-red-400 px-0"
+                    className="flex items-center gap-3 text-[10px] font-bold tracking-[0.2em] uppercase text-white/40 hover:text-red-400 px-0"
                   >
                     <LogOut className="w-4 h-4" />
                   </Button>
@@ -111,11 +114,21 @@ export default function Navbar() {
           >
             <Link href="/features" onClick={() => setIsOpen(false)} className="text-xl font-bold tracking-widest uppercase text-white/70">Protocols</Link>
             <Link href="/pricing" onClick={() => setIsOpen(false)} className="text-xl font-bold tracking-widest uppercase text-white/70">Economics</Link>
+            <Link href="/about" onClick={() => setIsOpen(false)} className="text-xl font-bold tracking-widest uppercase text-white/70">About</Link>
+            <Link href="/contact" onClick={() => setIsOpen(false)} className="text-xl font-bold tracking-widest uppercase text-white/70">Contact</Link>
+            
             {user && (
               <>
-                <Link href="/dashboard" onClick={() => setIsOpen(false)} className="text-xl font-bold tracking-widest uppercase text-white/70">Command Center</Link>
-                <Link href="/user-dashboard" onClick={() => setIsOpen(false)} className="text-xl font-bold tracking-widest uppercase text-accent">User Pulse</Link>
-                <Link href="/roadmap" onClick={() => setIsOpen(false)} className="text-xl font-bold tracking-widest uppercase text-white/70">Growth Roadmap</Link>
+                <div className="h-px bg-white/5 my-4"></div>
+                <Link href="/dashboard" onClick={() => setIsOpen(false)} className="text-xl font-bold tracking-widest uppercase text-white/70 flex items-center gap-4">
+                  <LayoutDashboard className="w-6 h-6" /> Command Center
+                </Link>
+                <Link href="/user-dashboard" onClick={() => setIsOpen(false)} className="text-xl font-bold tracking-widest uppercase text-accent flex items-center gap-4">
+                  <History className="w-6 h-6" /> User Pulse
+                </Link>
+                <Link href="/roadmap" onClick={() => setIsOpen(false)} className="text-xl font-bold tracking-widest uppercase text-white/70 flex items-center gap-4">
+                  <ShieldCheck className="w-6 h-6" /> Growth Roadmap
+                </Link>
               </>
             )}
             
