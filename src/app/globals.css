@@ -61,12 +61,37 @@
   .btn-premium {
     @apply relative overflow-hidden bg-gradient-to-r from-purple-600 to-blue-600 hover:shadow-[0_0_30px_rgba(147,51,234,0.4)] transition-all duration-500 rounded-full font-bold border-none;
   }
+  .btn-orange-premium {
+    @apply relative overflow-hidden bg-gradient-to-r from-orange-500 to-red-600 hover:shadow-[0_0_40px_rgba(249,115,22,0.4)] transition-all duration-500 rounded-2xl font-bold border-none text-white;
+  }
   .premium-card {
     @apply glass rounded-[3rem] p-8 shadow-2xl;
   }
-  .animate-float {
-    animation: float 6s ease-in-out infinite;
+  .border-glow-premium {
+    position: relative;
+    z-index: 1;
   }
+  .border-glow-premium::before {
+    content: '';
+    position: absolute;
+    inset: -1px;
+    z-index: -1;
+    background: linear-gradient(45deg, rgba(147, 51, 234, 0.5), rgba(34, 211, 238, 0.5), rgba(147, 51, 234, 0.5));
+    background-size: 200% 200%;
+    border-radius: inherit;
+    animation: borderRotate 4s linear infinite;
+    mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+    -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+    mask-composite: exclude;
+    -webkit-mask-composite: destination-out;
+    padding: 1px;
+  }
+}
+
+@keyframes borderRotate {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
 }
 
 @keyframes float {

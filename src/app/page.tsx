@@ -1,7 +1,6 @@
-
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
@@ -214,7 +213,7 @@ export default function LandingPage() {
           <div className="flex flex-col lg:flex-row items-center gap-16">
             
             {/* Left Side */}
-            <div className="lg:w-1/2 text-left">
+            <div className="lg:w-5/12 text-left">
               <motion.div 
                 initial={{ opacity: 0, scale: 0.9 }}
                 animate={{ opacity: 1, scale: 1 }}
@@ -265,45 +264,92 @@ export default function LandingPage() {
               </motion.div>
             </div>
 
-            {/* Right Side */}
-            <div className="lg:w-1/2 w-full">
+            {/* Right Side: Redesigned Virtual HR Manager Card */}
+            <div className="lg:w-7/12 w-full">
               <motion.div
                 initial={{ opacity: 0, x: 50 }}
                 animate={{ opacity: 1, x: 0 }}
-                className="premium-card p-0 overflow-hidden border-white/5 bg-white/[0.02] shadow-[0_0_100px_rgba(147,51,234,0.15)] relative"
+                className="relative group"
               >
-                <div className="absolute top-8 left-8 z-20">
-                  <Badge className="bg-accent/20 text-accent mb-4 border-none px-4 py-1 text-[10px] tracking-widest font-bold">NEURAL AGENT v4.2</Badge>
-                </div>
-                
-                <div className="relative aspect-[4/5] w-full group">
-                  <Image 
-                    src={PlaceHolderImages.find(img => img.id === 'ai-hr-interviewer')?.imageUrl || ''}
-                    alt="AI HR Interviewer"
-                    fill
-                    className="object-cover opacity-90 group-hover:scale-105 transition-transform duration-1000"
-                    data-ai-hint="professional businessman suit"
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-[#050816] via-transparent to-transparent"></div>
-                  
-                  <div className="absolute bottom-12 left-12 right-12 z-20 space-y-6">
-                    <div className="flex gap-4">
-                      <div className="glass px-6 py-4 rounded-2xl flex-1 text-center backdrop-blur-xl border-white/10">
-                        <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mb-1">Precision</p>
-                        <p className="text-2xl font-bold text-accent">98.4%</p>
+                <Card className="premium-card border-glow-premium p-0 overflow-hidden border-white/10 bg-[#0b0e1a]/80 shadow-[0_0_100px_rgba(147,51,234,0.15)] flex flex-col md:flex-row min-h-[500px]">
+                  {/* Left Content */}
+                  <div className="flex-1 p-12 flex flex-col justify-between relative z-10">
+                    <div className="space-y-6">
+                      <div className="flex justify-between items-start">
+                        <Badge className="bg-accent/20 text-accent border-none px-4 py-1.5 text-[10px] tracking-[0.3em] font-bold uppercase">Neural Agent v4.2</Badge>
+                        <Badge variant="outline" className="border-purple-500/30 text-purple-400 text-[10px] font-bold uppercase tracking-widest px-3">Premium Feature</Badge>
                       </div>
-                      <div className="glass px-6 py-4 rounded-2xl flex-1 text-center backdrop-blur-xl border-white/10">
-                        <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mb-1">Success</p>
-                        <p className="text-2xl font-bold text-purple-400">12k+</p>
+                      
+                      <h2 className="text-5xl font-bold tracking-tighter text-premium">Virtual HR <br />Manager</h2>
+                      
+                      <div className="grid grid-cols-1 gap-6 pt-4">
+                        {[
+                          { val: "10 Free", label: "Questions", icon: MessageSquare, color: "text-blue-400" },
+                          { val: "75+", label: "IT Job Roles", icon: Layers, color: "text-purple-400" },
+                          { val: "Instant", label: "AI Feedback", icon: Zap, color: "text-accent" }
+                        ].map((stat, i) => (
+                          <div key={i} className="flex items-center gap-4 group/stat">
+                            <div className={`w-10 h-10 rounded-xl glass flex items-center justify-center ${stat.color} group-hover/stat:scale-110 transition-transform`}>
+                              <stat.icon className="w-5 h-5" />
+                            </div>
+                            <div>
+                              <span className="text-xl font-bold block">{stat.val}</span>
+                              <span className="text-[10px] uppercase font-bold tracking-widest text-muted-foreground">{stat.label}</span>
+                            </div>
+                          </div>
+                        ))}
                       </div>
                     </div>
+
                     <Button 
                       onClick={handleStartVirtualInterview}
-                      className="w-full h-16 btn-premium text-sm font-bold tracking-[0.2em] uppercase"
+                      className="w-full h-18 btn-orange-premium text-sm font-bold tracking-[0.3em] uppercase mt-12"
                     >
-                      Initialize Simulation
+                      Start Virtual Interview
+                      <ChevronRight className="ml-3 w-5 h-5" />
                     </Button>
                   </div>
+
+                  {/* Right Avatar */}
+                  <div className="md:w-1/2 relative min-h-[400px] md:min-h-0 border-l border-white/5 overflow-hidden">
+                    <Image 
+                      src={PlaceHolderImages.find(img => img.id === 'ai-hr-interviewer')?.imageUrl || ''}
+                      alt="AI HR Interviewer"
+                      fill
+                      className="object-cover opacity-90 group-hover:scale-105 transition-transform duration-[2s] brightness-110"
+                      data-ai-hint="professional businessman suit"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-[#0b0e1a] via-transparent to-transparent md:bg-gradient-to-l md:from-transparent md:via-[#0b0e1a]/20 md:to-[#0b0e1a]"></div>
+                    
+                    {/* Floating Pulse Rings */}
+                    <div className="absolute bottom-12 right-12">
+                      <div className="w-4 h-4 rounded-full bg-accent animate-ping"></div>
+                    </div>
+                  </div>
+                </Card>
+
+                {/* Card Feature Highlights below */}
+                <div className="mt-12 grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4">
+                  {[
+                    { label: "AI-Powered", icon: BrainCircuit },
+                    { label: "Real-Life", icon: UserCheck },
+                    { label: "Instant", icon: Zap },
+                    { label: "Resume Audit", icon: FileText },
+                    { label: "Roadmap", icon: Map },
+                    { label: "Get Hired", icon: Trophy },
+                    { label: "Secure", icon: ShieldCheck }
+                  ].map((feat, i) => (
+                    <motion.div 
+                      key={i}
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: i * 0.1 }}
+                      className="glass px-4 py-3 rounded-2xl text-[9px] font-bold uppercase tracking-[0.2em] text-white/40 flex items-center justify-center gap-2 border-white/5 whitespace-nowrap"
+                    >
+                      <feat.icon className="w-3 h-3 text-accent/50" />
+                      {feat.label}
+                    </motion.div>
+                  ))}
                 </div>
               </motion.div>
             </div>
@@ -311,7 +357,7 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* NEW: Why Nexvoro AI Exists - Emotional Mission Section */}
+      {/* Emotional Mission Section */}
       <section className="py-32 relative overflow-hidden bg-white/[0.01]">
         <div className="container mx-auto px-6">
           <div className="grid lg:grid-cols-2 gap-24 items-center">
@@ -503,109 +549,6 @@ export default function LandingPage() {
             <div className="px-6 py-3 glass rounded-2xl text-xs font-bold uppercase tracking-widest text-accent border-accent/20">
               & 30+ more tracks
             </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Why Choose Nexvoro AI Section */}
-      <section className="py-32 bg-white/[0.02]">
-        <div className="container mx-auto px-6">
-          <div className="grid lg:grid-cols-2 gap-24 items-center">
-            <div className="space-y-12">
-              <div className="space-y-6">
-                <Badge className="bg-accent/20 text-accent border-none px-6 py-1.5 font-bold tracking-[0.4em] text-[10px] uppercase">The Competitive Edge</Badge>
-                <h2 className="text-5xl font-bold tracking-tighter text-premium">Why Elite Candidates Choose <br /><span className="text-gradient-purple">Nexvoro Protocol.</span></h2>
-              </div>
-              
-              <div className="space-y-8">
-                {[
-                  { title: "Hyper-Realistic Agents", desc: "Our AI HR agents simulate real human bias, pressure, and technical follow-ups.", icon: UserCheck },
-                  { title: "Enterprise Grade Privacy", desc: "Your data is encrypted and anonymized. We never sell your career blueprint.", icon: ShieldCheck },
-                  { title: "Global Hiring Standards", desc: "Our questions are calibrated against hiring benchmarks from the Fortune 500.", icon: Globe },
-                  { title: "Continuous Calibration", desc: "Neural tracks are updated weekly to reflect current market requirements.", icon: Activity }
-                ].map((item, i) => (
-                  <motion.div 
-                    key={i}
-                    initial={{ x: -20, opacity: 0 }}
-                    whileInView={{ x: 0, opacity: 1 }}
-                    transition={{ delay: i * 0.1 }}
-                    viewport={{ once: true }}
-                    className="flex gap-6 items-start"
-                  >
-                    <div className="w-12 h-12 glass rounded-xl flex items-center justify-center shrink-0 text-accent">
-                      <item.icon className="w-6 h-6" />
-                    </div>
-                    <div>
-                      <h4 className="text-xl font-bold mb-2">{item.title}</h4>
-                      <p className="text-muted-foreground font-light leading-relaxed">{item.desc}</p>
-                    </div>
-                  </motion.div>
-                ))}
-              </div>
-            </div>
-
-            <div className="relative">
-              <div className="absolute inset-0 bg-accent/20 blur-[120px] rounded-full"></div>
-              <motion.div 
-                initial={{ scale: 0.9, opacity: 0 }}
-                whileInView={{ scale: 1, opacity: 1 }}
-                viewport={{ once: true }}
-                className="relative premium-card p-0 overflow-hidden border-white/10 shadow-2xl"
-              >
-                <Image 
-                  src={PlaceHolderImages.find(img => img.id === 'demo-preview')?.imageUrl || ''}
-                  alt="Interface Preview"
-                  width={1000}
-                  height={600}
-                  className="w-full h-auto opacity-80"
-                  data-ai-hint="software interface"
-                />
-              </motion.div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Testimonials Section */}
-      <section className="py-32 relative">
-        <div className="container mx-auto px-6">
-          <div className="text-center max-w-3xl mx-auto mb-24">
-            <Badge className="bg-purple-500/20 text-purple-400 mb-6 border-none px-6 py-1.5 font-bold tracking-[0.4em] text-[10px] uppercase">Neural Network Feedback</Badge>
-            <h2 className="text-5xl font-bold tracking-tighter text-premium">Voices from the <br /><span className="text-gradient-purple">Arena.</span></h2>
-          </div>
-
-          <div className="grid md:grid-cols-3 gap-8">
-            {TESTIMONIALS.map((t, i) => (
-              <motion.div 
-                key={i}
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                transition={{ delay: i * 0.1 }}
-                viewport={{ once: true }}
-                className="premium-card p-12 border-white/5 bg-white/[0.01] flex flex-col justify-between"
-              >
-                <div className="space-y-8">
-                  <div className="flex justify-between items-center">
-                    <Quote className="w-10 h-10 text-accent/20" />
-                    <div className="flex gap-1">
-                      {[...Array(5)].map((_, j) => (
-                        <Star key={j} className="w-3 h-3 text-yellow-500 fill-yellow-500" />
-                      ))}
-                    </div>
-                  </div>
-                  <p className="text-lg font-light leading-relaxed italic text-white/80">"{t.content}"</p>
-                </div>
-                <div className="flex items-center gap-4 mt-12 pt-12 border-t border-white/5">
-                  <div className="w-12 h-12 rounded-full overflow-hidden border border-white/10">
-                    <Image src={t.avatar} alt={t.name} width={48} height={48} className="object-cover" />
-                  </div>
-                  <div>
-                    <h5 className="font-bold text-sm">{t.name}</h5>
-                    <p className="text-[10px] uppercase tracking-widest text-muted-foreground font-bold">{t.role}</p>
-                  </div>
-                </div>
-              </motion.div>
-            ))}
           </div>
         </div>
       </section>
