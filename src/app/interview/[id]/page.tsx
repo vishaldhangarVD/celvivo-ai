@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect, useRef } from 'react';
@@ -27,7 +28,8 @@ import {
   TrendingUp,
   Award,
   Target,
-  Star
+  Star,
+  Layers
 } from 'lucide-react';
 import { aiMockInterview, type AiMockInterviewOutput } from '@/ai/flows/ai-mock-interview';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
@@ -44,6 +46,7 @@ export default function InterviewSession() {
   const db = useFirestore();
   const role = searchParams.get('role') || 'Software Engineer';
   const exp = searchParams.get('exp') || 'Senior';
+  const round = searchParams.get('round') || 'Technical';
 
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [history, setHistory] = useState<any[]>([]);
@@ -63,6 +66,7 @@ export default function InterviewSession() {
         const output = await aiMockInterview({
           role,
           experienceLevel: exp,
+          roundType: round,
           currentMainQuestionIndex: 0,
           history: [],
         });
@@ -77,7 +81,7 @@ export default function InterviewSession() {
 
     const interval = setInterval(() => setTimer(t => t + 1), 1000);
     return () => clearInterval(interval);
-  }, [role, exp]);
+  }, [role, exp, round]);
 
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -104,6 +108,7 @@ export default function InterviewSession() {
       const output = await aiMockInterview({
         role,
         experienceLevel: exp,
+        roundType: round,
         currentMainQuestionIndex: nextIdx,
         history: newHistory,
         lastQuestionAsked: nextOutput?.nextQuestion,
@@ -131,12 +136,12 @@ export default function InterviewSession() {
     if (!user || !db) return;
     setIsSaving(true);
 
-    // Strict sanitization to prevent "undefined" Firestore values
     const interviewData = {
       userId: user.uid ?? "",
       userName: user.displayName || 'Anonymous Operator',
       role: role ?? "",
       experienceLevel: exp ?? "",
+      round: round ?? "General",
       history: history.map(h => ({
         question: h.question ?? "",
         answer: h.answer ?? "",
@@ -146,11 +151,6 @@ export default function InterviewSession() {
       createdAt: serverTimestamp(),
       overallScore: 0,
     };
-
-    // Debug: Detect undefined fields before write
-    Object.entries(interviewData).forEach(([key, val]) => {
-      if (val === undefined) console.warn(`[Firestore Debug] Field "${key}" is undefined in interviewData. Firestore will error.`);
-    });
 
     const interviewsRef = collection(db, 'users', user.uid, 'interviews');
     
@@ -190,10 +190,10 @@ export default function InterviewSession() {
             <Command className="text-white w-5 h-5" />
           </div>
           <div>
-            <h1 className="text-base font-bold tracking-tight">{role} Session</h1>
+            <h1 className="text-base font-bold tracking-tight">{role} • {round}</h1>
             <div className="flex items-center gap-2">
               <span className="w-1.5 h-1.5 rounded-full bg-accent animate-pulse"></span>
-              <p className="text-[10px] text-accent uppercase tracking-[0.2em] font-bold">Neural Protocol v4.2 Active</p>
+              <p className="text-[10px] text-accent uppercase tracking-[0.2em] font-bold">Neural Session Active</p>
             </div>
           </div>
         </div>
@@ -203,7 +203,7 @@ export default function InterviewSession() {
             <Clock className="w-4 h-4 text-accent" />
             <span className="tabular-nums text-accent tracking-widest">{formatTime(timer)}</span>
           </div>
-          <Button variant="ghost" size="sm" onClick={() => router.push('/dashboard')} className="text-[10px] font-bold tracking-widest uppercase hover:bg-white/5 transition-all">
+          <Button variant="ghost" size="sm" onClick={() => router.push('/dashboard')} className="text-[10px] font-bold tracking-widest uppercase hover:bg-white/5 transition-all text-white/40">
             <LogOut className="w-4 h-4 mr-2" />
             Abort Simulation
           </Button>
@@ -277,9 +277,9 @@ export default function InterviewSession() {
               </div>
             </motion.div>
 
-            <div className="mt-12 text-center">
+            <div className="mt-12 text-center flex flex-col items-center gap-4">
               <Badge className="bg-white/5 text-white/40 border-white/10 px-8 py-2 font-bold tracking-[0.4em] text-[10px] uppercase">
-                Neural Sync Verified
+                {round} Matrix Calibrated
               </Badge>
             </div>
           </div>
@@ -302,8 +302,8 @@ export default function InterviewSession() {
                   <p className="text-2xl font-bold text-accent">94%</p>
                 </div>
                 <div className="text-center">
-                  <p className="text-[10px] text-muted-foreground uppercase tracking-widest font-bold mb-1">Logic Rank</p>
-                  <p className="text-2xl font-bold text-purple-400">Top 5%</p>
+                  <p className="text-[10px] text-muted-foreground uppercase tracking-widest font-bold mb-1">Current Round</p>
+                  <p className="text-2xl font-bold text-purple-400">{round.split(' ')[0]}</p>
                 </div>
               </div>
             </div>

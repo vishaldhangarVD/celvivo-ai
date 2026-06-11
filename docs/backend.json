@@ -29,6 +29,7 @@
         "userId": { "type": "string" },
         "role": { "type": "string" },
         "experienceLevel": { "type": "string" },
+        "round": { "type": "string" },
         "overallScore": { "type": "number" },
         "technicalScore": { "type": "number" },
         "communicationScore": { "type": "number" },
