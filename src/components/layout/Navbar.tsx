@@ -3,7 +3,7 @@
 
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
-import { Command, LogIn, Menu, X, LogOut, LayoutDashboard, History, Settings, ShieldCheck, Info, MessageSquare, BrainCircuit, Flame, LayoutGrid, FileText } from 'lucide-react';
+import { Command, LogIn, Menu, X, LogOut, LayoutDashboard, History, Settings, ShieldCheck, Info, MessageSquare, BrainCircuit, Flame, LayoutGrid, FileText, BookOpen } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useState, useMemo } from 'react';
 import { useUser, useAuth } from '@/firebase';
@@ -46,7 +46,10 @@ export default function Navbar() {
         {/* Desktop Nav */}
         <div className="hidden md:flex items-center gap-10 text-[10px] font-bold uppercase tracking-[0.3em] text-white/50">
           <Link href="/features" className="hover:text-white transition-colors">Protocols</Link>
-          <Link href="/pricing" className="hover:text-white transition-colors">Economics</Link>
+          <Link href="/question-bank" className="hover:text-white transition-colors flex items-center gap-2">
+            <BookOpen className="w-3 h-3 text-accent" />
+            Library
+          </Link>
           {user && (
             <>
               <div className="w-px h-4 bg-white/10"></div>
@@ -65,10 +68,6 @@ export default function Navbar() {
               <Link href="/daily-challenge" className="hover:text-white transition-colors flex items-center gap-2 text-orange-400">
                 <Flame className="w-3 h-3" />
                 Challenge
-              </Link>
-              <Link href="/skill-gap" className="hover:text-white transition-colors flex items-center gap-2 text-accent">
-                <BrainCircuit className="w-3 h-3" />
-                Audit
               </Link>
             </>
           )}
@@ -126,7 +125,9 @@ export default function Navbar() {
             className="absolute top-20 left-0 w-full bg-[#050816] border-b border-white/5 p-12 flex flex-col gap-8 md:hidden z-50 min-h-screen"
           >
             <Link href="/features" onClick={() => setIsOpen(false)} className="text-xl font-bold tracking-widest uppercase text-white/70">Protocols</Link>
-            <Link href="/pricing" onClick={() => setIsOpen(false)} className="text-xl font-bold tracking-widest uppercase text-white/70">Economics</Link>
+            <Link href="/question-bank" onClick={() => setIsOpen(false)} className="text-xl font-bold tracking-widest uppercase text-accent flex items-center gap-4">
+              <BookOpen className="w-6 h-6" /> Library
+            </Link>
             
             {user && (
               <>
@@ -142,9 +143,6 @@ export default function Navbar() {
                 </Link>
                 <Link href="/daily-challenge" onClick={() => setIsOpen(false)} className="text-xl font-bold tracking-widest uppercase text-orange-400 flex items-center gap-4">
                   <Flame className="w-6 h-6" /> Daily Challenge
-                </Link>
-                <Link href="/skill-gap" onClick={() => setIsOpen(false)} className="text-xl font-bold tracking-widest uppercase text-accent flex items-center gap-4">
-                  <BrainCircuit className="w-6 h-6" /> Gap Audit
                 </Link>
               </>
             )}

@@ -55,48 +55,15 @@
         "completedAt": { "type": "string", "format": "date-time" }
       }
     },
-    "ResumeAnalysis": {
-      "title": "Resume Analysis",
-      "description": "Results of a resume audit.",
+    "FavoriteQuestion": {
+      "title": "Favorite Question",
+      "description": "A bookmarked question from the question bank.",
       "type": "object",
       "properties": {
         "userId": { "type": "string" },
-        "filename": { "type": "string" },
-        "atsScore": { "type": "number" },
-        "targetRole": { "type": "string" },
-        "analysis": { "type": "object" },
-        "keywords": { "type": "array", "items": { "type": "string" } },
-        "createdAt": { "type": "string", "format": "date-time" }
-      }
-    },
-    "JobApplication": {
-      "title": "Job Application",
-      "description": "A record of a job application submitted by the user.",
-      "type": "object",
-      "properties": {
-        "userId": { "type": "string" },
-        "companyName": { "type": "string" },
-        "role": { "type": "string" },
-        "location": { "type": "string" },
-        "appliedDate": { "type": "string", "format": "date" },
-        "link": { "type": "string" },
-        "notes": { "type": "string" },
-        "status": {
-          "type": "string",
-          "enum": ["Applied", "Shortlisted", "Interview Scheduled", "Rejected", "Selected"]
-        },
-        "createdAt": { "type": "string", "format": "date-time" }
-      }
-    },
-    "CoverLetter": {
-      "title": "Cover Letter",
-      "description": "An AI-generated cover letter for a specific job.",
-      "type": "object",
-      "properties": {
-        "userId": { "type": "string" },
-        "companyName": { "type": "string" },
-        "role": { "type": "string" },
-        "content": { "type": "string" },
+        "questionId": { "type": "string" },
+        "category": { "type": "string" },
+        "text": { "type": "string" },
         "createdAt": { "type": "string", "format": "date-time" }
       }
     }
@@ -117,17 +84,9 @@
       "schema": "#/entities/DailyChallenge",
       "description": "Stores individual daily challenge records."
     },
-    "/users/{userId}/resumes/{resumeId}": {
-      "schema": "#/entities/ResumeAnalysis",
-      "description": "Stores resume analysis reports."
-    },
-    "/users/{userId}/job_applications/{applicationId}": {
-      "schema": "#/entities/JobApplication",
-      "description": "Stores job application tracking data."
-    },
-    "/users/{userId}/cover_letters/{letterId}": {
-      "schema": "#/entities/CoverLetter",
-      "description": "Stores generated cover letters."
+    "/users/{userId}/favorite_questions/{favId}": {
+      "schema": "#/entities/FavoriteQuestion",
+      "description": "Stores user's bookmarked questions."
     }
   }
 }
