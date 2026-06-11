@@ -3,7 +3,7 @@
 
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
-import { Command, LogIn, Menu, X, LogOut, LayoutDashboard, History, Settings, ShieldCheck, Info, MessageSquare, BrainCircuit, Flame, LayoutGrid } from 'lucide-react';
+import { Command, LogIn, Menu, X, LogOut, LayoutDashboard, History, Settings, ShieldCheck, Info, MessageSquare, BrainCircuit, Flame, LayoutGrid, FileText } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useState, useMemo } from 'react';
 import { useUser, useAuth } from '@/firebase';
@@ -57,6 +57,10 @@ export default function Navbar() {
               <Link href="/job-tracker" className="hover:text-white transition-colors flex items-center gap-2 text-blue-400">
                 <LayoutGrid className="w-3 h-3" />
                 Tracker
+              </Link>
+              <Link href="/cover-letter" className="hover:text-white transition-colors flex items-center gap-2 text-purple-400">
+                <FileText className="w-3 h-3" />
+                Letter
               </Link>
               <Link href="/daily-challenge" className="hover:text-white transition-colors flex items-center gap-2 text-orange-400">
                 <Flame className="w-3 h-3" />
@@ -132,6 +136,9 @@ export default function Navbar() {
                 </Link>
                 <Link href="/job-tracker" onClick={() => setIsOpen(false)} className="text-xl font-bold tracking-widest uppercase text-blue-400 flex items-center gap-4">
                   <LayoutGrid className="w-6 h-6" /> Job Tracker
+                </Link>
+                <Link href="/cover-letter" onClick={() => setIsOpen(false)} className="text-xl font-bold tracking-widest uppercase text-purple-400 flex items-center gap-4">
+                  <FileText className="w-6 h-6" /> Cover Letter
                 </Link>
                 <Link href="/daily-challenge" onClick={() => setIsOpen(false)} className="text-xl font-bold tracking-widest uppercase text-orange-400 flex items-center gap-4">
                   <Flame className="w-6 h-6" /> Daily Challenge

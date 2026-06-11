@@ -28,12 +28,14 @@ import {
   TrendingUp,
   CheckCircle2,
   XCircle,
-  Clock
+  Clock,
+  Command,
+  FileBadge
 } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useUser, useFirestore, useCollection, useDoc } from '@/firebase';
-import { collection, query, orderBy, doc } from 'firebase/firestore';
+import { collection, query, orderBy, doc, limit } from 'firebase/firestore';
 
 export default function Dashboard() {
   const router = useRouter();
@@ -59,7 +61,8 @@ export default function Dashboard() {
     if (!db || !user?.uid) return null;
     return query(
       collection(db, 'users', user.uid, 'interviews'),
-      orderBy('createdAt', 'desc')
+      orderBy('createdAt', 'desc'),
+      limit(5)
     );
   }, [db, user?.uid]);
 
@@ -67,7 +70,8 @@ export default function Dashboard() {
     if (!db || !user?.uid) return null;
     return query(
       collection(db, 'users', user.uid, 'resumes'),
-      orderBy('createdAt', 'desc')
+      orderBy('createdAt', 'desc'),
+      limit(5)
     );
   }, [db, user?.uid]);
 
@@ -79,9 +83,19 @@ export default function Dashboard() {
     );
   }, [db, user?.uid]);
 
+  const lettersQuery = useMemo(() => {
+    if (!db || !user?.uid) return null;
+    return query(
+      collection(db, 'users', user.uid, 'cover_letters'),
+      orderBy('createdAt', 'desc'),
+      limit(3)
+    );
+  }, [db, user?.uid]);
+
   const { data: interviews, loading: interviewsLoading } = useCollection(interviewsQuery);
   const { data: resumes, loading: resumesLoading } = useCollection(resumesQuery);
   const { data: applications, loading: appsLoading } = useCollection(appsQuery);
+  const { data: letters, loading: lettersLoading } = useCollection(lettersQuery);
 
   useEffect(() => {
     if (!user && !authLoading) router.push('/login');
@@ -198,32 +212,6 @@ export default function Dashboard() {
             ))}
           </div>
 
-          {/* Deployment Pulse Section (Job Tracker Summary) */}
-          <div className="grid md:grid-cols-4 gap-4">
-             {[
-              { label: "Total Applications", val: stats.tracker.total, icon: LayoutGrid, color: "text-blue-400" },
-              { label: "Interviews Scheduled", val: stats.tracker.interviewed, icon: Clock, color: "text-orange-400" },
-              { label: "Success Rate", val: stats.tracker.successRate, icon: TrendingUp, color: "text-green-400" },
-              { label: "Shortlisted Nodes", val: stats.tracker.shortlisted, icon: Target, color: "text-purple-400" }
-            ].map((stat, i) => (
-              <motion.div
-                key={i}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.3 + i * 0.05 }}
-                className="glass p-6 rounded-[2rem] border-white/5 flex items-center gap-6"
-              >
-                <div className={`w-12 h-12 rounded-2xl flex items-center justify-center bg-white/5 ${stat.color}`}>
-                  <stat.icon className="w-6 h-6" />
-                </div>
-                <div>
-                  <div className="text-2xl font-bold tabular-nums">{stat.val}</div>
-                  <div className="text-[8px] uppercase font-bold tracking-[0.2em] text-muted-foreground">{stat.label}</div>
-                </div>
-              </motion.div>
-            ))}
-          </div>
-
           <div className="grid lg:grid-cols-12 gap-8">
             <div className="lg:col-span-8 space-y-8">
               {/* Recent Interviews Card */}
@@ -276,43 +264,86 @@ export default function Dashboard() {
                 </CardContent>
               </Card>
 
-              {/* Job Applications Card */}
+              {/* Resume Reports Card */}
               <Card className="premium-card bg-white/[0.01] border-white/5 p-8">
                 <CardHeader className="p-0 mb-8 flex flex-row items-center justify-between">
                   <CardTitle className="text-xl font-bold flex items-center gap-3">
-                    <LayoutGrid className="w-5 h-5 text-blue-400" /> Recent Applications
+                    <FileSearch className="w-5 h-5 text-purple-400" /> Resume Intelligence
                   </CardTitle>
-                  <Link href="/job-tracker">
-                    <Button variant="ghost" className="text-[10px] uppercase font-bold tracking-widest text-blue-400 hover:text-blue-300">Manage All</Button>
+                  <Link href="/resume">
+                    <Button variant="ghost" className="text-[10px] uppercase font-bold tracking-widest text-purple-400 hover:text-purple-300">New Audit</Button>
                   </Link>
                 </CardHeader>
                 <CardContent className="p-0 space-y-4">
-                  {appsLoading ? (
-                    <div className="py-12 flex justify-center"><Loader2 className="w-8 h-8 animate-spin text-blue-400" /></div>
-                  ) : applications && applications.length > 0 ? (
-                    applications.slice(0, 3).map((app: any, i) => (
+                  {resumesLoading ? (
+                    <div className="py-12 flex justify-center"><Loader2 className="w-8 h-8 animate-spin text-purple-400" /></div>
+                  ) : resumes && resumes.length > 0 ? (
+                    resumes.slice(0, 3).map((resume: any, i) => (
                       <div key={i} className="flex items-center justify-between p-5 glass rounded-2xl border-white/5">
                         <div className="flex items-center gap-4">
-                          <div className="w-10 h-10 rounded-xl bg-blue-500/10 flex items-center justify-center text-blue-400">
-                            <TrendingUp className="w-5 h-5" />
+                          <div className="w-10 h-10 rounded-xl bg-purple-500/10 flex items-center justify-center text-purple-400">
+                            <FileText className="w-5 h-5" />
                           </div>
                           <div>
-                            <p className="font-bold text-sm">{app.companyName}</p>
-                            <p className="text-[10px] text-muted-foreground uppercase tracking-widest">{app.role}</p>
+                            <p className="font-bold text-sm">{resume.filename}</p>
+                            <p className="text-[10px] text-muted-foreground uppercase tracking-widest">{resume.targetRole}</p>
                           </div>
                         </div>
-                        <Badge variant="outline" className="border-blue-400/30 text-blue-400 text-[8px] uppercase tracking-widest font-bold">
-                          {app.status}
-                        </Badge>
+                        <Badge className="bg-purple-500/20 text-purple-400 border-none font-bold tabular-nums">ATS: {resume.atsScore}%</Badge>
                       </div>
                     ))
                   ) : (
                     <div className="py-16 text-center glass rounded-3xl border-white/5 border-dashed">
-                      <LayoutGrid className="w-12 h-12 text-white/5 mx-auto mb-6" />
-                      <h3 className="text-xl font-bold mb-2">No applications tracked</h3>
-                      <p className="text-muted-foreground font-light text-sm mb-8">Start tracking your deployment missions across the industry.</p>
-                      <Link href="/job-tracker">
-                        <Button variant="outline" className="glass border-white/10 px-8 hover:bg-white/5 text-[10px] font-bold uppercase tracking-widest">Initialize Tracker</Button>
+                      <FileSearch className="w-12 h-12 text-white/5 mx-auto mb-6" />
+                      <h3 className="text-xl font-bold mb-2">No resumes audited</h3>
+                      <p className="text-muted-foreground font-light text-sm mb-8">Upload your career blueprints for high-fidelity ATS calibration.</p>
+                      <Link href="/resume">
+                        <Button className="btn-premium px-8">Initialize Blueprint Audit</Button>
+                      </Link>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+
+              {/* Recent Cover Letters Card */}
+              <Card className="premium-card bg-white/[0.01] border-white/5 p-8">
+                <CardHeader className="p-0 mb-8 flex flex-row items-center justify-between">
+                  <CardTitle className="text-xl font-bold flex items-center gap-3">
+                    <FileBadge className="w-5 h-5 text-green-400" /> Recent Directives
+                  </CardTitle>
+                  <Link href="/cover-letter">
+                    <Button variant="ghost" className="text-[10px] uppercase font-bold tracking-widest text-green-400 hover:text-green-300">Generate New</Button>
+                  </Link>
+                </CardHeader>
+                <CardContent className="p-0 space-y-4">
+                  {lettersLoading ? (
+                    <div className="py-12 flex justify-center"><Loader2 className="w-8 h-8 animate-spin text-green-400" /></div>
+                  ) : letters && letters.length > 0 ? (
+                    letters.map((letter: any, i) => (
+                      <div key={i} className="flex items-center justify-between p-5 glass rounded-2xl border-white/5 group hover:bg-white/[0.03] transition-all">
+                        <div className="flex items-center gap-4">
+                          <div className="w-10 h-10 rounded-xl bg-green-500/10 flex items-center justify-center text-green-400">
+                            <Sparkles className="w-5 h-5" />
+                          </div>
+                          <div>
+                            <p className="font-bold text-sm">{letter.companyName}</p>
+                            <p className="text-[10px] text-muted-foreground uppercase tracking-widest">{letter.role}</p>
+                          </div>
+                        </div>
+                        <Link href="/cover-letter">
+                          <Button size="icon" variant="ghost" className="h-8 w-8 rounded-lg group-hover:text-green-400 transition-colors">
+                            <ChevronRight className="w-4 h-4" />
+                          </Button>
+                        </Link>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="py-16 text-center glass rounded-3xl border-white/5 border-dashed">
+                      <Sparkles className="w-12 h-12 text-white/5 mx-auto mb-6" />
+                      <h3 className="text-xl font-bold mb-2">No cover letters generated</h3>
+                      <p className="text-muted-foreground font-light text-sm mb-8">Architect mission-specific cover letters using your resume context.</p>
+                      <Link href="/cover-letter">
+                        <Button className="btn-premium px-8">Synthesize Cover Letter</Button>
                       </Link>
                     </div>
                   )}
@@ -370,7 +401,8 @@ export default function Dashboard() {
                 <div className="grid gap-4">
                   {[
                     { title: "Start New Interview", icon: Zap, color: "text-accent", href: "/interview" },
-                    { title: "Upload Resume", icon: FileText, color: "text-purple-400", href: "/resume" },
+                    { title: "Upload Resume", icon: FileSearch, color: "text-purple-400", href: "/resume" },
+                    { title: "Cover Letter Architect", icon: FileText, color: "text-green-400", href: "/cover-letter" },
                     { title: "Skill Gap Audit", icon: BrainCircuit, color: "text-yellow-400", href: "/skill-gap" },
                     { title: "Career Roadmap", icon: Target, color: "text-blue-400", href: "/roadmap" }
                   ].map((action, i) => (
@@ -388,6 +420,30 @@ export default function Dashboard() {
                   ))}
                 </div>
               </div>
+
+              {/* Deployment Pulse Section (Job Tracker Summary) */}
+              <Card className="premium-card bg-blue-500/5 border-blue-500/20 p-8">
+                <CardHeader className="p-0 mb-6">
+                  <CardTitle className="text-lg font-bold flex items-center gap-3 text-blue-400">
+                    <LayoutGrid className="w-5 h-5" /> Deployment Pulse
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="p-0 space-y-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="p-4 glass rounded-2xl border-white/5 text-center">
+                      <p className="text-2xl font-bold tabular-nums text-blue-400">{stats.tracker.total}</p>
+                      <p className="text-[8px] uppercase font-bold tracking-widest text-muted-foreground">Applications</p>
+                    </div>
+                    <div className="p-4 glass rounded-2xl border-white/5 text-center">
+                      <p className="text-2xl font-bold tabular-nums text-green-400">{stats.tracker.successRate}</p>
+                      <p className="text-[8px] uppercase font-bold tracking-widest text-muted-foreground">Success Rate</p>
+                    </div>
+                  </div>
+                  <Link href="/job-tracker">
+                    <Button variant="outline" className="w-full h-12 rounded-xl glass border-white/10 text-[10px] font-bold uppercase tracking-widest text-blue-400">Manage Tracker</Button>
+                  </Link>
+                </CardContent>
+              </Card>
             </div>
           </div>
 
