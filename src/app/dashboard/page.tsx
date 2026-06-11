@@ -23,7 +23,12 @@ import {
   FileSearch,
   Flame,
   Award,
-  Sparkles
+  Sparkles,
+  LayoutGrid,
+  TrendingUp,
+  CheckCircle2,
+  XCircle,
+  Clock
 } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -66,8 +71,17 @@ export default function Dashboard() {
     );
   }, [db, user?.uid]);
 
+  const appsQuery = useMemo(() => {
+    if (!db || !user?.uid) return null;
+    return query(
+      collection(db, 'users', user.uid, 'job_applications'),
+      orderBy('createdAt', 'desc')
+    );
+  }, [db, user?.uid]);
+
   const { data: interviews, loading: interviewsLoading } = useCollection(interviewsQuery);
   const { data: resumes, loading: resumesLoading } = useCollection(resumesQuery);
+  const { data: applications, loading: appsLoading } = useCollection(appsQuery);
 
   useEffect(() => {
     if (!user && !authLoading) router.push('/login');
@@ -88,15 +102,31 @@ export default function Dashboard() {
     const avgComm = commScores.length > 0 ? Math.round(commScores.reduce((a, b) => a + b, 0) / commScores.length) : 0;
     const avgTech = techScores.length > 0 ? Math.round(techScores.reduce((a, b) => a + b, 0) / techScores.length) : 0;
 
+    // Job Tracker Stats
+    const totalApps = applications?.length || 0;
+    const shortlisted = applications?.filter((a: any) => a.status === 'Shortlisted').length || 0;
+    const interviewed = applications?.filter((a: any) => a.status === 'Interview Scheduled').length || 0;
+    const selected = applications?.filter((a: any) => a.status === 'Selected').length || 0;
+    const rejected = applications?.filter((a: any) => a.status === 'Rejected').length || 0;
+    const successRate = totalApps > 0 ? Math.round((selected / totalApps) * 100) : 0;
+
     return {
       total,
       avg: `${avg}%`,
       best: `${best}%`,
       confidence: `${avgConf}%`,
       communication: `${avgComm}%`,
-      technical: `${avgTech}%`
+      technical: `${avgTech}%`,
+      tracker: {
+        total: totalApps,
+        shortlisted,
+        interviewed,
+        selected,
+        rejected,
+        successRate: `${successRate}%`
+      }
     };
-  }, [interviews]);
+  }, [interviews, applications]);
 
   if (authLoading) return (
     <div className="min-h-screen bg-[#050816] flex items-center justify-center">
@@ -127,6 +157,12 @@ export default function Dashboard() {
               <p className="text-muted-foreground font-light mt-2">Neural synchronization complete. Your career metrics are live.</p>
             </div>
             <div className="flex gap-4">
+              <Link href="/job-tracker">
+                <Button variant="outline" className="h-14 px-8 glass border-white/10 flex gap-3 text-[10px] tracking-widest uppercase">
+                  <LayoutGrid className="w-4 h-4" />
+                  Mission Tracker
+                </Button>
+              </Link>
               <Link href="/daily-challenge">
                 <Button className="h-14 px-8 btn-premium flex gap-3">
                   <Flame className="w-5 h-5 text-orange-400" />
@@ -162,6 +198,32 @@ export default function Dashboard() {
             ))}
           </div>
 
+          {/* Deployment Pulse Section (Job Tracker Summary) */}
+          <div className="grid md:grid-cols-4 gap-4">
+             {[
+              { label: "Total Applications", val: stats.tracker.total, icon: LayoutGrid, color: "text-blue-400" },
+              { label: "Interviews Scheduled", val: stats.tracker.interviewed, icon: Clock, color: "text-orange-400" },
+              { label: "Success Rate", val: stats.tracker.successRate, icon: TrendingUp, color: "text-green-400" },
+              { label: "Shortlisted Nodes", val: stats.tracker.shortlisted, icon: Target, color: "text-purple-400" }
+            ].map((stat, i) => (
+              <motion.div
+                key={i}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.3 + i * 0.05 }}
+                className="glass p-6 rounded-[2rem] border-white/5 flex items-center gap-6"
+              >
+                <div className={`w-12 h-12 rounded-2xl flex items-center justify-center bg-white/5 ${stat.color}`}>
+                  <stat.icon className="w-6 h-6" />
+                </div>
+                <div>
+                  <div className="text-2xl font-bold tabular-nums">{stat.val}</div>
+                  <div className="text-[8px] uppercase font-bold tracking-[0.2em] text-muted-foreground">{stat.label}</div>
+                </div>
+              </motion.div>
+            ))}
+          </div>
+
           <div className="grid lg:grid-cols-12 gap-8">
             <div className="lg:col-span-8 space-y-8">
               {/* Recent Interviews Card */}
@@ -180,7 +242,7 @@ export default function Dashboard() {
                   {interviewsLoading ? (
                     <div className="py-12 flex justify-center"><Loader2 className="w-8 h-8 animate-spin text-accent" /></div>
                   ) : interviews && interviews.length > 0 ? (
-                    interviews.slice(0, 5).map((session: any, i) => (
+                    interviews.slice(0, 3).map((session: any, i) => (
                       <div key={i} className="flex items-center justify-between p-5 glass rounded-2xl border-white/5 group hover:bg-white/[0.03] transition-all">
                         <div className="flex items-center gap-4">
                           <div className="w-10 h-10 rounded-xl bg-accent/10 flex items-center justify-center text-accent">
@@ -214,53 +276,43 @@ export default function Dashboard() {
                 </CardContent>
               </Card>
 
-              {/* Resume Analysis Card */}
+              {/* Job Applications Card */}
               <Card className="premium-card bg-white/[0.01] border-white/5 p-8">
                 <CardHeader className="p-0 mb-8 flex flex-row items-center justify-between">
                   <CardTitle className="text-xl font-bold flex items-center gap-3">
-                    <FileText className="w-5 h-5 text-purple-400" /> Resume Analysis
+                    <LayoutGrid className="w-5 h-5 text-blue-400" /> Recent Applications
                   </CardTitle>
-                  {resumes && resumes.length > 0 && (
-                    <Link href="/user-dashboard">
-                      <Button variant="ghost" className="text-[10px] uppercase font-bold tracking-widest text-purple-400 hover:text-purple-300">View Audits</Button>
-                    </Link>
-                  )}
+                  <Link href="/job-tracker">
+                    <Button variant="ghost" className="text-[10px] uppercase font-bold tracking-widest text-blue-400 hover:text-blue-300">Manage All</Button>
+                  </Link>
                 </CardHeader>
                 <CardContent className="p-0 space-y-4">
-                  {resumesLoading ? (
-                    <div className="py-12 flex justify-center"><Loader2 className="w-8 h-8 animate-spin text-purple-400" /></div>
-                  ) : resumes && resumes.length > 0 ? (
-                    resumes.slice(0, 5).map((resume: any, i) => (
-                      <div key={i} className="flex items-center justify-between p-5 glass rounded-2xl border-white/5 group hover:bg-white/[0.03] transition-all">
+                  {appsLoading ? (
+                    <div className="py-12 flex justify-center"><Loader2 className="w-8 h-8 animate-spin text-blue-400" /></div>
+                  ) : applications && applications.length > 0 ? (
+                    applications.slice(0, 3).map((app: any, i) => (
+                      <div key={i} className="flex items-center justify-between p-5 glass rounded-2xl border-white/5">
                         <div className="flex items-center gap-4">
-                          <div className="w-10 h-10 rounded-xl bg-purple-500/10 flex items-center justify-center text-purple-400">
-                            <FileSearch className="w-5 h-5" />
+                          <div className="w-10 h-10 rounded-xl bg-blue-500/10 flex items-center justify-center text-blue-400">
+                            <TrendingUp className="w-5 h-5" />
                           </div>
                           <div>
-                            <p className="font-bold text-sm truncate max-w-[150px]">{resume.filename}</p>
-                            <p className="text-[10px] text-muted-foreground uppercase tracking-widest">{resume.targetRole || 'Standard Audit'}</p>
+                            <p className="font-bold text-sm">{app.companyName}</p>
+                            <p className="text-[10px] text-muted-foreground uppercase tracking-widest">{app.role}</p>
                           </div>
                         </div>
-                        <div className="flex items-center gap-4">
-                          <div className="text-right">
-                            <p className="text-xs font-bold text-purple-400">{resume.atsScore}% ATS</p>
-                            <p className="text-[8px] text-muted-foreground uppercase">{resume.createdAt?.seconds ? new Date(resume.createdAt.seconds * 1000).toLocaleDateString() : 'Recent'}</p>
-                          </div>
-                          <Link href="/resume">
-                            <Button size="icon" variant="ghost" className="h-8 w-8 rounded-lg group-hover:text-purple-400 transition-colors">
-                              <ChevronRight className="w-4 h-4" />
-                            </Button>
-                          </Link>
-                        </div>
+                        <Badge variant="outline" className="border-blue-400/30 text-blue-400 text-[8px] uppercase tracking-widest font-bold">
+                          {app.status}
+                        </Badge>
                       </div>
                     ))
                   ) : (
                     <div className="py-16 text-center glass rounded-3xl border-white/5 border-dashed">
-                      <FileSearch className="w-12 h-12 text-white/5 mx-auto mb-6" />
-                      <h3 className="text-xl font-bold mb-2">No resumes analyzed yet</h3>
-                      <p className="text-muted-foreground font-light text-sm mb-8">Upload your career blueprint for an enterprise-grade ATS audit.</p>
-                      <Link href="/resume">
-                        <Button variant="outline" className="glass border-white/10 px-8 hover:bg-white/5 text-[10px] font-bold uppercase tracking-widest">Upload Your Resume</Button>
+                      <LayoutGrid className="w-12 h-12 text-white/5 mx-auto mb-6" />
+                      <h3 className="text-xl font-bold mb-2">No applications tracked</h3>
+                      <p className="text-muted-foreground font-light text-sm mb-8">Start tracking your deployment missions across the industry.</p>
+                      <Link href="/job-tracker">
+                        <Button variant="outline" className="glass border-white/10 px-8 hover:bg-white/5 text-[10px] font-bold uppercase tracking-widest">Initialize Tracker</Button>
                       </Link>
                     </div>
                   )}

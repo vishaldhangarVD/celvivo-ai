@@ -67,6 +67,25 @@
         "keywords": { "type": "array", "items": { "type": "string" } },
         "createdAt": { "type": "string", "format": "date-time" }
       }
+    },
+    "JobApplication": {
+      "title": "Job Application",
+      "description": "A record of a job application submitted by the user.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "companyName": { "type": "string" },
+        "role": { "type": "string" },
+        "location": { "type": "string" },
+        "appliedDate": { "type": "string", "format": "date" },
+        "link": { "type": "string" },
+        "notes": { "type": "string" },
+        "status": {
+          "type": "string",
+          "enum": ["Applied", "Shortlisted", "Interview Scheduled", "Rejected", "Selected"]
+        },
+        "createdAt": { "type": "string", "format": "date-time" }
+      }
     }
   },
   "auth": {
@@ -88,6 +107,10 @@
     "/users/{userId}/resumes/{resumeId}": {
       "schema": "#/entities/ResumeAnalysis",
       "description": "Stores resume analysis reports."
+    },
+    "/users/{userId}/job_applications/{applicationId}": {
+      "schema": "#/entities/JobApplication",
+      "description": "Stores job application tracking data."
     }
   }
 }
