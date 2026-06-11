@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { useUser } from '@/firebase';
 import { motion } from 'framer-motion';
@@ -25,6 +25,12 @@ export default function SettingsPage() {
   const router = useRouter();
   const { user, loading } = useUser();
 
+  const formattedName = useMemo(() => {
+    if (!user) return 'Operator';
+    const name = user.displayName || user.email?.split('@')[0] || 'User';
+    return name.charAt(0).toUpperCase() + name.slice(1);
+  }, [user]);
+
   useEffect(() => {
     if (!loading && !user) router.push('/login');
   }, [user, loading, router]);
@@ -41,7 +47,7 @@ export default function SettingsPage() {
         <div className="max-w-6xl mx-auto">
           <header className="mb-16">
             <h1 className="text-5xl font-bold tracking-tighter text-premium">Control Panel</h1>
-            <p className="text-muted-foreground font-light uppercase tracking-[0.3em] text-[10px] mt-4 font-bold">Manage system protocols and identity</p>
+            <p className="text-muted-foreground font-light uppercase tracking-[0.3em] text-[10px] mt-4 font-bold">Manage system protocols and identity for {formattedName}</p>
           </header>
 
           <Tabs defaultValue="profile" className="space-y-12">
@@ -71,14 +77,14 @@ export default function SettingsPage() {
                       <div className="flex items-center gap-8">
                         <div className="relative group">
                           <div className="w-32 h-32 rounded-3xl bg-gradient-to-br from-purple-600 to-blue-600 flex items-center justify-center text-5xl font-bold shadow-2xl">
-                            {user.displayName?.substring(0, 2).toUpperCase() || 'OP'}
+                            {formattedName.substring(0, 2).toUpperCase()}
                           </div>
                           <button className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity rounded-3xl flex items-center justify-center">
                             <Camera className="w-8 h-8 text-white" />
                           </button>
                         </div>
                         <div className="space-y-2">
-                          <h3 className="text-xl font-bold">{user.displayName || 'Operator'}</h3>
+                          <h3 className="text-xl font-bold">{formattedName}</h3>
                           <p className="text-sm text-muted-foreground">{user.email}</p>
                           <Button variant="outline" size="sm" className="h-10 rounded-xl glass border-white/10 text-xs font-bold uppercase tracking-widest">Update Avatar</Button>
                         </div>

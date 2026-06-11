@@ -54,6 +54,12 @@ export default function UserDashboard() {
   const { user, loading: authLoading } = useUser();
   const db = useFirestore();
 
+  const formattedName = useMemo(() => {
+    if (!user) return 'Operator';
+    const name = user.displayName || user.email?.split('@')[0] || 'User';
+    return name.charAt(0).toUpperCase() + name.slice(1);
+  }, [user]);
+
   // Fetch User Profile
   const userProfileRef = useMemo(() => {
     if (!db || !user?.uid) return null;
@@ -140,7 +146,7 @@ export default function UserDashboard() {
             <div className="space-y-4">
               <Badge className="bg-accent/20 text-accent border-none px-4 py-1 text-[10px] tracking-widest font-bold uppercase">System: Online</Badge>
               <h1 className="text-6xl font-bold tracking-tighter text-premium">User Dashboard</h1>
-              <p className="text-muted-foreground font-light">Performance analytics and session history for {user.displayName || 'Operator'}.</p>
+              <p className="text-muted-foreground font-light">Performance analytics and session history for {formattedName}.</p>
             </div>
             <div className="flex gap-4">
               <Link href="/interview">

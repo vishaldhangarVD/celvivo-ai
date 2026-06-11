@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Command, LogIn, Menu, X, LogOut, LayoutDashboard, History, Settings, ShieldCheck, Info, MessageSquare, BrainCircuit } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useUser, useAuth } from '@/firebase';
 import { signOut } from 'firebase/auth';
 import { useRouter } from 'next/navigation';
@@ -14,6 +14,12 @@ export default function Navbar() {
   const { user, loading } = useUser();
   const auth = useAuth();
   const router = useRouter();
+
+  const formattedName = useMemo(() => {
+    if (!user) return 'Operator';
+    const name = user.displayName || user.email?.split('@')[0] || 'User';
+    return name.charAt(0).toUpperCase() + name.slice(1);
+  }, [user]);
 
   const handleSignOut = async () => {
     if (!auth) return;
@@ -67,7 +73,7 @@ export default function Navbar() {
               {user ? (
                 <div className="flex items-center gap-6">
                   <div className="flex flex-col items-end">
-                    <span className="text-[10px] font-bold uppercase tracking-widest text-white/80">{user.displayName || 'Operator'}</span>
+                    <span className="text-[10px] font-bold uppercase tracking-widest text-white/80">{formattedName}</span>
                     <span className="text-[8px] font-bold uppercase tracking-widest text-accent">Verified Track</span>
                   </div>
                   <div className="w-px h-8 bg-white/10"></div>
