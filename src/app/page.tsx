@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState } from 'react';
@@ -111,6 +110,8 @@ export default function LandingPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [isUploading, setIsUploading] = useState(false);
   const [uploadedFile, setUploadedFile] = useState<string | null>(null);
+
+  const hrImg = PlaceHolderImages.find(img => img.id === 'ai-hr-interviewer')?.imageUrl || "https://picsum.photos/seed/nexvoro_hr/800/1000";
 
   const filteredRoles = ROLES.filter(role => 
     role.toLowerCase().includes(searchQuery.toLowerCase())
@@ -277,11 +278,12 @@ export default function LandingPage() {
                   <div className="md:w-[48%] relative min-h-[550px] flex items-center justify-center p-6 md:p-8 bg-black/20">
                     <div className="relative w-full h-full min-h-[450px] rounded-3xl overflow-hidden border border-white/20 shadow-2xl glass bg-white/[0.02]">
                       <Image 
-                        src="/images/hr-manager.jpg"
+                        src={hrImg}
                         alt="Virtual HR Manager"
                         fill
                         className="object-cover rounded-3xl opacity-100 brightness-110 z-10 transition-all duration-700 group-hover:scale-105"
                         priority
+                        data-ai-hint="professional businessman suit"
                       />
                       {/* Interaction Overlays */}
                       <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-black/40 z-20"></div>

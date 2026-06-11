@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useEffect, useRef } from 'react';
@@ -58,6 +57,9 @@ export default function InterviewSession() {
   const [isSaving, setIsSaving] = useState(false);
 
   const chatEndRef = useRef<HTMLDivElement>(null);
+
+  const officeImg = PlaceHolderImages.find(img => img.id === 'office-bg')?.imageUrl || "https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&q=80";
+  const hrImg = PlaceHolderImages.find(img => img.id === 'ai-hr-interviewer')?.imageUrl || "https://picsum.photos/seed/nexvoro_hr/800/1000";
 
   useEffect(() => {
     const startInterview = async () => {
@@ -142,7 +144,7 @@ export default function InterviewSession() {
       role: role ?? "",
       experienceLevel: exp ?? "",
       round: round ?? "General",
-      history: history.map(h => ({
+      history: (history || []).map(h => ({
         question: h.question ?? "",
         answer: h.answer ?? "",
         aiFeedback: h.aiFeedback ?? ""
@@ -214,11 +216,12 @@ export default function InterviewSession() {
         <section className="w-[45%] relative border-r border-white/5 overflow-hidden bg-black/40">
           <div className="absolute inset-0 z-0">
             <Image 
-              src="/images/office-bg.jpg"
+              src={officeImg}
               alt="Corporate Office"
               fill
               className="object-cover opacity-30"
               priority
+              data-ai-hint="modern office"
             />
             <div className="absolute inset-0 bg-gradient-to-t from-[#050816] via-transparent to-[#050816]/50"></div>
           </div>
@@ -232,11 +235,12 @@ export default function InterviewSession() {
               className="relative w-full max-w-md aspect-[4/5] rounded-3xl overflow-hidden border border-white/10 shadow-[0_0_100px_rgba(147,51,234,0.15)] bg-white/[0.02] glass"
             >
               <Image 
-                src="/images/hr-manager.jpg"
+                src={hrImg}
                 alt="Virtual HR Manager"
                 fill
                 className="object-cover rounded-3xl opacity-100 brightness-110 z-10"
                 priority
+                data-ai-hint="professional businessman suit"
               />
               
               <AnimatePresence>
