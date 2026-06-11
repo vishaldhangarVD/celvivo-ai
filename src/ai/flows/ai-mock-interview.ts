@@ -11,7 +11,7 @@ import { z } from 'genkit';
 const AiMockInterviewInputSchema = z.object({
   role: z.string().describe('The job role for the mock interview.'),
   experienceLevel: z.string().describe('The experience level for the mock interview.'),
-  roundType: z.string().optional().describe('The specific interview round (e.g. Technical, Behavioral).'),
+  roundType: z.string().optional().describe('The specific interview round (e.g. Technical Round, HR Round).'),
   currentMainQuestionIndex: z.number().describe('The 0-indexed count of main questions asked so far.'),
   history: z.array(z.object({
     question: z.string(),
@@ -45,11 +45,11 @@ const aiMockInterviewFlow = ai.defineFlow(
   async (input) => {
     const isFirstQuestion = !input.userAnswer;
     const isLastQuestion = input.currentMainQuestionIndex >= 4;
-    const round = input.roundType || 'Technical';
+    const round = input.roundType || 'Technical Round';
 
     if (isFirstQuestion) {
       return {
-        nextQuestion: `Welcome to the ${input.role} ${round} interview. To start, can you explain your background and how you approach challenges in this specific field?`,
+        nextQuestion: `Welcome to the ${input.role} ${round}. To start, can you explain your professional background and how it prepares you for the specific challenges of this role?`,
         questionType: 'main',
         isInterviewComplete: false
       };
@@ -59,45 +59,45 @@ const aiMockInterviewFlow = ai.defineFlow(
       return {
         nextQuestion: "",
         questionType: 'summary',
-        feedbackOnLastAnswer: `Excellent session for a ${round} evaluation. You demonstrated consistent logic and depth.`,
+        feedbackOnLastAnswer: `Excellent session for a ${round} assessment. You demonstrated consistent logic and technical depth.`,
         isInterviewComplete: true,
         interviewSummary: "The candidate demonstrated strong capability in the requested assessment round."
       };
     }
 
     const roundQuestions: Record<string, string[]> = {
-      'Technical': [
-        "Can you describe the most complex technical challenge you've solved recently?",
-        "How do you ensure your code is optimized for both performance and readability?",
-        "What is your preferred testing strategy for complex business logic?",
+      'Technical Round': [
+        "Can you describe the most complex technical challenge you've solved recently and the architecture you used?",
+        "How do you ensure your code is optimized for both performance and readability in a collaborative environment?",
+        "What is your preferred testing strategy for complex business logic and how do you implement it?",
         "How do you stay updated with the latest tools and trends in your specific domain?"
       ],
-      'Behavioral': [
-        "Tell me about a time you had to handle a major disagreement within your team.",
-        "Describe a situation where you had to lead a project with ambiguous requirements.",
-        "How do you handle high-pressure deadlines while maintaining quality?",
-        "Give an example of a mistake you made at work and what you learned from it."
+      'HR Round': [
+        "Tell me about a time you had to handle a major disagreement within your team. How was it resolved?",
+        "Describe a situation where you had to lead a project with ambiguous requirements. What was the outcome?",
+        "How do you handle high-pressure deadlines while maintaining elite code quality?",
+        "Give an example of a mistake you made at work and the specific steps you took to learn from it."
       ],
-      'System Design': [
-        "How would you design a rate-limiting system for a global API?",
-        "What strategy would you use to handle consistency in a distributed database?",
-        "How do you identify and mitigate single points of failure in an architecture?",
-        "Describe how you would scale a real-time notification system to millions of users."
-      ],
-      'HR / Managerial': [
+      'Managerial Round': [
         "Where do you see your technical leadership evolving in the next 3 years?",
-        "How do you mentor junior engineers to ensure team growth?",
-        "What qualities do you look for in a team when joining a new organization?",
-        "Why are you the right fit for this role at this stage of your career?"
+        "How do you mentor junior engineers to ensure team growth and alignment with company goals?",
+        "What specific qualities do you look for in a team when joining a new organization?",
+        "Why are you the right fit for this role at this specific stage of your career?"
+      ],
+      'Full Interview Process': [
+        "Can you walk me through a technical architecture you designed from scratch?",
+        "How do you balance technical debt with the need for rapid feature deployment?",
+        "Tell me about a time you had to deliver difficult feedback to a peer or direct report.",
+        "What are your long-term professional aspirations and how does this role bridge that gap?"
       ]
     };
 
-    const questions = roundQuestions[round] || roundQuestions['Technical'];
+    const questions = roundQuestions[round] || roundQuestions['Technical Round'];
 
     return {
       nextQuestion: questions[input.currentMainQuestionIndex % questions.length],
       questionType: 'main',
-      feedbackOnLastAnswer: "That's an insightful perspective. It aligns well with industry benchmarks.",
+      feedbackOnLastAnswer: "That's an insightful perspective. It aligns well with elite industry benchmarks.",
       isInterviewComplete: false
     };
   }

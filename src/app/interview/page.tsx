@@ -30,10 +30,10 @@ const ROLES = [
 const EXPERIENCE_LEVELS = ["Junior", "Mid", "Senior"];
 
 const ROUNDS = [
-  { id: 'Technical', label: 'Technical Round', icon: Code2 },
-  { id: 'Behavioral', label: 'Behavioral Round', icon: Users },
-  { id: 'System Design', label: 'System Design', icon: Layers },
-  { id: 'HR / Managerial', label: 'HR / Managerial', icon: HandMetal }
+  { id: 'HR Round', label: 'HR Round', icon: Users },
+  { id: 'Technical Round', label: 'Technical Round', icon: Code2 },
+  { id: 'Managerial Round', label: 'Managerial Round', icon: HandMetal },
+  { id: 'Full Interview Process', label: 'Full Interview Process', icon: Layers }
 ];
 
 export default function InterviewSetup() {

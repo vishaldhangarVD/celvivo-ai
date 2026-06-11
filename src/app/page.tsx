@@ -68,10 +68,10 @@ const ROLES = [
 ].sort();
 
 const ROUNDS = [
-  { id: 'Technical', label: 'Technical Round', icon: Code2, desc: 'DSA, coding logic, and stack expertise.' },
-  { id: 'Behavioral', label: 'Behavioral Round', icon: Users, desc: 'Soft skills, STAR method, and culture fit.' },
-  { id: 'System Design', label: 'System Design', icon: Layers, desc: 'Architectural patterns and scalability.' },
-  { id: 'HR / Managerial', label: 'HR / Managerial', icon: HandMetal, desc: 'Leadership, goals, and professional maturity.' }
+  { id: 'HR Round', label: 'HR Round', icon: Users, desc: 'Screening, soft skills, and cultural fit.' },
+  { id: 'Technical Round', label: 'Technical Round', icon: Code2, desc: 'Technical logic and stack-specific depth.' },
+  { id: 'Managerial Round', label: 'Managerial Round', icon: HandMetal, desc: 'Leadership, goals, and professional maturity.' },
+  { id: 'Full Interview Process', label: 'Full Interview Process', icon: Layers, desc: 'Comprehensive session covering all modules.' }
 ];
 
 const HOW_IT_WORKS = [
@@ -101,53 +101,13 @@ const HOW_IT_WORKS = [
   }
 ];
 
-const FEATURES = [
-  {
-    title: "Real-time Tone Analysis",
-    description: "Our engine analyzes your communication strategic patterns and confidence levels in real-time.",
-    icon: MessageSquare
-  },
-  {
-    title: "Industry Benchmarking",
-    description: "Compare your results against anonymized performance nodes from senior engineers at Big Tech.",
-    icon: TrendingUp
-  },
-  {
-    title: "Skill Gap Mapping",
-    description: "Visualize your technical landscape and identify exactly which nodes require reinforcement.",
-    icon: BrainCircuit
-  },
-  {
-    title: "Automated Roadmap",
-    description: "Get a personalized learning path with certification recommendations to bridge your gaps.",
-    icon: Target
-  },
-  {
-    title: "Code Logic Audit",
-    description: "Verify your technical precision with simulated architectural and coding challenges.",
-    icon: Code2
-  },
-  {
-    title: "Executive Presence",
-    description: "Refine your leadership archetypes and strategic delivery for high-stakes positions.",
-    icon: UserCheck
-  }
-];
-
-const STATS = [
-  { label: "Successful Placements", value: "12k+", icon: Globe },
-  { label: "Accuracy Rate", value: "98.4%", icon: Cpu },
-  { label: "Technical Tracks", value: "60+", icon: Layers },
-  { label: "Avg. Readiness Boost", value: "45%", icon: Zap }
-];
-
 export default function LandingPage() {
   const router = useRouter();
   const { user, loading: authLoading } = useUser();
   const [isWizardOpen, setIsWizardOpen] = useState(false);
   const [step, setStep] = useState(1);
   const [selectedRole, setSelectedRole] = useState("");
-  const [selectedRound, setSelectedRound] = useState("Technical");
+  const [selectedRound, setSelectedRound] = useState("Technical Round");
   const [searchQuery, setSearchQuery] = useState("");
   const [isUploading, setIsUploading] = useState(false);
   const [uploadedFile, setUploadedFile] = useState<string | null>(null);
@@ -468,7 +428,7 @@ export default function LandingPage() {
                       className="space-y-8"
                     >
                       <div className="text-center mb-8">
-                        <h4 className="text-2xl font-bold tracking-tight">Select Assessment Round</h4>
+                        <h4 className="text-2xl font-bold tracking-tight">Select Interview Round</h4>
                         <p className="text-muted-foreground font-light">Calibrate the simulation type for this session.</p>
                       </div>
 
