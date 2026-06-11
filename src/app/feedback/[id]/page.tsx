@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect, useMemo } from 'react';
@@ -25,7 +26,8 @@ import {
   Share2,
   Activity,
   Award,
-  Loader2
+  Loader2,
+  FileCheck
 } from 'lucide-react';
 import { generateInterviewFeedback, type InterviewFeedbackOutput } from '@/ai/flows/ai-interview-feedback';
 import { generateLearningRoadmap, type LearningRoadmapOutput } from '@/ai/flows/ai-learning-roadmap';
@@ -33,12 +35,15 @@ import { useUser, useFirestore, useDoc } from '@/firebase';
 import { doc, updateDoc } from 'firebase/firestore';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
+import { generateCertificatePDF } from '@/lib/certificate-generator';
+import { useToast } from '@/hooks/use-toast';
 
 export default function FeedbackReport() {
   const params = useParams();
   const searchParams = useSearchParams();
   const { user } = useUser();
   const db = useFirestore();
+  const { toast } = useToast();
   
   const docId = params.id as string;
   
@@ -97,7 +102,6 @@ export default function FeedbackReport() {
         setRoadmap(roadmapResult);
 
         if (docId !== 'last' && interviewRef) {
-          // Strict sanitization for Firestore update
           const updateData = {
             feedback: {
               technicalKnowledgeScore: feedbackResult.technicalKnowledgeScore ?? 0,
@@ -118,11 +122,6 @@ export default function FeedbackReport() {
             strengths: feedbackResult.strengths ?? [],
             weaknesses: feedbackResult.weaknesses ?? [],
           };
-
-          // Debug log
-          Object.entries(updateData).forEach(([key, val]) => {
-            if (val === undefined) console.error(`[Firestore Debug] Field "${key}" is undefined in interview updateData`);
-          });
 
           updateDoc(interviewRef, updateData).catch(async (err) => {
             errorEmitter.emit('permission-error', new FirestorePermissionError({
@@ -151,6 +150,21 @@ export default function FeedbackReport() {
     }
   }, [docId, interviewDoc, docLoading, searchParams, user?.uid, db, interviewRef]);
 
+  const handleDownloadCert = () => {
+    if (!user || !feedback) return;
+    try {
+      generateCertificatePDF({
+        userName: user.displayName || user.email?.split('@')[0] || 'User',
+        role: interviewDoc?.role || 'Engineer',
+        score: feedback.overallInterviewScore,
+        date: new Date().toLocaleDateString()
+      });
+      toast({ title: "Credential Exported", description: "Certificate downloaded successfully." });
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
   if (docLoading || isProcessing) {
     return (
       <div className="h-screen flex flex-col items-center justify-center bg-[#050816] space-y-8">
@@ -168,6 +182,7 @@ export default function FeedbackReport() {
 
   const currentRole = interviewDoc?.role || searchParams.get('role') || 'Elite Engineer';
   const currentExp = interviewDoc?.experienceLevel || searchParams.get('exp') || 'Senior';
+  const showCertificate = (feedback?.overallInterviewScore || 0) >= 70;
 
   return (
     <div className="min-h-screen bg-[#050816] pb-32">
@@ -185,10 +200,18 @@ export default function FeedbackReport() {
             <div className="text-center lg:text-left z-10">
               <Badge className="bg-accent/20 text-accent mb-6 border-none px-4 py-1 font-bold tracking-widest text-[10px]">VERIFIED PERFORMANCE AUDIT</Badge>
               <h1 className="text-6xl md:text-8xl font-bold mb-4 tracking-tighter text-premium">{currentRole}</h1>
-              <div className="flex items-center gap-4 text-muted-foreground font-light text-xl">
+              <div className="flex items-center gap-6 text-muted-foreground font-light text-xl">
                 <span>Simulation Complete</span>
                 <span className="w-1.5 h-1.5 rounded-full bg-white/20"></span>
                 <span className="text-accent">{currentExp} Grade</span>
+                {showCertificate && (
+                  <>
+                    <span className="w-1.5 h-1.5 rounded-full bg-white/20"></span>
+                    <Badge className="bg-green-500/20 text-green-400 border-none px-3 py-1 font-bold flex items-center gap-2">
+                      <FileCheck className="w-4 h-4" /> Certificate Unlocked
+                    </Badge>
+                  </>
+                )}
               </div>
             </div>
             
@@ -298,7 +321,27 @@ export default function FeedbackReport() {
             </div>
 
             <div className="lg:col-span-4 space-y-12 h-fit lg:sticky lg:top-24">
-              <Card className="premium-card bg-accent/5 border-accent/10">
+              {showCertificate && (
+                <Card className="premium-card bg-accent/5 border-accent/20 p-8 shadow-[0_0_50px_rgba(34,211,238,0.1)]">
+                  <div className="text-center space-y-6">
+                    <div className="w-20 h-20 rounded-full bg-accent/20 flex items-center justify-center mx-auto">
+                      <Trophy className="w-10 h-10 text-accent" />
+                    </div>
+                    <div>
+                      <h3 className="text-xl font-bold">Elite Performance</h3>
+                      <p className="text-sm text-muted-foreground font-light mt-2">You've unlocked a verified Nexvoro AI Mastery Certificate.</p>
+                    </div>
+                    <Button 
+                      onClick={handleDownloadCert}
+                      className="w-full h-14 rounded-2xl bg-white text-black font-bold hover:bg-white/90 shadow-xl"
+                    >
+                      <Download className="w-5 h-5 mr-2" /> Download Credential
+                    </Button>
+                  </div>
+                </Card>
+              )}
+
+              <Card className="premium-card bg-white/[0.01] border-white/5">
                 <CardHeader>
                   <CardTitle className="text-xl font-bold flex items-center gap-3">
                     <Zap className="w-6 h-6 text-accent" />
@@ -312,8 +355,12 @@ export default function FeedbackReport() {
                     </div>
                   ))}
                   <div className="grid grid-cols-2 gap-4">
-                    <Button className="h-14 rounded-2xl bg-white text-black font-bold hover:bg-white/90">
-                      <Download className="w-5 h-5 mr-2" /> Export
+                    <Button 
+                      onClick={handleDownloadCert}
+                      disabled={!showCertificate}
+                      className="h-14 rounded-2xl bg-white text-black font-bold hover:bg-white/90"
+                    >
+                      <Download className="w-5 h-5 mr-2" /> PDF
                     </Button>
                     <Button variant="outline" className="h-14 rounded-2xl glass border-white/10 font-bold">
                       <Share2 className="w-5 h-5 mr-2" /> Share

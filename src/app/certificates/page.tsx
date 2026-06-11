@@ -1,3 +1,4 @@
+
 'use client';
 
 import { motion } from 'framer-motion';
@@ -20,10 +21,13 @@ import { useUser, useFirestore, useCollection } from '@/firebase';
 import { collection, query, orderBy, where } from 'firebase/firestore';
 import { useMemo } from 'react';
 import Link from 'next/link';
+import { generateCertificatePDF } from '@/lib/certificate-generator';
+import { useToast } from '@/hooks/use-toast';
 
 export default function CertificatesPage() {
   const { user, loading: authLoading } = useUser();
   const db = useFirestore();
+  const { toast } = useToast();
 
   const interviewsQuery = useMemo(() => {
     if (!db || !user?.uid) return null;
@@ -34,6 +38,34 @@ export default function CertificatesPage() {
     );
   }, [db, user?.uid]);
   const { data: interviews, loading: interviewsLoading } = useCollection(interviewsQuery);
+
+  const handleDownload = (cert: any) => {
+    if (!user) return;
+    try {
+      generateCertificatePDF({
+        userName: user.displayName || user.email?.split('@')[0] || 'User',
+        role: cert.role,
+        score: cert.overallScore,
+        date: cert.createdAt?.seconds ? new Date(cert.createdAt.seconds * 1000).toLocaleDateString() : new Date().toLocaleDateString()
+      });
+      toast({
+        title: "Credential Exported",
+        description: "Your mastery certificate has been generated and downloaded.",
+      });
+    } catch (e) {
+      console.error(e);
+      toast({
+        variant: "destructive",
+        title: "Export Failed",
+        description: "System encountered an error during PDF synthesis.",
+      });
+    }
+  };
+
+  const handleShare = (cert: any) => {
+    const text = encodeURIComponent(`I've just achieved a ${cert.overallScore}% Efficiency Rating in my ${cert.role} interview simulation at Nexvoro AI! #AI #TechInterview #CareerGrowth`);
+    window.open(`https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent('https://nexvoro.ai')}&summary=${text}`, '_blank');
+  };
 
   if (authLoading) return <div className="min-h-screen bg-[#050816] flex items-center justify-center"><Loader2 className="w-12 h-12 text-accent animate-spin" /></div>;
 
@@ -85,10 +117,18 @@ export default function CertificatesPage() {
                     </div>
 
                     <div className="flex gap-4 w-full relative z-10">
-                      <Button className="flex-1 h-12 rounded-xl bg-white text-[#050816] font-bold hover:bg-white/90">
+                      <Button 
+                        onClick={() => handleDownload(cert)}
+                        className="flex-1 h-12 rounded-xl bg-white text-[#050816] font-bold hover:bg-white/90"
+                      >
                         <Download className="w-4 h-4 mr-2" /> PDF
                       </Button>
-                      <Button variant="outline" size="icon" className="h-12 w-12 rounded-xl glass border-white/10">
+                      <Button 
+                        onClick={() => handleShare(cert)}
+                        variant="outline" 
+                        size="icon" 
+                        className="h-12 w-12 rounded-xl glass border-white/10"
+                      >
                         <Share2 className="w-4 h-4" />
                       </Button>
                     </div>
