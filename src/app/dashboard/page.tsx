@@ -164,8 +164,8 @@ export default function Dashboard() {
           >
             <div>
               <Badge className="bg-accent/20 text-accent mb-4 border-none px-4 py-1 text-[10px] tracking-widest font-bold uppercase">Operational Hub Active</Badge>
-              <h1 className="text-5xl font-bold tracking-tighter text-premium">Command Center</h1>
-              <p className="text-muted-foreground font-light mt-2">Neural synchronization active. Welcome back, {user.displayName || 'Operator'}.</p>
+              <h1 className="text-5xl font-bold tracking-tighter text-premium">Career Dashboard</h1>
+              <p className="text-muted-foreground font-light mt-2">Neural synchronization active. Welcome back.</p>
             </div>
             <div className="flex gap-4">
               <Link href="/interview">

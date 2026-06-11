@@ -47,7 +47,7 @@ export default function Navbar() {
               <div className="w-px h-4 bg-white/10"></div>
               <Link href="/dashboard" className="hover:text-white transition-colors flex items-center gap-2">
                 <LayoutDashboard className="w-3 h-3" />
-                Command
+                Dashboard
               </Link>
               <Link href="/skill-gap" className="hover:text-white transition-colors flex items-center gap-2 text-accent">
                 <BrainCircuit className="w-3 h-3" />
@@ -121,7 +121,7 @@ export default function Navbar() {
               <>
                 <div className="h-px bg-white/5 my-4"></div>
                 <Link href="/dashboard" onClick={() => setIsOpen(false)} className="text-xl font-bold tracking-widest uppercase text-white/70 flex items-center gap-4">
-                  <LayoutDashboard className="w-6 h-6" /> Command Center
+                  <LayoutDashboard className="w-6 h-6" /> Career Dashboard
                 </Link>
                 <Link href="/skill-gap" onClick={() => setIsOpen(false)} className="text-xl font-bold tracking-widest uppercase text-accent flex items-center gap-4">
                   <BrainCircuit className="w-6 h-6" /> Gap Audit
