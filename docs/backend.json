@@ -13,6 +13,9 @@
         "jobReadinessScore": { "type": "number" },
         "resumeScore": { "type": "number" },
         "totalInterviews": { "type": "number" },
+        "currentStreak": { "type": "number" },
+        "bestStreak": { "type": "number" },
+        "lastChallengeDate": { "type": "string" },
         "missingSkills": { "type": "array", "items": { "type": "string" } },
         "createdAt": { "type": "string", "format": "date-time" }
       },
@@ -36,6 +39,21 @@
         "createdAt": { "type": "string", "format": "date-time" }
       }
     },
+    "DailyChallenge": {
+      "title": "Daily Challenge",
+      "description": "A single daily question attempt.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "question": { "type": "string" },
+        "type": { "type": "string" },
+        "answer": { "type": "string" },
+        "score": { "type": "number" },
+        "feedback": { "type": "string" },
+        "tips": { "type": "array", "items": { "type": "string" } },
+        "completedAt": { "type": "string", "format": "date-time" }
+      }
+    },
     "ResumeAnalysis": {
       "title": "Resume Analysis",
       "description": "Results of a resume audit.",
@@ -47,41 +65,6 @@
         "targetRole": { "type": "string" },
         "analysis": { "type": "object" },
         "keywords": { "type": "array", "items": { "type": "string" } },
-        "createdAt": { "type": "string", "format": "date-time" }
-      }
-    },
-    "SkillGapAnalysis": {
-      "title": "Skill Gap Analysis",
-      "description": "A comparative report between user skills and target role requirements.",
-      "type": "object",
-      "properties": {
-        "userId": { "type": "string" },
-        "role": { "type": "string" },
-        "skillMatchPercentage": { "type": "number" },
-        "existingSkills": { "type": "array", "items": { "type": "string" } },
-        "missingSkills": { "type": "array", "items": { "type": "string" } },
-        "criticalMissingSkills": { "type": "array", "items": { "type": "string" } },
-        "recommendedRoadmap": { "type": "array", "items": { "type": "string" } },
-        "createdAt": { "type": "string", "format": "date-time" }
-      }
-    },
-    "CareerRoadmap": {
-      "title": "Career Roadmap",
-      "description": "A long-term strategic learning and preparation plan.",
-      "type": "object",
-      "properties": {
-        "userId": { "type": "string" },
-        "role": { "type": "string" },
-        "plans": {
-          "type": "object",
-          "properties": {
-            "thirtyDay": { "type": "array", "items": { "type": "object" } },
-            "sixtyDay": { "type": "array", "items": { "type": "object" } },
-            "ninetyDay": { "type": "array", "items": { "type": "object" } }
-          }
-        },
-        "recommendedProjects": { "type": "array", "items": { "type": "string" } },
-        "interviewPrepTasks": { "type": "array", "items": { "type": "string" } },
         "createdAt": { "type": "string", "format": "date-time" }
       }
     }
@@ -98,17 +81,13 @@
       "schema": "#/entities/InterviewSession",
       "description": "Stores individual mock interview records."
     },
+    "/users/{userId}/daily_challenges/{challengeId}": {
+      "schema": "#/entities/DailyChallenge",
+      "description": "Stores individual daily challenge records."
+    },
     "/users/{userId}/resumes/{resumeId}": {
       "schema": "#/entities/ResumeAnalysis",
       "description": "Stores resume analysis reports."
-    },
-    "/users/{userId}/skill_gap/{gapId}": {
-      "schema": "#/entities/SkillGapAnalysis",
-      "description": "Stores individual skill gap analysis reports."
-    },
-    "/users/{userId}/roadmaps/{roadmapId}": {
-      "schema": "#/entities/CareerRoadmap",
-      "description": "Stores generated career roadmaps."
     }
   }
 }
