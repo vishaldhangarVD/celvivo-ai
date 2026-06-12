@@ -58,7 +58,7 @@ export default function Navbar() {
               </Link>
               <Link href="/certificates" className="hover:text-white transition-colors flex items-center gap-2">
                 <Award className="w-3 h-3 text-yellow-400" />
-                Credentials
+                Certificates
               </Link>
               <Link href="/job-tracker" className="hover:text-white transition-colors flex items-center gap-2 text-blue-400">
                 <LayoutGrid className="w-3 h-3" />
@@ -139,7 +139,7 @@ export default function Navbar() {
                   <LayoutDashboard className="w-6 h-6" /> Dashboard
                 </Link>
                 <Link href="/certificates" onClick={() => setIsOpen(false)} className="text-xl font-bold tracking-widest uppercase text-yellow-400 flex items-center gap-4">
-                  <Award className="w-6 h-6" /> Credentials
+                  <Award className="w-6 h-6" /> Certificates
                 </Link>
                 <Link href="/job-tracker" onClick={() => setIsOpen(false)} className="text-xl font-bold tracking-widest uppercase text-blue-400 flex items-center gap-4">
                   <LayoutGrid className="w-6 h-6" /> Job Tracker

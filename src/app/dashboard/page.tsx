@@ -194,7 +194,7 @@ export default function Dashboard() {
               { label: "Interviews", val: stats.total, icon: History, color: "text-blue-400" },
               { label: "Avg Score", val: stats.avg, icon: Activity, color: "text-accent" },
               { label: "Best Score", val: stats.best, icon: Trophy, color: "text-yellow-400" },
-              { label: "Certificates", val: stats.certsEarned, icon: Award, color: "text-orange-300" },
+              { label: "Certs Earned", val: stats.certsEarned, icon: Award, color: "text-orange-300" },
               { label: "Confidence", val: stats.confidence, icon: Zap, color: "text-purple-400" },
               { label: "Communication", val: stats.communication, icon: MessageSquare, color: "text-green-400" },
               { label: "Technical", val: stats.technical, icon: BrainCircuit, color: "text-orange-400" }
@@ -405,7 +405,7 @@ export default function Dashboard() {
                   {[
                     { title: "Start New Interview", icon: Zap, color: "text-accent", href: "/interview" },
                     { title: "Upload Resume", icon: FileSearch, color: "text-purple-400", href: "/resume" },
-                    { title: "Earned Certificates", icon: Award, color: "text-orange-300", href: "/certificates" },
+                    { title: "Certificates", icon: Award, color: "text-orange-300", href: "/certificates" },
                     { title: "Cover Letter Architect", icon: FileText, color: "text-green-400", href: "/cover-letter" },
                     { title: "Skill Gap Audit", icon: BrainCircuit, color: "text-yellow-400", href: "/skill-gap" },
                     { title: "Career Roadmap", icon: Target, color: "text-blue-400", href: "/roadmap" }
