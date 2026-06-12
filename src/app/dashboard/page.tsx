@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useEffect, useMemo } from 'react';
@@ -61,8 +60,7 @@ export default function Dashboard() {
     if (!db || !user?.uid) return null;
     return query(
       collection(db, 'users', user.uid, 'interviews'),
-      orderBy('createdAt', 'desc'),
-      limit(5)
+      orderBy('createdAt', 'desc')
     );
   }, [db, user?.uid]);
 
@@ -107,6 +105,9 @@ export default function Dashboard() {
     const scores = interviews?.map((i: any) => i.overallScore || 0) || [];
     const avg = total > 0 ? Math.round(scores.reduce((a, b) => a + b, 0) / total) : 0;
     const best = total > 0 ? Math.max(...scores) : 0;
+    
+    // Certificates Earned (Score >= 70)
+    const certsEarned = interviews?.filter((i: any) => i.overallScore >= 70).length || 0;
 
     const confScores = interviews?.map((i: any) => i.feedback?.confidenceScore || 0).filter(s => s > 0) || [];
     const commScores = interviews?.map((i: any) => i.feedback?.communicationScore || 0).filter(s => s > 0) || [];
@@ -119,7 +120,7 @@ export default function Dashboard() {
     // Job Tracker Stats
     const totalApps = applications?.length || 0;
     const shortlisted = applications?.filter((a: any) => a.status === 'Shortlisted').length || 0;
-    const interviewed = applications?.filter((a: any) => a.status === 'Interview Scheduled').length || 0;
+    const interviewedCount = applications?.filter((a: any) => a.status === 'Interview Scheduled').length || 0;
     const selected = applications?.filter((a: any) => a.status === 'Selected').length || 0;
     const rejected = applications?.filter((a: any) => a.status === 'Rejected').length || 0;
     const successRate = totalApps > 0 ? Math.round((selected / totalApps) * 100) : 0;
@@ -128,13 +129,14 @@ export default function Dashboard() {
       total,
       avg: `${avg}%`,
       best: `${best}%`,
+      certsEarned,
       confidence: `${avgConf}%`,
       communication: `${avgComm}%`,
       technical: `${avgTech}%`,
       tracker: {
         total: totalApps,
         shortlisted,
-        interviewed,
+        interviewed: interviewedCount,
         selected,
         rejected,
         successRate: `${successRate}%`
@@ -187,11 +189,12 @@ export default function Dashboard() {
           </motion.header>
 
           {/* Top Statistics Row */}
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4">
             {[
-              { label: "Total Interviews", val: stats.total, icon: History, color: "text-blue-400" },
-              { label: "Average Score", val: stats.avg, icon: Activity, color: "text-accent" },
+              { label: "Interviews", val: stats.total, icon: History, color: "text-blue-400" },
+              { label: "Avg Score", val: stats.avg, icon: Activity, color: "text-accent" },
               { label: "Best Score", val: stats.best, icon: Trophy, color: "text-yellow-400" },
+              { label: "Certificates", val: stats.certsEarned, icon: Award, color: "text-orange-300" },
               { label: "Confidence", val: stats.confidence, icon: Zap, color: "text-purple-400" },
               { label: "Communication", val: stats.communication, icon: MessageSquare, color: "text-green-400" },
               { label: "Technical", val: stats.technical, icon: BrainCircuit, color: "text-orange-400" }
@@ -402,6 +405,7 @@ export default function Dashboard() {
                   {[
                     { title: "Start New Interview", icon: Zap, color: "text-accent", href: "/interview" },
                     { title: "Upload Resume", icon: FileSearch, color: "text-purple-400", href: "/resume" },
+                    { title: "Earned Certificates", icon: Award, color: "text-orange-300", href: "/certificates" },
                     { title: "Cover Letter Architect", icon: FileText, color: "text-green-400", href: "/cover-letter" },
                     { title: "Skill Gap Audit", icon: BrainCircuit, color: "text-yellow-400", href: "/skill-gap" },
                     { title: "Career Roadmap", icon: Target, color: "text-blue-400", href: "/roadmap" }

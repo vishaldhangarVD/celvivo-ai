@@ -1,8 +1,7 @@
-
 "use client";
 
 import { useState, useEffect, useMemo } from 'react';
-import { useSearchParams, useParams } from 'next/navigation';
+import { useSearchParams, useParams, useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import Navbar from '@/components/layout/Navbar';
 import NavigationControls from '@/components/NavigationControls';
@@ -37,10 +36,12 @@ import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
 import { generateCertificatePDF } from '@/lib/certificate-generator';
 import { useToast } from '@/hooks/use-toast';
+import Link from 'next/link';
 
 export default function FeedbackReport() {
   const params = useParams();
   const searchParams = useSearchParams();
+  const router = useRouter();
   const { user } = useUser();
   const db = useFirestore();
   const { toast } = useToast();
@@ -337,6 +338,11 @@ export default function FeedbackReport() {
                     >
                       <Download className="w-5 h-5 mr-2" /> Download Credential
                     </Button>
+                    <Link href="/certificates" className="block">
+                      <Button variant="ghost" className="w-full h-12 text-[10px] uppercase font-bold tracking-widest text-accent hover:bg-accent/10">
+                        View All Credentials
+                      </Button>
+                    </Link>
                   </div>
                 </Card>
               )}
@@ -366,6 +372,11 @@ export default function FeedbackReport() {
                       <Share2 className="w-5 h-5 mr-2" /> Share
                     </Button>
                   </div>
+                  <Link href="/certificates">
+                    <Button variant="ghost" className="w-full h-12 rounded-xl text-[10px] font-bold uppercase tracking-widest text-white/40 hover:text-white">
+                      Access Credential Vault
+                    </Button>
+                  </Link>
                 </CardContent>
               </Card>
             </div>
