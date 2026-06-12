@@ -261,12 +261,12 @@ export default function InterviewSession() {
                     animate={{ opacity: 1, y: 0, scale: 1 }}
                     className="absolute top-12 left-12 right-12 z-20"
                   >
-                    <div className="glass p-8 rounded-[2.5rem] rounded-tl-none border-accent/40 bg-accent/5 backdrop-blur-2xl shadow-2xl">
+                    <div className="glass p-8 rounded-[2.5rem] rounded-tl-none border-accent/40 bg-accent/10 backdrop-blur-2xl shadow-2xl">
                       <div className="flex gap-3 items-center mb-4">
                         <MessageSquare className="w-4 h-4 text-accent" />
                         <span className="text-[10px] font-bold text-accent uppercase tracking-[0.2em]">Neural Directives</span>
                       </div>
-                      <p className="text-lg font-light leading-relaxed tracking-tight text-white/95">
+                      <p className="text-xl font-medium leading-relaxed tracking-tight text-white">
                         {nextOutput.nextQuestion}
                       </p>
                     </div>
@@ -337,8 +337,8 @@ export default function InterviewSession() {
                     <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-purple-600 to-blue-600 flex items-center justify-center shadow-xl shrink-0">
                       <User className="w-6 h-6 text-white" />
                     </div>
-                    <div className="premium-card p-10 rounded-tr-none border-white/10 bg-white/[0.03] flex-1 max-w-[85%] text-right shadow-2xl">
-                      <p className="text-lg leading-relaxed font-light text-white/90">{turn.answer}</p>
+                    <div className="premium-card p-10 rounded-tr-none border-white/10 bg-white/[0.08] flex-1 max-w-[85%] text-right shadow-2xl">
+                      <p className="text-xl leading-relaxed font-medium text-white">{turn.answer}</p>
                     </div>
                   </div>
                   
@@ -347,8 +347,8 @@ export default function InterviewSession() {
                       <div className="w-12 h-12 glass rounded-2xl flex items-center justify-center text-accent shrink-0">
                         <Sparkles className="w-6 h-6" />
                       </div>
-                      <div className="glass p-8 rounded-[2.5rem] rounded-tl-none border-accent/20 bg-accent/5 max-w-[85%]">
-                        <p className="text-sm font-light leading-relaxed text-accent/80 italic">
+                      <div className="glass p-8 rounded-[2.5rem] rounded-tl-none border-accent/20 bg-accent/10 max-w-[85%]">
+                        <p className="text-lg font-medium leading-relaxed text-white italic">
                           " {turn.aiFeedback} "
                         </p>
                       </div>
