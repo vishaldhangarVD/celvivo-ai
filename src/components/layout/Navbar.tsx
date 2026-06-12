@@ -44,7 +44,8 @@ export default function Navbar() {
 
         {/* Desktop Nav */}
         <div className="hidden md:flex items-center gap-10 text-[10px] font-bold uppercase tracking-[0.3em] text-white/50">
-          <Link href="/features" className="hover:text-white transition-colors">Protocols</Link>
+          <Link href="/features" className="hover:text-white transition-colors">AI Career Tools
+          </Link>
           <Link href="/question-bank" className="hover:text-white transition-colors flex items-center gap-2">
             <BookOpen className="w-3 h-3 text-accent" />
             Library
@@ -127,7 +128,7 @@ export default function Navbar() {
             exit={{ opacity: 0, y: -20 }}
             className="absolute top-20 left-0 w-full bg-[#050816] border-b border-white/5 p-12 flex flex-col gap-8 md:hidden z-50 min-h-screen"
           >
-            <Link href="/features" onClick={() => setIsOpen(false)} className="text-xl font-bold tracking-widest uppercase text-white/70">Protocols</Link>
+<Link href="/features" onClick={() => setIsOpen(false)} className="text-xl font-bold tracking-widest uppercase text-white/70">AI Career Tools</Link>
             <Link href="/question-bank" onClick={() => setIsOpen(false)} className="text-xl font-bold tracking-widest uppercase text-accent flex items-center gap-4">
               <BookOpen className="w-6 h-6" /> Library
             </Link>

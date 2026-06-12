@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect, useRef } from 'react';
@@ -46,6 +47,7 @@ export default function InterviewSession() {
   const role = searchParams.get('role') || 'Software Engineer';
   const exp = searchParams.get('exp') || 'Senior';
   const round = searchParams.get('round') || 'Technical';
+  const practiceQuestion = searchParams.get('practiceQuestion');
 
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [history, setHistory] = useState<any[]>([]);
@@ -72,7 +74,16 @@ export default function InterviewSession() {
           currentMainQuestionIndex: 0,
           history: [],
         });
-        setNextOutput(output);
+        
+        // If it's a practice question session, override the first question
+        if (practiceQuestion) {
+          setNextOutput({
+            ...output,
+            nextQuestion: `I see you're here to practice a specific topic. Let's start with this: ${decodeURIComponent(practiceQuestion)}`
+          });
+        } else {
+          setNextOutput(output);
+        }
       } catch (e) {
         console.error(e);
       } finally {
@@ -83,7 +94,7 @@ export default function InterviewSession() {
 
     const interval = setInterval(() => setTimer(t => t + 1), 1000);
     return () => clearInterval(interval);
-  }, [role, exp, round]);
+  }, [role, exp, round, practiceQuestion]);
 
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
