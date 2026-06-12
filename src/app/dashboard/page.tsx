@@ -11,7 +11,6 @@ import {
   Zap, 
   Activity, 
   FileText, 
-  BrainCircuit, 
   Trophy,
   History,
   ArrowRight,
@@ -19,17 +18,18 @@ import {
   ChevronRight,
   MessageSquare,
   Target,
-  FileSearch,
   Flame,
   Award,
   Sparkles,
   LayoutGrid,
   TrendingUp,
-  CheckCircle2,
-  XCircle,
   Clock,
   Command,
-  FileBadge
+  FileBadge,
+  Mic,
+  Brain,
+  Map,
+  FileEdit
 } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -197,7 +197,7 @@ export default function Dashboard() {
               { label: "Certs Earned", val: stats.certsEarned, icon: Award, color: "text-orange-300" },
               { label: "Confidence", val: stats.confidence, icon: Zap, color: "text-purple-400" },
               { label: "Communication", val: stats.communication, icon: MessageSquare, color: "text-green-400" },
-              { label: "Technical", val: stats.technical, icon: BrainCircuit, color: "text-orange-400" }
+              { label: "Technical", val: stats.technical, icon: Brain, color: "text-orange-400" }
             ].map((stat, i) => (
               <motion.div
                 key={i}
@@ -271,7 +271,7 @@ export default function Dashboard() {
               <Card className="premium-card bg-white/[0.01] border-white/5 p-8">
                 <CardHeader className="p-0 mb-8 flex flex-row items-center justify-between">
                   <CardTitle className="text-xl font-bold flex items-center gap-3">
-                    <FileSearch className="w-5 h-5 text-purple-400" /> Resume Intelligence
+                    <FileText className="w-5 h-5 text-purple-400" /> Resume Intelligence
                   </CardTitle>
                   <Link href="/resume">
                     <Button variant="ghost" className="text-[10px] uppercase font-bold tracking-widest text-purple-400 hover:text-purple-300">New Audit</Button>
@@ -297,7 +297,7 @@ export default function Dashboard() {
                     ))
                   ) : (
                     <div className="py-16 text-center glass rounded-3xl border-white/5 border-dashed">
-                      <FileSearch className="w-12 h-12 text-white/5 mx-auto mb-6" />
+                      <FileText className="w-12 h-12 text-white/5 mx-auto mb-6" />
                       <h3 className="text-xl font-bold mb-2">No resumes audited</h3>
                       <p className="text-muted-foreground font-light text-sm mb-8">Upload your career blueprints for high-fidelity ATS calibration.</p>
                       <Link href="/resume">
@@ -398,27 +398,27 @@ export default function Dashboard() {
                 </CardContent>
               </Card>
 
-              {/* Quick Actions Row in Sidebar Style */}
+              {/* AI Career Tools Row in Sidebar Style */}
               <div className="space-y-4">
-                <h3 className="text-xs font-bold uppercase tracking-[0.3em] text-white/30 ml-2">Protocols</h3>
+                <h3 className="text-xs font-bold uppercase tracking-[0.3em] text-white/30 ml-2">AI Career Tools</h3>
                 <div className="grid gap-4">
                   {[
-                    { title: "Start New Interview", icon: Zap, color: "text-accent", href: "/interview" },
-                    { title: "Upload Resume", icon: FileSearch, color: "text-purple-400", href: "/resume" },
+                    { title: "Start Interview", icon: Mic, color: "text-accent", href: "/interview" },
+                    { title: "Resume Analyzer", icon: FileText, color: "text-purple-400", href: "/resume" },
                     { title: "Certificates", icon: Award, color: "text-orange-300", href: "/certificates" },
-                    { title: "Cover Letter Architect", icon: FileText, color: "text-green-400", href: "/cover-letter" },
-                    { title: "Skill Gap Audit", icon: BrainCircuit, color: "text-yellow-400", href: "/skill-gap" },
-                    { title: "Career Roadmap", icon: Target, color: "text-blue-400", href: "/roadmap" }
+                    { title: "Skill Gap Analysis", icon: Brain, color: "text-yellow-400", href: "/skill-gap" },
+                    { title: "Career Roadmap", icon: Map, color: "text-blue-400", href: "/roadmap" },
+                    { title: "Cover Letter Architect", icon: FileEdit, color: "text-green-400", href: "/cover-letter" }
                   ].map((action, i) => (
                     <Link href={action.href} key={i}>
                       <div className="p-5 glass rounded-2xl border-white/5 group hover:bg-white/[0.05] transition-all flex items-center justify-between">
                         <div className="flex items-center gap-4">
-                          <div className={`w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center ${action.color}`}>
+                          <div className={`w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center ${action.color} transition-all group-hover:scale-110 group-hover:bg-white/10`}>
                             <action.icon className="w-5 h-5" />
                           </div>
                           <span className="text-sm font-bold">{action.title}</span>
                         </div>
-                        <ChevronRight className="w-4 h-4 text-white/10 group-hover:text-white transition-all" />
+                        <ChevronRight className="w-4 h-4 text-white/10 group-hover:text-white transition-all group-hover:translate-x-1" />
                       </div>
                     </Link>
                   ))}
