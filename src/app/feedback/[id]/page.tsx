@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import { useSearchParams, useParams, useRouter } from 'next/navigation';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import Navbar from '@/components/layout/Navbar';
 import NavigationControls from '@/components/NavigationControls';
 import { Button } from '@/components/ui/button';
@@ -26,7 +26,9 @@ import {
   Activity,
   Award,
   Loader2,
-  FileCheck
+  FileCheck,
+  Cpu,
+  BarChart3
 } from 'lucide-react';
 import { generateInterviewFeedback, type InterviewFeedbackOutput } from '@/ai/flows/ai-interview-feedback';
 import { generateLearningRoadmap, type LearningRoadmapOutput } from '@/ai/flows/ai-learning-roadmap';
@@ -58,6 +60,29 @@ export default function FeedbackReport() {
   const [feedback, setFeedback] = useState<InterviewFeedbackOutput | null>(null);
   const [roadmap, setRoadmap] = useState<LearningRoadmapOutput | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [loadingStep, setLoadingStep] = useState(0);
+
+  const loadingMessages = [
+    "Analyzing Responses...",
+    "Calculating Scores...",
+    "Generating Report..."
+  ];
+
+  const loadingIcons = [
+    BrainCircuit,
+    BarChart3,
+    Activity
+  ];
+
+  useEffect(() => {
+    let interval: NodeJS.Timeout;
+    if (docLoading || isProcessing) {
+      interval = setInterval(() => {
+        setLoadingStep((prev) => (prev + 1) % loadingMessages.length);
+      }, 2500);
+    }
+    return () => clearInterval(interval);
+  }, [docLoading, isProcessing]);
 
   useEffect(() => {
     const processData = async () => {
@@ -167,15 +192,65 @@ export default function FeedbackReport() {
   };
 
   if (docLoading || isProcessing) {
+    const CurrentIcon = loadingIcons[loadingStep];
     return (
-      <div className="h-screen flex flex-col items-center justify-center bg-[#050816] space-y-8">
+      <div className="h-screen flex flex-col items-center justify-center bg-[#050816] space-y-12">
+        <div className="particles-bg" />
         <div className="relative">
-          <div className="w-32 h-32 rounded-full border-4 border-accent/10 border-t-accent animate-spin shadow-[0_0_50px_rgba(34,211,238,0.2)]"></div>
-          <Activity className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-10 h-10 text-accent animate-pulse" />
+          <motion.div 
+            animate={{ rotate: 360 }}
+            transition={{ duration: 8, repeat: Infinity, ease: "linear" }}
+            className="w-48 h-48 rounded-full border-2 border-accent/10 border-t-accent shadow-[0_0_100px_rgba(34,211,238,0.15)] flex items-center justify-center"
+          >
+            <div className="w-40 h-48 flex items-center justify-center">
+              <AnimatePresence mode="wait">
+                <motion.div
+                  key={loadingStep}
+                  initial={{ opacity: 0, scale: 0.8, rotate: -10 }}
+                  animate={{ opacity: 1, scale: 1, rotate: 0 }}
+                  exit={{ opacity: 0, scale: 1.2, rotate: 10 }}
+                  transition={{ duration: 0.5 }}
+                >
+                  <CurrentIcon className="w-16 h-16 text-accent" />
+                </motion.div>
+              </AnimatePresence>
+            </div>
+          </motion.div>
+          <div className="absolute -inset-4 border border-white/5 rounded-full animate-pulse"></div>
         </div>
-        <div className="text-center">
-          <h2 className="text-3xl font-bold mb-3 tracking-tighter">Synchronising Intelligence</h2>
-          <p className="text-muted-foreground font-light uppercase tracking-[0.3em] text-xs">Generating Neural Performance Audit...</p>
+
+        <div className="text-center space-y-6">
+          <div className="h-10">
+            <AnimatePresence mode="wait">
+              <motion.h2 
+                key={loadingStep}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+                className="text-4xl font-bold tracking-tighter text-premium"
+              >
+                {loadingMessages[loadingStep]}
+              </motion.h2>
+            </AnimatePresence>
+          </div>
+          <p className="text-muted-foreground font-light uppercase tracking-[0.4em] text-[10px] animate-pulse">
+            Neural Core Processing Simulation Data
+          </p>
+        </div>
+
+        <div className="w-64 space-y-2">
+          <div className="flex justify-between text-[8px] uppercase font-bold tracking-widest text-white/30 px-1">
+            <span>Calibrating</span>
+            <span>{Math.round(((loadingStep + 1) / 3) * 100)}%</span>
+          </div>
+          <div className="h-1 w-full bg-white/5 rounded-full overflow-hidden">
+            <motion.div 
+              className="h-full bg-accent"
+              initial={{ width: "0%" }}
+              animate={{ width: `${((loadingStep + 1) / 3) * 100}%` }}
+              transition={{ duration: 0.5 }}
+            />
+          </div>
         </div>
       </div>
     );
@@ -323,7 +398,7 @@ export default function FeedbackReport() {
 
             <div className="lg:col-span-4 space-y-12 h-fit lg:sticky lg:top-24">
               {showCertificate && (
-                <Card className="premium-card bg-accent/5 border-accent/20 p-8 shadow-[0_0_50px_rgba(34,211,238,0.1)]">
+                <Card className="premium-card bg-accent/5 border-accent/20 p-8 shadow-[0_0_50px_rgba(34,211,238,0.15)]">
                   <div className="text-center space-y-6">
                     <div className="w-20 h-20 rounded-full bg-accent/20 flex items-center justify-center mx-auto">
                       <Trophy className="w-10 h-10 text-accent" />
