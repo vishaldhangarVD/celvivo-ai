@@ -100,12 +100,13 @@ const aiResumeAnalysisFlow = ai.defineFlow(
     } catch (error: any) {
       console.error('\n--- [Genkit Critical Failure] ---');
       console.error('[Error Type]', error.name || 'UNKNOWN_ERROR');
-      console.error('[Status Code]', error.status || error.code || '401?');
+      console.error('[Status Code]', error.status || error.code || 'UNKNOWN');
       console.error('[Detailed message]', error.message);
       
-      if (error.message?.includes('401') || error.status === 401) {
-        console.error('[Diagnostic] AUTHENTICATION_FAILURE: The provided AQ/AIza token was rejected by Google AI Studio.');
-        console.error('[Action Required] 1. Verify GOOGLE_GENAI_API_KEY in .env. 2. Ensure the key is active in AI Studio. 3. Check for trailing spaces.');
+      if (error.message?.includes('401')) {
+        console.error('[Diagnostic] AUTHENTICATION_FAILURE: Check your API Key.');
+      } else if (error.message?.includes('404')) {
+        console.error('[Diagnostic] MODEL_NOT_FOUND: Verify model identifier in genkit.ts');
       }
       
       console.error('---------------------------------\n');
