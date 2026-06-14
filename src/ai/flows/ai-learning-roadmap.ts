@@ -1,8 +1,6 @@
-
 'use server';
 /**
  * @fileOverview Genkit flow for generating a structured multi-horizon career roadmap.
- * (MOCKED for testing)
  */
 
 import { ai } from '@/ai/genkit';
@@ -37,6 +35,22 @@ export async function generateLearningRoadmap(input: LearningRoadmapInput): Prom
   return learningRoadmapFlow(input);
 }
 
+const prompt = ai.definePrompt({
+  name: 'learningRoadmapPrompt',
+  input: { schema: LearningRoadmapInputSchema },
+  output: { schema: LearningRoadmapOutputSchema },
+  prompt: `You are a high-level engineering mentor.
+Synthesize a 90-day technical evolution roadmap for a {{{role}}} at a {{{experienceLevel}}} level.
+
+Current Capabilities: {{#each existingSkills}}{{{this}}}, {{/each}}
+Identified Delta Gaps: {{#each missingSkills}}{{{this}}}, {{/each}}
+
+Generate:
+1. 30-Day: Core Vector Acquisition (Focus on critical gaps).
+2. 60-Day: Architectural Deep-Dive (Advanced concepts and projects).
+3. 90-Day: System Dominance (Final readiness and market calibration).`,
+});
+
 const learningRoadmapFlow = ai.defineFlow(
   {
     name: 'learningRoadmapFlow',
@@ -44,58 +58,22 @@ const learningRoadmapFlow = ai.defineFlow(
     outputSchema: LearningRoadmapOutputSchema,
   },
   async (input) => {
-    // Simulated multi-horizon roadmap generation
-    const missing = input.missingSkills || ["System Design", "Cloud Infrastructure"];
-    
+    try {
+      const { output } = await prompt(input);
+      if (output) return output;
+    } catch (e) {
+      console.error('Roadmap Genkit Error:', e);
+    }
+
+    // Static roadmap fallback
     return {
       plans: {
-        thirtyDay: [
-          {
-            title: "Core Vector Acquisition",
-            desc: `Master the fundamental delta in ${input.role} architecture.`,
-            tasks: [`Complete training in ${missing[0] || 'Core Design'}`, "Quantify resume impact nodes"]
-          },
-          {
-            title: "Logic Refinement",
-            desc: "Daily session simulation to boost confidence vectors.",
-            tasks: ["Complete 5 technical simulations", "Analyze tone distribution reports"]
-          }
-        ],
-        sixtyDay: [
-          {
-            title: "Architectural Deep-Dive",
-            desc: `Scale your knowledge in ${missing[1] || 'Advanced Tooling'}.`,
-            tasks: [`Build proof-of-concept using ${missing[1] || 'Modern Stack'}`, "Study distributed system bottlenecks"]
-          },
-          {
-            title: "Executive Presence",
-            desc: "Calibrate behavioral archetypes for lead placements.",
-            tasks: ["Record and analyze soft-skill metrics", "Refine strategy presentation logic"]
-          }
-        ],
-        ninetyDay: [
-          {
-            title: "System Dominance",
-            desc: "Final readiness audit for top-tier corporate tracks.",
-            tasks: ["Execute full 1-hour simulation", "Complete cross-functional node analysis"]
-          },
-          {
-            title: "Direct Placement",
-            desc: "Market calibration and partner network initialization.",
-            tasks: ["Optimize global neural profile", "Connect with verified hiring nodes"]
-          }
-        ]
+        thirtyDay: [{ title: "Foundational Bridge", desc: "Master the basics of missing nodes", tasks: ["Study documentation", "Complete 5 small exercises"] }],
+        sixtyDay: [{ title: "Component Mastery", desc: "Build modular solutions", tasks: ["Build a mini-project", "Refactor existing code"] }],
+        ninetyDay: [{ title: "System Ready", desc: "Final performance audit", tasks: ["Execute full simulation", "Optimize resume keywords"] }]
       },
-      recommendedProjects: [
-        `Scalable ${input.role} Dashboard`,
-        "Distributed Event-Driven Service",
-        "AI-Integrated Knowledge Vault"
-      ],
-      interviewPrepTasks: [
-        "Master STAR behavioral logic",
-        "Study Big-O for distributed systems",
-        "Practice technical whiteboard simulation"
-      ]
+      recommendedProjects: ["Personal Portfolio v2", "Logic-heavy Dashboard"],
+      interviewPrepTasks: ["Review data structures", "Practice behavior questions"]
     };
   }
 );

@@ -1,7 +1,6 @@
 'use server';
 /**
  * @fileOverview AI flow for comparing user skills against role requirements.
- * (MOCKED for testing)
  */
 
 import { ai } from '@/ai/genkit';
@@ -27,6 +26,23 @@ export async function analyzeSkillGap(input: SkillGapInput): Promise<SkillGapOut
   return skillGapFlow(input);
 }
 
+const prompt = ai.definePrompt({
+  name: 'skillGapPrompt',
+  input: { schema: SkillGapInputSchema },
+  output: { schema: SkillGapOutputSchema },
+  prompt: `You are an expert recruiter and technical analyst.
+Conduct a neural skill audit comparing the user's skills against standard requirements for a {{{targetRole}}}.
+
+User Skills: {{#each userSkills}}{{{this}}}, {{/each}}
+
+Tasks:
+1. Identify required skills for {{{targetRole}}} in modern elite tech.
+2. Determine which of those skills the user already possesses.
+3. Identify the missing delta gaps.
+4. Flag the 2 most critical missing nodes.
+5. Calculate a match percentage.`,
+});
+
 const skillGapFlow = ai.defineFlow(
   {
     name: 'skillGapFlow',
@@ -34,32 +50,22 @@ const skillGapFlow = ai.defineFlow(
     outputSchema: SkillGapOutputSchema,
   },
   async (input) => {
-    // Logic to simulate comparison (In production this would use LLM)
-    const mockRoleRequirements: Record<string, string[]> = {
-      "Frontend Developer": ["React", "TypeScript", "Next.js", "Tailwind CSS", "GraphQL", "Testing Library"],
-      "Backend Developer": ["Node.js", "PostgreSQL", "Docker", "Redis", "Microservices", "gRPC"],
-      "Full Stack Developer": ["React", "Node.js", "PostgreSQL", "Next.js", "Docker", "AWS"],
-      "DevOps Engineer": ["Kubernetes", "Docker", "Terraform", "CI/CD", "AWS", "Monitoring"],
-    };
+    try {
+      const { output } = await prompt(input);
+      if (output) return output;
+    } catch (e) {
+      console.error('Skill Gap Genkit Error:', e);
+    }
 
-    const requirements = mockRoleRequirements[input.targetRole] || ["System Design", "Algorithms", "Leadership", "Teamwork"];
-    const existing = input.userSkills.filter(s => requirements.includes(s));
-    const missing = requirements.filter(s => !input.userSkills.includes(s));
-    const critical = missing.slice(0, 2);
-    
-    const matchPercentage = Math.round((existing.length / requirements.length) * 100) || 45;
-
+    // Mock fallback logic
+    const mockMissing = ["System Design", "Cloud Architecture"];
     return {
       role: input.targetRole,
-      skillMatchPercentage: matchPercentage,
-      existingSkills: existing,
-      missingSkills: missing,
-      criticalMissingSkills: critical,
-      recommendedRoadmap: [
-        `Master ${critical[0] || 'Core Architecture'} in 2 weeks`,
-        `Build a POC using ${missing[1] || 'Modern Tooling'}`,
-        `Get certified in ${input.targetRole} track`
-      ]
+      skillMatchPercentage: 55,
+      existingSkills: input.userSkills.slice(0, 3),
+      missingSkills: mockMissing,
+      criticalMissingSkills: mockMissing,
+      recommendedRoadmap: ["Complete Skill Gap Audit via Gemini"]
     };
   }
 );
