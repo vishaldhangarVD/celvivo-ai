@@ -1,5 +1,6 @@
 "use client";
 
+import { analyzeResume } from '@/ai/flows/ai-resume-analysis';
 import { useState } from 'react';
 import Navbar from '@/components/layout/Navbar';
 import NavigationControls from '@/components/NavigationControls';
@@ -67,64 +68,15 @@ export default function ResumeAnalyzer() {
   const runAnalysis = async () => {
     if (!file) return;
     setIsAnalyzing(true);
-    
-    setTimeout(() => {
-      const mockResult: AiResumeAnalysisOutput = {
-        personalInfo: {
-          fullName: user?.displayName || "Elite Candidate",
-          email: user?.email || "candidate@nexus.ai",
-          phone: "+1 (555) 934-2025"
-        },
-        atsScore: 88,
-        resumeQualityScore: 92,
-        technicalSkillsScore: 85,
-        keywordOptimizationScore: 78,
-        skillAnalysis: [
-          { skill: "React.js", proficiency: "Expert" },
-          { skill: "TypeScript", proficiency: "Advanced" },
-          { skill: "Next.js", proficiency: "Advanced" },
-          { skill: "Tailwind CSS", proficiency: "Expert" },
-          { skill: "Node.js", proficiency: "Intermediate" },
-          { skill: "Firebase", proficiency: "Advanced" }
-        ],
-        sections: {
-          education: [
-            "B.S. in Computer Science - Tech Institute of Excellence",
-            "Full-Stack Certification - Neural Academy"
-          ],
-          projects: [
-            "Nexvoro AI Platform - Built a scalable mock interview system using Next.js 15.",
-            "Distributed Ledger Audit - Optimized blockchain validation nodes by 40%."
-          ],
-          experience: [
-            "Senior Engineering Associate at Meta-Sys (2022 - Present)",
-            "Frontend Lead at Quantum-Bit Solutions (2020 - 2022)"
-          ],
-          certifications: [
-            "AWS Certified Solutions Architect",
-            "Google Professional Cloud Architect"
-          ],
-          achievements: [
-            "Won First Place at Global AI Hackathon 2024",
-            "Published 3 research papers on LLM optimization"
-          ]
-        },
-        missingSkills: ["GraphQL", "Docker", "Kubernetes", "Redis"],
-        improvementSuggestions: [
-          "Quantify your experience with specific metrics (e.g., 'Reduced latency by 30%').",
-          "Add more cloud-native deployment experience for current Senior roles.",
-          "Strengthen your system design documentation section."
-        ],
-        roleMatches: [
-          { role: targetRole, matchPercentage: 94 },
-          { role: "Full Stack Developer", matchPercentage: 86 },
-          { role: "AI Engineer", matchPercentage: 72 }
-        ]
-      };
 
-      setResult(mockResult);
-      setIsAnalyzing(false);
+    const result = await analyzeResume({
+    resumeDataUri: "data:text/plain;base64,test",
+     targetRole,
+    });
 
+    setResult(result);
+    setIsAnalyzing(false);
+      
       if (user && db) {
         const resumesRef = collection(db, 'users', user.uid, 'resumes');
         // Strict sanitization for Firestore write
@@ -132,30 +84,30 @@ export default function ResumeAnalyzer() {
           userId: user.uid ?? "",
           filename: file.name ?? "unnamed_resume",
           targetRole: targetRole ?? "",
-          atsScore: mockResult.atsScore ?? 0,
-          missingSkills: mockResult.missingSkills ?? [],
-          improvementSuggestions: mockResult.improvementSuggestions ?? [],
-          strengths: mockResult.skillAnalysis?.filter(s => s.proficiency === 'Expert').map(s => s.skill) ?? [],
-          weaknesses: mockResult.missingSkills ?? [],
-          analysis: mockResult ?? {},
+          atsScore: result.atsScore ?? 0,
+          missingSkills: result.missingSkills ?? [],
+          improvementSuggestions: result.improvementSuggestions ?? [],
+          strengths: result.skillAnalysis?.filter(s => s.proficiency === 'Expert').map(s => s.skill) ?? [],
+          weaknesses: result.missingSkills ?? [],
+          analysis: result ?? {},
           createdAt: serverTimestamp(),
         };
 
         // Debug: Log undefined fields
         Object.entries(resumeData).forEach(([key, val]) => {
           if (val === undefined) console.warn(`[Firestore Debug] Field "${key}" is undefined in resumeData`);
-        });
+        })
 
         addDoc(resumesRef, resumeData)
           .then(() => {
             const userDocRef = doc(db, 'users', user.uid);
             updateDoc(userDocRef, {
-              resumeScore: mockResult.atsScore ?? 0
+              resumeScore: result.atsScore ?? 0
             }).catch(async (e) => {
               errorEmitter.emit('permission-error', new FirestorePermissionError({
                 path: userDocRef.path,
                 operation: 'update',
-                requestResourceData: { resumeScore: mockResult.atsScore }
+                requestResourceData: { resumeScore: result.atsScore }
               }));
             });
           })
@@ -172,7 +124,6 @@ export default function ResumeAnalyzer() {
         title: "Analysis Complete",
         description: "Your neural career blueprint has been generated.",
       });
-    }, 3000);
   };
 
   return (

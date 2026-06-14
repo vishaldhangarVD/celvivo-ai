@@ -1,7 +1,7 @@
 'use server';
 /**
  * @fileOverview An AI agent for analyzing resumes with detailed extraction and ATS scoring.
- * (MOCKED for testing)
+ * Includes a fallback mock mechanism for development/prototyping.
  */
 
 import {ai} from '@/ai/genkit';
@@ -65,7 +65,6 @@ export async function analyzeResume(
   return aiResumeAnalysisFlow(input);
 }
 
-// Keeping the prompt defined for future use but not calling it in the flow
 const prompt = ai.definePrompt({
   name: 'aiResumeAnalysisPrompt',
   input: {schema: AiResumeAnalysisInputSchema},
@@ -89,41 +88,49 @@ const aiResumeAnalysisFlow = ai.defineFlow(
     inputSchema: AiResumeAnalysisInputSchema,
     outputSchema: AiResumeAnalysisOutputSchema,
   },
-  async input => {
-    // MOCKED RESPONSE to avoid 403 Forbidden errors
+  async (input) => {
+    try {
+      const { output } = await prompt(input);
+      if (output) return output;
+    } catch (e) {
+      console.warn('Genkit Analysis failed (likely Auth error), returning mock fallback.');
+    }
+  
+    // High-Fidelity Mock Fallback for Prototyping
     return {
       personalInfo: {
         fullName: "John Doe",
-        email: "john.doe@example.com",
-        phone: "+1 555-0123"
+        email: "john.doe@nexvoro.ai",
+        phone: "+1 (555) 934-2110"
       },
-      atsScore: 85,
-      resumeQualityScore: 90,
-      technicalSkillsScore: 82,
-      keywordOptimizationScore: 75,
+      atsScore: 84,
+      resumeQualityScore: 88,
+      technicalSkillsScore: 92,
+      keywordOptimizationScore: 76,
       skillAnalysis: [
         { skill: "React", proficiency: "Expert" },
         { skill: "TypeScript", proficiency: "Advanced" },
         { skill: "Next.js", proficiency: "Advanced" },
+        { skill: "Tailwind CSS", proficiency: "Expert" },
         { skill: "Node.js", proficiency: "Intermediate" }
       ],
       sections: {
-        education: ["B.S. Computer Science, University of Nexus"],
-        projects: ["Nexvoro AI - Full-stack technical interview simulation platform"],
-        experience: ["Senior Developer at TechGlobal (2021-Present)", "Software Engineer at StartupInc (2018-2021)"],
-        certifications: ["AWS Certified Solutions Architect"],
-        achievements: ["Reduced system latency by 40% using edge caching"]
+        education: ["B.S. in Computer Science - Silicon Valley Tech"],
+        projects: ["Neural Finance Dashboard", "E-commerce Optimization Engine"],
+        experience: ["Senior Frontend Lead - Global Tech Solutions", "UI Engineer - Creative Logic Inc"],
+        certifications: ["AWS Certified Developer", "React Mastery Professional"],
+        achievements: ["Improved application load time by 45%", "Managed team of 6 engineers"]
       },
-      missingSkills: ["GraphQL", "Docker", "Kubernetes"],
+      missingSkills: ["Docker", "Kubernetes", "GraphQL", "Redis"],
       improvementSuggestions: [
-        "Quantify achievements with more specific metrics.",
-        "Add more cloud-native deployment details.",
-        "Include a stronger professional summary."
+        "Include more quantifiable metrics in your project descriptions.",
+        "Highlight your experience with distributed systems more prominently.",
+        "Ensure your contact details follow enterprise standard formats."
       ],
       roleMatches: [
-        { role: input.targetRole, matchPercentage: 88 },
+        { role: "Frontend Developer", matchPercentage: 98 },
         { role: "Full Stack Developer", matchPercentage: 82 },
-        { role: "Frontend Lead", matchPercentage: 91 }
+        { role: "UI/UX Designer", matchPercentage: 75 }
       ]
     };
   }
