@@ -4,23 +4,26 @@ import { googleAI } from '@genkit-ai/google-genai';
 /**
  * Genkit instance initialized with the Google AI plugin.
  * Optimized for Google AI Studio 'AQ' and 'AIza' keys.
+ * Includes server-side diagnostics to verify environment variable ingestion.
  */
 
 const apiKey = process.env.GOOGLE_GENAI_API_KEY || process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY;
 
-// Server-side diagnostic check for environment variables
+// Runtime Diagnostic Sequence (Server-side only)
 if (typeof window === 'undefined') {
-  console.log('--- [Nexvoro AI] Authentication Diagnostic ---');
-  console.log(`GOOGLE_GENAI_API_KEY: ${process.env.GOOGLE_GENAI_API_KEY ? 'DETECTED (starts with ' + process.env.GOOGLE_GENAI_API_KEY.substring(0, 2) + ')' : 'MISSING'}`);
-  console.log(`GEMINI_API_KEY: ${process.env.GEMINI_API_KEY ? 'DETECTED (starts with ' + process.env.GEMINI_API_KEY.substring(0, 2) + ')' : 'MISSING'}`);
-  console.log(`GOOGLE_API_KEY: ${process.env.GOOGLE_API_KEY ? 'DETECTED (starts with ' + process.env.GOOGLE_API_KEY.substring(0, 2) + ')' : 'MISSING'}`);
+  console.log('\n--- [Nexvoro AI] Runtime Identity Audit ---');
+  console.log(`[Variable Status]`);
+  console.log(`- GOOGLE_GENAI_API_KEY: ${process.env.GOOGLE_GENAI_API_KEY ? 'DETECTED (Prefix: ' + process.env.GOOGLE_GENAI_API_KEY.substring(0, 2) + ')' : 'MISSING'}`);
+  console.log(`- GEMINI_API_KEY:       ${process.env.GEMINI_API_KEY ? 'DETECTED (Prefix: ' + process.env.GEMINI_API_KEY.substring(0, 2) + ')' : 'MISSING'}`);
+  console.log(`- GOOGLE_API_KEY:       ${process.env.GOOGLE_API_KEY ? 'DETECTED (Prefix: ' + process.env.GOOGLE_API_KEY.substring(0, 2) + ')' : 'MISSING'}`);
   
   if (!apiKey) {
-    console.error('CRITICAL ERROR: No API Key found in environment variables. Gemini calls will fail with 401.');
+    console.error('[CRITICAL] No authorization token found. AI protocols will fail (401).');
   } else {
-    console.log('Active Protocol: Using ' + (process.env.GOOGLE_GENAI_API_KEY ? 'GOOGLE_GENAI_API_KEY' : process.env.GEMINI_API_KEY ? 'GEMINI_API_KEY' : 'GOOGLE_API_KEY'));
+    const activeVar = process.env.GOOGLE_GENAI_API_KEY ? 'GOOGLE_GENAI_API_KEY' : process.env.GEMINI_API_KEY ? 'GEMINI_API_KEY' : 'GOOGLE_API_KEY';
+    console.log(`[Active Protocol] Ingesting token from: ${activeVar}`);
   }
-  console.log('--------------------------------------------');
+  console.log('-------------------------------------------\n');
 }
 
 export const ai = genkit({

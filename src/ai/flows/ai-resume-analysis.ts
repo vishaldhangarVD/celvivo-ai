@@ -98,11 +98,17 @@ const aiResumeAnalysisFlow = ai.defineFlow(
     
       return output;
     } catch (error: any) {
-      console.error('--- [Genkit Flow Error] ---');
-      console.error('Reason:', error.message);
-      if (error.message.includes('401')) {
-        console.error('Action Required: Your AQ key is invalid or not yet propagated in the Generative Language API.');
+      console.error('\n--- [Genkit Critical Failure] ---');
+      console.error('[Error Type]', error.name || 'UNKNOWN_ERROR');
+      console.error('[Status Code]', error.status || error.code || '401?');
+      console.error('[Detailed message]', error.message);
+      
+      if (error.message?.includes('401') || error.status === 401) {
+        console.error('[Diagnostic] AUTHENTICATION_FAILURE: The provided AQ/AIza token was rejected by Google AI Studio.');
+        console.error('[Action Required] 1. Verify GOOGLE_GENAI_API_KEY in .env. 2. Ensure the key is active in AI Studio. 3. Check for trailing spaces.');
       }
+      
+      console.error('---------------------------------\n');
       throw error;
     }
   }
