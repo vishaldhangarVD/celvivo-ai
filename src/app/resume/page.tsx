@@ -69,61 +69,59 @@ export default function ResumeAnalyzer() {
     if (!file) return;
     setIsAnalyzing(true);
 
-    const result = await analyzeResume({
-    resumeDataUri: "data:text/plain;base64,test",
-     targetRole,
-    });
+    try {
+      // Convert file to base64 Data URI
+      const base64 = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result as string);
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
 
-    setResult(result);
-    setIsAnalyzing(false);
+      const analysisResult = await analyzeResume({
+        resumeDataUri: base64,
+        targetRole,
+      });
+
+      setResult(analysisResult);
       
       if (user && db) {
         const resumesRef = collection(db, 'users', user.uid, 'resumes');
-        // Strict sanitization for Firestore write
         const resumeData = {
           userId: user.uid ?? "",
           filename: file.name ?? "unnamed_resume",
           targetRole: targetRole ?? "",
-          atsScore: result.atsScore ?? 0,
-          missingSkills: result.missingSkills ?? [],
-          improvementSuggestions: result.improvementSuggestions ?? [],
-          strengths: result.skillAnalysis?.filter(s => s.proficiency === 'Expert').map(s => s.skill) ?? [],
-          weaknesses: result.missingSkills ?? [],
-          analysis: result ?? {},
+          atsScore: analysisResult.atsScore ?? 0,
+          missingSkills: analysisResult.missingSkills ?? [],
+          improvementSuggestions: analysisResult.improvementSuggestions ?? [],
+          strengths: analysisResult.skillAnalysis?.filter(s => s.proficiency === 'Expert').map(s => s.skill) ?? [],
+          weaknesses: analysisResult.missingSkills ?? [],
+          analysis: analysisResult ?? {},
           createdAt: serverTimestamp(),
         };
 
-        // Debug: Log undefined fields
-        Object.entries(resumeData).forEach(([key, val]) => {
-          if (val === undefined) console.warn(`[Firestore Debug] Field "${key}" is undefined in resumeData`);
-        })
-
-        addDoc(resumesRef, resumeData)
-          .then(() => {
-            const userDocRef = doc(db, 'users', user.uid);
-            updateDoc(userDocRef, {
-              resumeScore: result.atsScore ?? 0
-            }).catch(async (e) => {
-              errorEmitter.emit('permission-error', new FirestorePermissionError({
-                path: userDocRef.path,
-                operation: 'update',
-                requestResourceData: { resumeScore: result.atsScore }
-              }));
-            });
-          })
-          .catch(async (err) => {
-            errorEmitter.emit('permission-error', new FirestorePermissionError({
-              path: resumesRef.path,
-              operation: 'create',
-              requestResourceData: resumeData
-            }));
-          });
+        await addDoc(resumesRef, resumeData);
+        
+        const userDocRef = doc(db, 'users', user.uid);
+        await updateDoc(userDocRef, {
+          resumeScore: analysisResult.atsScore ?? 0
+        });
       }
 
       toast({
         title: "Analysis Complete",
-        description: "Your neural career blueprint has been generated.",
+        description: "Your neural career blueprint has been synthesized.",
       });
+    } catch (e: any) {
+      console.error(e);
+      toast({
+        variant: "destructive",
+        title: "Analysis Failed",
+        description: e.message || "Failed to process your career blueprint.",
+      });
+    } finally {
+      setIsAnalyzing(false);
+    }
   };
 
   return (
@@ -139,8 +137,8 @@ export default function ResumeAnalyzer() {
           >
             <Badge className="bg-accent/20 text-accent mb-6 border-none px-6 py-1.5 font-bold tracking-[0.4em] text-[10px] uppercase">Neural Blueprint Auditor</Badge>
             <h1 className="text-6xl md:text-8xl font-bold mb-6 tracking-tighter text-premium">Resume <span className="text-gradient-purple">Intelligence.</span></h1>
-            <p className="text-muted-foreground text-xl max-w-2xl mx-auto font-light leading-relaxed">
-              Deploy elite simulated audits to optimize your career blueprints for global hiring protocols. (Demo Mode Active)
+            <p className="text-xl text-muted-foreground text-center max-w-2xl mx-auto font-light leading-relaxed">
+              Deploy elite simulated audits to optimize your career blueprints for global hiring protocols.
             </p>
           </motion.div>
         </header>
@@ -243,7 +241,7 @@ export default function ResumeAnalyzer() {
             >
               <Card className="premium-card bg-white/[0.02] border-white/5 overflow-hidden relative">
                 <div className="absolute top-0 right-0 p-12">
-                  <Badge className="bg-accent/20 text-accent border-none px-5 py-2 text-[10px] tracking-[0.3em] uppercase font-bold">VERIFIED AUDIT v4.2</Badge>
+                  <Badge className="bg-accent/20 text-accent border-none px-5 py-2 text-[10px] tracking-[0.3em] uppercase font-bold">VERIFIED AUDIT</Badge>
                 </div>
                 
                 <CardHeader className="pb-16 border-b border-white/5 mb-16 px-12 pt-12">
@@ -322,7 +320,7 @@ export default function ResumeAnalyzer() {
                     <AnimatePresence mode="wait">
                       {activeTab === 'experience' && (
                         <TabsContent key="experience-tab" value="experience" className="space-y-6">
-                          {result.sections.experience.map((exp, i) => (
+                          {result.sections.experience.length > 0 ? result.sections.experience.map((exp, i) => (
                             <motion.div 
                               key={`exp-${i}`} 
                               initial={{ opacity: 0, y: 10 }} 
@@ -334,12 +332,12 @@ export default function ResumeAnalyzer() {
                               <Briefcase className="w-6 h-6 text-accent shrink-0 mt-1" />
                               <p className="text-lg font-light leading-relaxed text-white/80">{exp}</p>
                             </motion.div>
-                          ))}
+                          )) : <p className="text-muted-foreground italic p-8">No experience nodes detected.</p>}
                         </TabsContent>
                       )}
                       {activeTab === 'projects' && (
                         <TabsContent key="projects-tab" value="projects" className="space-y-6">
-                          {result.sections.projects.map((proj, i) => (
+                          {result.sections.projects.length > 0 ? result.sections.projects.map((proj, i) => (
                             <motion.div 
                               key={`proj-${i}`} 
                               initial={{ opacity: 0, y: 10 }} 
@@ -351,12 +349,113 @@ export default function ResumeAnalyzer() {
                               <Zap className="w-6 h-6 text-purple-400 shrink-0 mt-1" />
                               <p className="text-lg font-light leading-relaxed text-white/80">{proj}</p>
                             </motion.div>
-                          ))}
+                          )) : <p className="text-muted-foreground italic p-8">No project nodes detected.</p>}
+                        </TabsContent>
+                      )}
+                      {activeTab === 'education' && (
+                        <TabsContent key="education-tab" value="education" className="space-y-6">
+                          {result.sections.education.length > 0 ? result.sections.education.map((edu, i) => (
+                            <motion.div 
+                              key={`edu-${i}`} 
+                              initial={{ opacity: 0, y: 10 }} 
+                              animate={{ opacity: 1, y: 0 }}
+                              className="glass p-8 rounded-[2.5rem] border-white/5 flex gap-6"
+                            >
+                              <GraduationCap className="w-6 h-6 text-blue-400 shrink-0 mt-1" />
+                              <p className="text-lg font-light text-white/80">{edu}</p>
+                            </motion.div>
+                          )) : <p className="text-muted-foreground italic p-8">No education records found.</p>}
+                        </TabsContent>
+                      )}
+                      {activeTab === 'certifications' && (
+                        <TabsContent key="cert-tab" value="certifications" className="space-y-6">
+                          {result.sections.certifications.length > 0 ? result.sections.certifications.map((cert, i) => (
+                            <motion.div 
+                              key={`cert-${i}`} 
+                              initial={{ opacity: 0, y: 10 }} 
+                              animate={{ opacity: 1, y: 0 }}
+                              className="glass p-8 rounded-[2.5rem] border-white/5 flex gap-6"
+                            >
+                              <ShieldCheck className="w-6 h-6 text-green-400 shrink-0 mt-1" />
+                              <p className="text-lg font-light text-white/80">{cert}</p>
+                            </motion.div>
+                          )) : <p className="text-muted-foreground italic p-8">No certifications detected.</p>}
                         </TabsContent>
                       )}
                     </AnimatePresence>
                   </Tabs>
                 </CardContent>
+              </Card>
+
+              <div className="grid md:grid-cols-2 gap-8">
+                <Card className="premium-card bg-white/[0.01] border-white/5 p-10">
+                  <h3 className="text-xl font-bold mb-8 flex items-center gap-3">
+                    <Target className="w-6 h-6 text-accent" /> Skill Audit
+                  </h3>
+                  <div className="space-y-4">
+                    {result.skillAnalysis.map((s, i) => (
+                      <div key={i} className="flex items-center justify-between p-4 glass rounded-2xl border-white/5">
+                        <span className="font-bold text-sm">{s.skill}</span>
+                        <Badge className="bg-accent/10 text-accent border-none text-[8px] uppercase tracking-widest">{s.proficiency}</Badge>
+                      </div>
+                    ))}
+                  </div>
+                </Card>
+
+                <Card className="premium-card bg-red-500/[0.02] border-red-500/10 p-10">
+                  <h3 className="text-xl font-bold mb-8 flex items-center gap-3 text-red-400">
+                    <AlertCircle className="w-6 h-6" /> Missing Nodes
+                  </h3>
+                  <div className="flex flex-wrap gap-3">
+                    {result.missingSkills.map((skill, i) => (
+                      <Badge key={i} variant="outline" className="border-red-500/20 text-red-400 bg-red-500/5 px-4 py-2 rounded-xl text-[10px] font-bold uppercase tracking-widest">
+                        {skill}
+                      </Badge>
+                    ))}
+                  </div>
+                </Card>
+              </div>
+            </motion.div>
+
+            <motion.div 
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              className="lg:col-span-4 space-y-8"
+            >
+              <Card className="premium-card bg-accent/5 border-accent/20 p-10">
+                <h3 className="text-xl font-bold mb-8 flex items-center gap-3">
+                  <Lightbulb className="w-6 h-6 text-accent" /> Strategic Directives
+                </h3>
+                <div className="space-y-6">
+                  {result.improvementSuggestions.map((tip, i) => (
+                    <div key={i} className="flex gap-4 group">
+                      <div className="w-2 h-2 rounded-full bg-accent mt-2 shrink-0 group-hover:scale-125 transition-transform" />
+                      <p className="text-sm font-light text-white/70 leading-relaxed">{tip}</p>
+                    </div>
+                  ))}
+                </div>
+                <Button 
+                  onClick={() => setResult(null)} 
+                  variant="outline" 
+                  className="w-full h-14 rounded-2xl glass border-white/10 mt-12 text-[10px] font-bold uppercase tracking-widest"
+                >
+                  Analyze New Blueprint
+                </Button>
+              </Card>
+
+              <Card className="premium-card bg-white/[0.01] border-white/5 p-10">
+                <h3 className="text-xl font-bold mb-8">Role Compatibility</h3>
+                <div className="space-y-8">
+                  {result.roleMatches.map((match, i) => (
+                    <div key={i} className="space-y-3">
+                      <div className="flex justify-between text-xs font-bold uppercase tracking-widest">
+                        <span>{match.role}</span>
+                        <span className="text-accent">{match.matchPercentage}%</span>
+                      </div>
+                      <Progress value={match.matchPercentage} className="h-1.5 bg-white/5" />
+                    </div>
+                  ))}
+                </div>
               </Card>
             </motion.div>
           </div>

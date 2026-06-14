@@ -1,7 +1,7 @@
 'use server';
 /**
  * @fileOverview An AI agent for analyzing resumes with detailed extraction and ATS scoring.
- * Includes a fallback mock mechanism for development/prototyping.
+ * This flow uses Gemini 1.5 Flash to conduct a high-fidelity audit of professional documents.
  */
 
 import {ai} from '@/ai/genkit';
@@ -69,17 +69,17 @@ const prompt = ai.definePrompt({
   name: 'aiResumeAnalysisPrompt',
   input: {schema: AiResumeAnalysisInputSchema},
   output: {schema: AiResumeAnalysisOutputSchema},
-  prompt: `You are an expert HR recruiter and an Applicant Tracking System (ATS) specializing in analyzing resumes for high-stakes technical roles.
-Your task is to analyze the provided resume against the requirements for a "{{targetRole}}" position.
+  prompt: `You are an elite HR auditor and ATS (Applicant Tracking System) expert. 
+Your mission is to conduct a multi-dimensional neural audit of the provided resume against the requirements for a "{{targetRole}}".
 
-Provide a high-fidelity audit including:
-1. Extraction of personal info, education, projects, experience, certifications, and achievements.
-2. ATS compatibility score and specific scores for quality, technical depth, and keyword density.
-3. Detailed skill analysis and identification of missing nodes for the "{{targetRole}}".
-4. Role match percentages for standard IT roles (Frontend, Backend, Full Stack, Data Scientist, DevOps, AI Engineer, Cyber Security).
-5. Actionable optimization strategies.
+Instructions:
+1. Extract personal identifiers and professional history.
+2. Calculate a precise ATS Compatibility Index (0-100) based on modern hiring benchmarks.
+3. Identify exactly which technical nodes are missing for a top-tier "{{targetRole}}".
+4. Analyze existing skills and assign proficiency tiers (Beginner to Expert).
+5. Provide high-impact optimization suggestions to improve market leveling.
 
-Resume: {{media url=resumeDataUri}}`,
+Resume Document: {{media url=resumeDataUri}}`,
 });
 
 const aiResumeAnalysisFlow = ai.defineFlow(
@@ -89,49 +89,12 @@ const aiResumeAnalysisFlow = ai.defineFlow(
     outputSchema: AiResumeAnalysisOutputSchema,
   },
   async (input) => {
-    try {
-      const { output } = await prompt(input);
-      if (output) return output;
-    } catch (e) {
-      console.warn('Genkit Analysis failed (likely Auth error), returning mock fallback.');
+    const { output } = await prompt(input);
+    
+    if (!output) {
+      throw new Error('Neural core failed to synthesize analysis. Verify API key and document format.');
     }
   
-    // High-Fidelity Mock Fallback for Prototyping
-    return {
-      personalInfo: {
-        fullName: "John Doe",
-        email: "john.doe@nexvoro.ai",
-        phone: "+1 (555) 934-2110"
-      },
-      atsScore: 84,
-      resumeQualityScore: 88,
-      technicalSkillsScore: 92,
-      keywordOptimizationScore: 76,
-      skillAnalysis: [
-        { skill: "React", proficiency: "Expert" },
-        { skill: "TypeScript", proficiency: "Advanced" },
-        { skill: "Next.js", proficiency: "Advanced" },
-        { skill: "Tailwind CSS", proficiency: "Expert" },
-        { skill: "Node.js", proficiency: "Intermediate" }
-      ],
-      sections: {
-        education: ["B.S. in Computer Science - Silicon Valley Tech"],
-        projects: ["Neural Finance Dashboard", "E-commerce Optimization Engine"],
-        experience: ["Senior Frontend Lead - Global Tech Solutions", "UI Engineer - Creative Logic Inc"],
-        certifications: ["AWS Certified Developer", "React Mastery Professional"],
-        achievements: ["Improved application load time by 45%", "Managed team of 6 engineers"]
-      },
-      missingSkills: ["Docker", "Kubernetes", "GraphQL", "Redis"],
-      improvementSuggestions: [
-        "Include more quantifiable metrics in your project descriptions.",
-        "Highlight your experience with distributed systems more prominently.",
-        "Ensure your contact details follow enterprise standard formats."
-      ],
-      roleMatches: [
-        { role: "Frontend Developer", matchPercentage: 98 },
-        { role: "Full Stack Developer", matchPercentage: 82 },
-        { role: "UI/UX Designer", matchPercentage: 75 }
-      ]
-    };
+    return output;
   }
 );
