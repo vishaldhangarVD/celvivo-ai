@@ -1,5 +1,5 @@
 import { genkit } from 'genkit';
-import { googleAI, gemini15Flash } from '@genkit-ai/google-genai';
+import { googleAI } from '@genkit-ai/google-genai';
 
 /**
  * Genkit instance initialized with the Google AI plugin.
@@ -40,5 +40,5 @@ export const ai = genkit({
       apiKey: apiKey,
     }),
   ],
-  model: gemini15Flash, // Use the explicit model reference to ensure correct API resolution
+  model: 'googleai/gemini-1.5-flash', // Correct stabilized string identifier for Genkit 1.x
 });
