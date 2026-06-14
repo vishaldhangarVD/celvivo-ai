@@ -89,12 +89,21 @@ const aiResumeAnalysisFlow = ai.defineFlow(
     outputSchema: AiResumeAnalysisOutputSchema,
   },
   async (input) => {
-    const { output } = await prompt(input);
+    try {
+      const { output } = await prompt(input);
+      
+      if (!output) {
+        throw new Error('Neural core failed to synthesize analysis. Verify API key and document format.');
+      }
     
-    if (!output) {
-      throw new Error('Neural core failed to synthesize analysis. Verify API key and document format.');
+      return output;
+    } catch (error: any) {
+      console.error('--- [Genkit Flow Error] ---');
+      console.error('Reason:', error.message);
+      if (error.message.includes('401')) {
+        console.error('Action Required: Your AQ key is invalid or not yet propagated in the Generative Language API.');
+      }
+      throw error;
     }
-  
-    return output;
   }
 );
