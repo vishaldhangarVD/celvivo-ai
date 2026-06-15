@@ -2,6 +2,7 @@
 /**
  * @fileOverview Nexvoro AI Mock Interview Agent.
  * Generates dynamic questions and evaluates responses using Resilient Gemini protocols.
+ * Includes a Debug Mode to intercept and display rendered prompts.
  */
 
 import { ai, runWithResilience } from '@/ai/genkit';
@@ -17,6 +18,7 @@ const AiMockInterviewInputSchema = z.object({
     answer: z.string(),
   })),
   userAnswer: z.string().optional(),
+  debugMode: z.boolean().optional(),
 });
 export type AiMockInterviewInput = z.infer<typeof AiMockInterviewInputSchema>;
 
@@ -29,6 +31,7 @@ const AiMockInterviewOutputSchema = z.object({
     confidence: z.number(),
   }).optional(),
   isInterviewComplete: z.boolean(),
+  debugPrompt: z.string().optional(),
 });
 export type AiMockInterviewOutput = z.infer<typeof AiMockInterviewOutputSchema>;
 
@@ -70,6 +73,18 @@ const aiMockInterviewFlow = ai.defineFlow(
     outputSchema: AiMockInterviewOutputSchema,
   },
   async (input) => {
+    // Render the prompt for debugging or live use
+    // In Genkit 1.x, we can use prompt.render() to get the content
+    const rendered = await prompt.renderText(input);
+
+    if (input.debugMode) {
+      return {
+        nextQuestion: "[DEBUG MODE ACTIVE - NO AI RESPONSE]",
+        isInterviewComplete: false,
+        debugPrompt: rendered
+      };
+    }
+
     const { output } = await runWithResilience(prompt, input);
     
     if (!output) {
