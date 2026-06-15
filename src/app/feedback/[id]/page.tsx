@@ -1,8 +1,7 @@
-
 "use client";
 
 import { useState, useEffect, useMemo } from 'react';
-import { useSearchParams, useParams, useRouter } from 'next/navigation';
+import { useParams } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import Navbar from '@/components/layout/Navbar';
 import NavigationControls from '@/components/NavigationControls';
@@ -11,18 +10,13 @@ import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
 import { 
-  Trophy, 
   Target, 
   BrainCircuit, 
   MessageSquare, 
   Zap,
   Map,
-  ArrowRight,
   Download,
-  Share2,
   Award,
-  Loader2,
-  FileCheck,
   TrendingUp,
   ShieldCheck,
   ChevronDown,
@@ -64,12 +58,12 @@ export default function FeedbackReport() {
 
       setIsProcessing(true);
       try {
-        const transcript = interviewDoc.history.map((h: any) => `Q: ${h.question}\nA: ${h.answer}`).join('\n\n');
+        const transcript = (interviewDoc.history || []).map((h: any) => `Q: ${h.question}\nA: ${h.answer}`).join('\n\n');
         
         const result = await generateInterviewFeedback({
           interviewTranscript: transcript,
-          role: interviewDoc.role,
-          experienceLevel: interviewDoc.experienceLevel
+          role: interviewDoc.role || 'Software Engineer',
+          experienceLevel: interviewDoc.experienceLevel || 'Senior'
         });
         
         setFeedback(result);
@@ -84,7 +78,7 @@ export default function FeedbackReport() {
             hiringRecommendation: result.hiringRecommendation,
           });
 
-          if (user?.uid) {
+          if (user?.uid && db) {
             const userRef = doc(db, 'users', user.uid);
             await updateDoc(userRef, {
               jobReadinessScore: Math.round(result.jobReadinessScore)
@@ -99,8 +93,8 @@ export default function FeedbackReport() {
       }
     };
 
-    if (!docLoading) processAudit();
-  }, [interviewDoc, docLoading, user?.uid, db, interviewRef, toast]);
+    if (!docLoading && interviewDoc) processAudit();
+  }, [interviewDoc, docLoading, user?.uid, db, interviewRef, toast, isProcessing]);
 
   if (docLoading || isProcessing) {
     return (
@@ -236,7 +230,7 @@ export default function FeedbackReport() {
                 </div>
                 <div>
                   <h3 className="text-xl font-bold">Credential Vault</h3>
-                  <p className="text-xs text-muted-foreground mt-2">Achievement recognized for elite performance (>70%).</p>
+                  <p className="text-xs text-muted-foreground mt-2">Achievement recognized for elite performance (&gt;70%).</p>
                 </div>
                 <Button 
                   onClick={() => generateCertificatePDF({ 
@@ -259,7 +253,7 @@ export default function FeedbackReport() {
                 <div className="space-y-4">
                   {feedback.improvementSuggestions.map((tip, i) => (
                     <div key={i} className="p-4 glass rounded-xl text-xs font-light text-white/60 border-white/5 italic">
-                      "{tip}"
+                      &quot;{tip}&quot;
                     </div>
                   ))}
                 </div>
