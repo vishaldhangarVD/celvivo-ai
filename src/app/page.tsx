@@ -45,7 +45,8 @@ import {
   Microscope,
   HandMetal,
   Users,
-  AlertTriangle
+  AlertTriangle,
+  FlaskConical
 } from 'lucide-react';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
 import { useUser } from '@/firebase';
@@ -134,7 +135,7 @@ export default function LandingPage() {
       const result = await runGeminiTest();
       setTestResult(result);
     } catch (e: any) {
-      setTestResult({ success: false, error: e.message });
+      setTestResult({ success: false, error: e.message || 'Fatal Execution Error', details: 'GENKIT_CLIENT_CRASH' });
     } finally {
       setIsTesting(false);
     }
@@ -153,8 +154,68 @@ export default function LandingPage() {
       <div className="particles-bg" />
       <Navbar />
       
+      {/* Massive Test Button at the Top */}
+      <div className="fixed top-24 left-0 right-0 z-[110] flex justify-center pointer-events-none px-6">
+        <div className="pointer-events-auto flex flex-col items-center gap-4 w-full max-w-xl">
+          <Button 
+            onClick={handleGeminiTest}
+            disabled={isTesting}
+            className="w-full h-20 bg-red-600 hover:bg-red-700 text-white font-black text-2xl tracking-[0.2em] rounded-2xl shadow-[0_0_50px_rgba(220,38,38,0.5)] border-4 border-white/20 animate-pulse-glow"
+          >
+            {isTesting ? (
+              <><Loader2 className="w-8 h-8 animate-spin mr-4" /> TESTING...</>
+            ) : (
+              <><FlaskConical className="w-8 h-8 mr-4" /> TEST GEMINI NOW</>
+            )}
+          </Button>
+          
+          <AnimatePresence>
+            {testResult && (
+              <motion.div 
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0 }}
+                className={`w-full p-8 rounded-3xl border-2 backdrop-blur-3xl shadow-2xl ${testResult.success ? 'bg-green-500/20 border-green-500/40 text-green-400' : 'bg-red-500/20 border-red-500/40 text-red-400'}`}
+              >
+                <div className="flex items-center gap-4 mb-4">
+                  {testResult.success ? (
+                    <CheckCircle2 className="w-10 h-10" />
+                  ) : (
+                    <AlertTriangle className="w-10 h-10" />
+                  )}
+                  <h3 className="text-3xl font-black tracking-tighter uppercase">
+                    {testResult.success ? "Status: Online" : "Status: Failed"}
+                  </h3>
+                </div>
+                
+                <div className="bg-black/60 p-6 rounded-2xl border border-white/5 font-mono text-lg break-all text-center">
+                  {testResult.success ? (
+                    <p className="font-bold py-4 text-green-400">{testResult.data}</p>
+                  ) : (
+                    <div className="space-y-4 text-left">
+                      <p className="font-bold text-xl">Error Signature:</p>
+                      <p className="text-white/80">{testResult.error}</p>
+                      <div className="h-px bg-white/10" />
+                      <p className="text-xs uppercase opacity-50 tracking-widest">Detail: {testResult.details}</p>
+                    </div>
+                  )}
+                </div>
+                
+                <Button 
+                  variant="ghost" 
+                  onClick={() => setTestResult(null)}
+                  className="mt-6 w-full text-white/50 hover:text-white"
+                >
+                  Clear Diagnostic Output
+                </Button>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
+      </div>
+
       {/* Hero Section */}
-      <section className="relative min-h-screen flex items-center pt-32 pb-32">
+      <section className="relative min-h-screen flex items-center pt-64 pb-32">
         <div className="container mx-auto px-6 z-10">
           <div className="flex flex-col lg:flex-row items-center gap-16">
             
@@ -199,55 +260,14 @@ export default function LandingPage() {
                   Start Virtual Interview
                   <Zap className="ml-3 w-5 h-5 group-hover:animate-pulse" />
                 </Button>
-                <div className="flex flex-col gap-4">
-                  <Button 
-                    onClick={handleAnalyzeResumeDirect}
-                    size="lg" 
-                    variant="outline" 
-                    className="h-16 px-10 text-lg rounded-full glass border-white/10 hover:bg-white/10"
-                  >
-                    Analyze Resume
-                  </Button>
-                  
-                  {/* Test Gemini Button */}
-                  <div className="space-y-3">
-                    <Button 
-                      onClick={handleGeminiTest}
-                      disabled={isTesting}
-                      variant="ghost"
-                      className="text-xs font-bold uppercase tracking-widest text-accent/60 hover:text-accent flex gap-2 p-0 h-auto"
-                    >
-                      {isTesting ? <Loader2 className="w-3 h-3 animate-spin" /> : <Microscope className="w-3 h-3" />}
-                      Test Gemini Signal
-                    </Button>
-                    
-                    <AnimatePresence>
-                      {testResult && (
-                        <motion.div 
-                          initial={{ opacity: 0, y: 10 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          exit={{ opacity: 0 }}
-                          className={`p-4 rounded-xl border text-[10px] font-mono break-all max-w-xs ${testResult.success ? 'bg-green-500/10 border-green-500/20 text-green-400' : 'bg-red-500/10 border-red-500/20 text-red-400'}`}
-                        >
-                          {testResult.success ? (
-                            <div className="flex items-center gap-2">
-                              <CheckCircle2 className="w-3 h-3" />
-                              {testResult.data}
-                            </div>
-                          ) : (
-                            <div className="space-y-1">
-                              <div className="flex items-center gap-2 font-bold">
-                                <AlertTriangle className="w-3 h-3" /> 
-                                ERROR: {testResult.details}
-                              </div>
-                              <p className="opacity-80">{testResult.error}</p>
-                            </div>
-                          )}
-                        </motion.div>
-                      )}
-                    </AnimatePresence>
-                  </div>
-                </div>
+                <Button 
+                  onClick={handleAnalyzeResumeDirect}
+                  size="lg" 
+                  variant="outline" 
+                  className="h-16 px-10 text-lg rounded-full glass border-white/10 hover:bg-white/10"
+                >
+                  Analyze Resume
+                </Button>
               </motion.div>
             </div>
 
@@ -531,8 +551,6 @@ export default function LandingPage() {
           </div>
         )}
       </AnimatePresence>
-
-      {/* Footer Section unchanged for brevity */}
     </div>
   );
 }
