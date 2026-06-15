@@ -37,6 +37,7 @@
         "history": { "type": "array" },
         "feedback": { "type": "object" },
         "duration": { "type": "number" },
+        "hiringRecommendation": { "type": "string" },
         "createdAt": { "type": "string", "format": "date-time" }
       }
     },

@@ -20,16 +20,11 @@ import {
   LogOut,
   Sparkles,
   Zap,
-  Activity,
-  BrainCircuit,
-  Command,
   MessageSquare,
   ShieldCheck,
-  TrendingUp,
-  Award,
-  Target,
-  Star,
-  Layers
+  BrainCircuit,
+  Command,
+  Target
 } from 'lucide-react';
 import { aiMockInterview, type AiMockInterviewOutput } from '@/ai/flows/ai-mock-interview';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
@@ -38,16 +33,17 @@ import { collection, addDoc, serverTimestamp, doc, updateDoc, increment } from '
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
 
+const TOTAL_QUESTIONS = 10;
+
 export default function InterviewSession() {
   const searchParams = useSearchParams();
-  const params = useParams();
   const router = useRouter();
   const { user } = useUser();
   const db = useFirestore();
+  
   const role = searchParams.get('role') || 'Software Engineer';
   const exp = searchParams.get('exp') || 'Senior';
   const round = searchParams.get('round') || 'Technical';
-  const practiceQuestion = searchParams.get('practiceQuestion');
 
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [history, setHistory] = useState<any[]>([]);
@@ -71,19 +67,10 @@ export default function InterviewSession() {
           role,
           experienceLevel: exp,
           roundType: round,
-          currentMainQuestionIndex: 0,
+          currentMainQuestionIndex: 1,
           history: [],
         });
-        
-        // If it's a practice question session, override the first question
-        if (practiceQuestion) {
-          setNextOutput({
-            ...output,
-            nextQuestion: `I see you're here to practice a specific topic. Let's start with this: ${decodeURIComponent(practiceQuestion)}`
-          });
-        } else {
-          setNextOutput(output);
-        }
+        setNextOutput(output);
       } catch (e) {
         console.error(e);
       } finally {
@@ -94,7 +81,7 @@ export default function InterviewSession() {
 
     const interval = setInterval(() => setTimer(t => t + 1), 1000);
     return () => clearInterval(interval);
-  }, [role, exp, round, practiceQuestion]);
+  }, [role, exp, round]);
 
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -114,17 +101,22 @@ export default function InterviewSession() {
     }];
     setHistory(newHistory);
 
-    const nextIdx = nextOutput?.questionType === 'main' ? currentQuestionIndex + 1 : currentQuestionIndex;
-    if (nextOutput?.questionType === 'main') setCurrentQuestionIndex(nextIdx);
+    const nextIdx = currentQuestionIndex + 1;
+    setCurrentQuestionIndex(nextIdx);
+
+    if (nextIdx >= TOTAL_QUESTIONS) {
+      setIsComplete(true);
+      setIsProcessing(false);
+      return;
+    }
 
     try {
       const output = await aiMockInterview({
         role,
         experienceLevel: exp,
         roundType: round,
-        currentMainQuestionIndex: nextIdx,
+        currentMainQuestionIndex: nextIdx + 1,
         history: newHistory,
-        lastQuestionAsked: nextOutput?.nextQuestion,
         userAnswer: currentAnswer
       });
 
@@ -150,54 +142,37 @@ export default function InterviewSession() {
     setIsSaving(true);
 
     const interviewData = {
-      userId: user.uid ?? "",
-      userName: user.displayName || 'Anonymous Operator',
-      role: role ?? "",
-      experienceLevel: exp ?? "",
-      round: round ?? "General",
-      history: (history || []).map(h => ({
-        question: h.question ?? "",
-        answer: h.answer ?? "",
-        aiFeedback: h.aiFeedback ?? ""
-      })) ?? [],
-      duration: timer ?? 0,
+      userId: user.uid,
+      role,
+      experienceLevel: exp,
+      round,
+      history: history.map(h => ({
+        question: h.question,
+        answer: h.answer,
+      })),
+      duration: timer,
       createdAt: serverTimestamp(),
-      overallScore: 0,
+      overallScore: 0, // Calculated in feedback page
     };
 
-    const interviewsRef = collection(db, 'users', user.uid, 'interviews');
-    
-    addDoc(interviewsRef, interviewData)
-      .then((docRef) => {
-        const userRef = doc(db, 'users', user.uid);
-        updateDoc(userRef, {
-          totalInterviews: increment(1)
-        }).catch(async (err) => {
-          errorEmitter.emit('permission-error', new FirestorePermissionError({
-            path: userRef.path,
-            operation: 'update',
-            requestResourceData: { totalInterviews: increment(1) }
-          }));
-        });
-
-        router.push(`/feedback/${docRef.id}`);
-      })
-      .catch(async (err) => {
-        setIsSaving(false);
-        errorEmitter.emit('permission-error', new FirestorePermissionError({
-          path: interviewsRef.path,
-          operation: 'create',
-          requestResourceData: interviewData
-        }));
-      });
+    try {
+      const docRef = await addDoc(collection(db, 'users', user.uid, 'interviews'), interviewData);
+      router.push(`/feedback/${docRef.id}`);
+    } catch (err: any) {
+      setIsSaving(false);
+      errorEmitter.emit('permission-error', new FirestorePermissionError({
+        path: `/users/${user.uid}/interviews`,
+        operation: 'create',
+        requestResourceData: interviewData
+      }));
+    }
   };
 
   return (
-    <div className="flex flex-col h-screen bg-[#050816] overflow-hidden text-white font-body relative">
+    <div className="flex flex-col h-screen bg-[#050816] overflow-hidden text-white relative">
       <div className="particles-bg" />
-      <NavigationControls className="hidden md:flex top-24" />
       
-      <header className="h-20 border-b border-white/5 glass backdrop-blur-3xl flex items-center justify-between px-10 shrink-0 z-50">
+      <header className="h-20 border-b border-white/5 glass flex items-center justify-between px-10 shrink-0 z-50">
         <div className="flex items-center gap-6">
           <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-purple-600 to-blue-600 flex items-center justify-center shadow-lg">
             <Command className="text-white w-5 h-5" />
@@ -216,141 +191,77 @@ export default function InterviewSession() {
             <Clock className="w-4 h-4 text-accent" />
             <span className="tabular-nums text-accent tracking-widest">{formatTime(timer)}</span>
           </div>
-          <Button variant="ghost" size="sm" onClick={() => router.push('/dashboard')} className="text-[10px] font-bold tracking-widest uppercase hover:bg-white/5 transition-all text-white/40">
+          <Button variant="ghost" size="sm" onClick={() => router.push('/dashboard')} className="text-[10px] font-bold tracking-widest uppercase text-white/40">
             <LogOut className="w-4 h-4 mr-2" />
-            Abort Simulation
+            Abort Session
           </Button>
         </div>
       </header>
 
       <main className="flex-1 flex overflow-hidden">
-        <section className="w-[45%] relative border-r border-white/5 overflow-hidden bg-black/40">
-          <div className="absolute inset-0 z-0">
-            <Image 
-              src={officeImg}
-              alt="Corporate Office"
-              fill
-              className="object-cover opacity-30"
-              priority
-              data-ai-hint="modern office"
-            />
-            <div className="absolute inset-0 bg-gradient-to-t from-[#050816] via-transparent to-[#050816]/50"></div>
+        <section className="w-[40%] relative border-r border-white/5 bg-black/20">
+          <div className="absolute inset-0">
+            <Image src={officeImg} alt="Office" fill className="object-cover opacity-10" />
+            <div className="absolute inset-0 bg-gradient-to-t from-[#050816] via-transparent to-transparent" />
           </div>
 
           <div className="relative h-full flex flex-col items-center justify-center p-12 z-10">
             <motion.div 
-              animate={{ 
-                scale: isProcessing ? [1, 1.01, 1] : 1,
-              }}
-              transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
-              className="relative w-full max-w-md aspect-[4/5] rounded-3xl overflow-hidden border border-white/10 shadow-[0_0_100px_rgba(147,51,234,0.15)] bg-white/[0.02] glass"
+              animate={{ scale: isProcessing ? [1, 1.02, 1] : 1 }}
+              transition={{ duration: 3, repeat: Infinity }}
+              className="relative w-full max-w-sm aspect-[4/5] rounded-[2rem] overflow-hidden border border-white/10 glass shadow-[0_0_100px_rgba(147,51,234,0.1)]"
             >
-              <Image 
-                src={hrImg}
-                alt="Virtual HR Manager"
-                fill
-                className="object-cover rounded-3xl opacity-100 brightness-110 z-10"
-                priority
-                data-ai-hint="professional businessman suit"
-              />
+              <Image src={hrImg} alt="Interviewer" fill className="object-cover brightness-110" priority />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent" />
               
               <AnimatePresence>
-                {nextOutput?.nextQuestion && !isProcessing && (
+                {nextOutput?.nextQuestion && !isProcessing && !isComplete && (
                   <motion.div 
-                    initial={{ opacity: 0, y: 20, scale: 0.9 }}
-                    animate={{ opacity: 1, y: 0, scale: 1 }}
-                    className="absolute top-12 left-12 right-12 z-20"
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="absolute top-8 left-8 right-8 z-20"
                   >
-                    <div className="glass p-8 rounded-[2.5rem] rounded-tl-none border-accent/40 bg-accent/10 backdrop-blur-2xl shadow-2xl">
-                      <div className="flex gap-3 items-center mb-4">
-                        <MessageSquare className="w-4 h-4 text-accent" />
-                        <span className="text-[10px] font-bold text-accent uppercase tracking-[0.2em]">Neural Directives</span>
-                      </div>
-                      <p className="text-xl font-medium leading-relaxed tracking-tight text-white">
-                        {nextOutput.nextQuestion}
-                      </p>
+                    <div className="glass p-6 rounded-3xl border-accent/40 bg-accent/10 backdrop-blur-2xl">
+                      <p className="text-base font-medium leading-relaxed">{nextOutput.nextQuestion}</p>
                     </div>
                   </motion.div>
                 )}
               </AnimatePresence>
-
-              <div className="absolute bottom-12 left-1/2 -translate-x-1/2 flex items-end gap-2 h-16 z-20">
-                {[...Array(16)].map((_, i) => (
-                  <motion.div 
-                    key={i} 
-                    animate={{ 
-                      height: isProcessing ? ["20%", "90%", "20%"] : "20%" 
-                    }}
-                    transition={{ 
-                      duration: 0.6 + Math.random(), 
-                      repeat: Infinity,
-                      delay: i * 0.05
-                    }}
-                    className="w-1.5 bg-accent/40 rounded-full"
-                  />
-                ))}
-              </div>
             </motion.div>
-
-            <div className="mt-12 text-center flex flex-col items-center gap-4">
-              <Badge className="bg-white/5 text-white/40 border-white/10 px-8 py-2 font-bold tracking-[0.4em] text-[10px] uppercase">
-                {round} Matrix Calibrated
-              </Badge>
-            </div>
           </div>
         </section>
 
-        <section className="flex-1 flex flex-col bg-[#050816]/40 backdrop-blur-md">
-          <div className="px-12 py-10 border-b border-white/5 flex items-center justify-between bg-white/[0.01]">
-            <div className="flex items-center gap-12 flex-1">
-              <div className="space-y-3 flex-1 max-w-md">
-                <div className="flex justify-between items-end mb-2">
-                  <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Simulation Velocity</span>
-                  <span className="text-xs font-bold tabular-nums text-accent">{currentQuestionIndex + 1} / 5</span>
-                </div>
-                <Progress value={((currentQuestionIndex + 1) / 5) * 100} className="h-2 bg-white/5" />
+        <section className="flex-1 flex flex-col">
+          <div className="px-12 py-8 border-b border-white/5 flex items-center justify-between">
+            <div className="flex-1 max-w-md">
+              <div className="flex justify-between items-end mb-2">
+                <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Progress</span>
+                <span className="text-xs font-bold tabular-nums text-accent">{currentQuestionIndex} / {TOTAL_QUESTIONS}</span>
               </div>
-              <div className="w-px h-12 bg-white/10"></div>
-              <div className="flex gap-12">
-                <div className="text-center">
-                  <p className="text-[10px] text-muted-foreground uppercase tracking-widest font-bold mb-1">Confidence</p>
-                  <p className="text-2xl font-bold text-accent">94%</p>
-                </div>
-                <div className="text-center">
-                  <p className="text-[10px] text-muted-foreground uppercase tracking-widest font-bold mb-1">Current Round</p>
-                  <p className="text-2xl font-bold text-purple-400">{round.split(' ')[0]}</p>
-                </div>
-              </div>
+              <Progress value={(currentQuestionIndex / TOTAL_QUESTIONS) * 100} className="h-1.5 bg-white/5" />
             </div>
           </div>
 
-          <div className="flex-1 overflow-y-auto px-12 py-16 space-y-16 custom-scrollbar">
+          <div className="flex-1 overflow-y-auto px-12 py-10 space-y-12 custom-scrollbar">
             <AnimatePresence mode="popLayout">
               {history.map((turn, i) => (
-                <motion.div 
-                  key={i}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  className="space-y-10"
-                >
-                  <div className="flex flex-row-reverse gap-8">
-                    <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-purple-600 to-blue-600 flex items-center justify-center shadow-xl shrink-0">
-                      <User className="w-6 h-6 text-white" />
+                <motion.div key={i} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
+                  <div className="flex flex-row-reverse gap-6">
+                    <div className="w-10 h-10 rounded-xl bg-accent/20 flex items-center justify-center shrink-0">
+                      <User className="w-5 h-5 text-accent" />
                     </div>
-                    <div className="premium-card p-10 rounded-tr-none border-white/10 bg-white/[0.08] flex-1 max-w-[85%] text-right shadow-2xl">
-                      <p className="text-xl leading-relaxed font-medium text-white">{turn.answer}</p>
+                    <div className="p-6 glass rounded-2xl rounded-tr-none flex-1 max-w-[80%] text-right bg-white/[0.05]">
+                      <p className="text-lg leading-relaxed text-white/90">{turn.answer}</p>
                     </div>
                   </div>
                   
                   {turn.aiFeedback && (
-                    <div className="flex gap-8 items-start">
-                      <div className="w-12 h-12 glass rounded-2xl flex items-center justify-center text-accent shrink-0">
-                        <Sparkles className="w-6 h-6" />
+                    <div className="flex gap-6 items-start">
+                      <div className="w-10 h-10 glass rounded-xl flex items-center justify-center text-purple-400 shrink-0">
+                        <Zap className="w-5 h-5" />
                       </div>
-                      <div className="glass p-8 rounded-[2.5rem] rounded-tl-none border-accent/20 bg-accent/10 max-w-[85%]">
-                        <p className="text-lg font-medium leading-relaxed text-white italic">
-                          " {turn.aiFeedback} "
-                        </p>
+                      <div className="p-6 glass rounded-2xl rounded-tl-none max-w-[80%] bg-purple-500/5 border-purple-500/10">
+                        <p className="text-base font-light italic text-white/70">"{turn.aiFeedback}"</p>
                       </div>
                     </div>
                   )}
@@ -358,80 +269,54 @@ export default function InterviewSession() {
               ))}
 
               {isProcessing && (
-                <div className="flex gap-8 items-center">
-                  <div className="w-12 h-12 glass rounded-2xl flex items-center justify-center animate-pulse">
-                    <BrainCircuit className="w-6 h-6 text-accent" />
+                <div className="flex gap-6 items-center">
+                  <div className="w-10 h-10 glass rounded-xl flex items-center justify-center animate-pulse">
+                    <BrainCircuit className="w-5 h-5 text-accent" />
                   </div>
-                  <div className="flex items-center gap-6 p-6 glass rounded-[2rem] border-white/10 bg-white/[0.02]">
-                    <Loader2 className="w-5 h-5 animate-spin text-accent" />
-                    <span className="text-xs font-bold tracking-[0.2em] text-muted-foreground uppercase">Analyzing Neural Logic...</span>
+                  <div className="px-6 py-4 glass rounded-2xl border-white/10 flex items-center gap-3">
+                    <Loader2 className="w-4 h-4 animate-spin text-accent" />
+                    <span className="text-[10px] font-bold tracking-widest text-muted-foreground uppercase">Analyzing Response...</span>
                   </div>
                 </div>
               )}
 
               {isComplete && (
-                <motion.div 
-                  initial={{ scale: 0.95, opacity: 0 }}
-                  animate={{ scale: 1, opacity: 1 }}
-                  className="premium-card p-20 text-center space-y-10 border-accent/30 bg-accent/[0.02] shadow-[0_0_80px_rgba(34,211,238,0.1)]"
-                >
-                  <div className="w-24 h-24 rounded-full bg-accent/20 flex items-center justify-center mx-auto shadow-2xl border border-accent/30">
-                    <ShieldCheck className="w-12 h-12 text-accent" />
+                <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="premium-card p-16 text-center space-y-8 bg-accent/[0.02]">
+                  <div className="w-20 h-20 rounded-full bg-accent/20 flex items-center justify-center mx-auto shadow-2xl border border-accent/20">
+                    <ShieldCheck className="w-10 h-10 text-accent" />
                   </div>
-                  <div className="space-y-4">
-                    <h2 className="text-5xl font-bold tracking-tighter">Protocol Terminated.</h2>
-                    <p className="text-muted-foreground font-light max-w-sm mx-auto uppercase tracking-[0.3em] text-xs">
-                      Simulation complete. Comprehensive performance audit initialized.
-                    </p>
+                  <div className="space-y-3">
+                    <h2 className="text-4xl font-bold tracking-tighter">Interview Terminated.</h2>
+                    <p className="text-muted-foreground font-light uppercase tracking-widest text-[10px]">Session complete. Generating performance audit.</p>
                   </div>
-                  <Button 
-                    onClick={finishInterview} 
-                    disabled={isSaving}
-                    size="lg" 
-                    className="h-20 px-16 btn-premium text-lg font-bold uppercase tracking-[0.3em]"
-                  >
-                    {isSaving ? <Loader2 className="w-6 h-6 animate-spin mr-3" /> : "Access Neural Audit"}
-                    {!isSaving && <ChevronRight className="ml-3 w-6 h-6" />}
+                  <Button onClick={finishInterview} disabled={isSaving} className="h-16 px-12 btn-premium text-sm font-bold uppercase tracking-widest">
+                    {isSaving ? <Loader2 className="w-5 h-5 animate-spin mr-3" /> : "Access Audit Report"}
+                    {!isSaving && <ChevronRight className="ml-2 w-5 h-5" />}
                   </Button>
                 </motion.div>
               )}
             </AnimatePresence>
-            <div ref={chatEndRef} className="h-40" />
+            <div ref={chatEndRef} className="h-20" />
           </div>
 
           {!isComplete && (
-            <footer className="p-12 glass border-t-0 shrink-0 z-50">
-              <div className="max-w-5xl mx-auto space-y-8">
-                <div className="relative group">
-                  <div className="absolute -inset-1 bg-gradient-to-r from-purple-600/30 to-accent/30 rounded-[3rem] opacity-0 group-focus-within:opacity-100 transition-opacity blur-2xl"></div>
-                  <div className="relative flex items-end gap-8 glass p-4 rounded-[3rem] border-white/20 bg-[#0b0e1a]/80 shadow-2xl backdrop-blur-3xl">
-                    <textarea
-                      value={userAnswer}
-                      onChange={(e) => setUserAnswer(e.target.value)}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter' && !e.shiftKey) {
-                          e.preventDefault();
-                          handleSend();
-                        }
-                      }}
-                      placeholder="Input technical insight..."
-                      rows={1}
-                      className="flex-1 bg-transparent border-none focus:ring-0 resize-none py-6 px-10 text-xl font-light max-h-48 placeholder:text-white/20 custom-scrollbar"
-                    />
-                    <div className="flex items-center gap-4 pb-4 pr-4">
-                      <Button variant="ghost" size="icon" className="rounded-3xl w-16 h-16 hover:bg-white/10 transition-all group/btn">
-                        <Mic className="w-8 h-8 text-muted-foreground group-hover/btn:text-accent transition-colors" />
-                      </Button>
-                      <Button 
-                        onClick={handleSend} 
-                        disabled={!userAnswer.trim() || isProcessing}
-                        className="btn-premium rounded-3xl w-16 h-16 flex items-center justify-center shadow-2xl"
-                      >
-                        <Send className="w-8 h-8" />
-                      </Button>
-                    </div>
-                  </div>
-                </div>
+            <footer className="p-8 glass shrink-0">
+              <div className="max-w-4xl mx-auto flex items-end gap-6">
+                <textarea
+                  value={userAnswer}
+                  onChange={(e) => setUserAnswer(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && (e.preventDefault(), handleSend())}
+                  placeholder="Type your answer here... (Press Enter to transmit)"
+                  rows={2}
+                  className="flex-1 bg-white/5 border border-white/10 rounded-2xl p-6 text-lg font-light focus:outline-none focus:border-accent transition-all resize-none custom-scrollbar"
+                />
+                <Button 
+                  onClick={handleSend} 
+                  disabled={!userAnswer.trim() || isProcessing}
+                  className="btn-premium h-20 w-20 rounded-2xl shrink-0 shadow-2xl"
+                >
+                  <Send className="w-6 h-6" />
+                </Button>
               </div>
             </footer>
           )}

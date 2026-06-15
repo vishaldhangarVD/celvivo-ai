@@ -1,6 +1,8 @@
+
 'use server';
 /**
- * @fileOverview Genkit flow for generating mock interview feedback.
+ * @fileOverview Nexvoro AI Performance Auditor.
+ * Synthesizes comprehensive reports from interview transcripts using Gemini 2.5 Flash.
  */
 
 import { ai } from '@/ai/genkit';
@@ -16,13 +18,17 @@ export type InterviewFeedbackInput = z.infer<typeof InterviewFeedbackInputSchema
 const InterviewFeedbackOutputSchema = z.object({
   technicalKnowledgeScore: z.number().min(0).max(100),
   communicationScore: z.number().min(0).max(100),
-  problemSolvingScore: z.number().min(0).max(100),
   confidenceScore: z.number().min(0).max(100),
   overallInterviewScore: z.number().min(0).max(100),
   strengths: z.array(z.string()),
   weaknesses: z.array(z.string()),
   improvementSuggestions: z.array(z.string()),
   jobReadinessScore: z.number().min(0).max(100),
+  hiringRecommendation: z.enum(['Hire', 'Strong Hire', 'No Hire', 'Leaning No Hire']),
+  improvementPlan: z.array(z.object({
+    title: z.string(),
+    description: z.string(),
+  })),
 });
 export type InterviewFeedbackOutput = z.infer<typeof InterviewFeedbackOutputSchema>;
 
@@ -36,20 +42,23 @@ const prompt = ai.definePrompt({
   name: 'interviewFeedbackPrompt',
   input: { schema: InterviewFeedbackInputSchema },
   output: { schema: InterviewFeedbackOutputSchema },
-  prompt: `You are an elite technical interviewer and performance auditor.
-Analyze the following interview transcript and provide a deep-dive performance audit.
-
-Role: {{{role}}}
-Grade: {{{experienceLevel}}}
+  prompt: `You are a Senior Recruitment Auditor.
+Analyze the following interview transcript for a {{{role}}} ({{{experienceLevel}}} level).
 
 Transcript:
 {{{interviewTranscript}}}
 
 Evaluation Rubric:
-1. Technical Logic: Accuracy of solutions and architectural depth.
-2. Strategic Communication: Clarity, structure, and professional presence.
-3. Execution Precision: Problem-solving methodology.
-4. Operational Presence: Confidence and adaptability.`,
+1. Technical Depth: Accuracy of solutions and architectural reasoning.
+2. Communication: Clarity, structure (STAR method), and terminology usage.
+3. Confidence: Decisiveness and handling of difficult follow-ups.
+
+Provide:
+- Scores out of 100.
+- Exactly 3 Strengths and 3 Weaknesses.
+- A final Hiring Recommendation.
+- A detailed Improvement Plan for the next 30 days.
+- A Job Readiness Score (0-100%) indicating how close they are to clearing a real interview for this role.`,
 });
 
 const interviewFeedbackFlow = ai.defineFlow(
@@ -59,24 +68,8 @@ const interviewFeedbackFlow = ai.defineFlow(
     outputSchema: InterviewFeedbackOutputSchema,
   },
   async (input) => {
-    try {
-      const { output } = await prompt(input);
-      if (output) return output;
-    } catch (e) {
-      console.error('Interview Feedback Genkit Error:', e);
-    }
-
-    // Reliable fallback audit
-    return {
-      technicalKnowledgeScore: 75,
-      communicationScore: 80,
-      problemSolvingScore: 70,
-      confidenceScore: 85,
-      overallInterviewScore: 78,
-      strengths: ["Clear baseline logic", "Professional tone"],
-      weaknesses: ["Needs more technical depth", "Specific examples missing"],
-      improvementSuggestions: ["Focus on quantifyable metrics", "Practice architectural deep-dives"],
-      jobReadinessScore: 72
-    };
+    const { output } = await prompt(input);
+    if (!output) throw new Error('Audit synthesis failed.');
+    return output;
   }
 );
