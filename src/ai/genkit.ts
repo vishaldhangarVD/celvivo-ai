@@ -40,5 +40,5 @@ export const ai = genkit({
       apiKey: apiKey,
     }),
   ],
-  model: 'googleai/gemini-1.5-flash', // Correct stabilized string identifier for Genkit 1.x
+  model: 'googleai/gemini-2.5-flash', // Updated to supported high-performance model
 });

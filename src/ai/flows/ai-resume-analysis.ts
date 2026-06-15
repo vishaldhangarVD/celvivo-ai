@@ -1,7 +1,7 @@
 'use server';
 /**
  * @fileOverview An AI agent for analyzing resumes with detailed extraction and ATS scoring.
- * This flow uses Google AI Gemini 1.5 Flash to conduct a high-fidelity audit of professional documents.
+ * This flow uses Google AI Gemini 2.5 Flash to conduct a high-fidelity audit of professional documents.
  */
 
 import {ai} from '@/ai/genkit';
