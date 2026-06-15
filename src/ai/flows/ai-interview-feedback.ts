@@ -1,11 +1,10 @@
-
 'use server';
 /**
  * @fileOverview Nexvoro AI Performance Auditor.
- * Synthesizes comprehensive reports from interview transcripts using Gemini 2.5 Flash.
+ * Synthesizes comprehensive reports from interview transcripts using Resilient Gemini protocols.
  */
 
-import { ai } from '@/ai/genkit';
+import { ai, runWithResilience } from '@/ai/genkit';
 import { z } from 'genkit';
 
 const InterviewFeedbackInputSchema = z.object({
@@ -68,7 +67,7 @@ const interviewFeedbackFlow = ai.defineFlow(
     outputSchema: InterviewFeedbackOutputSchema,
   },
   async (input) => {
-    const { output } = await prompt(input);
+    const { output } = await runWithResilience(prompt, input);
     if (!output) throw new Error('Audit synthesis failed.');
     return output;
   }

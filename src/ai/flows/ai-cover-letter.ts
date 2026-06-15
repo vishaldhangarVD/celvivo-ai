@@ -3,7 +3,7 @@
  * @fileOverview Genkit flow for generating professional AI cover letters.
  */
 
-import { ai } from '@/ai/genkit';
+import { ai, runWithResilience } from '@/ai/genkit';
 import { z } from 'genkit';
 
 const CoverLetterInputSchema = z.object({
@@ -53,16 +53,8 @@ const coverLetterFlow = ai.defineFlow(
     outputSchema: CoverLetterOutputSchema,
   },
   async (input) => {
-    try {
-      const { output } = await prompt(input);
-      if (output) return output;
-    } catch (e) {
-      console.error('Cover Letter Genkit Error:', e);
-    }
-
-    // High-fidelity fallback
-    return {
-      generatedLetter: `Dear Hiring Manager at ${input.companyName},\n\nI am writing to express my strong interest in the ${input.jobRole} position. With a background in ${input.userSkills?.slice(0, 3).join(', ') || 'software engineering'}, I am confident I can contribute to your team's success.\n\n[Note: This is a fallback response. Please ensure your Gemini API Key is valid.]`
-    };
+    const { output } = await runWithResilience(prompt, input);
+    if (!output) throw new Error("Narrative synthesis failed.");
+    return output;
   }
 );

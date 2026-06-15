@@ -1,9 +1,9 @@
 'use server';
 /**
- * @fileOverview AI flow for comparing user skills against role requirements.
+ * @fileOverview AI flow for comparing user skills against role requirements using Resilient Gemini protocols.
  */
 
-import { ai } from '@/ai/genkit';
+import { ai, runWithResilience } from '@/ai/genkit';
 import { z } from 'genkit';
 
 const SkillGapInputSchema = z.object({
@@ -50,22 +50,8 @@ const skillGapFlow = ai.defineFlow(
     outputSchema: SkillGapOutputSchema,
   },
   async (input) => {
-    try {
-      const { output } = await prompt(input);
-      if (output) return output;
-    } catch (e) {
-      console.error('Skill Gap Genkit Error:', e);
-    }
-
-    // Mock fallback logic
-    const mockMissing = ["System Design", "Cloud Architecture"];
-    return {
-      role: input.targetRole,
-      skillMatchPercentage: 55,
-      existingSkills: input.userSkills.slice(0, 3),
-      missingSkills: mockMissing,
-      criticalMissingSkills: mockMissing,
-      recommendedRoadmap: ["Complete Skill Gap Audit via Gemini"]
-    };
+    const { output } = await runWithResilience(prompt, input);
+    if (!output) throw new Error("Skill gap calibration failure.");
+    return output;
   }
 );

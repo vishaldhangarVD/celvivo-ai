@@ -1,16 +1,22 @@
 'use server';
 /**
- * @fileOverview Emergency diagnostic flow to verify Gemini API connectivity.
+ * @fileOverview Resilient diagnostic flow to verify Gemini API connectivity.
  */
 
-import { ai } from '@/ai/genkit';
+import { ai, runWithResilience } from '@/ai/genkit';
 
 export async function runGeminiTest() {
   try {
-    console.log('[Diagnostic] Initializing Gemini Connectivity Test...');
-    const response = await ai.generate({
-      prompt: "Reply with only these words: GEMINI WORKING",
+    console.log('[Diagnostic] Initializing Resilient Gemini Connectivity Test...');
+    
+    // Using a simple resilient prompt call for testing
+    const testPrompt = ai.definePrompt({
+      name: 'testSignalPrompt',
+      input: { schema: z.any() },
+      prompt: "Reply with only these words: GEMINI WORKING"
     });
+
+    const response = await runWithResilience(testPrompt, {});
     
     console.log('[Diagnostic] SUCCESS. Response Received.');
     return { 
@@ -26,3 +32,5 @@ export async function runGeminiTest() {
     };
   }
 }
+
+import { z } from 'genkit';

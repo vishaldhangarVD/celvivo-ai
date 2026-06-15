@@ -3,7 +3,7 @@
  * @fileOverview Genkit flow for generating a structured multi-horizon career roadmap.
  */
 
-import { ai } from '@/ai/genkit';
+import { ai, runWithResilience } from '@/ai/genkit';
 import { z } from 'genkit';
 
 const RoadmapModuleSchema = z.object({
@@ -58,22 +58,8 @@ const learningRoadmapFlow = ai.defineFlow(
     outputSchema: LearningRoadmapOutputSchema,
   },
   async (input) => {
-    try {
-      const { output } = await prompt(input);
-      if (output) return output;
-    } catch (e) {
-      console.error('Roadmap Genkit Error:', e);
-    }
-
-    // Static roadmap fallback
-    return {
-      plans: {
-        thirtyDay: [{ title: "Foundational Bridge", desc: "Master the basics of missing nodes", tasks: ["Study documentation", "Complete 5 small exercises"] }],
-        sixtyDay: [{ title: "Component Mastery", desc: "Build modular solutions", tasks: ["Build a mini-project", "Refactor existing code"] }],
-        ninetyDay: [{ title: "System Ready", desc: "Final performance audit", tasks: ["Execute full simulation", "Optimize resume keywords"] }]
-      },
-      recommendedProjects: ["Personal Portfolio v2", "Logic-heavy Dashboard"],
-      interviewPrepTasks: ["Review data structures", "Practice behavior questions"]
-    };
+    const { output } = await runWithResilience(prompt, input);
+    if (!output) throw new Error("Roadmap synthesis failure.");
+    return output;
   }
 );

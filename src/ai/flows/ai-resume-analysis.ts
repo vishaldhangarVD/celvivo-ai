@@ -1,11 +1,11 @@
 'use server';
 /**
  * @fileOverview An AI agent for analyzing resumes with detailed extraction and ATS scoring.
- * This flow uses Google AI Gemini 2.5 Flash to conduct a high-fidelity audit of professional documents.
+ * This flow uses Resilient Gemini protocols to conduct a high-fidelity audit of professional documents.
  */
 
-import {ai} from '@/ai/genkit';
-import {z} from 'genkit';
+import { ai, runWithResilience } from '@/ai/genkit';
+import { z } from 'genkit';
 
 const AiResumeAnalysisInputSchema = z.object({
   resumeDataUri: z
@@ -89,28 +89,8 @@ const aiResumeAnalysisFlow = ai.defineFlow(
     outputSchema: AiResumeAnalysisOutputSchema,
   },
   async (input) => {
-    try {
-      const { output } = await prompt(input);
-      
-      if (!output) {
-        throw new Error('Neural core failed to synthesize analysis. Verify API key and document format.');
-      }
-    
-      return output;
-    } catch (error: any) {
-      console.error('\n--- [Genkit Critical Failure] ---');
-      console.error('[Error Type]', error.name || 'UNKNOWN_ERROR');
-      console.error('[Status Code]', error.status || error.code || 'UNKNOWN');
-      console.error('[Detailed message]', error.message);
-      
-      if (error.message?.includes('401')) {
-        console.error('[Diagnostic] AUTHENTICATION_FAILURE: Check your API Key.');
-      } else if (error.message?.includes('404')) {
-        console.error('[Diagnostic] MODEL_NOT_FOUND: Verify model identifier in genkit.ts');
-      }
-      
-      console.error('---------------------------------\n');
-      throw error;
-    }
+    const { output } = await runWithResilience(prompt, input);
+    if (!output) throw new Error("Resume intelligence audit failure.");
+    return output;
   }
 );

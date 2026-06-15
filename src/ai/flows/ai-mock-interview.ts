@@ -1,11 +1,10 @@
-
 'use server';
 /**
  * @fileOverview Nexvoro AI Mock Interview Agent.
- * Generates dynamic questions and evaluates responses using Gemini 2.5 Flash.
+ * Generates dynamic questions and evaluates responses using Resilient Gemini protocols.
  */
 
-import { ai } from '@/ai/genkit';
+import { ai, runWithResilience } from '@/ai/genkit';
 import { z } from 'genkit';
 
 const AiMockInterviewInputSchema = z.object({
@@ -71,7 +70,7 @@ const aiMockInterviewFlow = ai.defineFlow(
     outputSchema: AiMockInterviewOutputSchema,
   },
   async (input) => {
-    const { output } = await prompt(input);
+    const { output } = await runWithResilience(prompt, input);
     
     if (!output) {
       throw new Error('Neural simulation failed to generate response.');
