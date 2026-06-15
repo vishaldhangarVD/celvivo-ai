@@ -73,15 +73,21 @@ const aiMockInterviewFlow = ai.defineFlow(
     outputSchema: AiMockInterviewOutputSchema,
   },
   async (input) => {
-    // Render the prompt for debugging or live use
-    // In Genkit 1.x, we can use prompt.render() to get the content
-    const rendered = await prompt.renderText(input);
+    console.log('[DEBUG REQUEST RECEIVED]', { role: input.role, debugMode: input.debugMode });
+
+    // Render the prompt for debugging or live use using Genkit 1.x standard
+    const rendered = await ai.renderPrompt({
+      prompt,
+      input,
+    });
+    const renderedText = rendered.text;
 
     if (input.debugMode) {
+      console.log('[DEBUG RESPONSE GENERATED - BYPASS ACTIVE]');
       return {
         nextQuestion: "[DEBUG MODE ACTIVE - NO AI RESPONSE]",
         isInterviewComplete: false,
-        debugPrompt: rendered
+        debugPrompt: renderedText
       };
     }
 

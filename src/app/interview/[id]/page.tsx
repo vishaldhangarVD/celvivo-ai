@@ -87,7 +87,7 @@ function InterviewSessionContent() {
 
     const interval = setInterval(() => setTimer(t => t + 1), 1000);
     return () => clearInterval(interval);
-  }, [role, exp, round]);
+  }, [role, exp, round]); // debugMode removed as dependency to avoid loop
 
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -106,9 +106,8 @@ function InterviewSessionContent() {
       aiFeedback: nextOutput?.feedbackOnLastAnswer
     }];
     
-    if (!debugMode) {
-      setHistory(newHistory);
-    }
+    // History should be maintained locally even in debug mode to test prompt synthesis
+    setHistory(newHistory);
 
     const nextIdx = currentQuestionIndex + 1;
     setCurrentQuestionIndex(nextIdx);

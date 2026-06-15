@@ -10,7 +10,8 @@ import { googleAI } from '@genkit-ai/google-genai';
 const apiKey = process.env.GOOGLE_GENAI_API_KEY || process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY;
 
 // Global Model Protocol
-export const PRIMARY_MODEL = 'googleai/gemini-2.5-flash';
+// NOTE: gemini-2.5 does not exist. Using 1.5-flash (Stable) and 2.0-flash (Experimental).
+export const PRIMARY_MODEL = 'googleai/gemini-1.5-flash';
 export const FALLBACK_MODEL = 'googleai/gemini-2.0-flash';
 
 // Runtime Diagnostic Sequence (Server-side only)
