@@ -44,10 +44,12 @@ import {
   Map,
   Microscope,
   HandMetal,
-  Users
+  Users,
+  AlertTriangle
 } from 'lucide-react';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
 import { useUser } from '@/firebase';
+import { runGeminiTest } from '@/ai/flows/test-gemini';
 
 const ROLES = [
   "Frontend Developer", "Backend Developer", "Full Stack Developer", "Software Engineer",
@@ -73,33 +75,6 @@ const ROUNDS = [
   { id: 'Full Interview Process', label: 'Full Interview Process', icon: Layers, desc: 'Comprehensive session covering all modules.' }
 ];
 
-const HOW_IT_WORKS = [
-  {
-    step: "01",
-    title: "Neural Scan",
-    description: "Upload your resume for a deep-dive career blueprint audit using our neural parsing engine.",
-    icon: FileSearch
-  },
-  {
-    step: "02",
-    title: "Track Calibration",
-    description: "Select from 60+ specialized technical tracks to calibrate the simulation's difficulty and focus.",
-    icon: Layers
-  },
-  {
-    step: "03",
-    title: "Arena Entry",
-    description: "Step into the virtual arena for a high-fidelity, real-time interview with our AI HR agent.",
-    icon: Zap
-  },
-  {
-    step: "04",
-    title: "Intelligence Audit",
-    description: "Receive an executive-grade performance report with skill gap mapping and a growth roadmap.",
-    icon: Award
-  }
-];
-
 export default function LandingPage() {
   const router = useRouter();
   const { user, loading: authLoading } = useUser();
@@ -110,6 +85,10 @@ export default function LandingPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [isUploading, setIsUploading] = useState(false);
   const [uploadedFile, setUploadedFile] = useState<string | null>(null);
+
+  // Test State
+  const [testResult, setTestResult] = useState<any>(null);
+  const [isTesting, setIsTesting] = useState(false);
 
   const hrImg = PlaceHolderImages.find(img => img.id === 'ai-hr-interviewer')?.imageUrl || "https://picsum.photos/seed/nexvoro_hr/800/1000";
 
@@ -146,6 +125,19 @@ export default function LandingPage() {
   const handleStartInterview = () => {
     const sessionId = Math.random().toString(36).substring(7);
     router.push(`/interview/${sessionId}?role=${encodeURIComponent(selectedRole)}&exp=Senior&round=${encodeURIComponent(selectedRound)}`);
+  };
+
+  const handleGeminiTest = async () => {
+    setIsTesting(true);
+    setTestResult(null);
+    try {
+      const result = await runGeminiTest();
+      setTestResult(result);
+    } catch (e: any) {
+      setTestResult({ success: false, error: e.message });
+    } finally {
+      setIsTesting(false);
+    }
   };
 
   if (authLoading) {
@@ -207,14 +199,55 @@ export default function LandingPage() {
                   Start Virtual Interview
                   <Zap className="ml-3 w-5 h-5 group-hover:animate-pulse" />
                 </Button>
-                <Button 
-                  onClick={handleAnalyzeResumeDirect}
-                  size="lg" 
-                  variant="outline" 
-                  className="h-16 px-10 text-lg rounded-full glass border-white/10 hover:bg-white/10"
-                >
-                  Analyze Resume
-                </Button>
+                <div className="flex flex-col gap-4">
+                  <Button 
+                    onClick={handleAnalyzeResumeDirect}
+                    size="lg" 
+                    variant="outline" 
+                    className="h-16 px-10 text-lg rounded-full glass border-white/10 hover:bg-white/10"
+                  >
+                    Analyze Resume
+                  </Button>
+                  
+                  {/* Test Gemini Button */}
+                  <div className="space-y-3">
+                    <Button 
+                      onClick={handleGeminiTest}
+                      disabled={isTesting}
+                      variant="ghost"
+                      className="text-xs font-bold uppercase tracking-widest text-accent/60 hover:text-accent flex gap-2 p-0 h-auto"
+                    >
+                      {isTesting ? <Loader2 className="w-3 h-3 animate-spin" /> : <Microscope className="w-3 h-3" />}
+                      Test Gemini Signal
+                    </Button>
+                    
+                    <AnimatePresence>
+                      {testResult && (
+                        <motion.div 
+                          initial={{ opacity: 0, y: 10 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          exit={{ opacity: 0 }}
+                          className={`p-4 rounded-xl border text-[10px] font-mono break-all max-w-xs ${testResult.success ? 'bg-green-500/10 border-green-500/20 text-green-400' : 'bg-red-500/10 border-red-500/20 text-red-400'}`}
+                        >
+                          {testResult.success ? (
+                            <div className="flex items-center gap-2">
+                              <CheckCircle2 className="w-3 h-3" />
+                              {testResult.data}
+                            </div>
+                          ) : (
+                            <div className="space-y-1">
+                              <div className="flex items-center gap-2 font-bold">
+                                <AlertTriangle className="w-3 h-3" /> 
+                                ERROR: {testResult.details}
+                              </div>
+                              <p className="opacity-80">{testResult.error}</p>
+                            </div>
+                          )}
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+                  </div>
+                </div>
               </motion.div>
             </div>
 
