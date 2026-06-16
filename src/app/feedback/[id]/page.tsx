@@ -63,7 +63,8 @@ export default function FeedbackReport() {
         const result = await generateInterviewFeedback({
           interviewTranscript: transcript,
           role: interviewDoc.role || 'Software Engineer',
-          experienceLevel: interviewDoc.experienceLevel || 'Senior'
+          experienceLevel: interviewDoc.experienceLevel || 'Senior',
+          round: interviewDoc.round || 'Technical Round'
         });
         
         setFeedback(result);

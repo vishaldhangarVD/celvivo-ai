@@ -11,6 +11,7 @@ const InterviewFeedbackInputSchema = z.object({
   interviewTranscript: z.string(),
   role: z.string(),
   experienceLevel: z.string(),
+  round: z.string().optional(),
 });
 export type InterviewFeedbackInput = z.infer<typeof InterviewFeedbackInputSchema>;
 
@@ -41,23 +42,30 @@ const prompt = ai.definePrompt({
   name: 'interviewFeedbackPrompt',
   input: { schema: InterviewFeedbackInputSchema },
   output: { schema: InterviewFeedbackOutputSchema },
-  prompt: `You are a Senior Recruitment Auditor.
-Analyze the following interview transcript for a {{{role}}} ({{{experienceLevel}}} level).
+  prompt: `You are an elite Senior Technical Recruitment Auditor. 
+Your mission is to synthesize a high-fidelity performance audit from the following interview transcript for a {{{role}}} at a {{{experienceLevel}}} level, specializing in the {{{round}}}.
 
 Transcript:
 {{{interviewTranscript}}}
 
-Evaluation Rubric:
-1. Technical Depth: Accuracy of solutions and architectural reasoning.
-2. Communication: Clarity, structure (STAR method), and terminology usage.
-3. Confidence: Decisiveness and handling of difficult follow-ups.
+Evaluation Protocol:
+1. Technical Logic Audit: Evaluate accuracy of solutions, depth of architectural reasoning, and role-specific mastery.
+2. Narrative Delivery: Analyze communication clarity, use of the STAR method, and command of industry terminology.
+3. Operational Presence: Assess decisiveness, handling of complex follow-ups, and professional confidence.
+
+CRITICAL INSTRUCTION FOR IMPROVEMENT PLAN:
+The "improvementPlan" MUST be highly specialized for the deployment role: {{{role}}}.
+- If the role is a Developer (e.g., .NET Developer), you MUST provide specific technical nodes like: C#, ASP.NET Core, Web API, Entity Framework, SQL Server, System Design, and Microservices.
+- If the role is a Data Analyst, prioritize: SQL Query Optimization, Data Visualization (PowerBI/Tableau), and Exploratory Data Analysis.
+- If the role is a Data Scientist, prioritize: Machine Learning Algorithms, Statistical Modeling, Feature Engineering, and Model Deployment.
+- Map these technical and behavioral vectors into actionable roadmap items.
 
 Provide:
-- Scores out of 100.
+- Scores (0-100) for all nodes.
 - Exactly 3 Strengths and 3 Weaknesses.
-- A final Hiring Recommendation.
-- A detailed Improvement Plan for the next 30 days.
-- A Job Readiness Score (0-100%) indicating how close they are to clearing a real interview for this role.`,
+- A strategic Hiring Recommendation.
+- A role-calibrated 30-day Improvement Plan.
+- A Job Readiness Score representing market calibration.`,
 });
 
 const interviewFeedbackFlow = ai.defineFlow(
