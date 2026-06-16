@@ -73,15 +73,39 @@ const aiMockInterviewFlow = ai.defineFlow(
     outputSchema: AiMockInterviewOutputSchema,
   },
   async (input) => {
-    // Instant Debug Bypass
+    // Neural Debug Intercept
     if (input.debugMode) {
       console.log('[DEBUG REQUEST RECEIVED]', { role: input.role, exp: input.experienceLevel });
       
+      const historyStr = input.history.length > 0 
+        ? input.history.map(h => `Interviewer: ${h.question}\nCandidate: ${h.answer}`).join('\n')
+        : 'No history yet.';
+
+      const renderedPrompt = `SYSTEM:
+You are an elite technical interviewer at a Tier-1 tech company.
+Your mission is to conduct a professional, high-fidelity interview for a ${input.role} at a ${input.experienceLevel} level, specializing in ${input.roundType}.
+
+INTERVIEW INSTRUCTIONS:
+Current Progress: Question ${input.currentMainQuestionIndex} of 10.
+1. If this is the FIRST question (history is empty), ask a strong opening question.
+2. If the user just answered, evaluate based on technical logic, communication, and confidence.
+3. Provide objective feedback and ask the NEXT question (progressively challenging).
+4. If index reaches 10, terminate simulation.
+
+CONVERSATION HISTORY:
+${historyStr}
+
+LATEST CANDIDATE INPUT:
+${input.userAnswer || 'Awaiting first input.'}
+
+FINAL PROMPT SENT TO GEMINI (2.5-FLASH):
+Generate the next ${input.roundType} interview question for a ${input.experienceLevel} ${input.role}. Output must follow the structured JSON schema for feedback and question nodes.`;
+
       const debugResponse: AiMockInterviewOutput = {
-        nextQuestion: "[DEBUG MODE ACTIVE: NEXT QUESTION SIMULATED]",
-        feedbackOnLastAnswer: "DEBUG: Signal received. UI pipeline is functional.",
-        isInterviewComplete: false,
-        debugPrompt: `DEBUG REQUEST RECEIVED\n\nRole: ${input.role}\nExperience: ${input.experienceLevel}\nRound: ${input.roundType}\n\nLast User Input: ${input.userAnswer || 'N/A'}\nHistory Depth: ${input.history.length}\nQuestion Index: ${input.currentMainQuestionIndex}`
+        nextQuestion: "[DEBUG MODE: NEXT QUESTION SIMULATED]",
+        feedbackOnLastAnswer: "DEBUG: Neural loop functional. Logic gate bypassed.",
+        isInterviewComplete: input.currentMainQuestionIndex >= 10,
+        debugPrompt: renderedPrompt
       };
       
       console.log('[DEBUG RESPONSE GENERATED]');

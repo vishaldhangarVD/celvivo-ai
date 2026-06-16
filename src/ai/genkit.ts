@@ -10,8 +10,7 @@ import { googleAI } from '@genkit-ai/google-genai';
 const apiKey = process.env.GOOGLE_GENAI_API_KEY || process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY;
 
 // Global Model Protocol
-// NOTE: gemini-2.5 does not exist. Using 1.5-flash (Stable) and 2.0-flash (Experimental).
-export const PRIMARY_MODEL = 'googleai/gemini-1.5-flash';
+export const PRIMARY_MODEL = 'googleai/gemini-2.5-flash';
 export const FALLBACK_MODEL = 'googleai/gemini-2.0-flash';
 
 // Runtime Diagnostic Sequence (Server-side only)
@@ -27,7 +26,7 @@ if (typeof window === 'undefined') {
   } else {
     const activeVar = process.env.GOOGLE_GENAI_API_KEY ? 'GOOGLE_GENAI_API_KEY' : process.env.GEMINI_API_KEY ? 'GEMINI_API_KEY' : 'GOOGLE_API_KEY';
     console.log(`[Active Load] Loaded identity from: ${activeVar}`);
-    console.log(`[STATUS] Resilient Neural Protocol v2.0 Live.`);
+    console.log(`[STATUS] Resilient Neural Protocol v2.5 Live. Target Model: ${PRIMARY_MODEL}`);
   }
   console.log('-----------------------------------------------\n');
 }
@@ -52,7 +51,6 @@ export async function runWithResilience(promptFn: any, input: any) {
   async function attemptExecution(model: string) {
     for (let i = 0; i <= 3; i++) {
       try {
-        // Genkit 1.x prompt calling with model override
         return await promptFn(input, { model });
       } catch (e: any) {
         const status = e.status || e.code;
