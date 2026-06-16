@@ -24,7 +24,8 @@ import {
   Command,
   Bug,
   Code2,
-  X
+  X,
+  AlertTriangle
 } from 'lucide-react';
 import { aiMockInterview, type AiMockInterviewOutput } from '@/ai/flows/ai-mock-interview';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
@@ -103,7 +104,8 @@ function InterviewSessionContent() {
     const turn = {
       question: nextOutput?.nextQuestion || '',
       answer: currentAnswer,
-      aiFeedback: nextOutput?.feedbackOnLastAnswer
+      aiFeedback: nextOutput?.feedbackOnLastAnswer,
+      isMock: nextOutput?.isMock
     };
     
     const newHistory = [...history, turn];
@@ -172,7 +174,7 @@ function InterviewSessionContent() {
         path: `/users/${user.uid}/interviews`,
         operation: 'create',
         requestResourceData: interviewData
-      }));
+      } satisfies any));
     }
   };
 
@@ -195,6 +197,12 @@ function InterviewSessionContent() {
         </div>
         
         <div className="flex items-center gap-8">
+          {nextOutput?.isMock && (
+            <Badge className="bg-orange-500/20 text-orange-400 border-none px-4 py-2 font-black tracking-widest text-[10px] animate-pulse">
+              [MOCK MODE ACTIVE]
+            </Badge>
+          )}
+
           <div className="flex items-center gap-3 px-4 py-2 rounded-xl bg-white/5 border border-white/5">
             <div className="flex items-center gap-2">
               <Bug className={`w-4 h-4 ${debugMode ? 'text-red-400' : 'text-white/20'}`} />
@@ -333,7 +341,10 @@ function InterviewSessionContent() {
                         <Zap className="w-5 h-5" />
                       </div>
                       <div className="p-6 glass rounded-2xl rounded-tl-none max-w-[80%] bg-purple-500/5 border-purple-500/10">
-                        <p className="text-base font-light italic text-white/70">"{turn.aiFeedback}"</p>
+                        <p className="text-base font-light italic text-white/70">
+                          {turn.isMock && <span className="text-orange-400 font-bold block mb-2">[MOCK MODE ACTIVE]</span>}
+                          "{turn.aiFeedback}"
+                        </p>
                       </div>
                     </div>
                   )}

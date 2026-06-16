@@ -2,7 +2,7 @@
 /**
  * @fileOverview Nexvoro AI Mock Interview Agent.
  * Generates dynamic questions and evaluates responses using Resilient Gemini protocols.
- * Includes a Debug Mode to intercept and display rendered prompts.
+ * Includes an Offline Mock Fallback for high availability during API outages.
  */
 
 import { ai, runWithResilience } from '@/ai/genkit';
@@ -32,8 +32,41 @@ const AiMockInterviewOutputSchema = z.object({
   }).optional(),
   isInterviewComplete: z.boolean(),
   debugPrompt: z.string().optional(),
+  isMock: z.boolean().optional(),
 });
 export type AiMockInterviewOutput = z.infer<typeof AiMockInterviewOutputSchema>;
+
+// Local Intelligence Nodes for Offline Fallback
+const MOCK_KNOWLEDGE_BANK: Record<string, string[]> = {
+  "Technical Round": [
+    "Explain the difference between asynchronous and synchronous execution in your primary tech stack.",
+    "How do you approach debugging a memory leak in a production environment?",
+    "Describe the trade-offs between using a SQL database vs a NoSQL database for a high-traffic application.",
+    "What are the core principles of SOLID and how do you apply them in your daily coding?",
+    "How do you ensure data security and integrity when building distributed systems?"
+  ],
+  "HR Round": [
+    "Tell me about a time you handled a significant conflict within your team.",
+    "Why are you looking to leave your current organization at this stage of your career?",
+    "What is the most challenging technical project you have led, and what was the outcome?",
+    "Describe your ideal work environment and company culture.",
+    "Where do you see your technical trajectory in the next 5 years?"
+  ],
+  "Managerial Round": [
+    "How do you prioritize competing deadlines across multiple high-stakes projects?",
+    "Describe your experience with mentoring junior engineers and fostering technical growth.",
+    "How do you handle a situation where a project is falling behind schedule?",
+    "What is your approach to technical debt management in a fast-paced delivery cycle?",
+    "How do you align technical engineering goals with broader business objectives?"
+  ]
+};
+
+const DEFAULT_MOCK_QUESTIONS = [
+  "Can you elaborate on your experience with system architecture and design patterns?",
+  "How do you keep your skills updated in this rapidly evolving tech landscape?",
+  "Describe a time you had to learn a complex new technology in a very short period.",
+  "What is your philosophy on code quality versus delivery speed?"
+];
 
 export async function aiMockInterview(input: AiMockInterviewInput): Promise<AiMockInterviewOutput> {
   return aiMockInterviewFlow(input);
@@ -65,6 +98,25 @@ Latest Candidate Answer: {{{userAnswer}}}
 
 Ensure the next question is specific to {{{role}}} and appropriate for a {{{experienceLevel}}} grade.`,
 });
+
+function generateMockResponse(input: AiMockInterviewInput): AiMockInterviewOutput {
+  console.warn('[OFFLINE MOCK FALLBACK TRIGGERED]', { role: input.role, round: input.roundType });
+  
+  const bank = MOCK_KNOWLEDGE_BANK[input.roundType] || DEFAULT_MOCK_QUESTIONS;
+  const nextQ = bank[input.currentMainQuestionIndex % bank.length];
+  
+  return {
+    nextQuestion: nextQ,
+    feedbackOnLastAnswer: "Your response shows a clear understanding of core concepts. Continue maintaining this level of technical detail.",
+    scores: {
+      technical: 8,
+      communication: 9,
+      confidence: 8
+    },
+    isInterviewComplete: input.currentMainQuestionIndex >= 10,
+    isMock: true
+  };
+}
 
 const aiMockInterviewFlow = ai.defineFlow(
   {
@@ -112,20 +164,24 @@ Generate the next ${input.roundType} interview question for a ${input.experience
       return debugResponse;
     }
 
-    const { output } = await runWithResilience(prompt, input);
-    
-    if (!output) {
-      throw new Error('Neural simulation failed to generate response.');
-    }
+    try {
+      const { output } = await runWithResilience(prompt, input);
+      
+      if (!output) {
+        return generateMockResponse(input);
+      }
 
-    if (input.currentMainQuestionIndex >= 10) {
-      return {
-        ...output,
-        isInterviewComplete: true,
-        nextQuestion: "The simulation is complete. Initiating comprehensive audit."
-      };
-    }
+      if (input.currentMainQuestionIndex >= 10) {
+        return {
+          ...output,
+          isInterviewComplete: true,
+          nextQuestion: "The simulation is complete. Initiating comprehensive audit."
+        };
+      }
 
-    return output;
+      return output;
+    } catch (error) {
+      return generateMockResponse(input);
+    }
   }
 );
