@@ -36,7 +36,7 @@ const AiMockInterviewOutputSchema = z.object({
 });
 export type AiMockInterviewOutput = z.infer<typeof AiMockInterviewOutputSchema>;
 
-// Local Intelligence Nodes for Offline Fallback
+// Local Intelligence Nodes for Offline Fallback - Recalibrated for Technical Roles
 const MOCK_KNOWLEDGE_BANK: Record<string, string[]> = {
   "Technical Round": [
     "Explain the difference between asynchronous and synchronous execution in your primary tech stack.",
@@ -46,11 +46,11 @@ const MOCK_KNOWLEDGE_BANK: Record<string, string[]> = {
     "How do you ensure data security and integrity when building distributed systems?"
   ],
   "HR Round": [
-    "Tell me about a time you handled a significant conflict within your team.",
-    "Why are you looking to leave your current organization at this stage of your career?",
-    "What is the most challenging technical project you have led, and what was the outcome?",
-    "Describe your ideal work environment and company culture.",
-    "Where do you see your technical trajectory in the next 5 years?"
+    "Describe a time you had a technical disagreement with a teammate. How did you resolve it?",
+    "How do you communicate complex technical concepts to non-technical stakeholders?",
+    "Tell me about a time you had to balance code quality with a strict project deadline.",
+    "What is your approach to giving and receiving feedback during code reviews?",
+    "Describe a situation where you took the lead on a technical initiative or project."
   ],
   "Managerial Round": [
     "How do you prioritize competing deadlines across multiple high-stakes projects?",
@@ -87,6 +87,11 @@ Protocol:
 3. Provide a brief, encouraging, but objective piece of feedback on their last answer.
 4. Ask the NEXT question. The questions should get progressively more challenging.
 5. If Question Index reaches 10, mark isInterviewComplete as true.
+
+CRITICAL INSTRUCTION FOR {{{roundType}}}:
+- If this is an "HR Round" or "Behavioral Round" for a technical role like {{{role}}}, you MUST NOT ask generic HR management or policy questions.
+- Instead, focus on the candidate's professional behavior WITHIN a software engineering context.
+- Ask about: Team conflict resolution in dev teams, communicating technical complexity to stakeholders, managing project deadlines, and leadership during code reviews or system migrations.
 
 History of conversation:
 {{#each history}}
@@ -143,6 +148,9 @@ Current Progress: Question ${input.currentMainQuestionIndex} of 10.
 2. If the user just answered, evaluate based on technical logic, communication, and confidence.
 3. Provide objective feedback and ask the NEXT question (progressively challenging).
 4. If index reaches 10, terminate simulation.
+
+CONTEXTUAL PROTOCOL:
+- Focus on professional behavior within a software context. No generic HR policy questions.
 
 CONVERSATION HISTORY:
 ${historyStr}
