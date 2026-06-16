@@ -11,36 +11,32 @@ Nexvoro AI is an advanced, AI-powered interview preparation and career developme
 - **Credential Vault**: Verified performance certificates for elite simulation results.
 - **Resilience Layer**: Automatic AI retries and offline mock fallback protocols.
 
-## Route Audit & Implementation Status
+## Neural Integrity Matrix (Audit v1.2)
 
-| Route | Classification | Status |
-| :--- | :--- | :--- |
-| `/` | Fully Functional | ✅ |
-| `/login` / `/signup` | Fully Functional | ✅ |
-| `/dashboard` | Fully Functional | ✅ |
-| `/user-dashboard` | Fully Functional | ✅ |
-| `/interview` | Fully Functional | ✅ |
-| `/interview/[id]` | Fully Functional | ✅ |
-| `/feedback/[id]` | Fully Functional | ✅ |
-| `/resume` | Fully Functional | ✅ |
-| `/skill-gap` | Fully Functional | ✅ |
-| `/roadmap` | Fully Functional | ✅ |
-| `/certificates` | Fully Functional | ✅ |
-| `/job-tracker` | Fully Functional | ✅ |
-| `/cover-letter` | Fully Functional | ✅ |
-| `/daily-challenge` | Fully Functional | ✅ |
-| `/question-bank` | Fully Functional | ✅ |
-| `/settings` | Partially Functional | ⚠️ |
-| `/admin` | UI Only | 🖼️ |
-| `/pricing` | UI Only | 🖼️ |
-| `/features` | UI Only | 🖼️ |
-| `/about` | UI Only | 🖼️ |
-| `/contact` | UI Only | 🖼️ |
+| Route | Real Backend (Firestore) | Real AI Flow | Mock Data Remaining | Status |
+| :--- | :--- | :--- | :--- | :--- |
+| `/` | `users` | `test-gemini.ts` | Onboarding Wizard simulated file | ✅ Fully Functional |
+| `/login` / `/signup` | `users` | N/A | None | ✅ Fully Functional |
+| `/dashboard` | `users`, `interviews`, `resumes`, `job_apps` | N/A | None | ✅ Fully Functional |
+| `/user-dashboard` | `interviews`, `resumes` | N/A | None | ✅ Fully Functional |
+| `/interview` | N/A | N/A | Role selection list | ✅ Fully Functional |
+| `/interview/[id]` | `interviews` | `ai-mock-interview.ts` | Offline Mock Fallback Bank | ✅ Fully Functional |
+| `/feedback/[id]` | `interviews`, `users` | `ai-interview-feedback.ts` | None | ✅ Fully Functional |
+| `/resume` | `resumes`, `users` | `ai-resume-analysis.ts` | None | ✅ Fully Functional |
+| `/skill-gap` | `skill_gap` | `ai-skill-gap-analysis.ts` | Role dropdown repository | ✅ Fully Functional |
+| `/roadmap` | `roadmaps` | `ai-learning-roadmap.ts` | None | ✅ Fully Functional |
+| `/certificates` | `interviews` | N/A | Verification ID (Random) | ✅ Fully Functional |
+| `/job-tracker` | `job_applications` | N/A | None | ✅ Fully Functional |
+| `/cover-letter` | `cover_letters` | `ai-cover-letter.ts` | None | ✅ Fully Functional |
+| `/daily-challenge` | `users`, `daily_challenges` | `ai-daily-challenge-eval.ts` | Local Question Pool | ✅ Fully Functional |
+| `/question-bank` | `favorite_questions` | N/A | Local Question Repository | ✅ Fully Functional |
+| `/settings` | `users` | N/A | Billing & Advanced Security stubs | ⚠️ Partially Functional |
+| `/admin` | N/A | N/A | System health and global metrics | 🖼️ UI Only |
 
 ## Tech Stack
 
 - **Framework**: Next.js 15 (App Router)
-- **AI**: Genkit 1.x + Gemini 2.5 Flash
+- **AI**: Genkit 1.x + Gemini 2.5 Flash (Primary) / 2.0 Flash (Fallback)
 - **Database**: Firebase Firestore
 - **Auth**: Firebase Authentication (Google & Email)
 - **UI**: Tailwind CSS + Framer Motion + ShadCN
