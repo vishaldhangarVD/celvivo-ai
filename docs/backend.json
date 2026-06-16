@@ -1,4 +1,3 @@
-
 {
   "entities": {
     "UserProfile": {
@@ -16,7 +15,6 @@
         "currentStreak": { "type": "number" },
         "bestStreak": { "type": "number" },
         "lastChallengeDate": { "type": "string" },
-        "missingSkills": { "type": "array", "items": { "type": "string" } },
         "createdAt": { "type": "string", "format": "date-time" }
       },
       "required": ["uid", "email"]
@@ -41,6 +39,33 @@
         "createdAt": { "type": "string", "format": "date-time" }
       }
     },
+    "ResumeAudit": {
+      "title": "Resume Audit",
+      "description": "Results of a neural resume intelligence scan.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "filename": { "type": "string" },
+        "targetRole": { "type": "string" },
+        "atsScore": { "type": "number" },
+        "missingSkills": { "type": "array", "items": { "type": "string" } },
+        "analysis": { "type": "object" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      }
+    },
+    "JobApplication": {
+      "title": "Job Application",
+      "description": "A tracked job mission node.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "companyName": { "type": "string" },
+        "role": { "type": "string" },
+        "status": { "type": "string", "enum": ["Applied", "Shortlisted", "Interview Scheduled", "Rejected", "Selected"] },
+        "appliedDate": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      }
+    },
     "DailyChallenge": {
       "title": "Daily Challenge",
       "description": "A single daily question attempt.",
@@ -48,24 +73,9 @@
       "properties": {
         "userId": { "type": "string" },
         "question": { "type": "string" },
-        "type": { "type": "string" },
         "answer": { "type": "string" },
         "score": { "type": "number" },
-        "feedback": { "type": "string" },
-        "tips": { "type": "array", "items": { "type": "string" } },
         "completedAt": { "type": "string", "format": "date-time" }
-      }
-    },
-    "FavoriteQuestion": {
-      "title": "Favorite Question",
-      "description": "A bookmarked question from the question bank.",
-      "type": "object",
-      "properties": {
-        "userId": { "type": "string" },
-        "questionId": { "type": "string" },
-        "category": { "type": "string" },
-        "text": { "type": "string" },
-        "createdAt": { "type": "string", "format": "date-time" }
       }
     }
   },
@@ -81,13 +91,17 @@
       "schema": "#/entities/InterviewSession",
       "description": "Stores individual mock interview records."
     },
+    "/users/{userId}/resumes/{resumeId}": {
+      "schema": "#/entities/ResumeAudit",
+      "description": "Stores resume intelligence audits."
+    },
+    "/users/{userId}/job_applications/{appId}": {
+      "schema": "#/entities/JobApplication",
+      "description": "Stores tracked job application nodes."
+    },
     "/users/{userId}/daily_challenges/{challengeId}": {
       "schema": "#/entities/DailyChallenge",
       "description": "Stores individual daily challenge records."
-    },
-    "/users/{userId}/favorite_questions/{favId}": {
-      "schema": "#/entities/FavoriteQuestion",
-      "description": "Stores user's bookmarked questions."
     }
   }
 }
