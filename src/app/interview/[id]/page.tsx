@@ -87,7 +87,7 @@ function InterviewSessionContent() {
 
     const interval = setInterval(() => setTimer(t => t + 1), 1000);
     return () => clearInterval(interval);
-  }, [role, exp, round]); // debugMode removed as dependency to avoid loop
+  }, [role, exp, round]);
 
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -98,25 +98,22 @@ function InterviewSessionContent() {
 
     const currentAnswer = userAnswer || "[DEBUG INPUT]";
     setUserAnswer('');
-    setIsProcessing(true);
 
-    const newHistory = [...history, {
+    // Pre-update history for immediate UI feedback
+    const turn = {
       question: nextOutput?.nextQuestion || '',
       answer: currentAnswer,
       aiFeedback: nextOutput?.feedbackOnLastAnswer
-    }];
+    };
     
-    // History should be maintained locally even in debug mode to test prompt synthesis
+    const newHistory = [...history, turn];
     setHistory(newHistory);
 
     const nextIdx = currentQuestionIndex + 1;
     setCurrentQuestionIndex(nextIdx);
 
-    if (nextIdx >= TOTAL_QUESTIONS && !debugMode) {
-      setIsComplete(true);
-      setIsProcessing(false);
-      return;
-    }
+    // Skip loader in debug mode for instant feel
+    if (!debugMode) setIsProcessing(true);
 
     try {
       const output = await aiMockInterview({
@@ -131,6 +128,7 @@ function InterviewSessionContent() {
 
       setNextOutput(output);
       if (output.debugPrompt) setLastDebugPrompt(output.debugPrompt);
+      
       if (output.isInterviewComplete && !debugMode) {
         setIsComplete(true);
       }
@@ -258,7 +256,7 @@ function InterviewSessionContent() {
                 </div>
 
                 <div className="space-y-4">
-                  <p className="text-[10px] font-bold uppercase tracking-widest text-red-400/60">Generated Neural Prompt</p>
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-red-400/60">Intercepted Signal Output</p>
                   <pre className="p-6 rounded-2xl bg-black/50 border border-white/5 text-[11px] leading-relaxed font-mono whitespace-pre-wrap text-white/70">
                     {lastDebugPrompt}
                   </pre>
@@ -291,7 +289,7 @@ function InterviewSessionContent() {
                     className="absolute top-8 left-8 right-8 z-20"
                   >
                     <div className="glass p-6 rounded-3xl border-accent/40 bg-accent/10 backdrop-blur-2xl">
-                      <p className="text-base font-medium leading-relaxed">{nextOutput.nextQuestion}</p>
+                      <p className="text-sm font-medium leading-relaxed">{nextOutput.nextQuestion}</p>
                     </div>
                   </motion.div>
                 )}
@@ -311,7 +309,7 @@ function InterviewSessionContent() {
             </div>
             {debugMode && (
               <Badge variant="outline" className="ml-6 border-red-500/40 text-red-400 uppercase tracking-widest font-bold text-[8px] animate-pulse">
-                Neural Bypass Enabled
+                Neural Bypass Active
               </Badge>
             )}
           </div>
@@ -350,7 +348,7 @@ function InterviewSessionContent() {
                   <div className="px-6 py-4 glass rounded-2xl border-white/10 flex items-center gap-3">
                     <Loader2 className="w-4 h-4 animate-spin text-accent" />
                     <span className="text-[10px] font-bold tracking-widest text-muted-foreground uppercase">
-                      {debugMode ? 'Intercepting Prompt...' : 'Analyzing Response...'}
+                      Analyzing Intelligence...
                     </span>
                   </div>
                 </div>
@@ -382,7 +380,7 @@ function InterviewSessionContent() {
                   value={userAnswer}
                   onChange={(e) => setUserAnswer(e.target.value)}
                   onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && (e.preventDefault(), handleSend())}
-                  placeholder={debugMode ? "DEBUG: Press Enter to simulate transmission..." : "Type your answer here... (Press Enter to transmit)"}
+                  placeholder={debugMode ? "DEBUG: Press Enter to transmit signal..." : "Type your answer here... (Press Enter to transmit)"}
                   rows={2}
                   className={`flex-1 bg-white/5 border rounded-2xl p-6 text-lg font-light focus:outline-none transition-all resize-none custom-scrollbar ${debugMode ? 'border-red-500/20 focus:border-red-500' : 'border-white/10 focus:border-accent'}`}
                 />

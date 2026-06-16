@@ -73,22 +73,19 @@ const aiMockInterviewFlow = ai.defineFlow(
     outputSchema: AiMockInterviewOutputSchema,
   },
   async (input) => {
-    console.log('[DEBUG REQUEST RECEIVED]', { role: input.role, debugMode: input.debugMode });
-
-    // Render the prompt for debugging or live use using Genkit 1.x standard
-    const rendered = await ai.renderPrompt({
-      prompt,
-      input,
-    });
-    const renderedText = rendered.text;
-
+    // Instant Debug Bypass
     if (input.debugMode) {
-      console.log('[DEBUG RESPONSE GENERATED - BYPASS ACTIVE]');
-      return {
-        nextQuestion: "[DEBUG MODE ACTIVE - NO AI RESPONSE]",
+      console.log('[DEBUG REQUEST RECEIVED]', { role: input.role, exp: input.experienceLevel });
+      
+      const debugResponse: AiMockInterviewOutput = {
+        nextQuestion: "[DEBUG MODE ACTIVE: NEXT QUESTION SIMULATED]",
+        feedbackOnLastAnswer: "DEBUG: Signal received. UI pipeline is functional.",
         isInterviewComplete: false,
-        debugPrompt: renderedText
+        debugPrompt: `DEBUG REQUEST RECEIVED\n\nRole: ${input.role}\nExperience: ${input.experienceLevel}\nRound: ${input.roundType}\n\nLast User Input: ${input.userAnswer || 'N/A'}\nHistory Depth: ${input.history.length}\nQuestion Index: ${input.currentMainQuestionIndex}`
       };
+      
+      console.log('[DEBUG RESPONSE GENERATED]');
+      return debugResponse;
     }
 
     const { output } = await runWithResilience(prompt, input);
