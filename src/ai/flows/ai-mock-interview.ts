@@ -3,6 +3,7 @@
  * @fileOverview Nexvoro AI Mock Interview Agent.
  * Generates dynamic questions and evaluates responses using Resilient Gemini protocols.
  * Includes an Offline Mock Fallback for high availability during API outages.
+ * Upgraded to support Resume-specific context questioning.
  */
 
 import { ai, runWithResilience } from '@/ai/genkit';
@@ -19,6 +20,11 @@ const AiMockInterviewInputSchema = z.object({
   })),
   userAnswer: z.string().optional(),
   debugMode: z.boolean().optional(),
+  resumeContext: z.object({
+    skills: z.array(z.string()).optional(),
+    projects: z.array(z.string()).optional(),
+    experienceSummary: z.string().optional(),
+  }).optional(),
 });
 export type AiMockInterviewInput = z.infer<typeof AiMockInterviewInputSchema>;
 
@@ -79,10 +85,22 @@ const prompt = ai.definePrompt({
   prompt: `You are an elite technical interviewer at a Tier-1 tech company.
 Your mission is to conduct a professional, high-fidelity interview for a {{{role}}} at a {{{experienceLevel}}} level, specializing in {{{roundType}}}.
 
+{{#if resumeContext}}
+CANDIDATE DOSSIER:
+- Skills: {{#each resumeContext.skills}}{{{this}}}, {{/each}}
+- Projects: {{#each resumeContext.projects}}{{{this}}}, {{/each}}
+- Experience: {{{resumeContext.experienceSummary}}}
+
+CRITICAL INSTRUCTION:
+You MUST challenge the candidate specifically on the projects, skills, and achievements listed in their resume. 
+Ask deep technical questions about their implementations (e.g. how they handled concurrency in their Inventory Tracking System, or the architecture of their E-Commerce system).
+Use the resume as the primary ground truth for questioning.
+{{/if}}
+
 Current Progress: Question {{{currentMainQuestionIndex}}} of 10.
 
 Protocol:
-1. If this is the FIRST question (history is empty), ask a strong opening question related to the role and level.
+1. If this is the FIRST question (history is empty), ask a strong opening question related to the role and level, preferably referencing their resume projects if available.
 2. If the user just answered (userAnswer is provided), evaluate their answer based on technical logic, communication clarity, and professional confidence.
 3. Provide a brief, encouraging, but objective piece of feedback on their last answer.
 4. Ask the NEXT question. The questions should get progressively more challenging.
@@ -138,9 +156,15 @@ const aiMockInterviewFlow = ai.defineFlow(
         ? input.history.map(h => `Interviewer: ${h.question}\nCandidate: ${h.answer}`).join('\n')
         : 'No history yet.';
 
+      const resumeStr = input.resumeContext 
+        ? `RESUME CONTEXT:\nSkills: ${input.resumeContext.skills?.join(', ')}\nProjects: ${input.resumeContext.projects?.join(', ')}\nExp: ${input.resumeContext.experienceSummary}`
+        : 'No resume context provided.';
+
       const renderedPrompt = `SYSTEM:
 You are an elite technical interviewer at a Tier-1 tech company.
 Your mission is to conduct a professional, high-fidelity interview for a ${input.role} at a ${input.experienceLevel} level, specializing in ${input.roundType}.
+
+${resumeStr}
 
 INTERVIEW INSTRUCTIONS:
 Current Progress: Question ${input.currentMainQuestionIndex} of 10.

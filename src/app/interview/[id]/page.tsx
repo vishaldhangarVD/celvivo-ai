@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef, Suspense } from 'react';
+import { useState, useEffect, useRef, Suspense, useMemo } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -29,8 +29,8 @@ import {
 } from 'lucide-react';
 import { aiMockInterview, type AiMockInterviewOutput } from '@/ai/flows/ai-mock-interview';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
-import { useUser, useFirestore } from '@/firebase';
-import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import { useUser, useFirestore, useCollection } from '@/firebase';
+import { collection, addDoc, serverTimestamp, query, orderBy, limit } from 'firebase/firestore';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
 
@@ -64,8 +64,32 @@ function InterviewSessionContent() {
   const officeImg = PlaceHolderImages.find(img => img.id === 'office-bg')?.imageUrl || "https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&q=80";
   const hrImg = PlaceHolderImages.find(img => img.id === 'ai-hr-interviewer')?.imageUrl || "https://picsum.photos/seed/nexvoro_hr/800/1000";
 
+  // Fetch Latest Resume for context-aware questioning
+  const resumesQuery = useMemo(() => {
+    if (!db || !user?.uid) return null;
+    return query(
+      collection(db, 'users', user.uid, 'resumes'),
+      orderBy('createdAt', 'desc'),
+      limit(1)
+    );
+  }, [db, user?.uid]);
+  const { data: latestResumes, loading: resumeLoading } = useCollection(resumesQuery);
+
+  const resumeContext = useMemo(() => {
+    const resume = latestResumes?.[0];
+    if (!resume) return undefined;
+    
+    return {
+      skills: resume.analysis?.skillAnalysis?.map((s: any) => s.skill) || [],
+      projects: resume.analysis?.sections?.projects || [],
+      experienceSummary: resume.analysis?.sections?.experience?.[0] || `${resume.targetRole} with focus on technical excellence.`
+    };
+  }, [latestResumes]);
+
   useEffect(() => {
     const startInterview = async () => {
+      if (resumeLoading) return; // Wait for resume data if user has it
+      
       setIsProcessing(true);
       try {
         const output = await aiMockInterview({
@@ -74,7 +98,8 @@ function InterviewSessionContent() {
           roundType: round,
           currentMainQuestionIndex: 1,
           history: [],
-          debugMode
+          debugMode,
+          resumeContext: resumeContext
         });
         setNextOutput(output);
         if (output.debugPrompt) setLastDebugPrompt(output.debugPrompt);
@@ -84,11 +109,15 @@ function InterviewSessionContent() {
         setIsProcessing(false);
       }
     };
-    startInterview();
+    
+    // Only run if we haven't started yet and history is empty
+    if (history.length === 0 && !nextOutput && !isProcessing) {
+      startInterview();
+    }
 
     const interval = setInterval(() => setTimer(t => t + 1), 1000);
     return () => clearInterval(interval);
-  }, [role, exp, round]);
+  }, [role, exp, round, resumeLoading, resumeContext, history.length, nextOutput, isProcessing, debugMode]);
 
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -125,7 +154,8 @@ function InterviewSessionContent() {
         currentMainQuestionIndex: nextIdx + 1,
         history: newHistory,
         userAnswer: currentAnswer,
-        debugMode
+        debugMode,
+        resumeContext: resumeContext
       });
 
       setNextOutput(output);
@@ -197,6 +227,12 @@ function InterviewSessionContent() {
         </div>
         
         <div className="flex items-center gap-8">
+          {resumeContext && (
+            <Badge className="bg-purple-500/20 text-purple-400 border-none px-4 py-2 font-bold tracking-widest text-[8px] uppercase">
+              <ShieldCheck className="w-3 h-3 mr-2" /> Resume Synced
+            </Badge>
+          )}
+
           {nextOutput?.isMock && (
             <Badge className="bg-orange-500/20 text-orange-400 border-none px-4 py-2 font-black tracking-widest text-[10px] animate-pulse">
               [MOCK MODE ACTIVE]
