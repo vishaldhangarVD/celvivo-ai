@@ -20,11 +20,14 @@ import {
   TrendingUp,
   ShieldCheck,
   ChevronDown,
-  ChevronUp
+  ChevronUp,
+  FileText,
+  SearchCheck,
+  Code2
 } from 'lucide-react';
 import { generateInterviewFeedback, type InterviewFeedbackOutput } from '@/ai/flows/ai-interview-feedback';
-import { useUser, useFirestore, useDoc } from '@/firebase';
-import { doc, updateDoc } from 'firebase/firestore';
+import { useUser, useFirestore, useDoc, useCollection } from '@/firebase';
+import { doc, updateDoc, collection, query, orderBy, limit } from 'firebase/firestore';
 import { generateCertificatePDF } from '@/lib/certificate-generator';
 import { useToast } from '@/hooks/use-toast';
 import Link from 'next/link';
@@ -42,6 +45,17 @@ export default function FeedbackReport() {
   }, [db, user?.uid, docId]);
   
   const { data: interviewDoc, loading: docLoading } = useDoc(interviewRef);
+
+  // Fetch Latest Resume for contextual validation
+  const resumesQuery = useMemo(() => {
+    if (!db || !user?.uid) return null;
+    return query(
+      collection(db, 'users', user.uid, 'resumes'),
+      orderBy('createdAt', 'desc'),
+      limit(1)
+    );
+  }, [db, user?.uid]);
+  const { data: latestResumes } = useCollection(resumesQuery);
   
   const [feedback, setFeedback] = useState<InterviewFeedbackOutput | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -60,11 +74,20 @@ export default function FeedbackReport() {
       try {
         const transcript = (interviewDoc.history || []).map((h: any) => `Q: ${h.question}\nA: ${h.answer}`).join('\n\n');
         
+        const resume = latestResumes?.[0];
+        const resumeContext = resume ? {
+          skills: resume.analysis?.skillAnalysis?.map((s: any) => s.skill) || [],
+          projects: resume.analysis?.sections?.projects || [],
+          experienceSummary: resume.analysis?.sections?.experience?.[0] || "",
+          atsScore: resume.atsScore || 0
+        } : undefined;
+
         const result = await generateInterviewFeedback({
           interviewTranscript: transcript,
           role: interviewDoc.role || 'Software Engineer',
           experienceLevel: interviewDoc.experienceLevel || 'Senior',
-          round: interviewDoc.round || 'Technical Round'
+          round: interviewDoc.round || 'Technical Round',
+          resumeContext
         });
         
         setFeedback(result);
@@ -95,7 +118,7 @@ export default function FeedbackReport() {
     };
 
     if (!docLoading && interviewDoc) processAudit();
-  }, [interviewDoc, docLoading, user?.uid, db, interviewRef, toast, isProcessing]);
+  }, [interviewDoc, docLoading, user?.uid, db, interviewRef, toast, isProcessing, latestResumes]);
 
   if (docLoading || isProcessing) {
     return (
@@ -106,7 +129,7 @@ export default function FeedbackReport() {
         </div>
         <div className="text-center space-y-4">
           <h2 className="text-3xl font-bold tracking-tighter text-premium">Synthesizing Neural Audit...</h2>
-          <p className="text-muted-foreground font-light uppercase tracking-[0.4em] text-[10px]">Processing 10 High-Fidelity Assessment Nodes</p>
+          <p className="text-muted-foreground font-light uppercase tracking-[0.4em] text-[10px]">Processing Contextual Intelligence Nodes</p>
         </div>
       </div>
     );
@@ -158,9 +181,11 @@ export default function FeedbackReport() {
                 <CardContent className="grid md:grid-cols-2 gap-10">
                   {[
                     { label: "Technical Logic", score: feedback.technicalKnowledgeScore, icon: BrainCircuit, color: "text-blue-400" },
-                    { label: "Execution Precision", score: feedback.overallInterviewScore, icon: Target, color: "text-orange-400" },
                     { label: "Strategic Communication", score: feedback.communicationScore, icon: MessageSquare, color: "text-green-400" },
-                    { label: "Operational Presence", score: feedback.confidenceScore, icon: Zap, color: "text-yellow-400" }
+                    { label: "Operational Presence", score: feedback.confidenceScore, icon: Zap, color: "text-yellow-400" },
+                    { label: "Resume Skill Match", score: feedback.resumeSkillMatchScore, icon: FileText, color: "text-purple-400" },
+                    { label: "Claim Validation", score: feedback.resumeClaimValidationScore, icon: SearchCheck, color: "text-orange-400" },
+                    { label: "Project Knowledge", score: feedback.projectKnowledgeScore, icon: Code2, color: "text-cyan-400" }
                   ].map((m, i) => (
                     <div key={i} className="space-y-4">
                       <div className="flex justify-between items-end">

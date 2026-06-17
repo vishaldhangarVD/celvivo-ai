@@ -24,6 +24,7 @@ const AiMockInterviewInputSchema = z.object({
     skills: z.array(z.string()).optional(),
     projects: z.array(z.string()).optional(),
     experienceSummary: z.string().optional(),
+    atsScore: z.number().optional(),
   }).optional(),
 });
 export type AiMockInterviewInput = z.infer<typeof AiMockInterviewInputSchema>;
@@ -86,15 +87,17 @@ const prompt = ai.definePrompt({
 Your mission is to conduct a professional, high-fidelity interview for a {{{role}}} at a {{{experienceLevel}}} level, specializing in {{{roundType}}}.
 
 {{#if resumeContext}}
-CANDIDATE DOSSIER:
+CANDIDATE RESUME DOSSIER:
 - Skills: {{#each resumeContext.skills}}{{{this}}}, {{/each}}
 - Projects: {{#each resumeContext.projects}}{{{this}}}, {{/each}}
 - Experience: {{{resumeContext.experienceSummary}}}
+- Resume ATS Score: {{{resumeContext.atsScore}}}%
 
 CRITICAL INSTRUCTION:
 You MUST challenge the candidate specifically on the projects, skills, and achievements listed in their resume. 
-Ask deep technical questions about their implementations (e.g. how they handled concurrency in their Inventory Tracking System, or the architecture of their E-Commerce system).
-Use the resume as the primary ground truth for questioning.
+- If the resume contains specific technologies (e.g. Java, SQL), ask deep optimization or conceptual questions about them.
+- Interrogate the architecture of the projects they listed.
+- Use the resume as the primary ground truth for questioning.
 {{/if}}
 
 Current Progress: Question {{{currentMainQuestionIndex}}} of 10.
@@ -105,11 +108,6 @@ Protocol:
 3. Provide a brief, encouraging, but objective piece of feedback on their last answer.
 4. Ask the NEXT question. The questions should get progressively more challenging.
 5. If Question Index reaches 10, mark isInterviewComplete as true.
-
-CRITICAL INSTRUCTION FOR {{{roundType}}}:
-- If this is an "HR Round" or "Behavioral Round" for a technical role like {{{role}}}, you MUST NOT ask generic HR management or policy questions.
-- Instead, focus on the candidate's professional behavior WITHIN a software engineering context.
-- Ask about: Team conflict resolution in dev teams, communicating technical complexity to stakeholders, managing project deadlines, and leadership during code reviews or system migrations.
 
 History of conversation:
 {{#each history}}
@@ -157,7 +155,7 @@ const aiMockInterviewFlow = ai.defineFlow(
         : 'No history yet.';
 
       const resumeStr = input.resumeContext 
-        ? `RESUME CONTEXT:\nSkills: ${input.resumeContext.skills?.join(', ')}\nProjects: ${input.resumeContext.projects?.join(', ')}\nExp: ${input.resumeContext.experienceSummary}`
+        ? `RESUME CONTEXT:\nSkills: ${input.resumeContext.skills?.join(', ')}\nProjects: ${input.resumeContext.projects?.join(', ')}\nExp: ${input.resumeContext.experienceSummary}\nATS: ${input.resumeContext.atsScore}%`
         : 'No resume context provided.';
 
       const renderedPrompt = `SYSTEM:
@@ -172,9 +170,6 @@ Current Progress: Question ${input.currentMainQuestionIndex} of 10.
 2. If the user just answered, evaluate based on technical logic, communication, and confidence.
 3. Provide objective feedback and ask the NEXT question (progressively challenging).
 4. If index reaches 10, terminate simulation.
-
-CONTEXTUAL PROTOCOL:
-- Focus on professional behavior within a software context. No generic HR policy questions.
 
 CONVERSATION HISTORY:
 ${historyStr}

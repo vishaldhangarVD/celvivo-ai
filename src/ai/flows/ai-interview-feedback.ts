@@ -2,6 +2,7 @@
 /**
  * @fileOverview Nexvoro AI Performance Auditor.
  * Synthesizes comprehensive reports from interview transcripts using Resilient Gemini protocols.
+ * Upgraded with Resume Intelligence synchronization.
  */
 
 import { ai, runWithResilience } from '@/ai/genkit';
@@ -12,6 +13,12 @@ const InterviewFeedbackInputSchema = z.object({
   role: z.string(),
   experienceLevel: z.string(),
   round: z.string().optional(),
+  resumeContext: z.object({
+    skills: z.array(z.string()).optional(),
+    projects: z.array(z.string()).optional(),
+    experienceSummary: z.string().optional(),
+    atsScore: z.number().optional(),
+  }).optional(),
 });
 export type InterviewFeedbackInput = z.infer<typeof InterviewFeedbackInputSchema>;
 
@@ -20,6 +27,9 @@ const InterviewFeedbackOutputSchema = z.object({
   communicationScore: z.number().min(0).max(100),
   confidenceScore: z.number().min(0).max(100),
   overallInterviewScore: z.number().min(0).max(100),
+  resumeSkillMatchScore: z.number().min(0).max(100).describe('Alignment between transcript and resume skills.'),
+  resumeClaimValidationScore: z.number().min(0).max(100).describe('Verification of claims made in the resume.'),
+  projectKnowledgeScore: z.number().min(0).max(100).describe('Depth of understanding of listed projects.'),
   strengths: z.array(z.string()),
   weaknesses: z.array(z.string()),
   improvementSuggestions: z.array(z.string()),
@@ -43,29 +53,34 @@ const prompt = ai.definePrompt({
   input: { schema: InterviewFeedbackInputSchema },
   output: { schema: InterviewFeedbackOutputSchema },
   prompt: `You are an elite Senior Technical Recruitment Auditor. 
-Your mission is to synthesize a high-fidelity performance audit from the following interview transcript for a {{{role}}} at a {{{experienceLevel}}} level, specializing in the {{{round}}}.
+Your mission is to synthesize a high-fidelity performance audit from the following interview transcript for a {{{role}}} at a {{{experienceLevel}}} level.
 
 Transcript:
 {{{interviewTranscript}}}
 
-Evaluation Protocol:
-1. Technical Logic Audit: Evaluate accuracy of solutions, depth of architectural reasoning, and role-specific mastery.
-2. Narrative Delivery: Analyze communication clarity, use of the STAR method, and command of industry terminology.
-3. Operational Presence: Assess decisiveness, handling of complex follow-ups, and professional confidence.
+{{#if resumeContext}}
+CANDIDATE RESUME DOSSIER:
+- Skills: {{#each resumeContext.skills}}{{{this}}}, {{/each}}
+- Projects: {{#each resumeContext.projects}}{{{this}}}, {{/each}}
+- Experience: {{{resumeContext.experienceSummary}}}
+- Resume ATS Score: {{{resumeContext.atsScore}}}%
 
-CRITICAL INSTRUCTION FOR IMPROVEMENT PLAN:
-The "improvementPlan" MUST be highly specialized for the deployment role: {{{role}}}.
-- If the role is a Developer (e.g., .NET Developer), you MUST provide specific technical nodes like: C#, ASP.NET Core, Web API, Entity Framework, SQL Server, System Design, and Microservices.
-- If the role is a Data Analyst, prioritize: SQL Query Optimization, Data Visualization (PowerBI/Tableau), and Exploratory Data Analysis.
-- If the role is a Data Scientist, prioritize: Machine Learning Algorithms, Statistical Modeling, Feature Engineering, and Model Deployment.
-- Map these technical and behavioral vectors into actionable roadmap items.
+RESUME VALIDATION PROTOCOL:
+1. Resume Skill Match: Analyze if the candidate's technical answers align with the proficiency claimed for skills listed in the resume.
+2. Claim Validation: Evaluate if the candidate successfully defended the achievements and tenure claimed in the resume.
+3. Project Depth: Specifically score how well the candidate explained the architectural and technical details of the projects listed in their resume.
+{{/if}}
+
+Evaluation Protocol:
+1. Technical Logic Audit: Evaluate accuracy of solutions and architectural reasoning.
+2. Narrative Delivery: Analyze communication clarity and STAR method application.
+3. Operational Presence: Assess decisiveness and professional confidence.
 
 Provide:
-- Scores (0-100) for all nodes.
+- All required scores (0-100).
 - Exactly 3 Strengths and 3 Weaknesses.
-- A strategic Hiring Recommendation.
-- A role-calibrated 30-day Improvement Plan.
-- A Job Readiness Score representing market calibration.`,
+- Hiring Recommendation.
+- Role-calibrated Improvement Plan.`,
 });
 
 const interviewFeedbackFlow = ai.defineFlow(
