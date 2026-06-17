@@ -49,8 +49,11 @@ import {
   FlaskConical
 } from 'lucide-react';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
-import { useUser } from '@/firebase';
+import { useUser, useFirestore } from '@/firebase';
 import { runGeminiTest } from '@/ai/flows/test-gemini';
+import { analyzeResume } from '@/ai/flows/ai-resume-analysis';
+import { collection, addDoc, serverTimestamp, doc, updateDoc } from 'firebase/firestore';
+import { useToast } from '@/hooks/use-toast';
 
 const ROLES = [
   "Frontend Developer", "Backend Developer", "Full Stack Developer", "Software Engineer",
@@ -79,13 +82,16 @@ const ROUNDS = [
 export default function LandingPage() {
   const router = useRouter();
   const { user, loading: authLoading } = useUser();
+  const db = useFirestore();
+  const { toast } = useToast();
+
   const [isWizardOpen, setIsWizardOpen] = useState(false);
   const [step, setStep] = useState(1);
   const [selectedRole, setSelectedRole] = useState("");
   const [selectedRound, setSelectedRound] = useState("Technical Round");
   const [searchQuery, setSearchQuery] = useState("");
   const [isUploading, setIsUploading] = useState(false);
-  const [uploadedFile, setUploadedFile] = useState<string | null>(null);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
 
   // Test State
   const [testResult, setTestResult] = useState<any>(null);
@@ -104,6 +110,7 @@ export default function LandingPage() {
     }
     setIsWizardOpen(true);
     setStep(1);
+    setSelectedFile(null);
   };
 
   const handleAnalyzeResumeDirect = () => {
@@ -114,18 +121,60 @@ export default function LandingPage() {
     router.push('/resume');
   };
 
-  const handleFileUpload = () => {
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      const file = e.target.files[0];
+      if (file.size > 5 * 1024 * 1024) {
+        toast({
+          variant: "destructive",
+          title: "File Too Large",
+          description: "Please upload a file smaller than 5MB.",
+        });
+        return;
+      }
+      setSelectedFile(file);
+    }
+  };
+
+  const handleResumeStep = async () => {
+    if (!selectedFile || !user || !db) return;
     setIsUploading(true);
-    setTimeout(() => {
-      setIsUploading(false);
-      setUploadedFile("RESUME_SIMULATED_2025.pdf");
+    try {
+      const base64 = await new Promise<string>((res) => {
+        const reader = new FileReader();
+        reader.onload = () => res(reader.result as string);
+        reader.readAsDataURL(selectedFile);
+      });
+
+      const audit = await analyzeResume({ resumeDataUri: base64, targetRole: selectedRole || "Software Engineer" });
+      
+      const resumesRef = collection(db, 'users', user.uid, 'resumes');
+      await addDoc(resumesRef, {
+        userId: user.uid,
+        filename: selectedFile.name,
+        targetRole: selectedRole || "Software Engineer",
+        atsScore: audit.atsScore,
+        analysis: audit,
+        createdAt: serverTimestamp(),
+      });
+
+      const userDocRef = doc(db, 'users', user.uid);
+      await updateDoc(userDocRef, {
+        resumeScore: audit.atsScore
+      });
+
       setStep(2);
-    }, 2000);
+      toast({ title: "Blueprint Verified", description: "Your career intelligence has been synchronized." });
+    } catch (e) {
+      toast({ variant: "destructive", title: "Audit Failed", description: "Could not parse document. Ensure Gemini is reachable." });
+    } finally {
+      setIsUploading(false);
+    }
   };
 
   const handleStartInterview = () => {
     const sessionId = Math.random().toString(36).substring(7);
-    router.push(`/interview/${sessionId}?role=${encodeURIComponent(selectedRole)}&exp=Senior&round=${encodeURIComponent(selectedRound)}`);
+    router.push(`/interview/${sessionId}?role=${encodeURIComponent(selectedRole || "Software Engineer")}&exp=Senior&round=${encodeURIComponent(selectedRound)}`);
   };
 
   const handleGeminiTest = async () => {
@@ -154,7 +203,6 @@ export default function LandingPage() {
       <div className="particles-bg" />
       <Navbar />
       
-      {/* Massive Test Button at the Top */}
       <div className="fixed top-24 left-0 right-0 z-[110] flex justify-center pointer-events-none px-6">
         <div className="pointer-events-auto flex flex-col items-center gap-4 w-full max-w-xl">
           <Button 
@@ -219,7 +267,6 @@ export default function LandingPage() {
         <div className="container mx-auto px-6 z-10">
           <div className="flex flex-col lg:flex-row items-center gap-16">
             
-            {/* Left Side */}
             <div className="lg:w-5/12 text-left">
               <motion.div 
                 initial={{ opacity: 0, scale: 0.9 }}
@@ -271,7 +318,6 @@ export default function LandingPage() {
               </motion.div>
             </div>
 
-            {/* Right Side: Virtual HR Manager Card */}
             <div className="lg:w-7/12 w-full">
               <motion.div
                 initial={{ opacity: 0, x: 50 }}
@@ -279,7 +325,6 @@ export default function LandingPage() {
                 className="relative group"
               >
                 <Card className="premium-card border-glow-premium p-0 overflow-hidden border-white/10 bg-[#0b0e1a]/80 shadow-[0_0_100px_rgba(147,51,234,0.15)] flex flex-col md:flex-row min-h-[550px]">
-                  {/* Left Content */}
                   <div className="flex-1 p-10 md:p-12 flex flex-col justify-between relative z-10">
                     <div className="space-y-6">
                       <div className="flex justify-between items-start">
@@ -301,7 +346,7 @@ export default function LandingPage() {
                       
                       <div className="grid grid-cols-1 gap-6 pt-2">
                         {[
-                          { val: "10 Free", label: "Questions", icon: MessageSquare, color: "text-blue-400" },
+                          { val: "10 Nodes", label: "Per Session", icon: MessageSquare, color: "text-blue-400" },
                           { val: "75+", label: "IT Job Roles", icon: Layers, color: "text-purple-400" },
                           { val: "Instant", label: "AI Feedback", icon: Zap, color: "text-accent" }
                         ].map((stat, i) => (
@@ -327,7 +372,6 @@ export default function LandingPage() {
                     </Button>
                   </div>
 
-                  {/* Right Avatar */}
                   <div className="md:w-[48%] relative min-h-[550px] flex items-center justify-center p-6 md:p-8 bg-black/20">
                     <div className="relative w-full h-full min-h-[450px] rounded-3xl overflow-hidden border border-white/20 shadow-2xl glass bg-white/[0.02]">
                       <Image 
@@ -338,7 +382,6 @@ export default function LandingPage() {
                         priority
                         data-ai-hint="professional businessman suit"
                       />
-                      {/* Interaction Overlays */}
                       <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-black/40 z-20"></div>
                       <div className="absolute top-6 left-6 z-30">
                         <Badge className="bg-white/10 backdrop-blur-md text-white border-white/20 px-4 py-1.5 text-[10px] tracking-widest font-bold uppercase rounded-xl">
@@ -415,9 +458,16 @@ export default function LandingPage() {
                       </div>
 
                       <div 
-                        onClick={handleFileUpload}
+                        onClick={() => document.getElementById('wizard-resume-upload')?.click()}
                         className={`border-2 border-dashed rounded-3xl p-12 text-center transition-all cursor-pointer group ${isUploading ? 'border-accent bg-accent/5' : 'border-white/10 hover:border-accent/30 hover:bg-white/[0.02]'}`}
                       >
+                        <input 
+                          type="file" 
+                          id="wizard-resume-upload" 
+                          className="hidden" 
+                          accept=".pdf,.docx"
+                          onChange={handleFileChange} 
+                        />
                         {isUploading ? (
                           <div className="flex flex-col items-center gap-4">
                             <Cpu className="w-10 h-10 text-accent animate-spin" />
@@ -427,12 +477,21 @@ export default function LandingPage() {
                           <div className="flex flex-col items-center gap-4">
                             <Upload className="w-10 h-10 text-muted-foreground group-hover:text-accent transition-colors" />
                             <div className="space-y-1">
-                              <span className="text-lg font-bold">Select Career Blueprint</span>
+                              <span className="text-lg font-bold">{selectedFile ? selectedFile.name : "Select Career Blueprint"}</span>
                               <p className="text-xs text-muted-foreground uppercase tracking-widest font-bold">PDF or DOCX • Enterprise Grade Parsing</p>
                             </div>
                           </div>
                         )}
                       </div>
+
+                      {selectedFile && !isUploading && (
+                        <Button 
+                          onClick={handleResumeStep}
+                          className="w-full h-18 btn-premium text-xs font-bold uppercase tracking-[0.3em]"
+                        >
+                          Initialize Neural Handshake <Zap className="ml-3 w-4 h-4" />
+                        </Button>
+                      )}
                     </motion.div>
                   )}
 

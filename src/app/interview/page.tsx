@@ -27,14 +27,15 @@ import {
   X
 } from 'lucide-react';
 import { useUser, useFirestore, useCollection } from '@/firebase';
-import { collection, query, orderBy, limit } from 'firebase/firestore';
+import { collection, query, orderBy, limit, addDoc, serverTimestamp, doc, updateDoc } from 'firebase/firestore';
 import { analyzeResume } from '@/ai/flows/ai-resume-analysis';
 import { useToast } from '@/hooks/use-toast';
 import { motion, AnimatePresence } from 'framer-motion';
 
 const ROLES = [
   "Frontend Developer", "Backend Developer", "Full Stack Developer", "Software Engineer",
-  "Data Scientist", "DevOps Engineer", "Cloud Engineer", "Cyber Security Analyst", "UI/UX Designer"
+  "Data Scientist", "DevOps Engineer", "Cloud Engineer", "Cyber Security Analyst", "UI/UX Designer",
+  ".NET Developer", "Python Developer", "Java Developer"
 ];
 
 const EXPERIENCE_LEVELS = ["Junior", "Mid", "Senior"];
@@ -66,11 +67,18 @@ export default function InterviewSetup() {
   const { data: resumes, loading: resumeCheckLoading } = useCollection(resumeQuery);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) setFile(e.target.files[0]);
+    if (e.target.files && e.target.files[0]) {
+      const selected = e.target.files[0];
+      if (selected.size > 5 * 1024 * 1024) {
+        toast({ variant: "destructive", title: "File Too Large", description: "Limit: 5MB" });
+        return;
+      }
+      setFile(selected);
+    }
   };
 
   const handleResumeStep = async () => {
-    if (!file) return;
+    if (!file || !user || !db) return;
     setIsAnalyzing(true);
     try {
       const base64 = await new Promise<string>((res) => {
@@ -78,11 +86,29 @@ export default function InterviewSetup() {
         reader.onload = () => res(reader.result as string);
         reader.readAsDataURL(file);
       });
-      await analyzeResume({ resumeDataUri: base64, targetRole: selectedRole });
+
+      const result = await analyzeResume({ resumeDataUri: base64, targetRole: selectedRole });
+      
+      // Save to Firestore
+      const resumesRef = collection(db, 'users', user.uid, 'resumes');
+      await addDoc(resumesRef, {
+        userId: user.uid,
+        filename: file.name,
+        targetRole: selectedRole,
+        atsScore: result.atsScore,
+        analysis: result,
+        createdAt: serverTimestamp(),
+      });
+
+      const userDocRef = doc(db, 'users', user.uid);
+      await updateDoc(userDocRef, {
+        resumeScore: result.atsScore
+      });
+
       setStep(2);
       toast({ title: "Blueprint Verified", description: "Your career intelligence has been synchronized." });
     } catch (e) {
-      toast({ variant: "destructive", title: "Audit Failed", description: "Could not parse document." });
+      toast({ variant: "destructive", title: "Audit Failed", description: "Could not parse document. Neural API may be busy." });
     } finally {
       setIsAnalyzing(false);
     }
@@ -140,10 +166,16 @@ export default function InterviewSetup() {
                   ) : null}
 
                   <div 
-                    onClick={() => document.getElementById('resume-upload')?.click()}
-                    className={`border-2 border-dashed rounded-[2.5rem] p-12 transition-all cursor-pointer group ${file ? 'border-accent bg-accent/5' : 'border-white/10 hover:border-accent/30 hover:bg-white/[0.02]'}`}
+                    onClick={() => !isAnalyzing && document.getElementById('resume-upload-calibration')?.click()}
+                    className={`border-2 border-dashed rounded-[2.5rem] p-12 transition-all cursor-pointer group ${file ? 'border-accent bg-accent/5' : 'border-white/10 hover:border-accent/30 hover:bg-white/[0.02]'} ${isAnalyzing ? 'opacity-50 cursor-not-allowed' : ''}`}
                   >
-                    <input type="file" id="resume-upload" className="hidden" onChange={handleFileChange} />
+                    <input 
+                      type="file" 
+                      id="resume-upload-calibration" 
+                      className="hidden" 
+                      accept=".pdf,.docx"
+                      onChange={handleFileChange} 
+                    />
                     {isAnalyzing ? (
                       <div className="flex flex-col items-center gap-4">
                         <Loader2 className="w-10 h-10 text-accent animate-spin" />
