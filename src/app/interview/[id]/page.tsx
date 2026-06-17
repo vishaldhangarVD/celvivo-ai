@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect, useRef, Suspense, useMemo } from 'react';
@@ -228,8 +229,8 @@ function InterviewSessionContent() {
         
         <div className="flex items-center gap-8">
           {resumeContext && (
-            <Badge className="bg-purple-500/20 text-purple-400 border-none px-4 py-2 font-bold tracking-widest text-[8px] uppercase">
-              <ShieldCheck className="w-3 h-3 mr-2" /> Resume Synced
+            <Badge className="bg-purple-500/20 text-purple-400 border-none px-4 py-2 font-bold tracking-widest text-[10px] uppercase animate-pulse">
+              <ShieldCheck className="w-3.5 h-3.5 mr-2" /> [RESUME-AWARE INTERVIEW]
             </Badge>
           )}
 
