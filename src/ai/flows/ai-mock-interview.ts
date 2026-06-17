@@ -1,9 +1,8 @@
 'use server';
 /**
  * @fileOverview Nexvoro AI Mock Interview Agent.
- * Generates dynamic questions and evaluates responses using Resilient Gemini protocols.
- * Includes an Offline Mock Fallback for high availability during API outages.
- * Upgraded to support Resume-specific context questioning.
+ * Generates adaptive questions and evaluates responses using Resilient Gemini protocols.
+ * Prioritizes resume-specific questioning and dynamic difficulty scaling.
  */
 
 import { ai, runWithResilience } from '@/ai/genkit';
@@ -25,6 +24,7 @@ const AiMockInterviewInputSchema = z.object({
     projects: z.array(z.string()).optional(),
     experienceSummary: z.string().optional(),
     atsScore: z.number().optional(),
+    certifications: z.array(z.string()).optional(),
   }).optional(),
 });
 export type AiMockInterviewInput = z.infer<typeof AiMockInterviewInputSchema>;
@@ -32,48 +32,12 @@ export type AiMockInterviewInput = z.infer<typeof AiMockInterviewInputSchema>;
 const AiMockInterviewOutputSchema = z.object({
   nextQuestion: z.string(),
   feedbackOnLastAnswer: z.string().optional(),
-  scores: z.object({
-    technical: z.number(),
-    communication: z.number(),
-    confidence: z.number(),
-  }).optional(),
+  difficultyAdjustment: z.enum(['Easier', 'Harder', 'Maintain']).optional(),
   isInterviewComplete: z.boolean(),
   debugPrompt: z.string().optional(),
   isMock: z.boolean().optional(),
 });
 export type AiMockInterviewOutput = z.infer<typeof AiMockInterviewOutputSchema>;
-
-// Local Intelligence Nodes for Offline Fallback - Recalibrated for Technical Roles
-const MOCK_KNOWLEDGE_BANK: Record<string, string[]> = {
-  "Technical Round": [
-    "Explain the difference between asynchronous and synchronous execution in your primary tech stack.",
-    "How do you approach debugging a memory leak in a production environment?",
-    "Describe the trade-offs between using a SQL database vs a NoSQL database for a high-traffic application.",
-    "What are the core principles of SOLID and how do you apply them in your daily coding?",
-    "How do you ensure data security and integrity when building distributed systems?"
-  ],
-  "HR Round": [
-    "Describe a time you had a technical disagreement with a teammate. How did you resolve it?",
-    "How do you communicate complex technical concepts to non-technical stakeholders?",
-    "Tell me about a time you had to balance code quality with a strict project deadline.",
-    "What is your approach to giving and receiving feedback during code reviews?",
-    "Describe a situation where you took the lead on a technical initiative or project."
-  ],
-  "Managerial Round": [
-    "How do you prioritize competing deadlines across multiple high-stakes projects?",
-    "Describe your experience with mentoring junior engineers and fostering technical growth.",
-    "How do you handle a situation where a project is falling behind schedule?",
-    "What is your approach to technical debt management in a fast-paced delivery cycle?",
-    "How do you align technical engineering goals with broader business objectives?"
-  ]
-};
-
-const DEFAULT_MOCK_QUESTIONS = [
-  "Can you elaborate on your experience with system architecture and design patterns?",
-  "How do you keep your skills updated in this rapidly evolving tech landscape?",
-  "Describe a time you had to learn a complex new technology in a very short period.",
-  "What is your philosophy on code quality versus delivery speed?"
-];
 
 export async function aiMockInterview(input: AiMockInterviewInput): Promise<AiMockInterviewOutput> {
   return aiMockInterviewFlow(input);
@@ -83,61 +47,41 @@ const prompt = ai.definePrompt({
   name: 'aiMockInterviewPrompt',
   input: { schema: AiMockInterviewInputSchema },
   output: { schema: AiMockInterviewOutputSchema },
-  prompt: `You are an elite technical interviewer at a Tier-1 tech company.
-Your mission is to conduct a professional, high-fidelity interview for a {{{role}}} at a {{{experienceLevel}}} level, specializing in {{{roundType}}}.
+  prompt: `You are an elite Senior Technical Interviewer.
+Your mission is to conduct a professional, RESUME-AWARE simulation for a {{{role}}} at a {{{experienceLevel}}} level, specializing in {{{roundType}}}.
 
 {{#if resumeContext}}
-CANDIDATE RESUME DOSSIER:
+CANDIDATE CAREER DOSSIER (Ground Truth):
 - Skills: {{#each resumeContext.skills}}{{{this}}}, {{/each}}
 - Projects: {{#each resumeContext.projects}}{{{this}}}, {{/each}}
 - Experience: {{{resumeContext.experienceSummary}}}
-- Resume ATS Score: {{{resumeContext.atsScore}}}%
+- Certifications: {{#each resumeContext.certifications}}{{{this}}}, {{/each}}
 
-CRITICAL INSTRUCTION:
-You MUST challenge the candidate specifically on the projects, skills, and achievements listed in their resume. 
-- If the resume contains specific technologies (e.g. Java, SQL), ask deep optimization or conceptual questions about them.
-- Interrogate the architecture of the projects they listed.
-- Use the resume as the primary ground truth for questioning.
+CRITICAL PRIORITY PROTOCOL:
+1. You MUST interrogate the candidate specifically on their LISTED PROJECTS and SKILLS first.
+2. If the user mentions a technology in their resume, ask for deep implementation details.
+3. Validate if their experience matches their tenure claims.
 {{/if}}
 
 Current Progress: Question {{{currentMainQuestionIndex}}} of 10.
 
-Protocol:
-1. If this is the FIRST question (history is empty), ask a strong opening question related to the role and level, preferably referencing their resume projects if available.
-2. If the user just answered (userAnswer is provided), evaluate their answer based on technical logic, communication clarity, and professional confidence.
-3. Provide a brief, encouraging, but objective piece of feedback on their last answer.
-4. Ask the NEXT question. The questions should get progressively more challenging.
-5. If Question Index reaches 10, mark isInterviewComplete as true.
+ADAPTIVE SCALING RULES:
+- If the last answer was technically shallow, set difficultyAdjustment to "Easier" and ask a foundational concept.
+- If the last answer was architectural/expert, set difficultyAdjustment to "Harder" and challenge with a complex scenario or trade-off.
 
-History of conversation:
+Protocol:
+1. If history is empty, ask a strong opening question related to their most impressive resume project.
+2. If userAnswer is provided, evaluate accuracy and depth.
+3. Mark isInterviewComplete as true after 10 questions.
+
+History:
 {{#each history}}
 Interviewer: {{{this.question}}}
 Candidate: {{{this.answer}}}
 {{/each}}
 
-Latest Candidate Answer: {{{userAnswer}}}
-
-Ensure the next question is specific to {{{role}}} and appropriate for a {{{experienceLevel}}} grade.`,
+Latest Candidate Answer: {{{userAnswer}}}`,
 });
-
-function generateMockResponse(input: AiMockInterviewInput): AiMockInterviewOutput {
-  console.warn('[OFFLINE MOCK FALLBACK TRIGGERED]', { role: input.role, round: input.roundType });
-  
-  const bank = MOCK_KNOWLEDGE_BANK[input.roundType] || DEFAULT_MOCK_QUESTIONS;
-  const nextQ = bank[input.currentMainQuestionIndex % bank.length];
-  
-  return {
-    nextQuestion: nextQ,
-    feedbackOnLastAnswer: "Your response shows a clear understanding of core concepts. Continue maintaining this level of technical detail.",
-    scores: {
-      technical: 8,
-      communication: 9,
-      confidence: 8
-    },
-    isInterviewComplete: input.currentMainQuestionIndex >= 10,
-    isMock: true
-  };
-}
 
 const aiMockInterviewFlow = ai.defineFlow(
   {
@@ -146,69 +90,31 @@ const aiMockInterviewFlow = ai.defineFlow(
     outputSchema: AiMockInterviewOutputSchema,
   },
   async (input) => {
-    // Neural Debug Intercept
     if (input.debugMode) {
-      console.log('[DEBUG REQUEST RECEIVED]', { role: input.role, exp: input.experienceLevel });
-      
-      const historyStr = input.history.length > 0 
-        ? input.history.map(h => `Interviewer: ${h.question}\nCandidate: ${h.answer}`).join('\n')
-        : 'No history yet.';
-
-      const resumeStr = input.resumeContext 
-        ? `RESUME CONTEXT:\nSkills: ${input.resumeContext.skills?.join(', ')}\nProjects: ${input.resumeContext.projects?.join(', ')}\nExp: ${input.resumeContext.experienceSummary}\nATS: ${input.resumeContext.atsScore}%`
-        : 'No resume context provided.';
-
-      const renderedPrompt = `SYSTEM:
-You are an elite technical interviewer at a Tier-1 tech company.
-Your mission is to conduct a professional, high-fidelity interview for a ${input.role} at a ${input.experienceLevel} level, specializing in ${input.roundType}.
-
-${resumeStr}
-
-INTERVIEW INSTRUCTIONS:
-Current Progress: Question ${input.currentMainQuestionIndex} of 10.
-1. If this is the FIRST question (history is empty), ask a strong opening question.
-2. If the user just answered, evaluate based on technical logic, communication, and confidence.
-3. Provide objective feedback and ask the NEXT question (progressively challenging).
-4. If index reaches 10, terminate simulation.
-
-CONVERSATION HISTORY:
-${historyStr}
-
-LATEST CANDIDATE INPUT:
-${input.userAnswer || 'Awaiting first input.'}
-
-FINAL PROMPT SENT TO GEMINI (2.5-FLASH):
-Generate the next ${input.roundType} interview question for a ${input.experienceLevel} ${input.role}. Output must follow the structured JSON schema for feedback and question nodes.`;
-
-      const debugResponse: AiMockInterviewOutput = {
-        nextQuestion: "[DEBUG MODE: NEXT QUESTION SIMULATED]",
-        feedbackOnLastAnswer: "DEBUG: Neural loop functional. Logic gate bypassed.",
+      return {
+        nextQuestion: "[DEBUG] Adaptive signal intercepted.",
+        feedbackOnLastAnswer: "DEBUG: Neural scaling logic active.",
         isInterviewComplete: input.currentMainQuestionIndex >= 10,
-        debugPrompt: renderedPrompt
+        debugPrompt: "RENDERED_PROMPT_BYPASSED_IN_MVP"
       };
-      
-      console.log('[DEBUG RESPONSE GENERATED]');
-      return debugResponse;
     }
 
     try {
       const { output } = await runWithResilience(prompt, input);
+      if (!output) throw new Error("Neural synthesis failed.");
       
-      if (!output) {
-        return generateMockResponse(input);
-      }
-
-      if (input.currentMainQuestionIndex >= 10) {
-        return {
-          ...output,
-          isInterviewComplete: true,
-          nextQuestion: "The simulation is complete. Initiating comprehensive audit."
-        };
-      }
-
-      return output;
+      return {
+        ...output,
+        isInterviewComplete: input.currentMainQuestionIndex >= 10
+      };
     } catch (error) {
-      return generateMockResponse(input);
+      // Fallback Question Bank
+      return {
+        nextQuestion: "Can you elaborate on the most complex technical challenge you faced in your recent project?",
+        feedbackOnLastAnswer: "Your answer shows baseline technical awareness. Moving to the next node.",
+        isInterviewComplete: input.currentMainQuestionIndex >= 10,
+        isMock: true
+      };
     }
   }
 );
