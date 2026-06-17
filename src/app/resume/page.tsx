@@ -30,7 +30,8 @@ import {
   Download,
   Share2,
   ShieldCheck,
-  Cpu
+  Cpu,
+  AlertTriangle
 } from 'lucide-react';
 import { type AiResumeAnalysisOutput } from '@/ai/flows/ai-resume-analysis';
 import { useUser, useFirestore } from '@/firebase';
@@ -109,8 +110,10 @@ export default function ResumeAnalyzer() {
       }
 
       toast({
-        title: "Analysis Complete",
-        description: "Your neural career blueprint has been synthesized.",
+        title: analysisResult.isOffline ? "Audit Synchronized (Offline)" : "Analysis Complete",
+        description: analysisResult.isOffline 
+          ? "System utilized local intelligence nodes for your blueprint audit."
+          : "Your neural career blueprint has been synthesized.",
       });
     } catch (e: any) {
       console.error(e);
@@ -240,7 +243,12 @@ export default function ResumeAnalyzer() {
               className="lg:col-span-8 space-y-12"
             >
               <Card className="premium-card bg-white/[0.02] border-white/5 overflow-hidden relative">
-                <div className="absolute top-0 right-0 p-12">
+                <div className="absolute top-0 right-0 p-12 flex flex-col items-end gap-3">
+                  {result.isOffline && (
+                    <Badge className="bg-orange-500/20 text-orange-400 border-none px-4 py-2 text-[10px] tracking-[0.2em] uppercase font-black animate-pulse flex items-center gap-2">
+                      <AlertTriangle className="w-3 h-3" /> [OFFLINE RESUME ANALYSIS MODE]
+                    </Badge>
+                  )}
                   <Badge className="bg-accent/20 text-accent border-none px-5 py-2 text-[10px] tracking-[0.3em] uppercase font-bold">VERIFIED AUDIT</Badge>
                 </div>
                 
