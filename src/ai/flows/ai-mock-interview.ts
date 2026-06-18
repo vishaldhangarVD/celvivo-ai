@@ -11,22 +11,22 @@ import { z } from 'genkit';
 
 const FALLBACK_QUESTIONS = {
   'HR Round': [
-    "Tell me about yourself and your professional journey so far.",
-    "Why are you interested in joining our organization specifically?",
-    "What are your greatest professional strengths and areas for improvement?",
-    "Describe a time you had to deal with a difficult teammate. How did you resolve it?",
-    "How do you handle high-pressure situations and tight project deadlines?",
-    "Where do you see your career trajectory in the next five years?",
-    "Why are you looking to transition from your current role at this time?",
-    "What kind of work environment allows you to be most productive?",
-    "Describe your ideal manager and how they support your growth.",
-    "How do you stay motivated during repetitive or challenging project phases?",
-    "Tell me about a time you took initiative or showed leadership outside your role.",
-    "How do you handle receiving constructive criticism from peers or superiors?",
-    "What do you do when you fundamentally disagree with a team decision?",
-    "What unique value do you bring to this specific role that sets you apart?",
-    "How do you prioritize your work when you have multiple competing tasks?",
-    "Tell me about a time you failed. What did you learn from the experience?"
+    "Walk me through your professional journey as a software developer so far.",
+    "What specific aspects of our organization's technical mission interest you?",
+    "What do you consider your greatest technical strength and one area you are actively improving?",
+    "Describe a time you had a conflict with a teammate over a code architecture decision. How was it resolved?",
+    "How do you handle high-pressure situations, such as a critical production bug or a tight release deadline?",
+    "Where do you see your technical career trajectory heading in the next five years?",
+    "Why are you looking to transition from your current project or role at this time?",
+    "What kind of team culture allows you to be most productive as an engineer?",
+    "Describe your ideal technical lead and how they support your professional growth.",
+    "How do you stay motivated during repetitive maintenance phases or long project cycles?",
+    "Tell me about a time you took initiative to implement a feature or tool outside your assigned scope.",
+    "How do you handle receiving critical feedback during a rigorous code review process?",
+    "What do you do when you fundamentally disagree with a senior architect's decision?",
+    "What unique technical value do you bring to this specific role that sets you apart?",
+    "How do you prioritize your work when you have multiple competing tasks in a single sprint?",
+    "Tell me about a technical failure you experienced. What did you learn from the retrospective?"
   ],
   'Technical Round': [
     "Can you elaborate on the most complex technical challenge you faced in your recent project?",
@@ -37,7 +37,7 @@ const FALLBACK_QUESTIONS = {
     "Describe your experience with CI/CD pipelines and automated deployment strategies.",
     "What are the significant trade-offs when choosing between microservices and monoliths?",
     "How do you ensure security best practices are integrated into your API development?",
-    "Explain a software design pattern you use frequently and the problem it solves.",
+    "Explain a software design pattern you use frequently and the specific problem it solves.",
     "How do you manage and communicate technical debt in a fast-paced development cycle?",
     "Describe your experience with cloud infrastructure and serverless architectures.",
     "What specific tools and metrics do you use for application performance monitoring?",
@@ -48,7 +48,7 @@ const FALLBACK_QUESTIONS = {
   ],
   'Managerial Round': [
     "How do you prioritize tasks and resources for your team during a complex sprint?",
-    "Tell me about a time you had to deliver difficult news or feedback to a major stakeholder.",
+    "Tell me about a time you had to deliver difficult technical feedback to a major stakeholder.",
     "What is your strategy for mentoring junior developers and fostering technical growth?",
     "Describe your specific approach to project management—do you prefer Scrum, Kanban, or a hybrid?",
     "How do you handle a project that is significantly falling behind its original schedule?",
@@ -170,7 +170,8 @@ DIRECTIVE: Generate next question for step ${input.currentMainQuestionIndex}/10.
       
       return {
         ...output,
-        isInterviewComplete: input.currentMainQuestionIndex >= 10
+        isInterviewComplete: input.currentMainQuestionIndex >= 10,
+        isMock: false
       };
     } catch (error) {
       // Dynamic Fallback Question Selection
@@ -190,7 +191,7 @@ DIRECTIVE: Generate next question for step ${input.currentMainQuestionIndex}/10.
 
       return {
         nextQuestion: fallbackQ,
-        feedbackOnLastAnswer: "Your answer shows baseline technical awareness. [MOCK MODE ACTIVE]",
+        feedbackOnLastAnswer: "Your answer shows baseline professional awareness. [MOCK MODE ACTIVE]",
         isInterviewComplete: input.currentMainQuestionIndex >= 10,
         isMock: true
       };

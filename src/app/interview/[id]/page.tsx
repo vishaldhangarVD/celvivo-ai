@@ -77,26 +77,36 @@ function InterviewSessionContent() {
 
   useEffect(() => {
     const start = async () => {
-      if (!resumeContext) return;
-      setIsProcessing(true);
-      const output = await aiMockInterview({
-        role, 
-        experienceLevel: exp, 
-        roundType: round, 
-        currentMainQuestionIndex: 1, 
-        history: [], 
-        resumeContext,
-        debugMode: debugEnabled
-      });
-      setNextOutput(output);
-      setIsProcessing(false);
+      if (!resumeContext && resumes?.length === 0) {
+          // If no resume found after loading, we can still proceed with generic mode or show alert
+          console.warn("No resume blueprint found. Proceeding with generic simulation.");
+      }
+      
+      if (!nextOutput && !isProcessing) {
+        setIsProcessing(true);
+        try {
+          const output = await aiMockInterview({
+            role, 
+            experienceLevel: exp, 
+            roundType: round, 
+            currentMainQuestionIndex: 1, 
+            history: [], 
+            resumeContext,
+            debugMode: debugEnabled
+          });
+          setNextOutput(output);
+        } finally {
+          setIsProcessing(false);
+        }
+      }
     };
-    if (history.length === 0 && !nextOutput && !isProcessing && resumeContext) start();
+    
+    start();
 
     const t = setInterval(() => setTotalTimer(s => s + 1), 1000);
     const qt = setInterval(() => setQuestionTimer(s => Math.max(0, s - 1)), 1000);
     return () => { clearInterval(t); clearInterval(qt); };
-  }, [resumeContext, debugEnabled, role, exp, round]);
+  }, [resumeContext, resumes, debugEnabled, role, exp, round]);
 
   useEffect(() => {
     if (chatEndRef.current) {
@@ -141,17 +151,22 @@ function InterviewSessionContent() {
   const finish = async () => {
     if (!user || !db) return;
     setIsSaving(true);
-    const docRef = await addDoc(collection(db, 'users', user.uid, 'interviews'), {
-      userId: user.uid, 
-      role, 
-      experienceLevel: exp, 
-      round, 
-      history, 
-      duration: totalTimer, 
-      createdAt: serverTimestamp(), 
-      overallScore: 0
-    });
-    router.push(`/feedback/${docRef.id}`);
+    try {
+      const docRef = await addDoc(collection(db, 'users', user.uid, 'interviews'), {
+        userId: user.uid, 
+        role, 
+        experienceLevel: exp, 
+        round, 
+        history, 
+        duration: totalTimer, 
+        createdAt: serverTimestamp(), 
+        overallScore: 0
+      });
+      router.push(`/feedback/${docRef.id}`);
+    } catch (e) {
+      console.error(e);
+      setIsSaving(false);
+    }
   };
 
   return (
@@ -165,20 +180,24 @@ function InterviewSessionContent() {
             <h1 className="text-sm font-bold">{role} • {round}</h1>
             <div className="flex items-center gap-2">
               <div className="w-1.5 h-1.5 bg-accent rounded-full animate-pulse" />
-              <p className="text-[8px] font-black uppercase tracking-widest text-accent">Adaptive Resume-Aware Mode</p>
+              <p className="text-[8px] font-black uppercase tracking-widest text-accent">
+                {nextOutput?.isMock ? "Mock Survival Mode Active" : "Adaptive Resume-Aware Mode"}
+              </p>
             </div>
           </div>
         </div>
         
         <div className="flex items-center gap-6">
           {nextOutput?.isMock && (
-            <Badge className="bg-orange-500/20 text-orange-400 border-none px-4 py-2 text-[8px] font-black tracking-widest uppercase animate-pulse">
+            <Badge className="bg-orange-500/20 text-orange-400 border-orange-500/30 px-4 py-2 text-[8px] font-black tracking-widest uppercase animate-pulse">
               <AlertTriangle className="w-3 h-3 mr-2" /> [MOCK MODE ACTIVE]
             </Badge>
           )}
-          <Badge className="bg-purple-500/20 text-purple-400 border-none px-4 py-2 text-[8px] font-black tracking-widest uppercase">
-            <ShieldCheck className="w-3 h-3 mr-2" /> [RESUME-AWARE INTERVIEW]
-          </Badge>
+          {!nextOutput?.isMock && (
+             <Badge className="bg-purple-500/20 text-purple-400 border-none px-4 py-2 text-[8px] font-black tracking-widest uppercase">
+              <ShieldCheck className="w-3 h-3 mr-2" /> [RESUME-AWARE INTERVIEW]
+            </Badge>
+          )}
           <div className="flex items-center gap-4 bg-white/5 px-6 py-2 rounded-full border border-white/5">
             <Timer className={`w-4 h-4 ${questionTimer < 10 ? 'text-red-500 animate-bounce' : 'text-accent'}`} />
             <span className="tabular-nums font-bold text-xs tracking-widest">{Math.floor(questionTimer / 60)}:{(questionTimer % 60).toString().padStart(2, '0')}</span>
