@@ -51,6 +51,10 @@ const AiMockInterviewInputSchema = z.object({
     atsScore: z.number().optional(),
     certifications: z.array(z.string()).optional(),
   }).optional(),
+  // New optimized fields
+  resumeSkills: z.array(z.string()).optional(),
+  resumeProjects: z.array(z.string()).optional(),
+  resumeSummary: z.string().optional(),
 });
 export type AiMockInterviewInput = z.infer<typeof AiMockInterviewInputSchema>;
 
@@ -78,17 +82,24 @@ Your mission is to conduct a high-impact, 5-question simulation for a {{{role}}}
 CRITICAL PROTOCOL:
 This is a condensed 5-question interview. Questions must be deep, scenario-based, and multi-layered.
 
+{{#if resumeSkills}}
+CANDIDATE DOSSIER (Primary):
+- Skills: {{#each resumeSkills}}{{{this}}}, {{/each}}
+- Projects: {{#each resumeProjects}}{{{this}}}, {{/each}}
+- Summary: {{{resumeSummary}}}
+{{else}}
 {{#if resumeContext}}
-CANDIDATE CAREER DOSSIER (Ground Truth):
+CANDIDATE CAREER DOSSIER (Secondary):
 - Skills: {{#each resumeContext.skills}}{{{this}}}, {{/each}}
 - Projects: {{#each resumeContext.projects}}{{{this}}}, {{/each}}
 - Experience: {{{resumeContext.experienceSummary}}}
 - Certifications: {{#each resumeContext.certifications}}{{{this}}}, {{/each}}
+{{/if}}
+{{/if}}
 
 RESUME-AWARE RULES:
 1. Interrogate the candidate specifically on their LISTED PROJECTS and SKILLS.
 2. Validate if their experience matches their tenure claims.
-{{/if}}
 
 Current Progress: Node {{{currentMainQuestionIndex}}} of 5.
 

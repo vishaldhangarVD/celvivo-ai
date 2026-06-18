@@ -89,6 +89,11 @@ export default function InterviewSetup() {
 
       const result = await analyzeResume({ resumeDataUri: base64, targetRole: selectedRole });
       
+      // Store in localStorage for fast session synchronization
+      if (typeof window !== 'undefined') {
+        localStorage.setItem("resumeAnalysis", JSON.stringify(result));
+      }
+
       // Save to Firestore
       const resumesRef = collection(db, 'users', user.uid, 'resumes');
       await addDoc(resumesRef, {

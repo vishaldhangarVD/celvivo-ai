@@ -54,10 +54,27 @@ function InterviewSessionContent() {
   const [isComplete, setIsComplete] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   
+  // Local storage analysis result
+  const [cachedAnalysis, setCachedAnalysis] = useState<any>(null);
+
   const chatEndRef = useRef<HTMLDivElement>(null);
   const hrImg = PlaceHolderImages.find(img => img.id === 'ai-hr-interviewer')?.imageUrl || "";
 
-  // Resume Ingestion
+  // Load from localStorage
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const stored = localStorage.getItem("resumeAnalysis");
+      if (stored) {
+        try {
+          setCachedAnalysis(JSON.parse(stored));
+        } catch (e) {
+          console.error("Failed to parse cached resume analysis", e);
+        }
+      }
+    }
+  }, []);
+
+  // Resume Ingestion (Firestore Fallback)
   const resumeQuery = useMemo(() => {
     if (!db || !user?.uid) return null;
     return query(collection(db, 'users', user.uid, 'resumes'), orderBy('createdAt', 'desc'), limit(1));
@@ -65,6 +82,17 @@ function InterviewSessionContent() {
   const { data: resumes } = useCollection(resumeQuery);
 
   const resumeContext = useMemo(() => {
+    // Prefer cached analysis from localStorage
+    if (cachedAnalysis) {
+      return {
+        skills: cachedAnalysis.skillAnalysis?.map((s: any) => s.skill) || [],
+        projects: cachedAnalysis.sections?.projects || [],
+        experienceSummary: cachedAnalysis.sections?.experience?.[0] || "",
+        certifications: cachedAnalysis.sections?.certifications || []
+      };
+    }
+
+    // Fallback to Firestore
     const r = resumes?.[0];
     if (!r) return undefined;
     return {
@@ -73,7 +101,7 @@ function InterviewSessionContent() {
       experienceSummary: r.analysis?.sections?.experience?.[0] || "",
       certifications: r.analysis?.sections?.certifications || []
     };
-  }, [resumes]);
+  }, [resumes, cachedAnalysis]);
 
   useEffect(() => {
     const start = async () => {
@@ -87,6 +115,10 @@ function InterviewSessionContent() {
             currentMainQuestionIndex: 1, 
             history: [], 
             resumeContext,
+            // Pass the explicit requirement fields
+            resumeSkills: resumeContext?.skills,
+            resumeProjects: resumeContext?.projects,
+            resumeSummary: resumeContext?.experienceSummary,
             debugMode: debugEnabled
           });
           setNextOutput(output);
@@ -134,6 +166,9 @@ function InterviewSessionContent() {
         history: newHistory, 
         userAnswer: ans, 
         resumeContext,
+        resumeSkills: resumeContext?.skills,
+        resumeProjects: resumeContext?.projects,
+        resumeSummary: resumeContext?.experienceSummary,
         debugMode: debugEnabled
       });
       setNextOutput(output);
