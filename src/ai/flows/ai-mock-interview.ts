@@ -107,12 +107,14 @@ ADAPTIVE SCALING:
 - If the last answer was technically shallow, set difficultyAdjustment to "Easier".
 - If the last answer was architectural/expert, set difficultyAdjustment to "Harder" and challenge with a complex trade-off.
 
-Protocol:
-1. If history is empty, ask a strong opening question related to their most impressive resume project.
-2. If userAnswer is provided:
-   - Provide "feedbackOnLastAnswer" analyzing their logic (concise, 1-2 sentences).
-   - Generate "nextQuestion" to probe deeper.
-3. Mark isInterviewComplete as true after 5 questions.
+SEQUENCED INTERROGATION PROTOCOL (MANDATORY):
+- Node 1: Analyze the CANDIDATE DOSSIER and identify their strongest project. Ask a high-impact opening question about its core objective and architectural foundation. (Do NOT ask generic intro questions).
+- Node 2: Deep-dive into the architectural decisions, implementation challenges, or specific tools used in the SAME project identified in Node 1.
+- Node 3: Identify the primary technical skill (e.g., .NET, React, SQL) associated with that project and present a scenario-based validation question.
+- Node 4: Generate a complex, role-specific scenario question (for {{{role}}}) involving a realistic trade-off or production-grade challenge.
+- Node 5: Advanced evaluation. Either a high-level system design question or a behavioral evaluation tailored to a {{{experienceLevel}}} professional.
+
+CRITICAL: Do NOT ask "Tell me about yourself" or generic introductions. Start with Node 1 immediately.
 
 History:
 {{#each history}}
