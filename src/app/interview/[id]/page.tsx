@@ -54,6 +54,9 @@ function InterviewSessionContent() {
   const [isComplete, setIsComplete] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   
+  // NEW LOADING GATE
+  const [resumeReady, setResumeReady] = useState(false);
+
   // Local storage analysis result
   const [cachedAnalysis, setCachedAnalysis] = useState<any>(null);
 
@@ -66,7 +69,10 @@ function InterviewSessionContent() {
       const stored = localStorage.getItem("resumeAnalysis");
       if (stored) {
         try {
-          setCachedAnalysis(JSON.parse(stored));
+          const parsed = JSON.parse(stored);
+          setCachedAnalysis(parsed);
+          console.log("[RESUME LOADED] Identified in local cache.");
+          setResumeReady(true);
         } catch (e) {
           console.error("Failed to parse cached resume analysis", e);
         }
@@ -79,7 +85,15 @@ function InterviewSessionContent() {
     if (!db || !user?.uid) return null;
     return query(collection(db, 'users', user.uid, 'resumes'), orderBy('createdAt', 'desc'), limit(1));
   }, [db, user?.uid]);
-  const { data: resumes } = useCollection(resumeQuery);
+  const { data: resumes, loading: resumesLoading } = useCollection(resumeQuery);
+
+  // Fallback Sync: If localStorage was empty, wait for Firestore
+  useEffect(() => {
+    if (!resumeReady && !resumesLoading) {
+      console.log("[RESUME LOADED] Synchronization protocol complete.");
+      setResumeReady(true);
+    }
+  }, [resumeReady, resumesLoading]);
 
   const resumeContext = useMemo(() => {
     // Prefer cached analysis from localStorage
@@ -104,6 +118,9 @@ function InterviewSessionContent() {
   }, [resumes, cachedAnalysis]);
 
   useEffect(() => {
+    // LOADING GATE: Prevent initialization until resume nodes are stable
+    if (!resumeReady) return;
+
     const start = async () => {
       if (!nextOutput && !isProcessing) {
         setIsProcessing(true);
@@ -122,6 +139,7 @@ function InterviewSessionContent() {
             debugMode: debugEnabled
           });
           setNextOutput(output);
+          console.log("[INTERVIEW INITIALIZED] Intelligence nodes synced. Question 1 deployed.");
         } finally {
           setIsProcessing(false);
         }
@@ -133,7 +151,7 @@ function InterviewSessionContent() {
     const t = setInterval(() => setTotalTimer(s => s + 1), 1000);
     const qt = setInterval(() => setQuestionTimer(s => Math.max(0, s - 1)), 1000);
     return () => { clearInterval(t); clearInterval(qt); };
-  }, [resumeContext, resumes, debugEnabled, role, exp, round]);
+  }, [resumeReady, resumeContext, resumes, debugEnabled, role, exp, round, nextOutput, isProcessing]);
 
   useEffect(() => {
     if (chatEndRef.current) {
@@ -238,23 +256,30 @@ function InterviewSessionContent() {
 
       <main className="flex-1 flex overflow-hidden">
         <section className="w-[35%] relative border-r border-white/5 bg-black/20 flex flex-col items-center justify-center p-12">
-          <motion.div 
-            animate={{ scale: isProcessing ? [1, 1.02, 1] : 1 }} 
-            transition={{ duration: 3, repeat: Infinity }} 
-            className="relative w-full max-w-sm aspect-[4/5] rounded-[2.5rem] overflow-hidden border border-white/10 glass"
-          >
-            <Image src={hrImg} alt="Interviewer" fill className="object-cover brightness-110" priority />
-            <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent" />
-            <AnimatePresence>
-              {nextOutput?.nextQuestion && !isProcessing && !isComplete && (
-                <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="absolute top-8 left-8 right-8 z-20">
-                  <div className="glass p-6 rounded-3xl border-accent/40 bg-accent/10 backdrop-blur-2xl text-sm font-medium leading-relaxed">
-                    {nextOutput.nextQuestion}
-                  </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </motion.div>
+          {!resumeReady ? (
+            <div className="flex flex-col items-center gap-6">
+              <Loader2 className="w-12 h-12 text-accent animate-spin" />
+              <p className="text-[10px] font-bold uppercase tracking-[0.4em] text-accent">Synchronizing Neural Vectors...</p>
+            </div>
+          ) : (
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              className="relative w-full max-w-sm aspect-[4/5] rounded-[2.5rem] overflow-hidden border border-white/10 glass"
+            >
+              <Image src={hrImg} alt="Interviewer" fill className="object-cover brightness-110" priority />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent" />
+              <AnimatePresence>
+                {nextOutput?.nextQuestion && !isProcessing && !isComplete && (
+                  <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="absolute top-8 left-8 right-8 z-20">
+                    <div className="glass p-6 rounded-3xl border-accent/40 bg-accent/10 backdrop-blur-2xl text-sm font-medium leading-relaxed">
+                      {nextOutput.nextQuestion}
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </motion.div>
+          )}
           
           <div className="mt-8 flex items-center gap-4 px-6 py-4 glass rounded-2xl border-white/5 bg-white/[0.02]">
             <Info className="w-4 h-4 text-accent" />
@@ -326,7 +351,7 @@ function InterviewSessionContent() {
                   rows={2} 
                   className="flex-1 bg-white/5 border border-white/10 rounded-2xl p-6 text-lg font-light focus:outline-none focus:border-accent resize-none transition-all placeholder:text-white/20" 
                 />
-                <Button onClick={handleSend} disabled={isProcessing || !userAnswer.trim()} className="h-20 w-20 rounded-2xl btn-premium shrink-0 shadow-2xl flex items-center justify-center">
+                <Button onClick={handleSend} disabled={isProcessing || !userAnswer.trim() || !resumeReady} className="h-20 w-20 rounded-2xl btn-premium shrink-0 shadow-2xl flex items-center justify-center">
                   <Send className="w-6 h-6" />
                 </Button>
               </div>
