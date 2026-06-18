@@ -29,8 +29,8 @@ import { PlaceHolderImages } from '@/lib/placeholder-images';
 import { useUser, useFirestore, useCollection } from '@/firebase';
 import { collection, addDoc, serverTimestamp, query, orderBy, limit } from 'firebase/firestore';
 
-const TOTAL_QUESTIONS = 10;
-const QUESTION_TIMEOUT = 90;
+const TOTAL_QUESTIONS = 5;
+const QUESTION_TIMEOUT = 120; // Increased to 120s for more complex 5-node questions
 
 function InterviewSessionContent() {
   const searchParams = useSearchParams();
@@ -77,11 +77,6 @@ function InterviewSessionContent() {
 
   useEffect(() => {
     const start = async () => {
-      if (!resumeContext && resumes?.length === 0) {
-          // If no resume found after loading, we can still proceed with generic mode or show alert
-          console.warn("No resume blueprint found. Proceeding with generic simulation.");
-      }
-      
       if (!nextOutput && !isProcessing) {
         setIsProcessing(true);
         try {
@@ -181,7 +176,7 @@ function InterviewSessionContent() {
             <div className="flex items-center gap-2">
               <div className="w-1.5 h-1.5 bg-accent rounded-full animate-pulse" />
               <p className="text-[8px] font-black uppercase tracking-widest text-accent">
-                {nextOutput?.isMock ? "Mock Survival Mode Active" : "Adaptive Resume-Aware Mode"}
+                {nextOutput?.isMock ? "Mock Survival Mode Active" : "Optimized 5-Node Protocol"}
               </p>
             </div>
           </div>
@@ -199,7 +194,7 @@ function InterviewSessionContent() {
             </Badge>
           )}
           <div className="flex items-center gap-4 bg-white/5 px-6 py-2 rounded-full border border-white/5">
-            <Timer className={`w-4 h-4 ${questionTimer < 10 ? 'text-red-500 animate-bounce' : 'text-accent'}`} />
+            <Timer className={`w-4 h-4 ${questionTimer < 15 ? 'text-red-500 animate-bounce' : 'text-accent'}`} />
             <span className="tabular-nums font-bold text-xs tracking-widest">{Math.floor(questionTimer / 60)}:{(questionTimer % 60).toString().padStart(2, '0')}</span>
           </div>
           <Button variant="ghost" size="sm" onClick={() => router.push('/dashboard')} className="text-[10px] font-bold uppercase tracking-widest text-white/40"><LogOut className="w-4 h-4 mr-2" /> Abort</Button>
@@ -226,22 +221,12 @@ function InterviewSessionContent() {
             </AnimatePresence>
           </motion.div>
           
-          {debugEnabled && nextOutput?.debugPrompt && (
-            <motion.div 
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="mt-8 w-full glass rounded-2xl border-purple-500/20 bg-purple-500/5 p-6 overflow-hidden"
-            >
-              <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-purple-400 mb-4">
-                <Terminal className="w-3 h-3" /> Neural Intercept Protocol
-              </div>
-              <div className="max-h-[200px] overflow-y-auto custom-scrollbar">
-                <pre className="text-[10px] font-mono leading-relaxed text-white/50 whitespace-pre-wrap">
-                  {nextOutput.debugPrompt}
-                </pre>
-              </div>
-            </motion.div>
-          )}
+          <div className="mt-8 flex items-center gap-4 px-6 py-4 glass rounded-2xl border-white/5 bg-white/[0.02]">
+            <Info className="w-4 h-4 text-accent" />
+            <p className="text-[10px] uppercase font-bold tracking-widest text-white/40">
+              Turn {Math.min(currentIdx + 1, TOTAL_QUESTIONS)} of {TOTAL_QUESTIONS} • High Fidelity Node
+            </p>
+          </div>
         </section>
 
         <section className="flex-1 flex flex-col">
@@ -253,9 +238,6 @@ function InterviewSessionContent() {
               </div>
               <Progress value={(currentIdx / TOTAL_QUESTIONS) * 100} className="h-1.5" />
             </div>
-            {nextOutput?.difficultyAdjustment === 'Harder' && (
-              <Badge className="bg-red-500/20 text-red-400 border-none text-[8px] font-black uppercase ml-4">Neural Deep-Dive Triggered</Badge>
-            )}
           </div>
 
           <div className="flex-1 overflow-y-auto px-12 py-10 space-y-12 custom-scrollbar">
