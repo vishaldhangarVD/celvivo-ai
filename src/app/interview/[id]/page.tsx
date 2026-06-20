@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useEffect, useRef, Suspense, useMemo } from 'react';
@@ -53,12 +52,12 @@ function InterviewSessionContent() {
   const [resumeReady, setResumeReady] = useState(false);
   const [cachedAnalysis, setCachedAnalysis] = useState<any>(null);
 
-  // Video Path Verification Logic
+  // Video Path Verification Logic (Diagnostic Mode)
   useEffect(() => {
     const videoElement = document.querySelector('video');
     if (videoElement) {
       videoElement.addEventListener('loadeddata', () => {
-        console.log("[RESUME-AWARE] Video avatar loaded successfully from:", videoElement.currentSrc);
+        console.log("[RESUME-AWARE] Video avatar loaded successfully");
       });
       videoElement.addEventListener('error', (e) => {
         console.error("[RESUME-AWARE] Video avatar failed to load. Ensure file is at public/vishal.mp4");
@@ -209,17 +208,10 @@ function InterviewSessionContent() {
 
   return (
     <div className="h-screen flex flex-col overflow-hidden relative">
-      {/* LAYER 0: FULL SCREEN VIDEO AVATAR */}
-      <video
-        autoPlay
-        muted
-        loop
-        playsInline
-        className="fixed inset-0 w-full h-full object-cover z-0 bg-[#050816]"
-        src="/vishal.mp4"
-      >
-        Your system protocol does not support background rendering.
-      </video>
+      {/* LAYER 0: DIAGNOSTIC BACKGROUND */}
+      <div className="fixed inset-0 z-0 bg-red-500 flex items-center justify-center text-white font-black text-4xl">
+        TEST AVATAR BACKGROUND
+      </div>
 
       {/* LAYER 10: DARK NEURAL OVERLAY */}
       <div className="fixed inset-0 bg-black/60 z-10" />
