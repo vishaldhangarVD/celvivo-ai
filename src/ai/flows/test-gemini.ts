@@ -4,18 +4,18 @@
  */
 
 import { ai, runWithResilience } from '@/ai/genkit';
+import { z } from 'genkit';
+
+const testPrompt = ai.definePrompt({
+  name: 'testSignalPrompt',
+  input: { schema: z.any() },
+  prompt: "Reply with only these words: GEMINI WORKING"
+});
 
 export async function runGeminiTest() {
   try {
     console.log('[Diagnostic] Initializing Resilient Gemini Connectivity Test...');
     
-    // Using a simple resilient prompt call for testing
-    const testPrompt = ai.definePrompt({
-      name: 'testSignalPrompt',
-      input: { schema: z.any() },
-      prompt: "Reply with only these words: GEMINI WORKING"
-    });
-
     const response = await runWithResilience(testPrompt, {});
     
     console.log('[Diagnostic] SUCCESS. Response Received.');
@@ -32,5 +32,3 @@ export async function runGeminiTest() {
     };
   }
 }
-
-import { z } from 'genkit';
