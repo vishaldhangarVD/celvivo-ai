@@ -52,6 +52,19 @@ function InterviewSessionContent() {
   const [resumeReady, setResumeReady] = useState(false);
   const [cachedAnalysis, setCachedAnalysis] = useState<any>(null);
 
+  // Video Path Verification Logic
+  useEffect(() => {
+    const videoElement = document.querySelector('video');
+    if (videoElement) {
+      videoElement.addEventListener('loadeddata', () => {
+        console.log("[RESUME-AWARE] Video avatar loaded successfully from:", videoElement.currentSrc);
+      });
+      videoElement.addEventListener('error', (e) => {
+        console.error("[RESUME-AWARE] Video avatar failed to load. Check public folder for vishal.mp4.mp4");
+      });
+    }
+  }, []);
+
   // Load from localStorage
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -194,21 +207,24 @@ function InterviewSessionContent() {
   };
 
   return (
-    <div className="h-screen bg-black flex flex-col overflow-hidden relative">
-      {/* LAYER 0: FULL SCREEN VIDEO AVATAR */}
+    <div className="h-screen flex flex-col overflow-hidden relative">
+      {/* LAYER 0: FULL SCREEN VIDEO AVATAR WITH DUAL-PATH FALLBACK */}
       <video
-        src="/vishal.mp4.mp4"
         autoPlay
         muted
         loop
         playsInline
-        className="fixed inset-0 w-full h-full object-cover z-0"
-      />
+        className="fixed inset-0 w-full h-full object-cover z-0 bg-[#050816]"
+      >
+        <source src="/vishal.mp4.mp4" type="video/mp4" />
+        <source src="/vishal.mp4" type="video/mp4" />
+        Your system protocol does not support background rendering.
+      </video>
 
-      {/* LAYER 10: DARK OVERLAY */}
+      {/* LAYER 10: DARK NEURAL OVERLAY */}
       <div className="fixed inset-0 bg-black/60 z-10" />
 
-      {/* LAYER 20: INTERVIEW CONTENT */}
+      {/* LAYER 20: INTERVIEW UI CONTENT */}
       <div className="relative z-20 flex flex-col h-full w-full">
         {/* HEADER PROTOCOLS */}
         <header className="h-20 px-10 flex items-center justify-between bg-gradient-to-b from-black/80 to-transparent">
