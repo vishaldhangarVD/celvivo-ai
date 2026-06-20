@@ -208,11 +208,6 @@ function InterviewSessionContent() {
 
   return (
     <div className="h-screen flex flex-col overflow-hidden relative">
-      {/* RENDER TEST BLOCK */}
-      <div style={{background:'red',height:'200px',width:'100%',zIndex:99999, position:'fixed', top:0, left:0, display:'flex', alignItems:'center', justifyContent:'center', color:'white', fontSize:'3rem', fontWeight:'bold'}}>
-        RENDER TEST
-      </div>
-
       {/* LAYER 0: AVATAR STAGE */}
       <video
         src="/vishal.mp4"
