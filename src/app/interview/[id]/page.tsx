@@ -2,35 +2,31 @@
 
 import { useState, useEffect, useRef, Suspense, useMemo } from 'react';
 import { useSearchParams, useRouter, useParams } from 'next/navigation';
-import Image from 'next/image';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
 import { 
   Send, 
-  Clock, 
-  User, 
   Loader2,
   LogOut,
   Zap,
   ShieldCheck,
-  BrainCircuit,
   Command,
   Timer,
-  ChevronRight,
   AlertTriangle,
-  Terminal,
-  Code2,
-  Info
+  Info,
+  Mic,
+  Video,
+  Settings,
+  MessageSquare
 } from 'lucide-react';
 import { aiMockInterview, type AiMockInterviewOutput } from '@/ai/flows/ai-mock-interview';
-import { PlaceHolderImages } from '@/lib/placeholder-images';
 import { useUser, useFirestore, useCollection } from '@/firebase';
 import { collection, addDoc, serverTimestamp, query, orderBy, limit } from 'firebase/firestore';
 
 const TOTAL_QUESTIONS = 5;
-const QUESTION_TIMEOUT = 120; // Increased to 120s for more complex 5-node questions
+const QUESTION_TIMEOUT = 120;
 
 function InterviewSessionContent() {
   const searchParams = useSearchParams();
@@ -53,15 +49,8 @@ function InterviewSessionContent() {
   const [questionTimer, setQuestionTimer] = useState(QUESTION_TIMEOUT);
   const [isComplete, setIsComplete] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
-  
-  // NEW LOADING GATE
   const [resumeReady, setResumeReady] = useState(false);
-
-  // Local storage analysis result
   const [cachedAnalysis, setCachedAnalysis] = useState<any>(null);
-
-  const chatEndRef = useRef<HTMLDivElement>(null);
-  const hrImg = PlaceHolderImages.find(img => img.id === 'ai-hr-interviewer')?.imageUrl || "";
 
   // Load from localStorage
   useEffect(() => {
@@ -87,7 +76,7 @@ function InterviewSessionContent() {
   }, [db, user?.uid]);
   const { data: resumes, loading: resumesLoading } = useCollection(resumeQuery);
 
-  // Fallback Sync: If localStorage was empty, wait for Firestore
+  // Fallback Sync
   useEffect(() => {
     if (!resumeReady && !resumesLoading) {
       console.log("[RESUME LOADED] Synchronization protocol complete.");
@@ -96,7 +85,6 @@ function InterviewSessionContent() {
   }, [resumeReady, resumesLoading]);
 
   const resumeContext = useMemo(() => {
-    // Prefer cached analysis from localStorage
     if (cachedAnalysis) {
       return {
         skills: cachedAnalysis.skillAnalysis?.map((s: any) => s.skill) || [],
@@ -105,8 +93,6 @@ function InterviewSessionContent() {
         certifications: cachedAnalysis.sections?.certifications || []
       };
     }
-
-    // Fallback to Firestore
     const r = resumes?.[0];
     if (!r) return undefined;
     return {
@@ -118,7 +104,6 @@ function InterviewSessionContent() {
   }, [resumes, cachedAnalysis]);
 
   useEffect(() => {
-    // LOADING GATE: Prevent initialization until resume nodes are stable
     if (!resumeReady) return;
 
     const start = async () => {
@@ -131,15 +116,13 @@ function InterviewSessionContent() {
             roundType: round, 
             currentMainQuestionIndex: 1, 
             history: [], 
-            resumeContext,
-            // Pass the explicit requirement fields
             resumeSkills: resumeContext?.skills,
             resumeProjects: resumeContext?.projects,
             resumeSummary: resumeContext?.experienceSummary,
             debugMode: debugEnabled
           });
           setNextOutput(output);
-          console.log("[INTERVIEW INITIALIZED] Intelligence nodes synced. Question 1 deployed.");
+          console.log("[INTERVIEW INITIALIZED] Intelligence nodes synced.");
         } finally {
           setIsProcessing(false);
         }
@@ -151,13 +134,7 @@ function InterviewSessionContent() {
     const t = setInterval(() => setTotalTimer(s => s + 1), 1000);
     const qt = setInterval(() => setQuestionTimer(s => Math.max(0, s - 1)), 1000);
     return () => { clearInterval(t); clearInterval(qt); };
-  }, [resumeReady, resumeContext, resumes, debugEnabled, role, exp, round, nextOutput, isProcessing]);
-
-  useEffect(() => {
-    if (chatEndRef.current) {
-      chatEndRef.current.scrollIntoView({ behavior: 'smooth' });
-    }
-  }, [history, isProcessing]);
+  }, [resumeReady, resumeContext, debugEnabled, role, exp, round, nextOutput, isProcessing]);
 
   const handleSend = async () => {
     if (!userAnswer.trim() || isProcessing) return;
@@ -183,7 +160,6 @@ function InterviewSessionContent() {
         currentMainQuestionIndex: newHistory.length + 1, 
         history: newHistory, 
         userAnswer: ans, 
-        resumeContext,
         resumeSkills: resumeContext?.skills,
         resumeProjects: resumeContext?.projects,
         resumeSummary: resumeContext?.experienceSummary,
@@ -218,154 +194,200 @@ function InterviewSessionContent() {
   };
 
   return (
-    <div className="h-screen bg-[#050816] flex flex-col overflow-hidden text-white">
-      <div className="particles-bg" />
-      
-      <header className="h-20 glass border-b border-white/5 flex items-center justify-between px-10 z-50">
+    <div className="h-screen bg-black flex flex-col overflow-hidden relative">
+      {/* FULL SCREEN VIDEO AVATAR */}
+      <video
+        src="/vishal.mp4.mp4"
+        autoPlay
+        muted
+        loop
+        playsInline
+        className="fixed inset-0 w-full h-full object-cover z-0 brightness-[0.7]"
+      />
+
+      {/* OVERLAY: HEADER PROTOCOLS */}
+      <header className="relative z-50 h-20 px-10 flex items-center justify-between bg-gradient-to-b from-black/80 to-transparent">
         <div className="flex items-center gap-6">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-purple-600 to-blue-600 flex items-center justify-center shadow-lg"><Command className="w-5 h-5" /></div>
+          <div className="w-12 h-12 rounded-2xl bg-white/10 backdrop-blur-xl flex items-center justify-center border border-white/10 shadow-2xl">
+            <Command className="w-6 h-6 text-white" />
+          </div>
           <div>
-            <h1 className="text-sm font-bold">{role} • {round}</h1>
+            <h1 className="text-sm font-bold text-white tracking-tight">{role} • {round}</h1>
             <div className="flex items-center gap-2">
-              <div className="w-1.5 h-1.5 bg-accent rounded-full animate-pulse" />
-              <p className="text-[8px] font-black uppercase tracking-widest text-accent">
-                {nextOutput?.isMock ? "Mock Survival Mode Active" : "Optimized 5-Node Protocol"}
+              <div className="w-2 h-2 bg-accent rounded-full animate-pulse shadow-[0_0_10px_rgba(34,211,238,0.8)]" />
+              <p className="text-[10px] font-black uppercase tracking-[0.2em] text-accent">
+                {nextOutput?.isMock ? "Mock Survival Mode" : "Neural Arena Active"}
               </p>
             </div>
           </div>
         </div>
         
-        <div className="flex items-center gap-6">
+        <div className="flex items-center gap-4">
           {nextOutput?.isMock && (
-            <Badge className="bg-orange-500/20 text-orange-400 border-orange-500/30 px-4 py-2 text-[8px] font-black tracking-widest uppercase animate-pulse">
-              <AlertTriangle className="w-3 h-3 mr-2" /> [MOCK MODE ACTIVE]
+            <Badge className="bg-orange-500/20 text-orange-400 border-orange-500/30 px-4 py-2 text-[8px] font-black tracking-widest uppercase">
+              <AlertTriangle className="w-3 h-3 mr-2" /> [MOCK MODE]
             </Badge>
           )}
           {!nextOutput?.isMock && (
-             <Badge className="bg-purple-500/20 text-purple-400 border-none px-4 py-2 text-[8px] font-black tracking-widest uppercase">
-              <ShieldCheck className="w-3 h-3 mr-2" /> [RESUME-AWARE INTERVIEW]
+             <Badge className="bg-purple-500/20 text-purple-400 border-none px-4 py-2 text-[8px] font-black tracking-widest uppercase backdrop-blur-md">
+              <ShieldCheck className="w-3 h-3 mr-2" /> [RESUME-AWARE]
             </Badge>
           )}
-          <div className="flex items-center gap-4 bg-white/5 px-6 py-2 rounded-full border border-white/5">
+          
+          <div className="flex items-center gap-4 bg-white/5 backdrop-blur-2xl px-6 py-2.5 rounded-full border border-white/10 shadow-2xl">
             <Timer className={`w-4 h-4 ${questionTimer < 15 ? 'text-red-500 animate-bounce' : 'text-accent'}`} />
-            <span className="tabular-nums font-bold text-xs tracking-widest">{Math.floor(questionTimer / 60)}:{(questionTimer % 60).toString().padStart(2, '0')}</span>
+            <span className="tabular-nums font-bold text-sm tracking-widest text-white">{Math.floor(questionTimer / 60)}:{(questionTimer % 60).toString().padStart(2, '0')}</span>
           </div>
-          <Button variant="ghost" size="sm" onClick={() => router.push('/dashboard')} className="text-[10px] font-bold uppercase tracking-widest text-white/40"><LogOut className="w-4 h-4 mr-2" /> Abort</Button>
+
+          <Button variant="ghost" size="sm" onClick={() => router.push('/dashboard')} className="h-10 rounded-xl glass border-white/10 hover:bg-red-500/20 hover:text-red-400 text-white/40 font-bold uppercase text-[10px] tracking-widest">
+            <LogOut className="w-4 h-4 mr-2" /> Abort
+          </Button>
         </div>
       </header>
 
-      <main className="flex-1 flex overflow-hidden">
-        <section className="w-[35%] relative border-r border-white/5 bg-black/20 flex flex-col items-center justify-center p-12">
-          {!resumeReady ? (
-            <div className="flex flex-col items-center gap-6">
-              <Loader2 className="w-12 h-12 text-accent animate-spin" />
-              <p className="text-[10px] font-bold uppercase tracking-[0.4em] text-accent">Synchronizing Neural Vectors...</p>
-            </div>
-          ) : (
-            <motion.div 
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              className="relative w-full max-w-sm aspect-[4/5] rounded-[2.5rem] overflow-hidden border border-white/10 glass"
-            >
-              <Image src={hrImg} alt="Interviewer" fill className="object-cover brightness-110" priority />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent" />
-              <AnimatePresence>
-                {nextOutput?.nextQuestion && !isProcessing && !isComplete && (
-                  <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="absolute top-8 left-8 right-8 z-20">
-                    <div className="glass p-6 rounded-3xl border-accent/40 bg-accent/10 backdrop-blur-2xl text-sm font-medium leading-relaxed">
-                      {nextOutput.nextQuestion}
-                    </div>
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </motion.div>
-          )}
+      {/* OVERLAY: MAIN FOCUS STAGE */}
+      <main className="relative z-10 flex-1 flex flex-col items-center justify-end pb-12 px-6">
+        
+        <div className="w-full max-w-4xl space-y-8 mb-12">
           
-          <div className="mt-8 flex items-center gap-4 px-6 py-4 glass rounded-2xl border-white/5 bg-white/[0.02]">
-            <Info className="w-4 h-4 text-accent" />
-            <p className="text-[10px] uppercase font-bold tracking-widest text-white/40">
-              Turn {Math.min(currentIdx + 1, TOTAL_QUESTIONS)} of {TOTAL_QUESTIONS} • High Fidelity Node
-            </p>
+          {/* PROGRESS INDICATOR */}
+          <div className="flex flex-col items-center gap-2 mb-4">
+            <div className="w-48 h-1.5 bg-white/5 rounded-full overflow-hidden border border-white/5 backdrop-blur-md">
+              <motion.div 
+                initial={{ width: 0 }}
+                animate={{ width: `${(currentIdx / TOTAL_QUESTIONS) * 100}%` }}
+                className="h-full bg-accent"
+              />
+            </div>
+            <p className="text-[10px] font-bold uppercase tracking-[0.4em] text-white/40">Node {Math.min(currentIdx + 1, TOTAL_QUESTIONS)} of {TOTAL_QUESTIONS}</p>
           </div>
-        </section>
 
-        <section className="flex-1 flex flex-col">
-          <div className="px-12 py-8 border-b border-white/5 flex items-center justify-between">
-            <div className="flex-1 max-w-md">
-              <div className="flex justify-between items-end mb-2">
-                <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Session Velocity</span>
-                <span className="text-xs font-bold tabular-nums text-accent">{currentIdx} / {TOTAL_QUESTIONS}</span>
+          <AnimatePresence mode="wait">
+            {!isComplete ? (
+              <motion.div 
+                key={currentIdx}
+                initial={{ opacity: 0, y: 30 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -30 }}
+                className="space-y-6"
+              >
+                {/* LATEST FEEDBACK (SITUATIONAL) */}
+                {nextOutput?.feedbackOnLastAnswer && (
+                   <motion.div 
+                    initial={{ opacity: 0, scale: 0.95 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    className="flex justify-center"
+                   >
+                     <div className="glass px-8 py-3 rounded-full border-purple-500/30 bg-purple-500/10 text-xs font-medium text-purple-200 backdrop-blur-3xl flex items-center gap-3">
+                       <Zap className="w-4 h-4 text-purple-400" />
+                       "{nextOutput.feedbackOnLastAnswer}"
+                     </div>
+                   </motion.div>
+                )}
+
+                {/* CURRENT QUESTION CARD */}
+                <div className="premium-card bg-black/40 backdrop-blur-3xl border-white/10 p-10 text-center relative overflow-hidden group">
+                  <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-accent/50 to-transparent opacity-50" />
+                  
+                  <div className="inline-flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.3em] text-accent mb-6">
+                    <Info className="w-3 h-3" /> Interrogation Directive
+                  </div>
+
+                  {!resumeReady || isProcessing && !nextOutput?.nextQuestion ? (
+                    <div className="py-12 flex flex-col items-center gap-6">
+                      <Loader2 className="w-10 h-10 text-accent animate-spin" />
+                      <p className="text-[10px] font-bold uppercase tracking-[0.4em] text-accent/60">Recalibrating Neural Vectors...</p>
+                    </div>
+                  ) : (
+                    <h2 className="text-2xl md:text-3xl font-medium leading-relaxed tracking-tight text-white/90">
+                      {nextOutput?.nextQuestion}
+                    </h2>
+                  )}
+                </div>
+              </motion.div>
+            ) : (
+              <motion.div 
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+                className="premium-card bg-black/60 backdrop-blur-3xl border-accent/20 p-16 text-center space-y-8"
+              >
+                <div className="w-24 h-24 rounded-full bg-accent/20 flex items-center justify-center mx-auto border border-accent/40 shadow-[0_0_50px_rgba(34,211,238,0.3)]">
+                  <ShieldCheck className="w-12 h-12 text-accent" />
+                </div>
+                <div>
+                  <h2 className="text-4xl font-bold tracking-tighter text-premium">Simulation Finalized.</h2>
+                  <p className="text-white/60 font-light mt-2 max-w-md mx-auto">Your technical vectors have been archived. The performance auditor is synthesizing your final report.</p>
+                </div>
+                <Button onClick={finish} disabled={isSaving} className="h-16 px-12 btn-premium uppercase tracking-[0.3em] font-bold text-xs shadow-2xl">
+                  {isSaving ? (
+                    <><Loader2 className="w-5 h-5 animate-spin mr-3" /> Archiving...</>
+                  ) : (
+                    "Deploy Performance Audit"
+                  )}
+                </Button>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
+
+        {/* INPUT DOCK */}
+        {!isComplete && (
+          <div className="w-full max-w-4xl relative">
+            <div className="absolute -top-12 left-0 right-0 flex justify-center gap-4">
+              <div className="h-8 px-4 glass rounded-full flex items-center gap-2 text-[10px] font-bold text-white/40 uppercase tracking-widest">
+                <Mic className="w-3 h-3" /> Voice Active
               </div>
-              <Progress value={(currentIdx / TOTAL_QUESTIONS) * 100} className="h-1.5" />
+              <div className="h-8 px-4 glass rounded-full flex items-center gap-2 text-[10px] font-bold text-white/40 uppercase tracking-widest">
+                <Video className="w-3 h-3" /> Stream Encrypted
+              </div>
+            </div>
+
+            <div className="glass bg-white/5 backdrop-blur-3xl rounded-[2.5rem] p-4 flex items-center gap-4 border border-white/10 shadow-[0_-20px_100px_rgba(0,0,0,0.5)]">
+              <textarea 
+                value={userAnswer} 
+                onChange={e => setUserAnswer(e.target.value)} 
+                onKeyDown={e => e.key === 'Enter' && !e.shiftKey && (e.preventDefault(), handleSend())} 
+                placeholder="Synthesize your response..." 
+                rows={1} 
+                disabled={isProcessing || !resumeReady}
+                className="flex-1 bg-transparent border-none rounded-3xl px-6 py-4 text-lg font-light text-white focus:outline-none resize-none transition-all placeholder:text-white/20 disabled:opacity-50" 
+              />
+              <Button 
+                onClick={handleSend} 
+                disabled={isProcessing || !userAnswer.trim() || !resumeReady} 
+                className="h-14 w-14 rounded-2xl btn-premium shrink-0 shadow-2xl flex items-center justify-center group"
+              >
+                {isProcessing ? (
+                  <Loader2 className="w-6 h-6 animate-spin" />
+                ) : (
+                  <Send className="w-6 h-6 group-hover:translate-x-1 group-hover:-translate-y-1 transition-transform" />
+                )}
+              </Button>
             </div>
           </div>
-
-          <div className="flex-1 overflow-y-auto px-12 py-10 space-y-12 custom-scrollbar">
-            {history.map((h, i) => (
-              <motion.div key={i} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
-                <div className="flex flex-row-reverse gap-6">
-                  <div className="w-10 h-10 rounded-xl bg-accent/20 flex items-center justify-center shrink-0"><User className="w-5 h-5 text-accent" /></div>
-                  <div className="p-6 glass rounded-2xl rounded-tr-none flex-1 max-w-[80%] text-right bg-white/[0.05] text-lg font-light leading-relaxed">
-                    {h.answer}
-                  </div>
-                </div>
-                {h.feedback && (
-                  <div className="flex gap-6 items-start">
-                    <div className="w-10 h-10 glass rounded-xl flex items-center justify-center text-purple-400 shrink-0"><Zap className="w-5 h-5" /></div>
-                    <div className="p-6 glass rounded-2xl rounded-tl-none max-w-[80%] bg-purple-500/5 border-purple-500/10 italic text-white/60">
-                      "{h.feedback}"
-                    </div>
-                  </div>
-                )}
-              </motion.div>
-            ))}
-            
-            {isProcessing && (
-              <div className="flex gap-4 items-center">
-                <Loader2 className="w-6 h-6 animate-spin text-accent" />
-                <span className="text-[10px] uppercase font-bold tracking-widest text-muted-foreground">Recalibrating Arena Logic...</span>
-              </div>
-            )}
-            
-            {isComplete && (
-              <motion.div initial={{ scale: 0.9 }} animate={{ scale: 1 }} className="premium-card p-16 text-center space-y-8 bg-accent/[0.02]">
-                <ShieldCheck className="w-16 h-16 text-accent mx-auto" />
-                <h2 className="text-4xl font-bold tracking-tighter text-premium">Simulation Terminated.</h2>
-                <p className="text-muted-foreground font-light">Your session transcript has been archived. Deploying final performance audit.</p>
-                <Button onClick={finish} disabled={isSaving} className="h-16 px-12 btn-premium uppercase tracking-[0.3em] font-bold text-xs">
-                  {isSaving ? "Finalizing Audit..." : "Synthesize Performance Report"}
-                </Button>
-              </motion.div>
-            )}
-            <div ref={chatEndRef} className="h-20" />
-          </div>
-
-          {!isComplete && (
-            <footer className="p-8 glass bg-[#050816]/80 backdrop-blur-3xl">
-              <div className="max-w-4xl mx-auto flex items-end gap-6">
-                <textarea 
-                  value={userAnswer} 
-                  onChange={e => setUserAnswer(e.target.value)} 
-                  onKeyDown={e => e.key === 'Enter' && !e.shiftKey && (e.preventDefault(), handleSend())} 
-                  placeholder="Transmit your response..." 
-                  rows={2} 
-                  className="flex-1 bg-white/5 border border-white/10 rounded-2xl p-6 text-lg font-light focus:outline-none focus:border-accent resize-none transition-all placeholder:text-white/20" 
-                />
-                <Button onClick={handleSend} disabled={isProcessing || !userAnswer.trim() || !resumeReady} className="h-20 w-20 rounded-2xl btn-premium shrink-0 shadow-2xl flex items-center justify-center">
-                  <Send className="w-6 h-6" />
-                </Button>
-              </div>
-            </footer>
-          )}
-        </section>
+        )}
       </main>
+
+      {/* CONTROLS FLOATING BAR */}
+      <div className="fixed right-10 top-1/2 -translate-y-1/2 z-50 flex flex-col gap-6">
+        {[
+          { icon: Mic, label: "Mute" },
+          { icon: Video, label: "Video" },
+          { icon: Settings, label: "Config" }
+        ].map((btn, i) => (
+          <button key={i} className="w-12 h-12 rounded-2xl glass border-white/10 flex items-center justify-center text-white/40 hover:text-white hover:bg-white/5 transition-all group">
+            <btn.icon className="w-5 h-5" />
+            <span className="absolute right-16 px-3 py-1 rounded-md bg-black/80 text-[10px] font-bold uppercase tracking-widest opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">{btn.label}</span>
+          </button>
+        ))}
+      </div>
     </div>
   );
 }
 
 export default function InterviewSession() {
   return (
-    <Suspense fallback={<div className="h-screen bg-[#050816] flex items-center justify-center"><Loader2 className="w-12 h-12 text-accent animate-spin" /></div>}>
+    <Suspense fallback={<div className="h-screen bg-black flex items-center justify-center"><Loader2 className="w-12 h-12 text-accent animate-spin" /></div>}>
       <InterviewSessionContent />
     </Suspense>
   );
