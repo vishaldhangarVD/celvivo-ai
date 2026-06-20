@@ -216,8 +216,8 @@ function InterviewSessionContent() {
         loop
         playsInline
         className="fixed inset-0 w-full h-full object-cover z-0 bg-[#050816]"
+        src="/vishal.mp4"
       >
-        <source src="/vishal.mp4" type="video/mp4" />
         Your system protocol does not support background rendering.
       </video>
 
