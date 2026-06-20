@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect, useRef, Suspense, useMemo } from 'react';
@@ -60,7 +61,7 @@ function InterviewSessionContent() {
         console.log("[RESUME-AWARE] Video avatar loaded successfully from:", videoElement.currentSrc);
       });
       videoElement.addEventListener('error', (e) => {
-        console.error("[RESUME-AWARE] Video avatar failed to load. Check public folder for vishal.mp4.mp4");
+        console.error("[RESUME-AWARE] Video avatar failed to load. Ensure file is at public/vishal.mp4");
       });
     }
   }, []);
@@ -208,7 +209,7 @@ function InterviewSessionContent() {
 
   return (
     <div className="h-screen flex flex-col overflow-hidden relative">
-      {/* LAYER 0: FULL SCREEN VIDEO AVATAR WITH DUAL-PATH FALLBACK */}
+      {/* LAYER 0: FULL SCREEN VIDEO AVATAR */}
       <video
         autoPlay
         muted
@@ -216,7 +217,6 @@ function InterviewSessionContent() {
         playsInline
         className="fixed inset-0 w-full h-full object-cover z-0 bg-[#050816]"
       >
-        <source src="/vishal.mp4.mp4" type="video/mp4" />
         <source src="/vishal.mp4" type="video/mp4" />
         Your system protocol does not support background rendering.
       </video>
