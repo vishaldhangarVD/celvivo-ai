@@ -52,19 +52,6 @@ function InterviewSessionContent() {
   const [resumeReady, setResumeReady] = useState(false);
   const [cachedAnalysis, setCachedAnalysis] = useState<any>(null);
 
-  // Diagnostic Video Monitoring
-  useEffect(() => {
-    const videoElement = document.querySelector('video');
-    if (videoElement) {
-      videoElement.addEventListener('loadeddata', () => {
-        console.log("[RESUME-AWARE] Video avatar loaded successfully");
-      });
-      videoElement.addEventListener('error', (e) => {
-        console.error("[RESUME-AWARE] Video avatar failed to load. Ensure file is at public/vishal.mp4");
-      });
-    }
-  }, []);
-
   // Load from localStorage
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -186,9 +173,15 @@ function InterviewSessionContent() {
   };
 
   const finish = async () => {
-    if (!user || !db) return;
+    console.log("Audit button clicked - Initializing Intelligence Archival");
+    if (!user || !db) {
+      console.warn("Archival aborted: System nodes not ready.");
+      return;
+    }
+    
     setIsSaving(true);
     try {
+      console.log("Persisting simulation vectors to Firestore...");
       const docRef = await addDoc(collection(db, 'users', user.uid, 'interviews'), {
         userId: user.uid, 
         role, 
@@ -199,9 +192,10 @@ function InterviewSessionContent() {
         createdAt: serverTimestamp(), 
         overallScore: 0
       });
+      console.log("Vectors archived successfully. Initializing navigation to feedback node:", docRef.id);
       router.push(`/feedback/${docRef.id}`);
     } catch (e) {
-      console.error(e);
+      console.error("Neural Archival Failed:", e);
       setIsSaving(false);
     }
   };
@@ -218,7 +212,7 @@ function InterviewSessionContent() {
         className="fixed inset-0 w-full h-full object-cover z-0 bg-[#050816]"
       />
 
-      {/* LAYER 10: MINIMAL NEURAL OVERLAY (Subtle for maximum background visibility) */}
+      {/* LAYER 10: MINIMAL NEURAL OVERLAY */}
       <div className="fixed inset-0 bg-black/5 z-10 pointer-events-none" />
 
       {/* LAYER 20: HUD & INTERFACE CONTENT */}
@@ -308,11 +302,11 @@ function InterviewSessionContent() {
               )}
             </AnimatePresence>
 
-            {/* MAIN PERFORMANCE STAGE (Completely clear for Avatar focus) */}
-            <main className="flex-1 pointer-events-none">
+            {/* MAIN PERFORMANCE STAGE */}
+            <main className="flex-1 pointer-events-none relative">
               <AnimatePresence>
                 {isComplete && (
-                  <div className="flex items-center justify-center h-full w-full px-6">
+                  <div className="absolute inset-0 flex items-center justify-center px-6 z-50">
                     <motion.div 
                       initial={{ opacity: 0, scale: 0.9 }}
                       animate={{ opacity: 1, scale: 1 }}
@@ -341,7 +335,6 @@ function InterviewSessionContent() {
             {/* INPUT DOCK (Bottom persistent synthesis layer) */}
             {!isComplete && (
               <div className="w-full max-w-5xl mx-auto pb-12 px-6 relative z-30">
-                {/* PROGRESS HUD */}
                 <div className="flex flex-col items-center gap-2 mb-4">
                   <div className="w-48 h-1 bg-white/5 rounded-full overflow-hidden border border-white/5">
                     <motion.div 
