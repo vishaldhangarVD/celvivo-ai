@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect, Suspense, useMemo } from 'react';
@@ -207,7 +208,7 @@ function InterviewSessionContent() {
 
   return (
     <div className="h-screen flex flex-col overflow-hidden relative">
-      {/* LAYER 0: AVATAR STAGE (Visible immediately) */}
+      {/* LAYER 0: CINEMATIC AVATAR BACKGROUND */}
       <video
         src="/vishal.mp4"
         autoPlay
@@ -217,10 +218,10 @@ function InterviewSessionContent() {
         className="fixed inset-0 w-full h-full object-cover z-0 bg-[#050816]"
       />
 
-      {/* LAYER 10: DARK NEURAL OVERLAY */}
-      <div className="fixed inset-0 bg-black/40 z-10" />
+      {/* LAYER 10: MINIMAL NEURAL OVERLAY (Subtle for maximum background visibility) */}
+      <div className="fixed inset-0 bg-black/5 z-10 pointer-events-none" />
 
-      {/* LAYER 20: INTERVIEW UI CONTENT */}
+      {/* LAYER 20: HUD & INTERFACE CONTENT */}
       <div className="relative z-20 flex flex-col h-full w-full">
         {!resumeReady ? (
           <div className="flex-1 flex flex-col items-center justify-center space-y-6">
@@ -229,8 +230,8 @@ function InterviewSessionContent() {
           </div>
         ) : (
           <>
-            {/* HEADER PROTOCOLS */}
-            <header className="px-10 py-6 flex flex-col gap-4 bg-gradient-to-b from-black/80 to-transparent">
+            {/* HUD HEADER PROTOCOLS */}
+            <header className="px-10 py-6 flex flex-col gap-4 bg-gradient-to-b from-black/20 to-transparent">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-6">
                   <div className="w-12 h-12 rounded-2xl bg-white/10 backdrop-blur-xl flex items-center justify-center border border-white/10 shadow-2xl">
@@ -269,77 +270,78 @@ function InterviewSessionContent() {
                   </Button>
                 </div>
               </div>
-
-              {/* COMPACT QUESTION STRIP (Relocated from center) */}
-              <AnimatePresence mode="wait">
-                {!isComplete && nextOutput?.nextQuestion && (
-                  <motion.div 
-                    key={currentIdx}
-                    initial={{ opacity: 0, y: -10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -10 }}
-                    className="flex flex-col items-center gap-2"
-                  >
-                    <div className="w-full max-w-4xl glass bg-white/5 backdrop-blur-2xl border border-white/10 rounded-2xl p-4 px-8 shadow-2xl flex items-center gap-6 relative overflow-hidden group">
-                      <div className="absolute top-0 left-0 w-1 h-full bg-accent" />
-                      <div className="flex flex-col shrink-0">
-                        <span className="text-[8px] font-black uppercase tracking-[0.3em] text-accent/60">Node {Math.min(currentIdx + 1, TOTAL_QUESTIONS)}</span>
-                        <Info className="w-3 h-3 text-accent mt-1" />
-                      </div>
-                      <div className="flex-1">
-                        <p className="text-white/90 text-sm md:text-base font-medium leading-tight">
-                          {isProcessing && !nextOutput?.nextQuestion ? "Recalibrating Neural Vectors..." : nextOutput.nextQuestion}
-                        </p>
-                      </div>
-                    </div>
-
-                    {/* SUBTLE FEEDBACK LABEL */}
-                    {nextOutput?.feedbackOnLastAnswer && (
-                      <motion.div 
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        className="text-[10px] font-bold text-purple-400/80 uppercase tracking-widest flex items-center gap-2"
-                      >
-                        <Zap className="w-3 h-3" /> "{nextOutput.feedbackOnLastAnswer}"
-                      </motion.div>
-                    )}
-                  </motion.div>
-                )}
-              </AnimatePresence>
             </header>
 
-            {/* MAIN FOCUS STAGE (Clearing space for Avatar) */}
-            <main className="flex-1 flex flex-col items-center justify-center px-6 pointer-events-none">
+            {/* FLOATING BRIEFING PANEL (TOP-LEFT HUD) */}
+            <AnimatePresence mode="wait">
+              {!isComplete && nextOutput?.nextQuestion && (
+                <motion.div 
+                  key={currentIdx}
+                  initial={{ opacity: 0, x: -50 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: -50 }}
+                  className="fixed top-32 left-10 z-30 w-80 pointer-events-none"
+                >
+                  <div className="bg-[#0a0a0a]/45 backdrop-blur-[8px] border border-accent/40 rounded-2xl p-6 shadow-[0_0_20px_rgba(34,211,238,0.15)] pointer-events-auto">
+                    <div className="flex items-center justify-between mb-4 border-b border-white/10 pb-2">
+                      <div className="flex items-center gap-2">
+                        <Badge className="bg-accent text-black text-[8px] font-black px-2 py-0.5 rounded-sm">NODE {Math.min(currentIdx + 1, TOTAL_QUESTIONS)}</Badge>
+                        <span className="text-[9px] font-bold text-white/40 uppercase tracking-widest">Inquiry Protocol</span>
+                      </div>
+                      <div className="w-1.5 h-1.5 rounded-full bg-accent animate-pulse shadow-[0_0_8px_rgba(34,211,238,1)]" />
+                    </div>
+                    <p className="text-white/90 text-sm md:text-[15px] font-medium leading-relaxed tracking-tight">
+                      {isProcessing && !nextOutput?.nextQuestion ? "Recalibrating Neural Vectors..." : nextOutput.nextQuestion}
+                    </p>
+
+                    {/* SUBTLE HUD FEEDBACK */}
+                    {nextOutput?.feedbackOnLastAnswer && (
+                      <div className="mt-4 pt-4 border-t border-white/5 flex items-center gap-2">
+                        <Zap className="w-3 h-3 text-purple-400" />
+                        <span className="text-[9px] font-bold text-purple-400/80 uppercase tracking-widest italic truncate">
+                          "{nextOutput.feedbackOnLastAnswer}"
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+
+            {/* MAIN PERFORMANCE STAGE (Completely clear for Avatar focus) */}
+            <main className="flex-1 pointer-events-none">
               <AnimatePresence>
                 {isComplete && (
-                  <motion.div 
-                    initial={{ opacity: 0, scale: 0.9 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    className="premium-card bg-black/60 backdrop-blur-3xl border-accent/20 p-16 text-center space-y-8 pointer-events-auto shadow-[0_0_100px_rgba(0,0,0,0.5)]"
-                  >
-                    <div className="w-24 h-24 rounded-full bg-accent/20 flex items-center justify-center mx-auto border border-accent/40 shadow-[0_0_50px_rgba(34,211,238,0.3)]">
-                      <ShieldCheck className="w-12 h-12 text-accent" />
-                    </div>
-                    <div>
-                      <h2 className="text-4xl font-bold tracking-tighter text-premium">Simulation Finalized.</h2>
-                      <p className="text-white/60 font-light mt-2 max-w-md mx-auto">Your technical vectors have been archived. The performance auditor is synthesizing your final report.</p>
-                    </div>
-                    <Button onClick={finish} disabled={isSaving} className="h-16 px-12 btn-premium uppercase tracking-[0.3em] font-bold text-xs shadow-2xl">
-                      {isSaving ? (
-                        <><Loader2 className="w-5 h-5 animate-spin mr-3" /> Archiving...</>
-                      ) : (
-                        "Deploy Performance Audit"
-                      )}
-                    </Button>
-                  </motion.div>
+                  <div className="flex items-center justify-center h-full w-full px-6">
+                    <motion.div 
+                      initial={{ opacity: 0, scale: 0.9 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      className="premium-card bg-black/60 backdrop-blur-3xl border-accent/20 p-16 text-center space-y-8 pointer-events-auto shadow-[0_0_100px_rgba(0,0,0,0.5)]"
+                    >
+                      <div className="w-24 h-24 rounded-full bg-accent/20 flex items-center justify-center mx-auto border border-accent/40 shadow-[0_0_50px_rgba(34,211,238,0.3)]">
+                        <ShieldCheck className="w-12 h-12 text-accent" />
+                      </div>
+                      <div>
+                        <h2 className="text-4xl font-bold tracking-tighter text-premium">Simulation Finalized.</h2>
+                        <p className="text-white/60 font-light mt-2 max-w-md mx-auto">Your technical vectors have been archived. The performance auditor is synthesizing your final report.</p>
+                      </div>
+                      <Button onClick={finish} disabled={isSaving} className="h-16 px-12 btn-premium uppercase tracking-[0.3em] font-bold text-xs shadow-2xl">
+                        {isSaving ? (
+                          <><Loader2 className="w-5 h-5 animate-spin mr-3" /> Archiving...</>
+                        ) : (
+                          "Deploy Performance Audit"
+                        )}
+                      </Button>
+                    </motion.div>
+                  </div>
                 )}
               </AnimatePresence>
             </main>
 
-            {/* INPUT DOCK (Bottom persistent layer) */}
+            {/* INPUT DOCK (Bottom persistent synthesis layer) */}
             {!isComplete && (
-              <div className="w-full max-w-5xl mx-auto pb-12 px-6 relative">
-                {/* PROGRESS INDICATOR */}
+              <div className="w-full max-w-5xl mx-auto pb-12 px-6 relative z-30">
+                {/* PROGRESS HUD */}
                 <div className="flex flex-col items-center gap-2 mb-4">
                   <div className="w-48 h-1 bg-white/5 rounded-full overflow-hidden border border-white/5">
                     <motion.div 
@@ -359,7 +361,7 @@ function InterviewSessionContent() {
                   </div>
                 </div>
 
-                <div className="glass bg-black/40 backdrop-blur-3xl rounded-[2.5rem] p-4 flex items-center gap-4 border border-white/10 shadow-[0_-20px_100px_rgba(0,0,0,0.5)]">
+                <div className="glass bg-[#0a0a0a]/40 backdrop-blur-3xl rounded-[2.5rem] p-4 flex items-center gap-4 border border-white/10 shadow-[0_-20px_100px_rgba(0,0,0,0.5)] pointer-events-auto">
                   <textarea 
                     value={userAnswer} 
                     onChange={e => setUserAnswer(e.target.value)} 
@@ -384,7 +386,7 @@ function InterviewSessionContent() {
               </div>
             )}
 
-            {/* CONTROLS FLOATING BAR */}
+            {/* CONTROLS SIDE-DOCK */}
             <div className="fixed right-10 top-1/2 -translate-y-1/2 z-50 flex flex-col gap-6">
               {[
                 { icon: Mic, label: "Mute" },
