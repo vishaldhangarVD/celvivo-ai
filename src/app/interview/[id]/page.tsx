@@ -182,6 +182,18 @@ function InterviewSessionContent() {
     setIsSaving(true);
     try {
       console.log("Persisting simulation vectors to Firestore...");
+      console.log("DEBUG SAVE DATA", {
+        userId: user?.uid,
+        role,
+        exp,
+        round,
+        history,
+        totalTimer
+      });
+      
+      if (history) {
+        console.log("HISTORY JSON", JSON.stringify(history, null, 2));
+      }
       const docRef = await addDoc(collection(db, 'users', user.uid, 'interviews'), {
         userId: user.uid, 
         role, 
@@ -206,9 +218,9 @@ function InterviewSessionContent() {
       <video
         src="/vishal.mp4"
         autoPlay
-        muted
         loop
         playsInline
+        controls
         className="fixed inset-0 w-full h-full object-cover z-0 bg-[#050816]"
       />
 

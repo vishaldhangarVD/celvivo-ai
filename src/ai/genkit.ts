@@ -72,7 +72,10 @@ export async function runWithResilience(promptFn: any, input: any) {
       return await attemptExecution(FALLBACK_MODEL);
     } catch (finalError) {
       console.error("[Neural Critical] Resilience pipeline exhausted.");
-      throw new Error("Gemini is currently overloaded. Please try again in a few minutes.");
+      console.error("REAL GEMINI ERROR:", finalError);
+    
+      throw finalError;
+    
     }
   }
 }
