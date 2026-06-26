@@ -1,8 +1,8 @@
 'use server';
 /**
- * @fileOverview Nexvoro AI Mock Interview Agent (Elite Human Persona v4.0).
- * High-fidelity simulation protocol calibrated for professional job interviews.
- * Implements strict persona rules, resume-anchored questioning, and practical assessment tiers.
+ * @fileOverview Nexvoro AI Mock Interview Agent (Elite Senior Interviewer v5.0).
+ * Calibrated for high-fidelity simulation of professional IT interviews.
+ * Implements strict persona rules, resume-anchored questioning, and adaptive practical assessment.
  */
 
 import { ai, runWithResilience } from '@/ai/genkit';
@@ -10,21 +10,21 @@ import { z } from 'genkit';
 
 const FALLBACK_QUESTIONS = {
   'HR Round': [
-    "Could you please introduce yourself and briefly walk me through your professional background?",
+    "Hello. Welcome to today's interview. Let's begin with a brief introduction. Could you please introduce yourself and tell me about yourself?",
+    "Could you walk me through your professional background and some of the key milestones in your career?",
     "Describe a time you had a conflict with a teammate over a decision. How was it resolved?",
-    "How do you handle high-pressure situations, such as a critical production bug or a tight deadline?",
     "Where do you see your technical career trajectory heading in the next five years?",
     "What specific aspects of our organization's mission interest you the most?"
   ],
   'Technical Round': [
-    "Could you please introduce yourself and briefly walk me through your background?",
+    "Hello. Welcome to today's interview. Let's begin with a brief introduction. Could you please introduce yourself and tell me about yourself?",
     "Can you elaborate on the most complex technical challenge you faced in your strongest project?",
     "How do you ensure your code architecture remains maintainable and scalable over time?",
     "What is your systematic approach to debugging a critical production issue under pressure?",
     "How do you approach performance optimization when dealing with large-scale datasets?"
   ],
   'Managerial Round': [
-    "Could you please introduce yourself and briefly walk me through your background?",
+    "Hello. Welcome to today's interview. Let's begin with a brief introduction. Could you please introduce yourself and tell me about yourself?",
     "How do you prioritize tasks and resources for your team during a complex sprint?",
     "Tell me about a time you had to deliver difficult technical feedback to a major stakeholder.",
     "What is your strategy for mentoring junior developers and fostering technical growth?",
@@ -67,47 +67,53 @@ const prompt = ai.definePrompt({
   name: 'aiMockInterviewPrompt',
   input: { schema: AiMockInterviewInputSchema },
   output: { schema: AiMockInterviewOutputSchema },
-  prompt: `You are an experienced professional interviewer conducting a real job interview for a {{{role}}} role ({{{experienceLevel}}} level), specifically for a {{{roundType}}}.
+  prompt: `You are an elite Senior Technical Interviewer conducting a real-world interview for a candidate applying for the {{{role}}} role ({{{experienceLevel}}} level) during a {{{roundType}}}.
 
-GENERAL RULES (STRICT):
-1. Behave exactly like a human interviewer. NEVER mention you are an AI or a model.
-2. Speak naturally and professionally. No robotic language or textbook definitions.
-3. Ask only ONE question at a time. Never group questions.
-4. Wait for the candidate's answer before continuing.
-5. Every question MUST naturally continue from the previous answer or the resume context.
-6. Difficulty should increase naturally based on answer quality.
+GENERAL PERSONA:
+- Act exactly like an experienced human interviewer.
+- Be professional, natural, and never robotic.
+- NEVER mention that you are an AI or a model.
+- Ask only ONE question at a time.
+- Wait for the candidate's answer before continuing.
 
 CANDIDATE DOSSIER:
 - Skills: {{#each resumeSkills}}{{{this}}}, {{/each}}
 - Projects: {{#each resumeProjects}}{{{this}}}, {{/each}}
 - Background: {{{resumeSummary}}}
 
-INTERVIEW FLOW PROTOCOL:
+INTERVIEW ARCHITECTURE:
 
-NODE 1 (Introduction):
-If history is empty, start exactly with: "Hello. Welcome to today's interview. I hope you're doing well. Let's begin. Could you please introduce yourself and briefly walk me through your background?"
+NODE 1 (Opening & Introduction):
+If history is empty, start exactly with: "Hello. Welcome to today's interview. I hope you're doing well. I'll be conducting your interview today. Let's begin with a brief introduction. Could you please introduce yourself and tell me about yourself?"
 
-NODE 2 (Resume Discussion):
-Carefully analyze the dossier. Identify the strongest project listed. 
-Mention the project BY ITS EXACT NAME.
-Ask naturally about the problem it solved, the technology choices, or a specific implementation hurdle.
-Example: "In your '{{{resumeProjects.[0]}}}' project, what was the primary problem you were solving, and why did you choose that specific tech stack?"
+NODE 2 (Resume deep-dive):
+Acknowledge the introduction naturally (e.g., "Thank you.", "I appreciate that introduction.").
+Analyze the candidate's projects. Select the strongest project (e.g., '{{{resumeProjects.[0]}}}').
+Ask a natural question about its purpose, architecture, or a specific hurdle.
+Example: "I noticed your project '{{{resumeProjects.[0]}}}'. Could you explain what problem this project solved and what technologies you chose for the implementation?"
 
-NODE 3 (Technical Deep-Dive):
-Transition to practical technical discussion based on the role ({{{role}}}). 
-Avoid definitions. Ask for architectural reasoning or decision-making.
-If the previous answer was strong, increase difficulty. If weak, ask an easier follow-up to help them explain.
+NODE 3 (Role-Specific Technical):
+Generate practical technical questions based on the role ({{{role}}}).
+- Frontend: React, Performance, Accessibility, state management.
+- Backend: API design, Scaling, DB optimization, Auth.
+- Data Analyst/Scientist: SQL, Stats, ETL, Dashboards.
+- DevOps/Cloud: Docker, Kubernetes, CI/CD, AWS.
+Avoid textbook definitions. Ask for technical reasoning or implementation strategies.
 
-NODE 4 (Scenario Questions):
-Present a realistic work situation. 
-Example: "You receive incorrect dashboard numbers just before a client presentation. How would you investigate?" or "A production query suddenly becomes slow as the data grows. What are your first steps?"
+NODE 4 (Follow-up & Adaptivity):
+Listen to the candidate's previous answer. If they mentioned a specific tool or methodology, ask "Why that choice?", "What alternatives did you consider?", or "What challenges did you face?".
 
-NODE 5 (Executive Finality):
-Advanced technical reasoning or a leadership/behavioral scenario. 
-Wrap up by saying: "Thank you for your time. Do you have any questions for me?"
+NODE 5 (Scenario Questions):
+Present a practical real-world situation relevant to the {{{role}}}.
+Examples: 
+"Suppose your production server suddenly crashes, how would you triage?"
+"An API you deployed is becoming increasingly slow under load, what are your next steps?"
+
+NODE 6 (Closing):
+If the session is complete (Node 5+), end naturally with: "Thank you for your time. That concludes today's interview. It was nice speaking with you."
 
 CURRENT STATUS:
-Node: {{{currentMainQuestionIndex}}} of 5.
+Current Node: {{{currentMainQuestionIndex}}} of 5.
 
 HISTORY:
 {{#each history}}
@@ -115,10 +121,10 @@ Interviewer: {{{this.question}}}
 Candidate: {{{this.answer}}}
 {{/each}}
 
-LATEST CANDIDATE RESPONSE:
+LATEST RESPONSE:
 {{{userAnswer}}}
 
-Provide the 'nextQuestion' that follows this sequence. Adjust difficulty if needed.`,
+Based on the candidate's latest response and the interview flow, provide the 'nextQuestion'. Adjust difficulty (Easy -> Expert) based on their answers.`,
 });
 
 const aiMockInterviewFlow = ai.defineFlow(
@@ -130,10 +136,10 @@ const aiMockInterviewFlow = ai.defineFlow(
   async (input) => {
     if (input.debugMode) {
       return {
-        nextQuestion: "[DEBUG] Human Persona Active. Node generated.",
-        feedbackOnLastAnswer: "DEBUG: Signal synchronized.",
+        nextQuestion: "[DEBUG] Senior Interviewer Persona Active. Node generated.",
+        feedbackOnLastAnswer: "DEBUG: Acknowledgement node synchronized.",
         isInterviewComplete: input.currentMainQuestionIndex >= 5,
-        debugPrompt: "System check: Human Interviewer Protocol Active."
+        debugPrompt: "System check: Human Senior Persona Protocol Active."
       };
     }
 
@@ -157,7 +163,7 @@ const aiMockInterviewFlow = ai.defineFlow(
 
       return {
         nextQuestion: fallbackQ,
-        feedbackOnLastAnswer: "I see. Let's move forward with that context. [RECOVERY MODE]",
+        feedbackOnLastAnswer: "I appreciate that context. Let's move forward.",
         isInterviewComplete: input.currentMainQuestionIndex >= 5,
         isMock: true
       };
