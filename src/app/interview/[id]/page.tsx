@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useEffect, Suspense, useMemo } from 'react';
@@ -15,11 +14,9 @@ import {
   Command,
   Timer,
   AlertTriangle,
-  Info,
   Mic,
   Video,
-  Settings,
-  MessageSquare
+  Settings
 } from 'lucide-react';
 import { aiMockInterview, type AiMockInterviewOutput } from '@/ai/flows/ai-mock-interview';
 import { useUser, useFirestore, useCollection } from '@/firebase';
@@ -31,7 +28,6 @@ const QUESTION_TIMEOUT = 120;
 function InterviewSessionContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
-  const params = useParams();
   const { user } = useUser();
   const db = useFirestore();
   
@@ -45,6 +41,7 @@ function InterviewSessionContent() {
   const [nextOutput, setNextOutput] = useState<AiMockInterviewOutput | null>(null);
   const [userAnswer, setUserAnswer] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
+  const [hasAttemptedInitial, setHasAttemptedInitial] = useState(false);
   const [totalTimer, setTotalTimer] = useState(0);
   const [questionTimer, setQuestionTimer] = useState(QUESTION_TIMEOUT);
   const [isComplete, setIsComplete] = useState(false);
@@ -52,7 +49,6 @@ function InterviewSessionContent() {
   const [resumeReady, setResumeReady] = useState(false);
   const [cachedAnalysis, setCachedAnalysis] = useState<any>(null);
 
-  // Load from localStorage
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const stored = localStorage.getItem("resumeAnalysis");
@@ -69,17 +65,14 @@ function InterviewSessionContent() {
     }
   }, []);
 
-  // Resume Ingestion (Firestore Fallback)
   const resumeQuery = useMemo(() => {
     if (!db || !user?.uid) return null;
     return query(collection(db, 'users', user.uid, 'resumes'), orderBy('createdAt', 'desc'), limit(1));
   }, [db, user?.uid]);
   const { data: resumes, loading: resumesLoading } = useCollection(resumeQuery);
 
-  // Fallback Sync
   useEffect(() => {
     if (!resumeReady && !resumesLoading) {
-      console.log("[RESUME LOADED] Synchronization protocol complete.");
       setResumeReady(true);
     }
   }, [resumeReady, resumesLoading]);
@@ -104,11 +97,12 @@ function InterviewSessionContent() {
   }, [resumes, cachedAnalysis]);
 
   useEffect(() => {
-    if (!resumeReady) return;
+    if (!resumeReady || hasAttemptedInitial) return;
 
     const start = async () => {
       if (!nextOutput && !isProcessing) {
         setIsProcessing(true);
+        setHasAttemptedInitial(true);
         try {
           const output = await aiMockInterview({
             role, 
@@ -123,6 +117,8 @@ function InterviewSessionContent() {
           });
           setNextOutput(output);
           console.log("[INTERVIEW INITIALIZED] Intelligence nodes synced.");
+        } catch (err) {
+          console.error("Initial interview load failed", err);
         } finally {
           setIsProcessing(false);
         }
@@ -134,7 +130,7 @@ function InterviewSessionContent() {
     const t = setInterval(() => setTotalTimer(s => s + 1), 1000);
     const qt = setInterval(() => setQuestionTimer(s => Math.max(0, s - 1)), 1000);
     return () => { clearInterval(t); clearInterval(qt); };
-  }, [resumeReady, resumeContext, debugEnabled, role, exp, round, nextOutput, isProcessing]);
+  }, [resumeReady, hasAttemptedInitial, resumeContext, debugEnabled, role, exp, round, nextOutput, isProcessing]);
 
   const handleSend = async () => {
     if (!userAnswer.trim() || isProcessing) return;
@@ -167,33 +163,17 @@ function InterviewSessionContent() {
       });
       setNextOutput(output);
       if (output.isInterviewComplete) setIsComplete(true);
+    } catch (err) {
+      console.error("Submission failed", err);
     } finally {
       setIsProcessing(false);
     }
   };
 
   const finish = async () => {
-    console.log("Audit button clicked - Initializing Intelligence Archival");
-    if (!user || !db) {
-      console.warn("Archival aborted: System nodes not ready.");
-      return;
-    }
-    
+    if (!user || !db) return;
     setIsSaving(true);
     try {
-      console.log("Persisting simulation vectors to Firestore...");
-      console.log("DEBUG SAVE DATA", {
-        userId: user?.uid,
-        role,
-        exp,
-        round,
-        history,
-        totalTimer
-      });
-      
-      if (history) {
-        console.log("HISTORY JSON", JSON.stringify(history, null, 2));
-      }
       const docRef = await addDoc(collection(db, 'users', user.uid, 'interviews'), {
         userId: user.uid, 
         role, 
@@ -204,7 +184,6 @@ function InterviewSessionContent() {
         createdAt: serverTimestamp(), 
         overallScore: 0
       });
-      console.log("Vectors archived successfully. Initializing navigation to feedback node:", docRef.id);
       router.push(`/feedback/${docRef.id}`);
     } catch (e) {
       console.error("Neural Archival Failed:", e);
@@ -214,20 +193,17 @@ function InterviewSessionContent() {
 
   return (
     <div className="h-screen flex flex-col overflow-hidden relative">
-      {/* LAYER 0: CINEMATIC AVATAR BACKGROUND */}
       <video
         src="/vishal.mp4"
         autoPlay
+        muted
         loop
         playsInline
-        controls
         className="fixed inset-0 w-full h-full object-cover z-0 bg-[#050816]"
       />
 
-      {/* LAYER 10: MINIMAL NEURAL OVERLAY */}
       <div className="fixed inset-0 bg-black/5 z-10 pointer-events-none" />
 
-      {/* LAYER 20: HUD & INTERFACE CONTENT */}
       <div className="relative z-20 flex flex-col h-full w-full">
         {!resumeReady ? (
           <div className="flex-1 flex flex-col items-center justify-center space-y-6">
@@ -236,7 +212,6 @@ function InterviewSessionContent() {
           </div>
         ) : (
           <>
-            {/* HUD HEADER PROTOCOLS */}
             <header className="px-10 py-6 flex flex-col gap-4 bg-gradient-to-b from-black/20 to-transparent">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-6">
@@ -246,7 +221,7 @@ function InterviewSessionContent() {
                   <div>
                     <h1 className="text-sm font-bold text-white tracking-tight">{role} • {round}</h1>
                     <div className="flex items-center gap-2">
-                      <div className="w-2 h-2 bg-accent rounded-full animate-pulse shadow-[0_0_10px_rgba(34,211,238,0.8)]" />
+                      <div className="w-2 h-2 bg-accent rounded-full animate-pulse shadow-[0_0_100px_rgba(34,211,238,0.8)]" />
                       <p className="text-[10px] font-black uppercase tracking-[0.2em] text-accent">
                         {nextOutput?.isMock ? "Mock Survival Mode" : "Neural Arena Active"}
                       </p>
@@ -258,11 +233,6 @@ function InterviewSessionContent() {
                   {nextOutput?.isMock && (
                     <Badge className="bg-orange-500/20 text-orange-400 border-orange-500/30 px-4 py-2 text-[8px] font-black tracking-widest uppercase">
                       <AlertTriangle className="w-3 h-3 mr-2" /> [MOCK MODE]
-                    </Badge>
-                  )}
-                  {!nextOutput?.isMock && (
-                    <Badge className="bg-purple-500/20 text-purple-400 border-none px-4 py-2 text-[8px] font-black tracking-widest uppercase backdrop-blur-md">
-                      <ShieldCheck className="w-3 h-3 mr-2" /> [RESUME-AWARE]
                     </Badge>
                   )}
                   
@@ -278,7 +248,6 @@ function InterviewSessionContent() {
               </div>
             </header>
 
-            {/* FLOATING BRIEFING PANEL (TOP-LEFT HUD) */}
             <AnimatePresence mode="wait">
               {!isComplete && nextOutput?.nextQuestion && (
                 <motion.div 
@@ -300,7 +269,6 @@ function InterviewSessionContent() {
                       {isProcessing && !nextOutput?.nextQuestion ? "Recalibrating Neural Vectors..." : nextOutput.nextQuestion}
                     </p>
 
-                    {/* SUBTLE HUD FEEDBACK */}
                     {nextOutput?.feedbackOnLastAnswer && (
                       <div className="mt-4 pt-4 border-t border-white/5 flex items-center gap-2">
                         <Zap className="w-3 h-3 text-purple-400" />
@@ -314,7 +282,6 @@ function InterviewSessionContent() {
               )}
             </AnimatePresence>
 
-            {/* MAIN PERFORMANCE STAGE */}
             <main className="flex-1 pointer-events-none relative">
               <AnimatePresence>
                 {isComplete && (
@@ -344,7 +311,6 @@ function InterviewSessionContent() {
               </AnimatePresence>
             </main>
 
-            {/* INPUT DOCK (Bottom persistent synthesis layer) */}
             {!isComplete && (
               <div className="w-full max-w-5xl mx-auto pb-12 px-6 relative z-30">
                 <div className="flex flex-col items-center gap-2 mb-4">
@@ -391,7 +357,6 @@ function InterviewSessionContent() {
               </div>
             )}
 
-            {/* CONTROLS SIDE-DOCK */}
             <div className="fixed right-10 top-1/2 -translate-y-1/2 z-50 flex flex-col gap-6">
               {[
                 { icon: Mic, label: "Mute" },

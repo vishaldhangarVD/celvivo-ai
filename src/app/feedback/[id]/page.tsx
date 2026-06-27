@@ -10,7 +10,6 @@ import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
 import { 
-  Target, 
   BrainCircuit, 
   MessageSquare, 
   Zap,
@@ -46,7 +45,6 @@ export default function FeedbackReport() {
   
   const { data: interviewDoc, loading: docLoading } = useDoc(interviewRef);
 
-  // Fetch Latest Resume for contextual validation
   const resumesQuery = useMemo(() => {
     if (!db || !user?.uid) return null;
     return query(
@@ -59,18 +57,20 @@ export default function FeedbackReport() {
   
   const [feedback, setFeedback] = useState<InterviewFeedbackOutput | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [hasAttempted, setHasAttempted] = useState(false);
 
   useEffect(() => {
     const processAudit = async () => {
-      if (!interviewDoc || isProcessing) return;
+      if (!interviewDoc || isProcessing || hasAttempted) return;
       
-      // If feedback already exists, just load it
       if (interviewDoc.feedback && interviewDoc.overallScore > 0) {
         setFeedback(interviewDoc.feedback);
+        setHasAttempted(true);
         return;
       }
 
       setIsProcessing(true);
+      setHasAttempted(true);
       try {
         const transcript = (interviewDoc.history || []).map((h: any) => `Q: ${h.question}\nA: ${h.answer}`).join('\n\n');
         
@@ -110,7 +110,7 @@ export default function FeedbackReport() {
           }
         }
       } catch (e) {
-        console.error(e);
+        console.error("Audit Synthesis Failure", e);
         toast({ variant: "destructive", title: "Audit Failed", description: "System could not synthesize the final report." });
       } finally {
         setIsProcessing(false);
@@ -118,7 +118,7 @@ export default function FeedbackReport() {
     };
 
     if (!docLoading && interviewDoc) processAudit();
-  }, [interviewDoc, docLoading, user?.uid, db, interviewRef, toast, isProcessing, latestResumes]);
+  }, [interviewDoc, docLoading, user?.uid, db, interviewRef, toast, isProcessing, hasAttempted, latestResumes]);
 
   if (docLoading || isProcessing) {
     return (
@@ -135,7 +135,17 @@ export default function FeedbackReport() {
     );
   }
 
-  if (!feedback) return null;
+  if (!feedback) {
+    return (
+      <div className="h-screen flex flex-col items-center justify-center bg-[#050816]">
+        <h2 className="text-2xl font-bold text-red-400">Audit Not Found</h2>
+        <p className="text-muted-foreground mt-2">The requested simulation vectors could not be retrieved.</p>
+        <Link href="/dashboard" className="mt-8">
+          <Button variant="outline">Return to Command</Button>
+        </Link>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-[#050816] pb-32">
