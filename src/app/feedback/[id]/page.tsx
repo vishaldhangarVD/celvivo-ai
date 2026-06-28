@@ -63,8 +63,8 @@ export default function FeedbackReport() {
     const processAudit = async () => {
       if (!interviewDoc || isProcessing || hasAttempted) return;
       
-      if (interviewDoc.feedback && interviewDoc.overallScore > 0) {
-        setFeedback(interviewDoc.feedback);
+      if ((interviewDoc as any).feedback && (interviewDoc as any).overallScore > 0) {
+        setFeedback((interviewDoc as any).feedback);
         setHasAttempted(true);
         return;
       }
@@ -72,40 +72,43 @@ export default function FeedbackReport() {
       setIsProcessing(true);
       setHasAttempted(true);
       try {
-        const transcript = (interviewDoc.history || []).map((h: any) => `Q: ${h.question}\nA: ${h.answer}`).join('\n\n');
+        const transcript = ((interviewDoc as any).history || []).map((h: any) => `Q: ${h.question}\nA: ${h.answer}`).join('\n\n');
         
         const resume = latestResumes?.[0];
         const resumeContext = resume ? {
-          skills: resume.analysis?.skillAnalysis?.map((s: any) => s.skill) || [],
-          projects: resume.analysis?.sections?.projects || [],
-          experienceSummary: resume.analysis?.sections?.experience?.[0] || "",
-          atsScore: resume.atsScore || 0
+          skills: (resume as any).analysis?.skillAnalysis?.map((s: any) => s.skill) || [],
+          projects: (resume as any).analysis?.sections?.projects || [],
+          experienceSummary: (resume as any).analysis?.sections?.experience?.[0] || "",
+          atsScore: (resume as any).atsScore || 0
         } : undefined;
 
         const result = await generateInterviewFeedback({
           interviewTranscript: transcript,
-          role: interviewDoc.role || 'Software Engineer',
-          experienceLevel: interviewDoc.experienceLevel || 'Senior',
-          round: interviewDoc.round || 'Technical Round',
+          role: (interviewDoc as any).role || 'Software Engineer',
+          experienceLevel: (interviewDoc as any).experienceLevel || 'Senior',
+          round: (interviewDoc as any).round || 'Technical Round',
           resumeContext
         });
+        
+        // Firestore sanitization: deep clone and remove undefineds
+        const sanitizedFeedback = JSON.parse(JSON.stringify(result));
         
         setFeedback(result);
 
         if (interviewRef) {
           await updateDoc(interviewRef, {
-            feedback: result,
-            overallScore: result.overallInterviewScore,
-            technicalScore: result.technicalKnowledgeScore,
-            communicationScore: result.communicationScore,
-            confidenceScore: result.confidenceScore,
-            hiringRecommendation: result.hiringRecommendation,
+            feedback: sanitizedFeedback,
+            overallScore: result.overallInterviewScore || 0,
+            technicalScore: result.technicalKnowledgeScore || 0,
+            communicationScore: result.communicationScore || 0,
+            confidenceScore: result.confidenceScore || 0,
+            hiringRecommendation: result.hiringRecommendation || 'No Hire',
           });
 
           if (user?.uid && db) {
             const userRef = doc(db, 'users', user.uid);
             await updateDoc(userRef, {
-              jobReadinessScore: Math.round(result.jobReadinessScore)
+              jobReadinessScore: Math.round(result.jobReadinessScore || 0)
             });
           }
         }
@@ -159,9 +162,9 @@ export default function FeedbackReport() {
           <motion.div initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} className="premium-card p-12 border-glow-premium relative overflow-hidden flex flex-col md:flex-row items-center justify-between gap-8">
             <div className="z-10 text-center md:text-left">
               <Badge className="bg-accent/20 text-accent border-none px-4 py-1 mb-6 text-[10px] tracking-widest font-bold">EXECUTIVE PERFORMANCE REPORT</Badge>
-              <h1 className="text-6xl font-bold tracking-tighter text-premium mb-2">{interviewDoc?.role}</h1>
+              <h1 className="text-6xl font-bold tracking-tighter text-premium mb-2">{(interviewDoc as any)?.role}</h1>
               <div className="flex items-center justify-center md:justify-start gap-4 text-muted-foreground">
-                <span className="text-accent font-bold uppercase tracking-widest text-xs">{interviewDoc?.experienceLevel} Grade</span>
+                <span className="text-accent font-bold uppercase tracking-widest text-xs">{(interviewDoc as any)?.experienceLevel} Grade</span>
                 <span className="w-1.5 h-1.5 rounded-full bg-white/20" />
                 <Badge variant="outline" className="border-purple-500/40 text-purple-400 font-bold">{feedback.hiringRecommendation}</Badge>
               </div>
@@ -271,7 +274,7 @@ export default function FeedbackReport() {
                 <Button 
                   onClick={() => generateCertificatePDF({ 
                     userName: user?.displayName || 'Candidate', 
-                    role: interviewDoc?.role || 'Engineer', 
+                    role: (interviewDoc as any)?.role || 'Engineer', 
                     score: feedback.overallInterviewScore, 
                     date: new Date().toLocaleDateString() 
                   })}

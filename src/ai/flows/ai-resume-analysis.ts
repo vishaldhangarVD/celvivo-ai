@@ -145,8 +145,14 @@ const aiResumeAnalysisFlow = ai.defineFlow(
         isOffline: false
       };
     } catch (error) {
+      console.error("========== GEMINI ERROR ==========");
+      console.error(error);
+      console.error("==================================");
+    
       const result = generateFallbackAnalysis(input.targetRole);
+    
       console.log('[RESUME ANALYSIS COMPLETE]');
+    
       return result;
     }
   }

@@ -18,7 +18,10 @@ import {
   Video,
   Settings
 } from 'lucide-react';
-import { aiMockInterview, type AiMockInterviewOutput } from '@/ai/flows/ai-mock-interview';
+import {
+  aiMockInterview,
+  type AiMockInterviewOutput,
+} from '@/ai/flows/ai-mock-interview-v2';
 import { useUser, useFirestore, useCollection } from '@/firebase';
 import { collection, addDoc, serverTimestamp, query, orderBy, limit } from 'firebase/firestore';
 
@@ -89,10 +92,10 @@ function InterviewSessionContent() {
     const r = resumes?.[0];
     if (!r) return undefined;
     return {
-      skills: r.analysis?.skillAnalysis?.map((s: any) => s.skill) || [],
-      projects: r.analysis?.sections?.projects || [],
-      experienceSummary: r.analysis?.sections?.experience?.[0] || "",
-      certifications: r.analysis?.sections?.certifications || []
+      skills: (r as any).analysis?.skillAnalysis?.map((s: any) => s.skill) || [],
+      projects: (r as any).analysis?.sections?.projects || [],
+      experienceSummary: (r as any).analysis?.sections?.experience?.[0] || "",
+      certifications: (r as any).analysis?.sections?.certifications || []
     };
   }, [resumes, cachedAnalysis]);
 
@@ -104,17 +107,28 @@ function InterviewSessionContent() {
         setIsProcessing(true);
         setHasAttemptedInitial(true);
         try {
-          const output = await aiMockInterview({
-            role, 
-            experienceLevel: exp, 
-            roundType: round, 
-            currentMainQuestionIndex: 1, 
-            history: [], 
-            resumeSkills: resumeContext?.skills,
-            resumeProjects: resumeContext?.projects,
-            resumeSummary: resumeContext?.experienceSummary,
-            debugMode: debugEnabled
-          });
+            const output = await aiMockInterview({
+              role,
+              experienceLevel: exp,
+              roundType: round,
+              currentMainQuestionIndex: 1,
+              history: [],
+            
+              resumeSkills: resumeContext?.skills,
+              resumeProjects: resumeContext?.projects,
+              resumeSummary: resumeContext?.experienceSummary,
+            
+              debugMode: debugEnabled,
+            
+              interviewStage: "INTRODUCTION",
+              difficultyLevel: "MEDIUM",
+            
+              askedQuestions: [],
+            
+              candidateStrengths: [],
+            
+              candidateWeaknesses: [],
+            });
           setNextOutput(output);
           console.log("[INTERVIEW INITIALIZED] Intelligence nodes synced.");
         } catch (err) {
@@ -140,7 +154,7 @@ function InterviewSessionContent() {
     const turn = { 
       question: nextOutput?.nextQuestion || '', 
       answer: ans, 
-      feedback: nextOutput?.feedbackOnLastAnswer 
+      feedback: nextOutput?.feedbackOnLastAnswer || null 
     };
     const newHistory = [...history, turn];
     setHistory(newHistory);
@@ -150,16 +164,39 @@ function InterviewSessionContent() {
 
     try {
       const output = await aiMockInterview({
-        role, 
-        experienceLevel: exp, 
-        roundType: round, 
-        currentMainQuestionIndex: newHistory.length + 1, 
-        history: newHistory, 
-        userAnswer: ans, 
+        role,
+        experienceLevel: exp,
+        roundType: round,
+        currentMainQuestionIndex: newHistory.length + 1,
+      
+        history: newHistory,
+      
+        userAnswer: ans,
+      
         resumeSkills: resumeContext?.skills,
         resumeProjects: resumeContext?.projects,
         resumeSummary: resumeContext?.experienceSummary,
-        debugMode: debugEnabled
+      
+        debugMode: debugEnabled,
+      
+        interviewStage:
+          nextOutput?.nextInterviewStage || "TECHNICAL",
+      
+        difficultyLevel:
+          nextOutput?.difficultyAdjustment === "Harder"
+            ? "HARD"
+            : nextOutput?.difficultyAdjustment === "Easier"
+            ? "EASY"
+            : "MEDIUM",
+      
+        askedQuestions:
+          nextOutput?.askedQuestions || [],
+      
+        candidateStrengths:
+          nextOutput?.candidateStrengths || [],
+      
+        candidateWeaknesses:
+          nextOutput?.candidateWeaknesses || [],
       });
       setNextOutput(output);
       if (output.isInterviewComplete) setIsComplete(true);
@@ -173,17 +210,26 @@ function InterviewSessionContent() {
   const finish = async () => {
     if (!user || !db) return;
     setIsSaving(true);
+    console.log("Audit button clicked");
     try {
+      // Create a sanitized history to avoid 'undefined' values
+      const sanitizedHistory = history.map(turn => ({
+        question: turn.question || "",
+        answer: turn.answer || "",
+        feedback: turn.feedback || null
+      }));
+
       const docRef = await addDoc(collection(db, 'users', user.uid, 'interviews'), {
         userId: user.uid, 
-        role, 
-        experienceLevel: exp, 
-        round, 
-        history, 
-        duration: totalTimer, 
+        role: role || "Software Engineer", 
+        experienceLevel: exp || "Senior", 
+        round: round || "Technical", 
+        history: sanitizedHistory, 
+        duration: totalTimer || 0, 
         createdAt: serverTimestamp(), 
         overallScore: 0
       });
+      console.log("Session saved successfully:", docRef.id);
       router.push(`/feedback/${docRef.id}`);
     } catch (e) {
       console.error("Neural Archival Failed:", e);
