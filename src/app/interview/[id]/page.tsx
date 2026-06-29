@@ -42,6 +42,29 @@ function InterviewSessionContent() {
   const [currentIdx, setCurrentIdx] = useState(0);
   const [history, setHistory] = useState<any[]>([]);
   const [nextOutput, setNextOutput] = useState<AiMockInterviewOutput | null>(null);
+  const [askedQuestions, setAskedQuestions] = useState<string[]>([]);
+
+  const [interviewStage, setInterviewStage] = useState<
+  | "INTRODUCTION"
+  | "RESUME"
+  | "PROJECT"
+  | "TECHNICAL"
+  | "SCENARIO"
+  | "FOLLOW_UP"
+  | "BEHAVIOR"
+  | "RAPID_FIRE"
+  | "CLOSING"
+>("TECHNICAL");
+
+const [difficultyLevel, setDifficultyLevel] =
+  useState<"EASY" | "MEDIUM" | "HARD">("MEDIUM");
+
+const [candidateStrengths, setCandidateStrengths] =
+  useState<string[]>([]);
+  
+  const [candidateWeaknesses, setCandidateWeaknesses] =
+  useState<string[]>([]);
+
   const [userAnswer, setUserAnswer] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
   const [hasAttemptedInitial, setHasAttemptedInitial] = useState(false);
@@ -117,15 +140,15 @@ function InterviewSessionContent() {
               resumeSkills: resumeContext?.skills,
               resumeProjects: resumeContext?.projects,
               resumeSummary: resumeContext?.experienceSummary,
-            
+
               debugMode: debugEnabled,
-            
-              interviewStage: "INTRODUCTION",
-              difficultyLevel: "MEDIUM",
-            
-              askedQuestions: [],
-            
-              candidateStrengths: [],
+              interviewStage: interviewStage,
+
+              difficultyLevel: difficultyLevel,
+
+              askedQuestions: askedQuestions,
+
+              candidateStrengths: candidateStrengths,
             
               candidateWeaknesses: [],
             });
@@ -178,28 +201,41 @@ function InterviewSessionContent() {
         resumeSummary: resumeContext?.experienceSummary,
       
         debugMode: debugEnabled,
-      
-        interviewStage:
-          nextOutput?.nextInterviewStage || "TECHNICAL",
-      
-        difficultyLevel:
-          nextOutput?.difficultyAdjustment === "Harder"
-            ? "HARD"
-            : nextOutput?.difficultyAdjustment === "Easier"
-            ? "EASY"
-            : "MEDIUM",
-      
-        askedQuestions:
-          nextOutput?.askedQuestions || [],
-      
-        candidateStrengths:
-          nextOutput?.candidateStrengths || [],
-      
+
+        interviewStage: interviewStage,
+
+        difficultyLevel: difficultyLevel,
+
+        askedQuestions: askedQuestions,
+
+        candidateStrengths: candidateStrengths, 
         candidateWeaknesses:
-          nextOutput?.candidateWeaknesses || [],
+        nextOutput?.candidateWeaknesses || [],
       });
       setNextOutput(output);
+      setInterviewStage(
+        output.nextInterviewStage ?? interviewStage
+      );
       if (output.isInterviewComplete) setIsComplete(true);
+     
+      setDifficultyLevel(
+        output.difficultyAdjustment === "Harder"
+          ? "HARD"
+          : output.difficultyAdjustment === "Easier"
+          ? "EASY"
+          : "MEDIUM"
+        );
+        setAskedQuestions(
+         output.askedQuestions ?? askedQuestions
+        );
+      
+      setCandidateStrengths(
+        output.candidateStrengths ?? candidateStrengths
+      );
+      
+      setCandidateWeaknesses(
+        output.candidateWeaknesses ?? candidateWeaknesses
+      );
     } catch (err) {
       console.error("Submission failed", err);
     } finally {

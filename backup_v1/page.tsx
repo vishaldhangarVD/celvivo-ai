@@ -88,7 +88,9 @@ export default function InterviewSetup() {
       });
 
       const result = await analyzeResume({ resumeDataUri: base64, targetRole: selectedRole });
-      
+      console.log("STEP 1: analyzeResume success");
+      console.log(result);
+      console.log("Resume Result:", result);
       // Store in localStorage for fast session synchronization
       if (typeof window !== 'undefined') {
         localStorage.setItem("resumeAnalysis", JSON.stringify(result));
@@ -96,6 +98,7 @@ export default function InterviewSetup() {
 
       // Save to Firestore
       const resumesRef = collection(db, 'users', user.uid, 'resumes');
+      console.log("STEP 2: Before addDoc");
       await addDoc(resumesRef, {
         userId: user.uid,
         filename: file.name,
@@ -105,16 +108,25 @@ export default function InterviewSetup() {
         createdAt: serverTimestamp(),
       });
 
+      console.log("STEP 3: After addDoc");
+
       const userDocRef = doc(db, 'users', user.uid);
       await updateDoc(userDocRef, {
         resumeScore: result.atsScore
       });
+      console.log("STEP 4: After updateDoc");
 
       setStep(2);
       toast({ title: "Blueprint Verified", description: "Your career intelligence has been synchronized." });
     } catch (e) {
-      toast({ variant: "destructive", title: "Audit Failed", description: "Could not parse document. Neural API may be busy." });
-    } finally {
+      console.error("HANDLE RESUME ERROR:", e);
+    
+      toast({
+        variant: "destructive",
+        title: "Audit Failed",
+        description: e instanceof Error ? e.message : String(e),
+      });
+    }finally {
       setIsAnalyzing(false);
     }
   };
