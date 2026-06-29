@@ -45,7 +45,7 @@ export const ai = genkit({
  * Implements exponential backoff and model fallback.
  */
 export async function runWithResilience(promptFn: any, input: any) {
-  const delays = [2000, 5000, 10000];
+  const delays = [3000, 7000, 15000]; // Increased for hard quota hits
   const retryableStatuses = [429, 500, 502, 503, 504];
 
   async function attemptExecution(model: string) {
@@ -54,8 +54,15 @@ export async function runWithResilience(promptFn: any, input: any) {
         return await promptFn(input, { model });
       } catch (e: any) {
         const status = e.status || e.code;
+        
+        // Log the specific error for debugging
+        if (status === 429) {
+          console.warn(`[Neural Quota] Gemini ${model} is exhausted. Attempt ${i + 1}/3...`);
+        } else {
+          console.warn(`[Neural Resilience] Server Error ${status} from ${model}. Retrying...`);
+        }
+
         if (i < 3 && retryableStatuses.includes(status)) {
-          console.warn(`[Neural Resilience] AI server is busy, retrying attempt ${i + 1} with ${model}...`);
           await new Promise(r => setTimeout(r, delays[i]));
           continue;
         }
@@ -66,16 +73,14 @@ export async function runWithResilience(promptFn: any, input: any) {
 
   try {
     return await attemptExecution(PRIMARY_MODEL);
-  } catch (primaryError) {
-    console.warn(`[Neural Fallback] Primary model failed. Initiating fallback to ${FALLBACK_MODEL}...`);
+  } catch (primaryError: any) {
+    // If it's a 429, maybe try the fallback model immediately or after a short wait
+    console.warn(`[Neural Fallback] Primary model failure (${primaryError.status || primaryError.code}). Trying ${FALLBACK_MODEL}...`);
     try {
       return await attemptExecution(FALLBACK_MODEL);
-    } catch (finalError) {
+    } catch (finalError: any) {
       console.error("[Neural Critical] Resilience pipeline exhausted.");
-      console.error("REAL GEMINI ERROR:", finalError);
-    
       throw finalError;
-    
     }
   }
 }
