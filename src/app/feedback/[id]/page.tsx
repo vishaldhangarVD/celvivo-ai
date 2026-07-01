@@ -82,33 +82,25 @@ export default function FeedbackReport() {
           atsScore: (resume as any).atsScore || 0
         } : undefined;
 
-        const result = await generateInterviewFeedback({
-          interviewTranscript: transcript,
-          role: (interviewDoc as any).role || 'Software Engineer',
-          experienceLevel: (interviewDoc as any).experienceLevel || 'Senior',
-          round: (interviewDoc as any).round || 'Technical Round',
-          resumeContext
-        });
+        const storedFeedback = (interviewDoc as any).feedback;
+
+        if (!storedFeedback) {
+          toast({
+            variant: "destructive",
+            title: "Feedback Missing",
+            description: "Interview feedback was not found."
+          });
+          return;
+        }
         
-        // Firestore sanitization: deep clone and remove undefineds
-        const sanitizedFeedback = JSON.parse(JSON.stringify(result));
-        
-        setFeedback(result);
+        setFeedback(storedFeedback);
 
         if (interviewRef) {
-          await updateDoc(interviewRef, {
-            feedback: sanitizedFeedback,
-            overallScore: result.overallInterviewScore || 0,
-            technicalScore: result.technicalKnowledgeScore || 0,
-            communicationScore: result.communicationScore || 0,
-            confidenceScore: result.confidenceScore || 0,
-            hiringRecommendation: result.hiringRecommendation || 'No Hire',
-          });
-
+          
           if (user?.uid && db) {
             const userRef = doc(db, 'users', user.uid);
             await updateDoc(userRef, {
-              jobReadinessScore: Math.round(result.jobReadinessScore || 0)
+              jobReadinessScore: Math.round(storedFeedback.jobReadinessScore || 0)
             });
           }
         }

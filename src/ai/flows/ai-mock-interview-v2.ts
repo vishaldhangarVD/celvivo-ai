@@ -129,6 +129,15 @@ const AiMockInterviewOutputSchema = z.object({
   candidateStrengths: z.array(z.string()).optional(),
 
   candidateWeaknesses: z.array(z.string()).optional(),
+  overallScore: z.number().optional(),
+  finalRecommendation: z.string().optional(),
+
+hiringDecision: z.enum([
+  "Strong Hire",
+  "Hire",
+  "Borderline",
+  "Reject",
+]).optional(),
 });
 export type AiMockInterviewOutput = z.infer<typeof AiMockInterviewOutputSchema>;
 
@@ -399,6 +408,27 @@ At the end of every response decide the next stage.
 Return:
 
 nextInterviewStage
+At the end of every response also generate:
+
+overallScore:
+- 0 to 100
+- Evaluate the candidate based on all answers given so far.
+- Increase score for strong technical answers.
+- Reduce score for weak or incorrect answers.
+- Never leave overallScore empty.
+
+finalRecommendation:
+- Give a short summary (2–4 sentences).
+- Mention the candidate's biggest strengths.
+- Mention the candidate's biggest weaknesses.
+- Mention what should be improved.
+
+hiringDecision:
+Choose exactly one:
+- Strong Hire
+- Hire
+- Borderline
+- Reject
 `,
 });
 

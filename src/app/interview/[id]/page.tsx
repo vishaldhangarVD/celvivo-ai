@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useEffect, Suspense, useMemo } from 'react';
-import { useSearchParams, useRouter, useParams } from 'next/navigation';
+import { useState, useEffect, Suspense, useMemo, useRef } from 'react';
+import { useSearchParams, useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -66,6 +66,9 @@ const [candidateStrengths, setCandidateStrengths] =
   useState<string[]>([]);
 
   const [userAnswer, setUserAnswer] = useState('');
+  const [isListening, setIsListening] = useState(false);
+  const recognitionRef = useRef<any>(null);
+
   const [isProcessing, setIsProcessing] = useState(false);
   const [hasAttemptedInitial, setHasAttemptedInitial] = useState(false);
   const [totalTimer, setTotalTimer] = useState(0);
@@ -169,6 +172,120 @@ const [candidateStrengths, setCandidateStrengths] =
     return () => { clearInterval(t); clearInterval(qt); };
   }, [resumeReady, hasAttemptedInitial, resumeContext, debugEnabled, role, exp, round, nextOutput, isProcessing]);
 
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+  
+    const SpeechRecognition =
+      (window as any).SpeechRecognition ||
+      (window as any).webkitSpeechRecognition;
+  
+    if (!SpeechRecognition) return;
+  
+    const recog = new SpeechRecognition();
+  
+    recog.continuous = true;
+    recog.interimResults = true;
+    recog.lang = "en-US";
+  
+    recog.onresult = (event: any) => {
+      let transcript = "";
+  
+      for (let i = event.resultIndex; i < event.results.length; i++) {
+        transcript += event.results[i][0].transcript;
+      }
+  
+      setUserAnswer(transcript);
+    };
+  
+    recog.onend = () => {
+      setIsListening(false);
+    };
+  
+    recognitionRef.current = recog;
+    recog.onerror = (event: any) => {
+      console.error(event.error);
+      setIsListening(false);
+    };
+  }, []);
+  useEffect(() => {
+    console.log("useEffect Fired", nextOutput);
+  
+    if (nextOutput?.nextQuestion) {
+      console.log("Question:", nextOutput.nextQuestion);
+      speak(nextOutput.nextQuestion);
+    }
+  }, [nextOutput]);
+  const toggleListening = () => {
+    if (!recognitionRef.current) {
+      alert("Speech Recognition is not supported in this browser.");
+      return;
+    }
+  
+    if (isListening) {
+      recognitionRef.current.stop();
+      setIsListening(false);
+    } else {
+      recognitionRef.current.start();
+      setIsListening(true);
+    }
+  };
+  const speak = async (text: string) => {
+    try {
+      console.log("Speaking:", text);
+  
+      const response = await fetch("/api/tts", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ text }),
+      });
+  
+      console.log("Status:", response.status);
+  
+      if (!response.ok) {
+        console.log(await response.text());
+        return;
+      }
+  
+      const blob = await response.blob();
+  
+      console.log("Audio Size:", blob.size);
+  
+      const url = URL.createObjectURL(blob);
+  
+      const audio = new Audio();
+
+audio.src = url;
+audio.preload = "auto";
+
+audio.onloadedmetadata = () => {
+  console.log("Duration:", audio.duration);
+};
+
+audio.oncanplaythrough = async () => {
+  console.log("Can Play");
+
+  try {
+    await audio.play();
+    console.log("Playing...");
+  } catch (err) {
+    console.error("Play Error:", err);
+  }
+};
+
+audio.onerror = (e) => {
+  console.error("Audio Error:", e);
+};
+audio.onended = () => {
+  URL.revokeObjectURL(url);
+};
+
+audio.load();
+    } catch (err) {
+      console.error(err);
+    }
+  };
   const handleSend = async () => {
     if (!userAnswer.trim() || isProcessing) return;
     const ans = userAnswer;
@@ -263,7 +380,18 @@ const [candidateStrengths, setCandidateStrengths] =
         history: sanitizedHistory, 
         duration: totalTimer || 0, 
         createdAt: serverTimestamp(), 
-        overallScore: 0
+        overallScore: nextOutput?.overallScore ?? 0,
+        finalRecommendation:
+  nextOutput?.finalRecommendation ?? "",
+
+hiringDecision:
+  nextOutput?.hiringDecision ?? "Borderline",
+
+candidateStrengths:
+  nextOutput?.candidateStrengths ?? [],
+
+candidateWeaknesses:
+  nextOutput?.candidateWeaknesses ?? [],
       });
       console.log("Session saved successfully:", docRef.id);
       router.push(`/feedback/${docRef.id}`);
@@ -424,6 +552,14 @@ const [candidateStrengths, setCandidateStrengths] =
                     disabled={isProcessing}
                     className="flex-1 bg-transparent border-none rounded-3xl px-6 py-4 text-lg font-light text-white focus:outline-none resize-none transition-all placeholder:text-white/20 disabled:opacity-50" 
                   />
+                  <Button
+                  type="button"
+                   onClick={toggleListening}
+                   disabled={isProcessing}
+                   className="h-14 w-14 rounded-2xl"
+                  >
+                  <Mic className={isListening ? "text-red-500" : ""} />
+                  </Button>
                   <Button 
                     onClick={handleSend} 
                     disabled={isProcessing || !userAnswer.trim()} 
