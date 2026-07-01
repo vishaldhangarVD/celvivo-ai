@@ -10,7 +10,8 @@ import {
   Database, 
   Globe, 
   ChevronRight,
-  Search
+  Search,
+  Map
 } from 'lucide-react';
 import { Progress } from '@/components/ui/progress';
 
