@@ -68,6 +68,8 @@ const [candidateStrengths, setCandidateStrengths] =
   const [userAnswer, setUserAnswer] = useState('');
   const [isListening, setIsListening] = useState(false);
   const recognitionRef = useRef<any>(null);
+  const silenceTimer = useRef<NodeJS.Timeout | null>(null);
+const transcriptRef = useRef("");
 
   const [isProcessing, setIsProcessing] = useState(false);
   const [hasAttemptedInitial, setHasAttemptedInitial] = useState(false);
@@ -189,32 +191,76 @@ const [candidateStrengths, setCandidateStrengths] =
   
     recog.onresult = (event: any) => {
       let transcript = "";
-  
+    
       for (let i = event.resultIndex; i < event.results.length; i++) {
         transcript += event.results[i][0].transcript;
       }
-  
+    
+      transcriptRef.current = transcript;
+    
       setUserAnswer(transcript);
-    };
+    
+      if (silenceTimer.current) {
+        clearTimeout(silenceTimer.current);
+      }
+      silenceTimer.current = setTimeout(() => {
+        console.log("Auto Submit:", transcriptRef.current);
+      
+        recognitionRef.current?.stop();
+        setIsListening(false);
+      
+        handleSend(transcriptRef.current);
+      
+      }, 2000);
+    
+      // User अजून बोलत असेल तर timer reset
+      if (silenceTimer.current) {
+        clearTimeout(silenceTimer.current);
+      }
+    }
   
     recog.onend = () => {
       setIsListening(false);
     };
   
-    recognitionRef.current = recog;
     recog.onerror = (event: any) => {
-      console.error(event.error);
+      if (event.error === "no-speech") {
+        console.warn("Speech Recognition Warning: No speech detected.");
+        setIsListening(false);
+        return;
+      }
+      
+      console.error("Speech Recognition Error:", event.error);
       setIsListening(false);
     };
+
+    recognitionRef.current = recog;
   }, []);
-  useEffect(() => {
-    console.log("useEffect Fired", nextOutput);
   
-    if (nextOutput?.nextQuestion) {
-      console.log("Question:", nextOutput.nextQuestion);
-      speak(nextOutput.nextQuestion);
-    }
+  useEffect(() => {
+    const startInterviewFlow = async () => {
+      if (!nextOutput?.nextQuestion) return;
+  
+      // AI question बोलेल
+      await speak(nextOutput.nextQuestion);
+  
+      // AI बोलून झाल्यावर 1.5 sec wait
+      await new Promise((resolve) => setTimeout(resolve, 1500));
+  
+      // Mic Auto ON
+      if (!isListening && recognitionRef.current) {
+        try {
+          recognitionRef.current.start();
+          setIsListening(true);
+        } catch (e) {
+          console.error("Mic start failed", e);
+        }
+      }
+    };
+  
+    startInterviewFlow();
   }, [nextOutput]);
+
   const toggleListening = () => {
     if (!recognitionRef.current) {
       alert("Speech Recognition is not supported in this browser.");
@@ -225,8 +271,12 @@ const [candidateStrengths, setCandidateStrengths] =
       recognitionRef.current.stop();
       setIsListening(false);
     } else {
-      recognitionRef.current.start();
-      setIsListening(true);
+      try {
+        recognitionRef.current.start();
+        setIsListening(true);
+      } catch (e) {
+        console.error("Mic toggle start failed", e);
+      }
     }
   };
   const speak = async (text: string) => {
@@ -277,18 +327,19 @@ audio.oncanplaythrough = async () => {
 audio.onerror = (e) => {
   console.error("Audio Error:", e);
 };
-audio.onended = () => {
-  URL.revokeObjectURL(url);
-};
+
 
 audio.load();
     } catch (err) {
       console.error(err);
     }
   };
-  const handleSend = async () => {
-    if (!userAnswer.trim() || isProcessing) return;
-    const ans = userAnswer;
+  const handleSend = async (answer?: string) => {
+    const ans = answer ?? userAnswer;
+    console.log("handleSend Called");
+    console.log("Answer:", ans);
+
+    if (!ans.trim() || isProcessing) return;
     setUserAnswer('');
     
     const turn = { 
@@ -561,7 +612,7 @@ candidateWeaknesses:
                   <Mic className={isListening ? "text-red-500" : ""} />
                   </Button>
                   <Button 
-                    onClick={handleSend} 
+                    onClick={() => handleSend()}
                     disabled={isProcessing || !userAnswer.trim()} 
                     className="h-14 w-14 rounded-2xl btn-premium shrink-0 shadow-2xl flex items-center justify-center group"
                   >
