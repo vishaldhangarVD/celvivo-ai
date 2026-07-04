@@ -189,6 +189,10 @@ const transcriptRef = useRef("");
     recog.interimResults = true;
     recog.lang = "en-US";
   
+    recog.onstart = () => {
+      setIsListening(true);
+    };
+
     recog.onresult = (event: any) => {
       let transcript = "";
     
@@ -248,12 +252,13 @@ const transcriptRef = useRef("");
       await new Promise((resolve) => setTimeout(resolve, 1500));
   
       // Mic Auto ON
-      if (!isListening && recognitionRef.current) {
+      if (recognitionRef.current) {
         try {
           recognitionRef.current.start();
-          setIsListening(true);
-        } catch (e) {
-          console.error("Mic start failed", e);
+        } catch (e: any) {
+          if (e.name !== 'InvalidStateError') {
+            console.error("Mic auto-start failed", e);
+          }
         }
       }
     };
@@ -269,20 +274,27 @@ const transcriptRef = useRef("");
   
     if (isListening) {
       recognitionRef.current.stop();
-      setIsListening(false);
     } else {
       try {
         recognitionRef.current.start();
-        setIsListening(true);
-      } catch (e) {
-        console.error("Mic toggle start failed", e);
+      } catch (e: any) {
+        if (e.name !== 'InvalidStateError') {
+          console.error("Mic toggle start failed", e);
+        }
       }
     }
   };
+
   const speak = async (text: string) => {
     try {
       console.log("Speaking:", text);
   
+      // Stop mic before speaking to avoid feedback and InvalidStateError
+      if (recognitionRef.current) {
+        try { recognitionRef.current.stop(); } catch(e) {}
+      }
+      setIsListening(false);
+
       const response = await fetch("/api/tts", {
         method: "POST",
         headers: {
