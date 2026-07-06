@@ -1,5 +1,5 @@
 "use client";
-
+import { createDidAgent } from "@/lib/did";
 import { useState, useEffect, Suspense, useMemo, useRef } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -68,6 +68,9 @@ const [candidateStrengths, setCandidateStrengths] =
   const [userAnswer, setUserAnswer] = useState('');
   const [isListening, setIsListening] = useState(false);
   const recognitionRef = useRef<any>(null);
+  const videoRef = useRef<HTMLVideoElement>(null);
+
+const agentRef = useRef<any>(null);
   const silenceTimer = useRef<NodeJS.Timeout | null>(null);
 const transcriptRef = useRef("");
 
@@ -193,6 +196,10 @@ const transcriptRef = useRef("");
       setIsListening(true);
     };
 
+    recog.onend = () => {
+      setIsListening(false);
+    };
+
     recog.onresult = (event: any) => {
       let transcript = "";
     
@@ -211,60 +218,100 @@ const transcriptRef = useRef("");
         console.log("Auto Submit:", transcriptRef.current);
       
         recognitionRef.current?.stop();
-        setIsListening(false);
-      
         handleSend(transcriptRef.current);
       
       }, 2000);
-    
-      // User अजून बोलत असेल तर timer reset
-      if (silenceTimer.current) {
-        clearTimeout(silenceTimer.current);
-      }
     }
-  
-    recog.onend = () => {
-      setIsListening(false);
-    };
   
     recog.onerror = (event: any) => {
       if (event.error === "no-speech") {
         console.warn("Speech Recognition Warning: No speech detected.");
-        setIsListening(false);
         return;
       }
       
       console.error("Speech Recognition Error:", event.error);
-      setIsListening(false);
     };
 
     recognitionRef.current = recog;
   }, []);
-  
+ 
   useEffect(() => {
     const startInterviewFlow = async () => {
       if (!nextOutput?.nextQuestion) return;
-  
-      // AI question बोलेल
-      await speak(nextOutput.nextQuestion);
-  
-      // AI बोलून झाल्यावर 1.5 sec wait
-      await new Promise((resolve) => setTimeout(resolve, 1500));
-  
-      // Mic Auto ON
+      if (!agentRef.current) return;
+      if (currentIdx === 0) return; 
+
       if (recognitionRef.current) {
         try {
-          recognitionRef.current.start();
-        } catch (e: any) {
-          if (e.name !== 'InvalidStateError') {
-            console.error("Mic auto-start failed", e);
+          recognitionRef.current.stop();
+        } catch {}
+      }
+  
+      try {
+        // Avatar question बोलेल
+        await agentRef.current.chat(nextOutput.nextQuestion);
+        console.log("Chat Finished");
+        // Safety delay
+        await new Promise((resolve) => setTimeout(resolve, 1000));
+  
+        // Mic ON
+        if (recognitionRef.current && !isListening) {
+          if (isProcessing) return;
+          try {
+            recognitionRef.current.start();
+          } catch (e: any) {
+            if (e.name !== "InvalidStateError") {
+              console.error("Mic start failed", e);
+            }
           }
         }
+      } catch (err) {
+        console.error("Interview Flow Error:", err);
       }
     };
   
     startInterviewFlow();
   }, [nextOutput]);
+
+  useEffect(() => {
+    let mounted = true;
+  
+    const init = async () => {
+      if (!mounted) return;
+      if (agentRef.current) return;
+      if (!videoRef.current) return;
+  
+      try {
+        agentRef.current = await createDidAgent(
+          "ck_CEDQoCXEV8MPEo2PgycbN",
+          "v2_agt_J2JKp1Oq",
+          videoRef.current
+        );
+        console.log("Video Element:", videoRef.current);
+  
+        console.log("✅ D-ID Connected");
+
+        await new Promise((resolve) => setTimeout(resolve, 1500));
+  
+      } catch (err) {
+        console.error(err);
+      }
+    };
+  
+    init();
+  
+    return () => {
+      mounted = false;
+  
+      if (agentRef.current) {
+        try {
+           agentRef.current.disconnect();
+        } catch (e) {}
+  
+        agentRef.current = null;
+      }
+    };
+  }, []);
 
   const toggleListening = () => {
     if (!recognitionRef.current) {
@@ -278,81 +325,28 @@ const transcriptRef = useRef("");
       try {
         recognitionRef.current.start();
       } catch (e: any) {
-        if (e.name !== 'InvalidStateError') {
-          console.error("Mic toggle start failed", e);
+        if (e.name !== "InvalidStateError") {
+          console.error(e);
         }
       }
     }
   };
 
-  const speak = async (text: string) => {
-    try {
-      console.log("Speaking:", text);
-  
-      // Stop mic before speaking to avoid feedback and InvalidStateError
-      if (recognitionRef.current) {
-        try { recognitionRef.current.stop(); } catch(e) {}
-      }
-      setIsListening(false);
-
-      const response = await fetch("/api/tts", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ text }),
-      });
-  
-      console.log("Status:", response.status);
-  
-      if (!response.ok) {
-        console.log(await response.text());
-        return;
-      }
-  
-      const blob = await response.blob();
-  
-      console.log("Audio Size:", blob.size);
-  
-      const url = URL.createObjectURL(blob);
-  
-      const audio = new Audio();
-
-audio.src = url;
-audio.preload = "auto";
-
-audio.onloadedmetadata = () => {
-  console.log("Duration:", audio.duration);
-};
-
-audio.oncanplaythrough = async () => {
-  console.log("Can Play");
-
-  try {
-    await audio.play();
-    console.log("Playing...");
-  } catch (err) {
-    console.error("Play Error:", err);
-  }
-};
-
-audio.onerror = (e) => {
-  console.error("Audio Error:", e);
-};
-
-
-audio.load();
-    } catch (err) {
-      console.error(err);
-    }
-  };
   const handleSend = async (answer?: string) => {
     const ans = answer ?? userAnswer;
+
     console.log("handleSend Called");
     console.log("Answer:", ans);
 
     if (!ans.trim() || isProcessing) return;
-    setUserAnswer('');
+
+    if (recognitionRef.current) {
+      try {
+        recognitionRef.current.stop();
+      } catch {}
+    }
+
+    setUserAnswer("");
     
     const turn = { 
       question: nextOutput?.nextQuestion || '', 
@@ -366,6 +360,10 @@ audio.load();
     setIsProcessing(true);
 
     try {
+      if (agentRef.current) {
+        await agentRef.current.chat("Let me analyze your answer.");
+      }
+
       const output = await aiMockInterview({
         role,
         experienceLevel: exp,
@@ -392,6 +390,7 @@ audio.load();
         candidateWeaknesses:
         nextOutput?.candidateWeaknesses || [],
       });
+      
       setNextOutput(output);
       setInterviewStage(
         output.nextInterviewStage ?? interviewStage
@@ -428,7 +427,6 @@ audio.load();
     setIsSaving(true);
     console.log("Audit button clicked");
     try {
-      // Create a sanitized history to avoid 'undefined' values
       const sanitizedHistory = history.map(turn => ({
         question: turn.question || "",
         answer: turn.answer || "",
@@ -444,19 +442,18 @@ audio.load();
         duration: totalTimer || 0, 
         createdAt: serverTimestamp(), 
         overallScore: nextOutput?.overallScore ?? 0,
-        finalRecommendation:
-  nextOutput?.finalRecommendation ?? "",
-
-hiringDecision:
-  nextOutput?.hiringDecision ?? "Borderline",
-
-candidateStrengths:
-  nextOutput?.candidateStrengths ?? [],
-
-candidateWeaknesses:
-  nextOutput?.candidateWeaknesses ?? [],
+        finalRecommendation: nextOutput?.finalRecommendation ?? "",
+        hiringDecision: nextOutput?.hiringDecision ?? "Borderline",
+        candidateStrengths: nextOutput?.candidateStrengths ?? [],
+        candidateWeaknesses: nextOutput?.candidateWeaknesses ?? [],
       });
       console.log("Session saved successfully:", docRef.id);
+
+      if (agentRef.current) {
+        await agentRef.current.disconnect();
+        agentRef.current = null;
+      }
+
       router.push(`/feedback/${docRef.id}`);
     } catch (e) {
       console.error("Neural Archival Failed:", e);
@@ -464,17 +461,24 @@ candidateWeaknesses:
     }
   };
 
+  useEffect(() => {
+    return () => {
+      if (agentRef.current) {
+        agentRef.current.disconnect();
+      }
+    };
+  }, []);
+
   return (
     <div className="h-screen flex flex-col overflow-hidden relative">
-      <video
-        src="/vishal.mp4"
-        autoPlay
-        muted
-        loop
-        playsInline
-        className="fixed inset-0 w-full h-full object-cover z-0 bg-[#050816]"
-      />
-
+     <video
+     id="agent-video"
+  ref={videoRef}
+  autoPlay
+  playsInline
+  muted
+  className="fixed inset-0 w-full h-full object-cover z-0 bg-[#050816]"
+/>
       <div className="fixed inset-0 bg-black/5 z-10 pointer-events-none" />
 
       <div className="relative z-20 flex flex-col h-full w-full">
