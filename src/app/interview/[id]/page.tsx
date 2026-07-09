@@ -34,7 +34,7 @@ import {
   limit,
 } from "firebase/firestore";
 
-const TOTAL_QUESTIONS = 5;
+const TOTAL_QUESTIONS = 9;
 const QUESTION_TIMEOUT = 120;
 
 function InterviewSessionContent() {
@@ -61,7 +61,7 @@ function InterviewSessionContent() {
   const [difficultyLevel, setDifficultyLevel] = useState<"EASY" | "MEDIUM" | "HARD">("MEDIUM");
 
   const [interviewStage, setInterviewStage] = useState<
-    | "INTRODUCTION" | "RESUME" | "PROJECT" | "TECHNICAL" | "SCENARIO" | "FOLLOW_UP" | "BEHAVIOR" | "RAPID_FIRE" | "CLOSING"
+    | "INTRODUCTION" | "RESUME" | "PROJECT" | "TECHNICAL" | "SCENARIO" | "FOLLOW UP" | "BEHAVIOUR" | "RAPID FIRE" | "CLOSING"
   >("INTRODUCTION");
 
   const [userAnswer, setUserAnswer] = useState("");
@@ -245,6 +245,9 @@ function InterviewSessionContent() {
                       <div className="w-2 h-2 rounded-full bg-cyan-400 animate-pulse" />
                     </div>
                     <p className="text-white leading-7">{nextOutput.nextQuestion}</p>
+                    <div className="mt-4">
+                      <Badge variant="outline" className="text-[10px] text-cyan-400 border-cyan-400/30 uppercase tracking-widest">{interviewStage}</Badge>
+                    </div>
                   </div>
                 </motion.div>
               )}

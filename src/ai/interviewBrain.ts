@@ -4,9 +4,9 @@ export type InterviewStage =
   | "PROJECT"
   | "TECHNICAL"
   | "SCENARIO"
-  | "FOLLOW_UP"
-  | "BEHAVIOR"
-  | "RAPID_FIRE"
+  | "FOLLOW UP"
+  | "BEHAVIOUR"
+  | "RAPID FIRE"
   | "CLOSING";
 
 export function getNextStage(
@@ -30,13 +30,16 @@ export function getNextStage(
       return "SCENARIO";
 
     case "SCENARIO":
-      return "FOLLOW_UP";
+      return "FOLLOW UP";
 
-    case "FOLLOW_UP":
-      return "BEHAVIOR";
+    case "FOLLOW UP":
+      return "BEHAVIOUR";
 
-    case "BEHAVIOR":
-      return "RAPID_FIRE";
+    case "BEHAVIOUR":
+      return "RAPID FIRE";
+
+    case "RAPID FIRE":
+      return "CLOSING";
 
     default:
       return "CLOSING";

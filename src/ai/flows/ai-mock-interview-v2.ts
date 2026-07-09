@@ -1,9 +1,8 @@
 'use server';
 /**
- * @fileOverview Nexvoro AI Mock Interview Agent (Elite Senior Interviewer v15.0).
- * Calibrated for adaptive difficulty, strict technical mapping, and realistic production scenarios.
- * Persona updated for professional neutrality and human-fidelity mimicking elite tech firms.
- * Strict adherence to resume intelligence and no-hallucination protocols.
+ * @fileOverview Nexvoro AI Mock Interview Agent (Elite Senior Interviewer v16.0).
+ * Calibrated for a strict 9-stage sequence:
+ * INTRODUCTION -> RESUME -> PROJECT -> TECHNICAL -> SCENARIO -> FOLLOW UP -> BEHAVIOUR -> RAPID FIRE -> CLOSING.
  */
 
 import { ai, runWithResilience } from '@/ai/genkit';
@@ -15,7 +14,7 @@ import {
   isQuestionRepeated,
 } from "@/ai/interviewBrain";
 
-const INTERVIEW_VERSION = "NEXVORO_V15_MASTER";
+const INTERVIEW_VERSION = "NEXVORO_V16_SEQUENTIAL";
 
 function createInterviewSeed(
   role: string,
@@ -31,29 +30,14 @@ function createInterviewSeed(
     .substring(0, 10);
 }
 
-const FALLBACK_QUESTIONS = {
-  'HR Round': [
-    "Hello. Welcome to today's interview. I hope you're doing well. I'll be conducting your interview today. Let's begin with a brief introduction. Could you please introduce yourself and tell me about yourself?",
-    "Could you walk me through your professional background and some of the key milestones in your career?",
-    "Describe a time you had a conflict with a teammate over a decision. How was it resolved?",
-    "Where do you see your technical career trajectory heading in the next five years?",
-    "What specific aspects of our organization's mission interest you the most?"
-  ],
-  'Technical Round': [
-    "Hello. Welcome to today's interview. I hope you're doing well. I'll be conducting your interview today. Let's begin with a brief introduction. Could you please introduce yourself and tell me about yourself?",
-    "Can you elaborate on the most complex technical challenge you faced in your strongest project?",
-    "How do you ensure your code architecture remains maintainable and scalable over time?",
-    "What is your systematic approach to debugging a critical production issue under pressure?",
-    "How do you approach performance optimization when dealing with large-scale datasets?"
-  ],
-  'Managerial Round': [
-    "Hello. Welcome to today's interview. I hope you're doing well. I'll be conducting your interview today. Let's begin with a brief introduction. Could you please introduce yourself and tell me about yourself?",
-    "How do you prioritize tasks and resources for your team during a complex sprint?",
-    "Tell me about a time you had to deliver difficult technical feedback to a major stakeholder.",
-    "What is your strategy for mentoring junior developers and fostering technical growth?",
-    "How do you handle a project that is significantly falling behind its original schedule?"
-  ]
-};
+const FALLBACK_QUESTIONS = [
+  "Hello. Welcome to today's interview. Let's begin with a brief introduction. Tell me about yourself?",
+  "I noticed your technical background. What specific aspects of your strongest project are you most proud of?",
+  "How do you ensure your code remains maintainable and scalable over time?",
+  "If a production API suddenly returns 500 errors, how would you investigate step-by-step?",
+  "Tell me about a time you had to work with a difficult teammate. How did you handle it?",
+  "That concludes our session. It was nice speaking with you."
+];
 
 const AiMockInterviewInputSchema = z.object({
   role: z.string(),
@@ -77,9 +61,9 @@ const AiMockInterviewInputSchema = z.object({
     "PROJECT",
     "TECHNICAL",
     "SCENARIO",
-    "FOLLOW_UP",
-    "BEHAVIOR",
-    "RAPID_FIRE",
+    "FOLLOW UP",
+    "BEHAVIOUR",
+    "RAPID FIRE",
     "CLOSING"
   ]).optional(),
   
@@ -106,7 +90,7 @@ const AiMockInterviewOutputSchema = z.object({
   isMock: z.boolean().optional(),
   interviewSeed: z.string().optional(),
   nextInterviewStage: z.enum([
-    "INTRODUCTION", "RESUME", "PROJECT", "TECHNICAL", "SCENARIO", "FOLLOW_UP", "BEHAVIOR", "RAPID_FIRE", "CLOSING"
+    "INTRODUCTION", "RESUME", "PROJECT", "TECHNICAL", "SCENARIO", "FOLLOW UP", "BEHAVIOUR", "RAPID FIRE", "CLOSING"
   ]).optional(),
   askedQuestions: z.array(z.string()).optional(),
   candidateStrengths: z.array(z.string()).optional(),
@@ -128,68 +112,78 @@ const prompt = ai.definePrompt({
   prompt: `You are a Senior Technical Interviewer representing {{{targetCompany}}} for a {{{role}}} position ({{{experienceLevel}}} level).
 
 GENERAL PERSONA RULES:
-- BEHAVE EXACTLY LIKE AN EXPERIENCED HUMAN INTERVIEWER. Professional, technical, and human-fidelity.
-- NEVER explain that you are an AI or a model.
-- NEVER sound robotic. Avoid generic transitions like "Excellent answer" or "Let's move to the next stage".
-- Professional Neutrality: DO NOT praise every answer. In elite firms, interviewers stay neutral or inquisitive.
-- Probing Logic:
-  • IF ANSWER IS WEAK: Challenge the candidate politely (e.g., "You mentioned sharding, but how would you handle cross-shard joins in that specific scenario?").
-  • IF ANSWER IS STRONG: Ask deeper technical questions about trade-offs and edge cases.
-- NO EVALUATION DISCLOSURE: Do not reveal scores or evaluation during the interview.
-- ONE AT A TIME: Ask exactly ONE question. Wait for the answer.
+- BEHAVE EXACTLY LIKE AN EXPERIENCED HUMAN INTERVIEWER. Professional, neutral, and high-fidelity.
+- NEVER say you are an AI or a model.
+- Ask exactly ONE question at a time. Wait for the answer.
+- NO robotic praise (e.g., "Excellent answer").
+- IF ANSWER IS WEAK: Challenge politely.
+- IF ANSWER IS STRONG: Ask deeper technical drill-downs.
 
-RESUME INTELLIGENCE PROTOCOL (CRITICAL):
-- IF RESUME DATA EXISTS (Skills, Projects, Summary):
-  • You MUST anchor all resume/technical assessment questions ONLY to the provided data.
-  • NEVER invent projects, experience, or roles that are not listed in the candidate dossier.
-  • Node 2 must use the EXACT name of a project from {{#each resumeProjects}}'{{{this}}}', {{/each}} or a skill from {{#each resumeSkills}}{{{this}}}, {{/each}}.
-- IF RESUME IS EMPTY: Switch to industry-standard interview questions calibrated for a Senior {{{role}}}.
+STRICT SEQUENCE PROTOCOL:
+You MUST follow this sequence based on the current stage: {{{interviewStage}}}.
 
-TECHNICAL MAPPING PROTOCOL:
-If resumeSkills contains these technologies, target these specific sub-topics:
-- React/Angular/Vue: Rendering cycles, Performance tuning, Virtual DOM, Hooks internals.
-- .NET: Dependency Injection, Middleware architecture, EF Core performance, Caching.
-- Python: Concurrency (asyncio), Memory management, FastAPI/Django internals.
-- Java: JVM architecture, Spring Boot beans, Multi-threading, Garbage Collection.
-- SQL: Indexing strategies, Normalization vs Denormalization, Transactions, Execution Plans.
-- Cloud: AWS/Azure specifics, CI/CD pipelines, Docker/Kubernetes orchestration.
-- Directive: Always mention the skill from the resume exactly. Never ignore listed skills.
+NODE 1: INTRODUCTION
+- Only node allowed to ask: "Tell me about yourself" or "Introduction".
 
-REACTIVE FOLLOW-UP PROTOCOL:
-- Every new question MUST naturally follow the candidate's last response.
-- Decision-Based: If candidate mentions "JWT", ask "Why JWT instead of Session?". If "Docker", ask "How would you deploy on K8s?".
-- Never generate random follow-ups. Stay in the technical thread until exhausted.
+NODE 2: RESUME
+- Use exact items from resumeSkills: {{#each resumeSkills}}{{{this}}}, {{/each}} or resumeSummary.
+- Ask about a specific skill listed. NEVER ask "What are your skills?".
 
-PRODUCTION SCENARIO PROTOCOL:
-- When in SCENARIO stage, ask exactly ONE hyper-realistic production crisis.
-- Examples: 
-  • "A production API suddenly returns 500 errors."
-  • "Database latency spikes from 20ms to 5s."
-  • "Memory usage increases incrementally every hour."
-- Directive: "How would you investigate? Step-by-step diagnostic process." NEVER ask textbook questions.
+NODE 3: PROJECT
+- If resumeProjects is NOT empty, select ONE: {{#each resumeProjects}}'{{{this}}}', {{/each}}.
+- Mention the exact project name. Ask about architecture, responsibility, and the biggest challenge.
+- If empty, pivot to a second skill from resumeSkills.
+
+NODE 4: TECHNICAL
+- Deep dive into stack fundamentals based on resumeSkills.
+- React/Vue: Rendering, reconciliation, hooks.
+- .NET: Middleware, DI, EF Core.
+- Python: Concurrency, memory.
+- Java: JVM, GC.
+- SQL: Execution plans, indexing.
+- Cloud: K8s, CI/CD.
+
+NODE 5: SCENARIO
+- Hyper-realistic production crisis ONLY.
+- Example: "A production API returns 500s," "Memory increases every hour," "DB is slow."
+- Goal: "How would you investigate step-by-step?"
+- NEVER ask textbook scenarios.
+
+NODE 6: FOLLOW UP
+- Strict reactive node. Focus on a specific technology mentioned in the candidate's LAST response.
+- Example: "You mentioned JWT, why JWT over session?" or "You mentioned Docker, how do you handle secrets?"
+
+NODE 7: BEHAVIOUR
+- Focus on soft skills and culture.
+- Leadership, conflict resolution, or project ownership.
+
+NODE 8: RAPID FIRE
+- High-intensity, short-answer technical questions.
+
+NODE 9: CLOSING
+- Thank the candidate and end the session naturally.
+
+ANTI-HALLUCINATION:
+- NEVER invent projects or experience not in resumeSkills, resumeProjects, or resumeSummary.
+- If resume is empty, switch to industry standards for a Senior {{{role}}}.
 
 DIFFICULTY PROTOCOL:
-- EASY (Freshers): Basic concepts, simple project explanation.
-- MEDIUM (Mid-level): Debugging, real-world trade-offs, scenarios.
-- HARD (Senior): High-level architecture, performance, security, distributed systems.
-- Increase difficulty ONLY if candidate performs well. NEVER jump suddenly from Easy to Hard.
+- Current: {{{difficultyLevel}}}
+- Increase difficulty ONLY if candidate performs well. Never jump suddenly from Easy to Hard.
 
-COMPANY-SPECIFIC FOCUS:
-{{#if (eq targetCompany 'Google')}} - Problem solving, algorithmic efficiency, scalability, edge cases, and "why" reasoning. {{/if}}
-{{#if (eq targetCompany 'Amazon')}} - Leadership Principles (Ownership, Customer Obsession) and practical production issues. {{/if}}
-{{#if (eq targetCompany 'Microsoft')}} - Architecture, collaborative debugging, design decisions, and collaboration. {{/if}}
-
-ANTI-GENERIC GUARDRAIL:
-- "Tell me about yourself" is ONLY allowed in INTRODUCTION.
-- NEVER ask: "Choose any project", "Tell me about your experience", or "Tell me about your skills" in Node 2 or later.
-
-CURRENT STATUS:
+CURRENT INTERVIEW STATUS:
 Stage: {{{interviewStage}}}
-Difficulty: {{{difficultyLevel}}}
-Question: {{{currentMainQuestionIndex}}} of 5
-Latest Answer: {{{userAnswer}}}
+Question: {{{currentMainQuestionIndex}}} of 9
+History:
+{{#each history}}
+Q: {{{this.question}}}
+A: {{{this.answer}}}
+{{/each}}
 
-Based on protocols, dossiers, and history, output ONE interviewer question. Wait for response.`
+Latest Candidate Response:
+{{{userAnswer}}}
+
+Based on the Protocol, output ONE interviewer question. Wait for response.`
 });
 
 const aiMockInterviewFlow = ai.defineFlow(
@@ -201,10 +195,10 @@ const aiMockInterviewFlow = ai.defineFlow(
   async (input) => {
     if (input.debugMode) {
       return {
-        nextQuestion: "[DEBUG] Senior Interviewer Persona Active. Flow sequence initiated.",
-        feedbackOnLastAnswer: "DEBUG: Acknowledgement node synchronized.",
-        isInterviewComplete: input.currentMainQuestionIndex >= 5,
-        debugPrompt: "System check: Elite Senior Persona Protocol Active."
+        nextQuestion: "[DEBUG] Senior Interviewer Persona Active. Sequence Node: " + (input.interviewStage || "INTRODUCTION"),
+        feedbackOnLastAnswer: "DEBUG: Sequence handshake active.",
+        isInterviewComplete: input.currentMainQuestionIndex >= 9,
+        debugPrompt: "System check: 9-Stage Sequence Active."
       };
     }
 
@@ -237,17 +231,16 @@ const aiMockInterviewFlow = ai.defineFlow(
         askedQuestions: [...askedQuestions, output.nextQuestion || ""],
         nextInterviewStage: output.nextInterviewStage ?? interviewStage,
         difficultyAdjustment: output.difficultyAdjustment ?? (difficulty > (input.difficultyLevel || "MEDIUM") ? "Harder" : difficulty < (input.difficultyLevel || "MEDIUM") ? "Easier" : "Maintain"),
-        isInterviewComplete: input.currentMainQuestionIndex >= 5,
+        isInterviewComplete: input.currentMainQuestionIndex >= 9,
         isMock: false
       };
     } catch (error) {
       console.error("AI Flow Error:", error);
-      const roundBank = FALLBACK_QUESTIONS['Technical Round'];
-      const bankIndex = (input.currentMainQuestionIndex - 1) % roundBank.length;
+      const bankIndex = (input.currentMainQuestionIndex - 1) % FALLBACK_QUESTIONS.length;
       return {
-        nextQuestion: roundBank[bankIndex],
+        nextQuestion: FALLBACK_QUESTIONS[bankIndex],
         feedbackOnLastAnswer: "I appreciate that context. Let's move forward.",
-        isInterviewComplete: input.currentMainQuestionIndex >= 5,
+        isInterviewComplete: input.currentMainQuestionIndex >= 9,
         isMock: true
       };
     }
