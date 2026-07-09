@@ -13,43 +13,27 @@ export function getNextStage(
   currentStage: InterviewStage,
   questionNumber: number
 ): InterviewStage {
-
-  if (questionNumber <= 1) return "INTRODUCTION";
-
-  switch (currentStage) {
-    case "INTRODUCTION":
-      return "RESUME";
-
-    case "RESUME":
-      return "PROJECT";
-
-    case "PROJECT":
-      return "TECHNICAL";
-
-    case "TECHNICAL":
-      return "SCENARIO";
-
-    case "SCENARIO":
-      return "FOLLOW UP";
-
-    case "FOLLOW UP":
-      return "BEHAVIOUR";
-
-    case "BEHAVIOUR":
-      return "RAPID FIRE";
-
-    case "RAPID FIRE":
-      return "CLOSING";
-
-    default:
-      return "CLOSING";
-  }
+  const stages: InterviewStage[] = [
+    "INTRODUCTION",
+    "RESUME",
+    "PROJECT",
+    "TECHNICAL",
+    "SCENARIO",
+    "FOLLOW UP",
+    "BEHAVIOUR",
+    "RAPID FIRE",
+    "CLOSING"
+  ];
+  
+  if (questionNumber < 1) return "INTRODUCTION";
+  if (questionNumber >= stages.length) return "CLOSING";
+  
+  return stages[questionNumber];
 }
 
 export type Difficulty =
   | "EASY"
-  | "MEDIUM"
-  | "HARD";
+  | "MEDIUM" | "HARD";
 
 /**
  * Progression logic for difficulty.
