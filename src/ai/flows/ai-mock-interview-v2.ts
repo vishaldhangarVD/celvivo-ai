@@ -1,7 +1,7 @@
 'use server';
 /**
- * @fileOverview Nexvoro AI Mock Interview Agent (Elite Senior Interviewer v8.0).
- * Calibrated for company-specific interrogation protocols, strict resume anchoring, and adaptive practical assessment.
+ * @fileOverview Nexvoro AI Mock Interview Agent (Elite Senior Interviewer v9.0).
+ * Calibrated for strict technical mapping, reactive follow-ups, and resume-anchored interrogation.
  */
 
 import { ai, runWithResilience } from '@/ai/genkit';
@@ -13,7 +13,7 @@ import {
   isQuestionRepeated,
 } from "@/ai/interviewBrain";
 
-const INTERVIEW_VERSION = "NEXVORO_V9";
+const INTERVIEW_VERSION = "NEXVORO_V10";
 
 function createInterviewSeed(
   role: string,
@@ -136,14 +136,22 @@ CRITICAL ANTI-GENERIC RULES:
 - NEVER ask: "Choose any project", "Tell me about your projects", "Explain your profile", "Tell me about your experience", or "Tell me about your skills".
 - You MUST be the one to select specific data points to discuss.
 
-COMPANY-SPECIFIC INTERROGATION PROTOCOLS:
-If targetCompany is 'Google': Focus on problem solving, scalability, algorithms, and ask "why" frequently.
-If targetCompany is 'Amazon': Focus on Leadership Principles, ownership, customer obsession, and production issues.
-If targetCompany is 'Microsoft': Focus on architecture, collaboration, debugging, and design decisions.
-If targetCompany is 'TCS Digital': Focus on practical implementation, OOP, SQL, APIs, and cloud basics.
-If targetCompany is 'Infosys': Focus on fundamentals, coding logic, and client scenarios.
-If targetCompany is 'Accenture': Focus on enterprise apps, SDLC, Agile, and communication.
-Default: Focus on high-level system design and practical problem solving.
+STRICT TECHNICAL MAPPING (MANDATORY):
+If resumeSkills contains these technologies, you MUST interrogate these specific nodes:
+- React/Angular/Vue: Rendering cycles, Performance optimization, Lifecycle, Hooks.
+- .NET: Dependency Injection, Middleware, EF Core, Authentication, Caching.
+- Python: Concurrency, Memory management, FastAPI/Django, Pandas.
+- Java: JVM internals, Spring Boot architecture, Multi-threading, Garbage Collection.
+- SQL: Indexes, Normalization, Transactions, Execution Plans.
+- Cloud (AWS/Azure): Service selection, CI/CD pipelines, Docker, Kubernetes.
+
+STRICT FOLLOW-UP PROTOCOL (EVERY ANSWER MUST PRODUCE A FOLLOW-UP):
+Every new question MUST naturally follow the candidate's last response.
+Examples:
+- Candidate: "I used JWT" -> Next: "Why JWT instead of Session? What trade-offs did you consider?"
+- Candidate: "I used Firebase" -> Next: "How did you secure Firestore? Explain your security rules."
+- Candidate: "I used Docker" -> Next: "How would you deploy and scale this container on Kubernetes?"
+- Candidate: "I used React" -> Next: "Explain the reconciliation process and how the Virtual DOM updates."
 
 CANDIDATE DOSSIER:
 - Skills: {{#each resumeSkills}}{{{this}}}, {{/each}}
@@ -151,31 +159,28 @@ CANDIDATE DOSSIER:
 - Summary: {{{resumeSummary}}}
 
 NODE 2 (Resume Discussion Protocol):
-You MUST anchor your question to exact resume data. NEVER ask generic summary questions.
-- If resumeProjects is NOT empty:
-  1. Select exactly ONE project from: {{#each resumeProjects}}'{{{this}}}', {{/each}}.
-  2. Mention the project name EXACTLY as provided.
-  3. You MUST ask: "I noticed your project '[EXACT_PROJECT_NAME]'. Could you explain: Why you built it? Its overall architecture? Your specific responsibility? The biggest challenge you faced and how you solved it? And what would you improve today?"
-- If resumeProjects is empty but resumeSkills is NOT empty:
-  1. Select exactly ONE skill. Mention it exactly.
-  2. Ask a deep technical question about its real-world implementation or internal mechanics.
-- If both are empty: Only then ask a general background question.
+If resumeProjects is NOT empty:
+  1. Select exactly ONE project: {{#each resumeProjects}}'{{{this}}}', {{/each}}.
+  2. You MUST ask: "I noticed your project '[EXACT_PROJECT_NAME]'. Could you explain: Why you built it? Its overall architecture? Your specific responsibility? The biggest challenge you faced and how you solved it? And what would you improve today?"
+Else if resumeSkills is NOT empty:
+  1. Select ONE skill from the technical mapping above.
+  2. Ask a deep technical question about its real-world implementation.
 
 INTERVIEW FLOW:
-NODE 1 (Opening): Welcome and introduce self. (Intro questions allowed here).
-NODE 2 (Resume): Anchored project/skill deep-dive. (Intro questions FORBIDDEN here).
-NODE 3 (Technical): Role-specific proficiency assessment.
-NODE 4 (Follow-up): Listen to previous answer and drill down.
-NODE 5 (Scenario): Practical situations matching the role and company culture.
+NODE 1 (Opening): Welcome.
+NODE 2 (Resume): Anchored project/skill deep-dive.
+NODE 3 (Technical): Proficiency assessment based on dossier.
+NODE 4 (Follow-up): Listen to previous answer and drill down (Why X over Y? How did you secure Z?).
+NODE 5 (Scenario): Practical situations matching role and company.
 NODE 6 (Closing): Finish naturally if current index >= 5.
 
 CURRENT STATUS:
 Target Company: {{{targetCompany}}}
-Current Stage: {{{interviewStage}}}
+Stage: {{{interviewStage}}}
 Question: {{{currentMainQuestionIndex}}} of 5
 Latest Answer: {{{userAnswer}}}
 
-Based on company protocols and dossier, output ONE interviewer question.`,
+Based on protocols and dossier, output ONE interviewer question.`,
 });
 
 const aiMockInterviewFlow = ai.defineFlow(
