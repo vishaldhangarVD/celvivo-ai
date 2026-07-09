@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useMemo } from 'react';
@@ -8,6 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
+import { Input } from '@/components/ui/input';
 import { 
   Briefcase, 
   Building2, 
@@ -27,7 +29,11 @@ import {
   Play,
   ShieldCheck,
   Building,
-  Target
+  Target,
+  Search,
+  Layers,
+  Database,
+  ShieldAlert
 } from 'lucide-react';
 import { useUser, useFirestore, useCollection } from '@/firebase';
 import { collection, query, orderBy, limit, addDoc, serverTimestamp, doc, updateDoc } from 'firebase/firestore';
@@ -35,9 +41,17 @@ import { analyzeResume } from '@/ai/flows/ai-resume-analysis';
 import { useToast } from '@/hooks/use-toast';
 import { motion, AnimatePresence } from 'framer-motion';
 
-const ROLES = [
-  "Frontend Developer", "Backend Developer", "Full Stack Developer", "Software Engineer",
-  "Data Scientist", "DevOps Engineer", "Cloud Engineer", "Cyber Security Analyst", "UI/UX Designer"
+const ROLES_DATA = [
+  { id: 'java', name: "Java Developer", category: "Development", icon: Code2 },
+  { id: 'python', name: "Python Developer", category: "Development", icon: Code2 },
+  { id: 'react', name: "React Developer", category: "Development", icon: Code2 },
+  { id: 'nodejs', name: "Node.js Developer", category: "Development", icon: Code2 },
+  { id: 'fullstack', name: "Full Stack Developer", category: "Development", icon: Code2 },
+  { id: 'data', name: "Data Analyst", category: "Data & Intelligence", icon: Database },
+  { id: 'devops', name: "DevOps Engineer", category: "Operations & Trust", icon: Layers },
+  { id: 'qa', name: "QA Engineer", category: "Operations & Trust", icon: SearchCheck },
+  { id: 'ai', name: "AI Engineer", category: "Data & Intelligence", icon: Zap },
+  { id: 'cyber', name: "Cyber Security Analyst", category: "Operations & Trust", icon: ShieldAlert },
 ];
 
 const COMPANIES = [
@@ -63,8 +77,9 @@ export default function InterviewJourney() {
   const { toast } = useToast();
 
   const [currentStep, setCurrentStep] = useState(1);
-  const [selectedRole, setSelectedRole] = useState(ROLES[0]);
+  const [selectedRole, setSelectedRole] = useState("");
   const [selectedCompany, setSelectedCompany] = useState(COMPANIES[0]);
+  const [roleSearch, setRoleSearch] = useState("");
   const [file, setFile] = useState<File | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [resumeAtsScore, setResumeScore] = useState<number | null>(null);
@@ -75,6 +90,13 @@ export default function InterviewJourney() {
     return query(collection(db, 'users', user.uid, 'resumes'), orderBy('createdAt', 'desc'), limit(1));
   }, [db, user?.uid]);
   const { data: resumes, loading: resumeCheckLoading } = useCollection(resumeQuery);
+
+  const filteredRoles = useMemo(() => {
+    return ROLES_DATA.filter(role => 
+      role.name.toLowerCase().includes(roleSearch.toLowerCase()) ||
+      role.category.toLowerCase().includes(roleSearch.toLowerCase())
+    );
+  }, [roleSearch]);
 
   const nextStep = () => {
     if (currentStep < INTERVIEW_STEPS.length) {
@@ -202,26 +224,68 @@ export default function InterviewJourney() {
               >
                 {/* Step 1: Job Role */}
                 {currentStep === 1 && (
-                  <Card className="premium-card bg-white/[0.01] border-white/5 p-12 text-center space-y-12">
-                    <header className="space-y-4">
+                  <Card className="premium-card bg-white/[0.01] border-white/5 p-12 space-y-12">
+                    <header className="text-center space-y-4">
                       <div className="w-20 h-20 rounded-[2rem] bg-accent/10 flex items-center justify-center mx-auto border border-accent/20">
                         <Briefcase className="w-10 h-10 text-accent" />
                       </div>
                       <h2 className="text-4xl font-bold tracking-tighter">Choose Your Deployment Track</h2>
                       <p className="text-muted-foreground font-light max-w-lg mx-auto">Select the specialized engineering role for your neural calibration.</p>
                     </header>
-                    <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                      {ROLES.map(role => (
-                        <button 
-                          key={role} 
-                          onClick={() => setSelectedRole(role)}
-                          className={`p-6 rounded-[2rem] border transition-all text-xs font-bold uppercase tracking-widest ${selectedRole === role ? 'bg-accent/20 border-accent text-accent shadow-[0_0_30px_rgba(34,211,238,0.2)]' : 'glass border-white/5 hover:border-white/20 text-muted-foreground'}`}
-                        >
-                          {role}
-                        </button>
-                      ))}
+
+                    <div className="relative group max-w-2xl mx-auto w-full">
+                      <Search className="absolute left-6 top-1/2 -translate-y-1/2 w-5 h-5 text-white/20 group-focus-within:text-accent transition-colors" />
+                      <Input 
+                        placeholder="Search technical tracks..." 
+                        value={roleSearch}
+                        onChange={(e) => setRoleSearch(e.target.value)}
+                        className="h-16 pl-16 rounded-2xl glass border-white/10 bg-transparent text-lg focus:border-accent transition-all"
+                      />
                     </div>
-                    <Button onClick={nextStep} className="w-full h-20 btn-premium text-lg font-bold uppercase tracking-[0.3em]">
+
+                    <div className="space-y-10">
+                      {["Development", "Data & Intelligence", "Operations & Trust"].map(cat => {
+                        const categoryRoles = filteredRoles.filter(r => r.category === cat);
+                        if (categoryRoles.length === 0) return null;
+
+                        return (
+                          <div key={cat} className="space-y-6">
+                            <h3 className="text-[10px] font-bold uppercase tracking-[0.4em] text-white/30 flex items-center gap-3">
+                              <span className="w-8 h-px bg-white/10" /> {cat}
+                            </h3>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                              {categoryRoles.map(role => (
+                                <button 
+                                  key={role.id} 
+                                  onClick={() => setSelectedRole(role.name)}
+                                  className={`p-6 rounded-[2rem] border transition-all text-left flex items-center gap-6 group ${
+                                    selectedRole === role.name 
+                                    ? 'bg-accent/20 border-accent shadow-[0_0_30px_rgba(34,211,238,0.1)]' 
+                                    : 'glass border-white/5 hover:border-white/20'
+                                  }`}
+                                >
+                                  <div className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-colors ${
+                                    selectedRole === role.name ? 'bg-accent text-black' : 'bg-white/5 text-white/40 group-hover:bg-white/10'
+                                  }`}>
+                                    <role.icon className="w-6 h-6" />
+                                  </div>
+                                  <div>
+                                    <p className={`font-bold transition-colors ${selectedRole === role.name ? 'text-white' : 'text-white/60'}`}>{role.name}</p>
+                                    <p className="text-[9px] uppercase tracking-widest font-bold text-muted-foreground">{role.category}</p>
+                                  </div>
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+
+                    <Button 
+                      onClick={nextStep} 
+                      disabled={!selectedRole}
+                      className="w-full h-20 btn-premium text-lg font-bold uppercase tracking-[0.3em]"
+                    >
                       Confirm Role Vector <ChevronRight className="ml-3 w-6 h-6" />
                     </Button>
                   </Card>
