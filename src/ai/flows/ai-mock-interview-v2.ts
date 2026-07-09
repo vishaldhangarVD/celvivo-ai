@@ -1,8 +1,7 @@
 'use server';
 /**
- * @fileOverview Nexvoro AI Mock Interview Agent (Elite Senior Interviewer v16.0).
- * Calibrated for a strict 9-stage sequence:
- * INTRODUCTION -> RESUME -> PROJECT -> TECHNICAL -> SCENARIO -> FOLLOW UP -> BEHAVIOUR -> RAPID FIRE -> CLOSING.
+ * @fileOverview Nexvoro AI Mock Interview Agent (Elite Senior Interviewer v17.0).
+ * Implements strict 9-stage sequence and Strength-based Difficulty Progression.
  */
 
 import { ai, runWithResilience } from '@/ai/genkit';
@@ -10,11 +9,10 @@ import { z } from 'genkit';
 import crypto from "crypto";
 import {
   getNextStage,
-  getNextDifficulty,
   isQuestionRepeated,
 } from "@/ai/interviewBrain";
 
-const INTERVIEW_VERSION = "NEXVORO_V16_SEQUENTIAL";
+const INTERVIEW_VERSION = "NEXVORO_V17_STRENGTH_PROGRESSION";
 
 function createInterviewSeed(
   role: string,
@@ -115,63 +113,33 @@ GENERAL PERSONA RULES:
 - BEHAVE EXACTLY LIKE AN EXPERIENCED HUMAN INTERVIEWER. Professional, neutral, and high-fidelity.
 - NEVER say you are an AI or a model.
 - Ask exactly ONE question at a time. Wait for the answer.
-- NO robotic praise (e.g., "Excellent answer").
+- NO robotic praise. 
 - IF ANSWER IS WEAK: Challenge politely.
 - IF ANSWER IS STRONG: Ask deeper technical drill-downs.
 
-STRICT SEQUENCE PROTOCOL:
+STRICT 9-STAGE SEQUENCE:
 You MUST follow this sequence based on the current stage: {{{interviewStage}}}.
+1. INTRODUCTION -> 2. RESUME -> 3. PROJECT -> 4. TECHNICAL -> 5. SCENARIO -> 6. FOLLOW UP -> 7. BEHAVIOUR -> 8. RAPID FIRE -> 9. CLOSING.
 
-NODE 1: INTRODUCTION
-- Only node allowed to ask: "Tell me about yourself" or "Introduction".
+DIFFICULTY PROGRESSION PROTOCOL:
+- Analyze the candidate's latest response:
+  * STRONG (Technical depth, architectural reasoning, trade-offs) -> Output difficultyAdjustment: "Harder".
+  * AVERAGE (Correct but standard, lacks depth) -> Output difficultyAdjustment: "Maintain".
+  * WEAK (Shallow, incorrect, or too brief) -> Output difficultyAdjustment: "Easier".
+- Current Difficulty: {{{difficultyLevel}}}.
+- Frame the 'nextQuestion' exactly at the 'Current Difficulty' level.
 
-NODE 2: RESUME
-- Use exact items from resumeSkills: {{#each resumeSkills}}{{{this}}}, {{/each}} or resumeSummary.
-- Ask about a specific skill listed. NEVER ask "What are your skills?".
-
-NODE 3: PROJECT
-- If resumeProjects is NOT empty, select ONE: {{#each resumeProjects}}'{{{this}}}', {{/each}}.
-- Mention the exact project name. Ask about architecture, responsibility, and the biggest challenge.
-- If empty, pivot to a second skill from resumeSkills.
-
-NODE 4: TECHNICAL
-- Deep dive into stack fundamentals based on resumeSkills.
-- React/Vue: Rendering, reconciliation, hooks.
-- .NET: Middleware, DI, EF Core.
-- Python: Concurrency, memory.
-- Java: JVM, GC.
-- SQL: Execution plans, indexing.
-- Cloud: K8s, CI/CD.
-
-NODE 5: SCENARIO
-- Hyper-realistic production crisis ONLY.
-- Example: "A production API returns 500s," "Memory increases every hour," "DB is slow."
-- Goal: "How would you investigate step-by-step?"
-- NEVER ask textbook scenarios.
-
-NODE 6: FOLLOW UP
-- Strict reactive node. Focus on a specific technology mentioned in the candidate's LAST response.
-- Example: "You mentioned JWT, why JWT over session?" or "You mentioned Docker, how do you handle secrets?"
-
-NODE 7: BEHAVIOUR
-- Focus on soft skills and culture.
-- Leadership, conflict resolution, or project ownership.
-
-NODE 8: RAPID FIRE
-- High-intensity, short-answer technical questions.
-
-NODE 9: CLOSING
-- Thank the candidate and end the session naturally.
+STAGE SPECIFIC RULES:
+- NODE 2 (RESUME): Select ONE skill or project. Use exact names from resumeSkills or resumeProjects.
+- NODE 3 (PROJECT): select ONE project: {{#each resumeProjects}}'{{{this}}}', {{/each}}. Ask architecturally.
+- NODE 5 (SCENARIO): Hyper-realistic production crisis ONLY (e.g. 500 errors, slow DB, memory leak).
+- NODE 6 (FOLLOW UP): Reactive node based on the candidate's LAST response. "Why X over Y?"
 
 ANTI-HALLUCINATION:
-- NEVER invent projects or experience not in resumeSkills, resumeProjects, or resumeSummary.
+- NEVER invent projects or experience not in resume dossier.
 - If resume is empty, switch to industry standards for a Senior {{{role}}}.
 
-DIFFICULTY PROTOCOL:
-- Current: {{{difficultyLevel}}}
-- Increase difficulty ONLY if candidate performs well. Never jump suddenly from Easy to Hard.
-
-CURRENT INTERVIEW STATUS:
+CURRENT STATUS:
 Stage: {{{interviewStage}}}
 Question: {{{currentMainQuestionIndex}}} of 9
 History:
@@ -207,15 +175,12 @@ const aiMockInterviewFlow = ai.defineFlow(
       const askedQuestions = input.askedQuestions || [];
       const interviewStage = getNextStage((input.interviewStage as any) || "INTRODUCTION", input.currentMainQuestionIndex);
       
-      const difficulty = getNextDifficulty((input.difficultyLevel as any) || "MEDIUM", (input.userAnswer || "").length);
-
       let output;
       for (let attempt = 0; attempt < 3; attempt++) {
         const result = await runWithResilience(prompt, {
           ...input,
           interviewSeed,
           interviewStage,
-          difficultyLevel: difficulty,
           askedQuestions,
         });
         output = result.output;
@@ -230,7 +195,7 @@ const aiMockInterviewFlow = ai.defineFlow(
         interviewSeed,
         askedQuestions: [...askedQuestions, output.nextQuestion || ""],
         nextInterviewStage: output.nextInterviewStage ?? interviewStage,
-        difficultyAdjustment: output.difficultyAdjustment ?? (difficulty > (input.difficultyLevel || "MEDIUM") ? "Harder" : difficulty < (input.difficultyLevel || "MEDIUM") ? "Easier" : "Maintain"),
+        difficultyAdjustment: output.difficultyAdjustment || "Maintain",
         isInterviewComplete: input.currentMainQuestionIndex >= 9,
         isMock: false
       };

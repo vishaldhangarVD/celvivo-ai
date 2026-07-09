@@ -34,6 +34,8 @@ import {
   limit,
 } from "firebase/firestore";
 
+import { calculateNextDifficulty } from "@/ai/interviewBrain";
+
 const TOTAL_QUESTIONS = 9;
 const QUESTION_TIMEOUT = 120;
 
@@ -185,7 +187,10 @@ function InterviewSessionContent() {
       });
       setNextOutput(output);
       setInterviewStage(output.nextInterviewStage ?? interviewStage);
-      setDifficultyLevel(output.difficultyAdjustment === "Harder" ? "HARD" : output.difficultyAdjustment === "Easier" ? "EASY" : "MEDIUM");
+      
+      // Update Difficulty based on strength evaluation adjustment
+      setDifficultyLevel(prev => calculateNextDifficulty(prev, output.difficultyAdjustment));
+      
       setAskedQuestions(output.askedQuestions ?? []);
       setCandidateStrengths(output.candidateStrengths ?? []);
       setCandidateWeaknesses(output.candidateWeaknesses ?? []);
@@ -245,8 +250,9 @@ function InterviewSessionContent() {
                       <div className="w-2 h-2 rounded-full bg-cyan-400 animate-pulse" />
                     </div>
                     <p className="text-white leading-7">{nextOutput.nextQuestion}</p>
-                    <div className="mt-4">
+                    <div className="mt-4 flex flex-wrap gap-2">
                       <Badge variant="outline" className="text-[10px] text-cyan-400 border-cyan-400/30 uppercase tracking-widest">{interviewStage}</Badge>
+                      <Badge variant="outline" className="text-[10px] text-purple-400 border-purple-400/30 uppercase tracking-widest">{difficultyLevel}</Badge>
                     </div>
                   </div>
                 </motion.div>

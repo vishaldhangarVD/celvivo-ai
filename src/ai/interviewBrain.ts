@@ -52,23 +52,24 @@ export type Difficulty =
   | "HARD";
 
 /**
- * Calculates next difficulty step.
- * Increase difficulty ONLY if the candidate performs well (long answers).
- * Never jumps suddenly (e.g. EASY -> HARD).
+ * Progression logic for difficulty.
+ * Strong answer -> Harder
+ * Average answer -> Maintain
+ * Weak answer -> Easier
  */
-export function getNextDifficulty(
+export function calculateNextDifficulty(
   current: Difficulty,
-  answerLength: number
+  adjustment: "Easier" | "Harder" | "Maintain" = "Maintain"
 ): Difficulty {
+  if (adjustment === "Maintain") return current;
 
-  // Heuristic: Length of response as a proxy for "performing well"
-  if (answerLength > 300) {
+  if (adjustment === "Harder") {
     if (current === "EASY") return "MEDIUM";
     if (current === "MEDIUM") return "HARD";
     return "HARD";
   }
 
-  if (answerLength < 80) {
+  if (adjustment === "Easier") {
     if (current === "HARD") return "MEDIUM";
     if (current === "MEDIUM") return "EASY";
     return "EASY";
