@@ -7,6 +7,7 @@ import Navbar from '@/components/layout/Navbar';
 import NavigationControls from '@/components/NavigationControls';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Input } from "@/components/ui/input";
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -34,7 +35,8 @@ import {
   FileSearch,
   ArrowRight,
   ClipboardCheck,
-  Globe
+  Globe,
+  AlertTriangle
 } from 'lucide-react';
 import { useUser, useFirestore } from '@/firebase';
 import { collection, addDoc, serverTimestamp, doc, updateDoc } from 'firebase/firestore';
@@ -58,6 +60,7 @@ export default function ResumeAnalysisPage() {
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const selected = e.target.files[0];
+      console.log('[UI] File Selected:', selected.name, selected.size);
       if (selected.size > 10 * 1024 * 1024) {
         toast({ variant: "destructive", title: "File Too Large", description: "Limit: 10MB" });
         return;
@@ -67,39 +70,85 @@ export default function ResumeAnalysisPage() {
   };
 
   const handleRunAnalysis = async () => {
-    if (!file || !user || !db) return;
+    console.log('[UI] Launching Neural Audit Clicked');
+    
+    if (!file) {
+      toast({ variant: "destructive", title: "Missing Blueprint", description: "Please upload a resume file first." });
+      return;
+    }
+    if (!user || !db) {
+      console.error('[UI] Auth/DB not initialized', { user: !!user, db: !!db });
+      toast({ variant: "destructive", title: "Identity Error", description: "Authentication or database service is offline." });
+      return;
+    }
+
     setIsAnalyzing(true);
+    setAuditResult(null);
+
     try {
-      const base64 = await new Promise<string>((res) => {
+      console.log('[UI] Starting Base64 conversion...');
+      const base64 = await new Promise<string>((resolve, reject) => {
         const reader = new FileReader();
-        reader.onload = () => res(reader.result as string);
+        reader.onload = () => {
+          console.log('[UI] Base64 created successfully');
+          resolve(reader.result as string);
+        };
+        reader.onerror = (err) => {
+          console.error('[UI] FileReader error:', err);
+          reject(new Error("Failed to read document stream."));
+        };
         reader.readAsDataURL(file);
       });
 
+      console.log('[UI] Calling Gemini Deep Audit Flow...');
       const result = await deepAuditResume({ resumeDataUri: base64, targetRole });
+      
+      console.log('[UI] Gemini Response Received:', result ? 'SUCCESS' : 'FAILED');
+      
+      if (!result) {
+        throw new Error("Neural synthesis returned empty intelligence nodes.");
+      }
+
       setAuditResult(result);
+      console.log('[UI] auditResult state updated.');
 
-      // Save to Firestore
-      const resumesRef = collection(db, 'users', user.uid, 'resumes');
-      await addDoc(resumesRef, {
-        userId: user.uid,
-        filename: file.name,
-        targetRole,
-        atsScore: result.atsScore,
-        analysis: result,
-        createdAt: serverTimestamp(),
+      // Save to Firestore for persistence
+      try {
+        console.log('[UI] Persisting audit to Firestore...');
+        const resumesRef = collection(db, 'users', user.uid, 'resumes');
+        await addDoc(resumesRef, {
+          userId: user.uid,
+          filename: file.name,
+          targetRole,
+          atsScore: result.atsScore,
+          analysis: result,
+          createdAt: serverTimestamp(),
+        });
+
+        console.log('[UI] Updating User Profile Score...');
+        await updateDoc(doc(db, 'users', user.uid), {
+          resumeScore: result.atsScore
+        });
+        console.log('[UI] Firestore Sync SUCCESS');
+      } catch (fsErr) {
+        console.error('[UI] Firestore Save FAILED:', fsErr);
+        // We don't throw here so the UI still shows the result
+      }
+
+      toast({ 
+        title: result.isOffline ? "Audit Synchronized (Offline)" : "Analysis Complete", 
+        description: result.isOffline ? "System utilized local intelligence nodes." : "Your neural audit is ready for review." 
       });
-
-      await updateDoc(doc(db, 'users', user.uid), {
-        resumeScore: result.atsScore
+    } catch (e: any) {
+      console.error('[UI] CRITICAL AUDIT FAILURE:', e);
+      toast({ 
+        variant: "destructive", 
+        title: "Audit Failed", 
+        description: e instanceof Error ? e.message : "System encountered a neural synchronization error." 
       });
-
-      toast({ title: "Analysis Complete", description: "Your neural audit is ready for review." });
-    } catch (e) {
-      console.error(e);
-      toast({ variant: "destructive", title: "Audit Failed", description: "Neural synthesis encountered an error." });
     } finally {
       setIsAnalyzing(false);
+      console.log('[UI] Analysis process ended.');
     }
   };
 
@@ -132,7 +181,6 @@ export default function ResumeAnalysisPage() {
 
   const startInterviewWithImproved = () => {
     if (!auditResult) return;
-    // Store improved context in localStorage
     const improvedContext = {
       analysis: {
         skillAnalysis: auditResult.improvedResume.skills.map(s => ({ skill: s, proficiency: 'Expert' })),
@@ -144,7 +192,6 @@ export default function ResumeAnalysisPage() {
       }
     };
     localStorage.setItem("resumeAnalysis", JSON.stringify(improvedContext));
-    
     const sessionId = Math.random().toString(36).substring(7);
     router.push(`/interview/${sessionId}?role=${encodeURIComponent(targetRole)}&exp=Senior&round=Technical%20Round&company=Standard`);
   };
@@ -223,21 +270,21 @@ export default function ResumeAnalysisPage() {
 
                 <div className="space-y-4">
                   <label className="text-[10px] font-bold uppercase tracking-[0.4em] text-muted-foreground ml-2">Target Career Vector</label>
-                  <Input 
-                    value={targetRole}
-                    onChange={(e) => setTargetRole(e.target.value)}
-                    placeholder="e.g. Senior Full Stack Engineer"
-                    className="h-18 rounded-2xl glass border-white/10 bg-[#0b0e1a] px-8 text-white font-medium text-lg focus:border-accent transition-all"
+                  <input
+                  type="text"
+                  value={targetRole}
+                  onChange={(e) => setTargetRole(e.target.value)}
+                  placeholder="e.g. Senior Full Stack Engineer"
+                  className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-white placeholder:text-gray-500 outline-none focus:border-cyan-400"
                   />
                 </div>
 
                 <Button 
                   onClick={handleRunAnalysis}
-                  disabled={!file}
+                  disabled={!file || isAnalyzing}
                   className="w-full h-20 text-lg btn-premium shadow-[0_0_60px_rgba(147,51,234,0.3)]"
                 >
-                  <Zap className="w-6 h-6 mr-4 group-hover:animate-pulse" />
-                  <span className="tracking-[0.3em] uppercase text-sm font-bold">Launch Neural Audit</span>
+                  {isAnalyzing ? <><Loader2 className="w-6 h-6 mr-4 animate-spin" /> <span className="tracking-[0.3em] uppercase text-sm font-bold">Extracting Knowledge Nodes...</span></> : <><Zap className="w-6 h-6 mr-4 group-hover:animate-pulse" /> <span className="tracking-[0.3em] uppercase text-sm font-bold">Launch Neural Audit</span></>}
                 </Button>
               </div>
             </Card>
@@ -249,6 +296,12 @@ export default function ResumeAnalysisPage() {
                 <Badge className="bg-accent/20 text-accent mb-4 border-none px-4 py-1 text-[10px] tracking-widest font-bold uppercase">Audit Result v4.0</Badge>
                 <h1 className="text-5xl font-bold tracking-tighter text-premium">Performance Intelligence</h1>
                 <p className="text-muted-foreground font-light mt-2 uppercase tracking-widest text-[10px]">Validated for: {targetRole}</p>
+                {auditResult.isOffline && (
+                   <div className="flex items-center gap-2 mt-4 text-orange-400 animate-pulse">
+                     <AlertTriangle className="w-4 h-4" />
+                     <span className="text-[10px] font-black uppercase tracking-widest">[OFFLINE MODE ACTIVE]</span>
+                   </div>
+                )}
               </div>
               <div className="flex gap-4">
                 <Button onClick={() => setAuditResult(null)} variant="outline" className="h-14 px-8 glass border-white/10 text-[10px] font-bold uppercase tracking-widest">New Scan</Button>

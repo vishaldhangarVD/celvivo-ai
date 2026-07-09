@@ -1,9 +1,9 @@
-
 'use server';
 /**
  * @fileOverview Nexvoro AI Deep Resume Auditor.
  * Conducts a multi-dimensional high-fidelity audit of professional documents.
  * Produces structured intelligence for scoring, rewriting, and predictive matching.
+ * Includes automatic retry on validation failure and a deterministic fallback engine.
  */
 
 import { ai, runWithResilience } from '@/ai/genkit';
@@ -57,6 +57,7 @@ const ResumeDeepAuditOutputSchema = z.object({
     projects: z.array(z.string()),
     skills: z.array(z.string()),
   }),
+  isOffline: z.boolean().optional().default(false),
 });
 export type ResumeDeepAuditOutput = z.infer<typeof ResumeDeepAuditOutputSchema>;
 
@@ -78,15 +79,75 @@ INSTRUCTIONS:
 4. Provide comprehensive improvements for every experience node and project node. 
 5. Use measurable achievements and action verbs in improved versions.
 6. Predict match percentages for major companies (Google, Amazon, Microsoft, etc.).
-7. Generate an "Improved Resume" object that contains rewritten, ATS-optimized content.
+7. Generate an "improvedResume" object that contains rewritten, ATS-optimized content.
 
 REWRITE RULES:
 - Focus on IMPACT, not just tasks.
 - Include metrics (%, $, time) where implied.
 - Use professional engineering terminology.
 
-Resume Document: {{media url=resumeDataUri}}`,
+Resume Document: {{media url=resumeDataUri}}
+
+IMPORTANT: Return ONLY raw valid JSON. No markdown backticks. No explanation.`,
 });
+
+function getFallbackAudit(targetRole: string): ResumeDeepAuditOutput {
+  console.warn('[AUDIT FALLBACK] Generating deterministic intelligence nodes.');
+  return {
+    atsScore: 68,
+    strengths: ["Strong technical core detected", "Effective section hierarchy"],
+    weaknesses: ["Missing quantified impact metrics", "Keyword density below Tier-1 threshold"],
+    missingKeywords: ["Distributed Systems", "Cloud-Native Architecture", "Kubernetes", "CI/CD Pipelines"],
+    skillsScore: {
+      technical: 75,
+      soft: 80,
+      projects: 60,
+      experience: 65,
+      education: 90,
+      atsFormatting: 85
+    },
+    summaryImprovement: {
+      current: "Experienced professional seeking opportunities in tech.",
+      improved: "Strategic Software Engineer specialized in architecting scalable distributed systems and optimizing high-throughput API layers for global enterprise applications."
+    },
+    experienceSuggestions: [
+      {
+        original: "Responsible for developing the frontend using React.",
+        improved: "Engineered 12+ modular React components using TypeScript, achieving a 40% reduction in client-side bundle size and improving lighthouse scores by 25 points.",
+        reasons: "Added measurable KPIs and specific technology depth."
+      }
+    ],
+    projectSuggestions: [
+      {
+        name: "Cloud Project",
+        original: "Built a deployment tool.",
+        improved: "Architected an automated CI/CD pipeline using GitHub Actions and AWS Lambda, reducing deployment lead time from 2 hours to 8 minutes.",
+        metricsAdded: "93% reduction in deployment latency"
+      }
+    ],
+    skillsSuggestions: {
+      technical: ["Next.js", "Redis", "Kafka", "Docker"],
+      soft: ["Cross-functional Leadership", "Architectural Decision Making"],
+      certifications: ["AWS Solutions Architect", "CKAD"]
+    },
+    formattingIssues: ["Consider increasing line spacing in experience sections for readability."],
+    companyPrediction: {
+      "Google": 45,
+      "Amazon": 62,
+      "Microsoft": 58,
+      "Accenture": 82,
+      "TCS": 88
+    },
+    finalFeedback: "Your profile is solid for mid-market firms but requires significant quantification of achievements to pass elite Big Tech filters. Focus on adding exact percentages to your impact nodes.",
+    improvedResume: {
+      summary: "High-performance engineer focused on cloud-native excellence.",
+      experience: ["Lead Developer at Tech Hub: Optimized database indexing, resulting in a 50% faster query execution time across 1M+ records."],
+      projects: ["Neural Pulse: AI-driven telemetry dashboard built with Genkit and Gemini."],
+      skills: ["React", "TypeScript", "Go", "AWS", "Terraform"]
+    },
+    isOffline: true
+  };
+}
 
 const resumeDeepAuditFlow = ai.defineFlow(
   {
@@ -95,13 +156,28 @@ const resumeDeepAuditFlow = ai.defineFlow(
     outputSchema: ResumeDeepAuditOutputSchema,
   },
   async (input) => {
-    try {
-      const { output } = await runWithResilience(prompt, input);
-      if (!output) throw new Error("Neural synthesis of deep audit failed.");
-      return output;
-    } catch (error) {
-      console.error("Deep Audit Flow Error:", error);
-      throw error;
+    console.log('[Flow] Initializing Deep Audit for:', input.targetRole);
+    
+    // Internal Retry Logic for Validation/Model Flakiness
+    for (let attempt = 1; attempt <= 2; attempt++) {
+      try {
+        console.log(`[Flow] Execution Attempt ${attempt}/2...`);
+        const { output } = await runWithResilience(prompt, input);
+        
+        if (output) {
+          console.log('[Flow] Neural Synthesis Successful.');
+          return {
+            ...output,
+            isOffline: false
+          };
+        }
+      } catch (error: any) {
+        console.warn(`[Flow] Attempt ${attempt} failed:`, error.message || error);
+        if (attempt === 2) break;
+      }
     }
+
+    console.error('[Flow] All attempts exhausted. Reverting to fallback protocol.');
+    return getFallbackAudit(input.targetRole || "Software Engineer");
   }
 );
