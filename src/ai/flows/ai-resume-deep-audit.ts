@@ -1,3 +1,4 @@
+
 'use server';
 /**
  * @fileOverview Nexvoro AI Deep Resume Auditor.
@@ -78,7 +79,7 @@ INSTRUCTIONS:
 3. Identify exactly which keywords are missing for a top-tier "{{{targetRole}}}".
 4. Provide comprehensive improvements for every experience node and project node. 
 5. Use measurable achievements and action verbs in improved versions.
-6. Predict match percentages for major companies (Google, Amazon, Microsoft, etc.).
+6. Predict match percentages for major companies (Google, Amazon, Microsoft, Meta, IBM, etc.).
 7. Generate an "improvedResume" object that contains rewritten, ATS-optimized content.
 
 REWRITE RULES:
@@ -86,9 +87,7 @@ REWRITE RULES:
 - Include metrics (%, $, time) where implied.
 - Use professional engineering terminology.
 
-Resume Document: {{media url=resumeDataUri}}
-
-IMPORTANT: Return ONLY raw valid JSON. No markdown backticks. No explanation.`,
+Resume Document: {{media url=resumeDataUri}}`,
 });
 
 function getFallbackAudit(targetRole: string): ResumeDeepAuditOutput {

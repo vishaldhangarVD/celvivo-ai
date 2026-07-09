@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Navbar from '@/components/layout/Navbar';
 import NavigationControls from '@/components/NavigationControls';
@@ -47,7 +47,7 @@ import { jsPDF } from 'jspdf';
 
 export default function ResumeAnalysisPage() {
   const router = useRouter();
-  const { user } = useUser();
+  const { user, loading: authLoading } = useUser();
   const db = useFirestore();
   const { toast } = useToast();
 
@@ -56,6 +56,13 @@ export default function ResumeAnalysisPage() {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [auditResult, setAuditResult] = useState<ResumeDeepAuditOutput | null>(null);
   const [activeTab, setActiveTab] = useState("overview");
+
+  // Auth Guard
+  useEffect(() => {
+    if (!authLoading && !user) {
+      router.push(`/login?redirectTo=/resume-analysis`);
+    }
+  }, [user, authLoading, router]);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
@@ -70,15 +77,20 @@ export default function ResumeAnalysisPage() {
   };
 
   const handleRunAnalysis = async () => {
-    console.log('[UI] Launching Neural Audit Clicked');
+    console.log('[UI] Launching Neural Audit process...');
     
     if (!file) {
       toast({ variant: "destructive", title: "Missing Blueprint", description: "Please upload a resume file first." });
       return;
     }
+
     if (!user || !db) {
       console.error('[UI] Auth/DB not initialized', { user: !!user, db: !!db });
-      toast({ variant: "destructive", title: "Identity Error", description: "Authentication or database service is offline." });
+      toast({ 
+        variant: "destructive", 
+        title: "Identity Error", 
+        description: "Authentication or database service is offline. Please try refreshing." 
+      });
       return;
     }
 
@@ -86,35 +98,34 @@ export default function ResumeAnalysisPage() {
     setAuditResult(null);
 
     try {
-      console.log('[UI] Starting Base64 conversion...');
+      console.log('[UI] Reading document stream...');
       const base64 = await new Promise<string>((resolve, reject) => {
         const reader = new FileReader();
         reader.onload = () => {
-          console.log('[UI] Base64 created successfully');
+          console.log('[UI] Document stream read successfully.');
           resolve(reader.result as string);
         };
         reader.onerror = (err) => {
           console.error('[UI] FileReader error:', err);
-          reject(new Error("Failed to read document stream."));
+          reject(new Error("System failed to read the document."));
         };
         reader.readAsDataURL(file);
       });
 
-      console.log('[UI] Calling Gemini Deep Audit Flow...');
+      console.log('[UI] Initiating Neural Deep Audit flow...');
       const result = await deepAuditResume({ resumeDataUri: base64, targetRole });
       
-      console.log('[UI] Gemini Response Received:', result ? 'SUCCESS' : 'FAILED');
+      console.log('[UI] Neural response status:', result ? 'RECEIVED' : 'FAILED');
       
       if (!result) {
         throw new Error("Neural synthesis returned empty intelligence nodes.");
       }
 
       setAuditResult(result);
-      console.log('[UI] auditResult state updated.');
 
-      // Save to Firestore for persistence
+      // Save to Firestore
       try {
-        console.log('[UI] Persisting audit to Firestore...');
+        console.log('[UI] Synchronizing audit with cloud archives...');
         const resumesRef = collection(db, 'users', user.uid, 'resumes');
         await addDoc(resumesRef, {
           userId: user.uid,
@@ -125,30 +136,31 @@ export default function ResumeAnalysisPage() {
           createdAt: serverTimestamp(),
         });
 
-        console.log('[UI] Updating User Profile Score...');
         await updateDoc(doc(db, 'users', user.uid), {
           resumeScore: result.atsScore
         });
-        console.log('[UI] Firestore Sync SUCCESS');
+        console.log('[UI] Cloud synchronization successful.');
       } catch (fsErr) {
-        console.error('[UI] Firestore Save FAILED:', fsErr);
-        // We don't throw here so the UI still shows the result
+        console.warn('[UI] Archive synchronization failed, but audit displayed.', fsErr);
       }
 
       toast({ 
         title: result.isOffline ? "Audit Synchronized (Offline)" : "Analysis Complete", 
-        description: result.isOffline ? "System utilized local intelligence nodes." : "Your neural audit is ready for review." 
+        description: result.isOffline 
+          ? "System utilized local intelligence nodes." 
+          : "Your neural audit has been synthesized successfully." 
       });
+
     } catch (e: any) {
       console.error('[UI] CRITICAL AUDIT FAILURE:', e);
       toast({ 
         variant: "destructive", 
-        title: "Audit Failed", 
+        title: "Analysis Failed", 
         description: e instanceof Error ? e.message : "System encountered a neural synchronization error." 
       });
     } finally {
       setIsAnalyzing(false);
-      console.log('[UI] Analysis process ended.');
+      console.log('[UI] Analysis sequence completed.');
     }
   };
 
@@ -208,6 +220,14 @@ export default function ResumeAnalysisPage() {
     if (score >= 50) return "Average";
     return "Poor";
   };
+
+  if (authLoading) {
+    return (
+      <div className="min-h-screen bg-[#050816] flex items-center justify-center">
+        <Loader2 className="w-12 h-12 text-accent animate-spin" />
+      </div>
+    );
+  }
 
   if (isAnalyzing) {
     return (
@@ -270,12 +290,12 @@ export default function ResumeAnalysisPage() {
 
                 <div className="space-y-4">
                   <label className="text-[10px] font-bold uppercase tracking-[0.4em] text-muted-foreground ml-2">Target Career Vector</label>
-                  <input
-                  type="text"
-                  value={targetRole}
-                  onChange={(e) => setTargetRole(e.target.value)}
-                  placeholder="e.g. Senior Full Stack Engineer"
-                  className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-white placeholder:text-gray-500 outline-none focus:border-cyan-400"
+                  <Input
+                    type="text"
+                    value={targetRole}
+                    onChange={(e) => setTargetRole(e.target.value)}
+                    placeholder="e.g. Senior Full Stack Engineer"
+                    className="h-16 px-8 rounded-2xl glass border-white/10 bg-transparent text-white text-lg font-light focus:border-accent"
                   />
                 </div>
 
