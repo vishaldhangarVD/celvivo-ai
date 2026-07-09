@@ -1,8 +1,7 @@
 'use server';
 /**
- * @fileOverview Nexvoro AI Mock Interview Agent (Elite Senior Interviewer v6.0).
- * Calibrated for high-fidelity simulation of professional IT interviews.
- * Implements strict persona rules, resume-anchored questioning, and adaptive practical assessment.
+ * @fileOverview Nexvoro AI Mock Interview Agent (Elite Senior Interviewer v7.0).
+ * Calibrated for company-specific interrogation protocols and adaptive practical assessment.
  */
 
 import { ai, runWithResilience } from '@/ai/genkit';
@@ -14,7 +13,7 @@ import {
   isQuestionRepeated,
 } from "@/ai/interviewBrain";
 
-const INTERVIEW_VERSION = "NEXVORO_V7";
+const INTERVIEW_VERSION = "NEXVORO_V8";
 
 function createInterviewSeed(
   role: string,
@@ -29,6 +28,7 @@ function createInterviewSeed(
     .digest("hex")
     .substring(0, 10);
 }
+
 const FALLBACK_QUESTIONS = {
   'HR Round': [
     "Hello. Welcome to today's interview. I hope you're doing well. I'll be conducting your interview today. Let's begin with a brief introduction. Could you please introduce yourself and tell me about yourself?",
@@ -68,6 +68,7 @@ const AiMockInterviewInputSchema = z.object({
   resumeProjects: z.array(z.string()).optional(),
   resumeSummary: z.string().optional(),
   interviewSeed: z.string().optional(),
+  targetCompany: z.string().optional(),
   interviewStage: z.enum([
     "INTRODUCTION",
     "RESUME",
@@ -93,51 +94,24 @@ const AiMockInterviewInputSchema = z.object({
   candidateWeaknesses: z.array(z.string()).optional(),
 });
 export type AiMockInterviewInput = z.infer<typeof AiMockInterviewInputSchema>;
+
 const AiMockInterviewOutputSchema = z.object({
   nextQuestion: z.string(),
-
   feedbackOnLastAnswer: z.string().optional(),
-
-  difficultyAdjustment: z.enum([
-    "Easier",
-    "Harder",
-    "Maintain",
-  ]).optional(),
-
+  difficultyAdjustment: z.enum(["Easier", "Harder", "Maintain"]).optional(),
   isInterviewComplete: z.boolean(),
-
   debugPrompt: z.string().optional(),
-
   isMock: z.boolean().optional(),
-
   interviewSeed: z.string().optional(),
-
   nextInterviewStage: z.enum([
-    "INTRODUCTION",
-    "RESUME",
-    "PROJECT",
-    "TECHNICAL",
-    "SCENARIO",
-    "FOLLOW_UP",
-    "BEHAVIOR",
-    "RAPID_FIRE",
-    "CLOSING"
+    "INTRODUCTION", "RESUME", "PROJECT", "TECHNICAL", "SCENARIO", "FOLLOW_UP", "BEHAVIOR", "RAPID_FIRE", "CLOSING"
   ]).optional(),
-
   askedQuestions: z.array(z.string()).optional(),
-
   candidateStrengths: z.array(z.string()).optional(),
-
   candidateWeaknesses: z.array(z.string()).optional(),
   overallScore: z.number().optional(),
   finalRecommendation: z.string().optional(),
-
-hiringDecision: z.enum([
-  "Strong Hire",
-  "Hire",
-  "Borderline",
-  "Reject",
-]).optional(),
+  hiringDecision: z.enum(["Strong Hire", "Hire", "Borderline", "Reject"]).optional(),
 });
 export type AiMockInterviewOutput = z.infer<typeof AiMockInterviewOutputSchema>;
 
@@ -149,74 +123,48 @@ const prompt = ai.definePrompt({
   name: 'aiMockInterviewPrompt',
   input: { schema: AiMockInterviewInputSchema },
   output: { schema: AiMockInterviewOutputSchema },
-  prompt: `You are an elite Senior Technical Interviewer with extensive experience conducting real-world interviews for IT professionals.
-Your objective is to conduct a realistic interview that feels exactly like a live interview conducted by an experienced interviewer for a {{{role}}} position ({{{experienceLevel}}} level) during a {{{roundType}}}.
+  prompt: `You are an elite Senior Technical Interviewer representing {{{targetCompany}}} for a {{{role}}} position ({{{experienceLevel}}} level).
 
 GENERAL PERSONA RULES:
-- Act exactly like an experienced human interviewer. Be professional, natural, and never robotic.
-- NEVER mention that you are an AI or a model.
-- Ask only ONE question at a time. Wait for the candidate's answer before continuing.
-- Every new question should naturally continue from the previous answer or resume context.
-- Never ask generic textbook definitions. Focus on technical reasoning, decision-making, and practical application.
+- Act exactly like an experienced human interviewer. Professional, natural, and non-robotic.
+- NEVER mention you are an AI. Ask only ONE question at a time.
+- Adapt difficulty based on candidate performance.
+
+COMPANY-SPECIFIC INTERROGATION PROTOCOLS:
+If targetCompany is 'Google': Focus on problem solving, scalability, algorithms, and ask "why" frequently.
+If targetCompany is 'Amazon': Focus on Leadership Principles, ownership, customer obsession, and production issues.
+If targetCompany is 'Microsoft': Focus on architecture, collaboration, debugging, and design decisions.
+If targetCompany is 'TCS Digital': Focus on practical implementation, OOP, SQL, APIs, and cloud basics.
+If targetCompany is 'Infosys': Focus on fundamentals, coding logic, and client scenarios.
+If targetCompany is 'Accenture': Focus on enterprise apps, SDLC, Agile, and communication.
+Default: Focus on high-level system design and practical problem solving.
 
 CANDIDATE DOSSIER:
 - Skills: {{#each resumeSkills}}{{{this}}}, {{/each}}
 - Projects: {{#each resumeProjects}}{{{this}}}, {{/each}}
-- Experience Context: {{{resumeSummary}}}
-
-INTERVIEW FLOW PROTOCOL:
-
-NODE 1 (Opening):
-If history is empty, you MUST start exactly with: "Hello. Welcome to today's interview. I hope you're doing well. I'll be conducting your interview today. Let's begin with a brief introduction. Could you please introduce yourself and tell me about yourself?"
+- Summary: {{{resumeSummary}}}
 
 NODE 2 (Resume Discussion Protocol):
-Acknowledge the candidate's introduction naturally. Then, you MUST reference exact data from the dossier.
-
-BAD: "Tell me about your projects." or "What are your skills?"
+You MUST anchor your question to exact resume data. Avoid generic background summaries.
 GOOD: "I noticed your project '{{{resumeProjects.[0]}}}'. Explain the architecture and your specific role."
-GOOD: "You have listed '{{{resumeSkills.[0]}}}'. Explain a complex real-world problem where you used it."
+GOOD: "You listed '{{{resumeSkills.[0]}}}'. Explain a complex real-world problem you solved using it."
+BAD: "Tell me about your projects." or "What are your skills?"
 
-1. IF resumeProjects is NOT empty:
-   - You MUST select ONE project from: {{#each resumeProjects}}'{{{this}}}', {{/each}}.
-   - Mention the project name EXACTLY.
-   - Ask about architecture, technical hurdles, and role.
-
-2. ELSE IF resumeSkills is NOT empty:
-   - You MUST select ONE skill from: {{#each resumeSkills}}{{{this}}}, {{/each}}.
-   - Mention the skill EXACTLY.
-   - Ask for a practical implementation example or internal mechanics.
-
-3. ELSE:
-   - Ask a background question related to: {{{resumeSummary}}}.
-
-NODE 3 (Role-Specific Technical):
-Generate practical technical questions based on the role ({{{role}}}).
-- Frontend: Performance, React state, reconciliation, CSS architecture.
-- Backend: API design, Scaling, DB optimization, security.
-- Data: ETL, ML model validation, feature engineering.
-- Cloud: K8s, CI/CD, Disaster recovery.
-
-NODE 4 (Follow-up & Adaptivity):
-Listen to the candidate. If they mention a technology, ask "Why that choice?", "What alternatives?", or "Challenges?".
-
-NODE 5 (Scenario Questions):
-Ask practical situations:
-- "Suppose your production server crashes..."
-- "An API becomes slow after deployment..."
-- "You find data inconsistencies before a client demo..."
-
-NODE 6 (Closing):
-If session complete (index >= 5), finish with: "Thank you for your time. That concludes today's interview. It was nice speaking with you."
+INTERVIEW FLOW:
+NODE 1 (Opening): Welcome and introduce self.
+NODE 2 (Resume): Anchored project/skill deep-dive.
+NODE 3 (Technical): Role-specific proficiency assessment.
+NODE 4 (Follow-up): Listen to previous answer and drill down.
+NODE 5 (Scenario): Practical situations matching the role and company culture.
+NODE 6 (Closing): Finish naturally if current index >= 5.
 
 CURRENT STATUS:
+Target Company: {{{targetCompany}}}
 Current Stage: {{{interviewStage}}}
-Difficulty: {{{difficultyLevel}}}
-Question Number: {{{currentMainQuestionIndex}}} of 5
-Previously Asked: {{#each askedQuestions}}- {{{this}}} {{/each}}
+Question: {{{currentMainQuestionIndex}}} of 5
+Latest Answer: {{{userAnswer}}}
 
-Latest Candidate Response: {{{userAnswer}}}
-
-Based on rules, output ONE specific interviewer question.`,
+Based on company protocols and dossier, output ONE interviewer question.`,
 });
 
 const aiMockInterviewFlow = ai.defineFlow(
@@ -236,99 +184,48 @@ const aiMockInterviewFlow = ai.defineFlow(
     }
 
     try {
-    const interviewSeed = createInterviewSeed(
-  input.role,
-  input.experienceLevel,
-  input.roundType
-);
+      const interviewSeed = createInterviewSeed(input.role, input.experienceLevel, input.roundType);
+      const askedQuestions = input.askedQuestions || [];
+      const interviewStage = getNextStage((input.interviewStage as any) || "INTRODUCTION", input.currentMainQuestionIndex);
+      const difficulty = getNextDifficulty((input.difficultyLevel as any) || "MEDIUM", (input.userAnswer || "").length);
 
-const askedQuestions = input.askedQuestions || [];
+      let output;
+      for (let attempt = 0; attempt < 3; attempt++) {
+        const result = await runWithResilience(prompt, {
+          ...input,
+          interviewSeed,
+          interviewStage,
+          difficultyLevel: difficulty,
+          askedQuestions,
+        });
+        output = result.output;
+        if (output && !isQuestionRepeated(output.nextQuestion, askedQuestions)) break;
+        output = undefined;
+      }
 
-const interviewStage = getNextStage(
-  (input.interviewStage as any) || "INTRODUCTION",
-  input.currentMainQuestionIndex
-);
-
-const difficulty = getNextDifficulty(
-  (input.difficultyLevel as any) || "MEDIUM",
-  (input.userAnswer || "").length
-);
-
-let output;
-
-for (let attempt = 0; attempt < 3; attempt++) {
-
-  const result = await runWithResilience(prompt, {
-    ...input,
-    interviewSeed,
-    interviewStage,
-    difficultyLevel: difficulty,
-    askedQuestions,
-  });
-
-  output = result.output;
-
-  if (!output) continue;
-
-  if (
-    !isQuestionRepeated(
-      output.nextQuestion,
-      askedQuestions
-    )
-  ) {
-    break;
-  }
-
-  output = undefined;
-}
-
-if (!output) {
-  throw new Error("Unable to generate unique interview question.");
-}
+      if (!output) throw new Error("Unable to generate unique interview question.");
       
       return {
         ...output,
-      
         interviewSeed,
-      
-        askedQuestions: [
-          ...askedQuestions,
-          output.nextQuestion || ""
-        ],
-      
-        nextInterviewStage:
-          output.nextInterviewStage ??
-          interviewStage,
-      
-        candidateStrengths:
-          output.candidateStrengths ?? input.candidateStrengths ?? [],
-      
-        candidateWeaknesses:
-          output.candidateWeaknesses ?? input.candidateWeaknesses ?? [],
-      
-        difficultyAdjustment:
-          output.difficultyAdjustment ?? "Maintain",
-      
-        isInterviewComplete:
-          input.currentMainQuestionIndex >= 5,
-      
+        askedQuestions: [...askedQuestions, output.nextQuestion || ""],
+        nextInterviewStage: output.nextInterviewStage ?? interviewStage,
+        candidateStrengths: output.candidateStrengths ?? input.candidateStrengths ?? [],
+        candidateWeaknesses: output.candidateWeaknesses ?? input.candidateWeaknesses ?? [],
+        difficultyAdjustment: output.difficultyAdjustment ?? "Maintain",
+        isInterviewComplete: input.currentMainQuestionIndex >= 5,
         isMock: false
       };
     } catch (error) {
-      console.error("AI Flow Error, using fallback:", error);
-      const round = input.roundType || 'Technical Round';
-      const roundKey = round.includes('HR') ? 'HR Round' : round.includes('Managerial') ? 'Managerial Round' : 'Technical Round';
-      const roundBank = FALLBACK_QUESTIONS[roundKey as keyof typeof FALLBACK_QUESTIONS] || FALLBACK_QUESTIONS['Technical Round'];
-      
+      console.error("AI Flow Error:", error);
+      const roundBank = FALLBACK_QUESTIONS['Technical Round'];
       const bankIndex = (input.currentMainQuestionIndex - 1) % roundBank.length;
-      let fallbackQ = roundBank[bankIndex];
-
       return {
-        nextQuestion: fallbackQ,
+        nextQuestion: roundBank[bankIndex],
         feedbackOnLastAnswer: "I appreciate that context. Let's move forward.",
         isInterviewComplete: input.currentMainQuestionIndex >= 5,
         isMock: true
       };
     }
-}
+  }
 );

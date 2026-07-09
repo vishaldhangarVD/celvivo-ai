@@ -16,15 +16,13 @@ import {
   Users,
   HandMetal,
   Upload,
-  FileSearch,
   CheckCircle2,
   Zap,
-  ArrowRight,
   ShieldCheck,
-  Search,
-  Check,
   Loader2,
-  X
+  Building2,
+  ChevronRight,
+  Target
 } from 'lucide-react';
 import { useUser, useFirestore, useCollection } from '@/firebase';
 import { collection, query, orderBy, limit, addDoc, serverTimestamp, doc, updateDoc } from 'firebase/firestore';
@@ -34,8 +32,11 @@ import { motion, AnimatePresence } from 'framer-motion';
 
 const ROLES = [
   "Frontend Developer", "Backend Developer", "Full Stack Developer", "Software Engineer",
-  "Data Scientist", "DevOps Engineer", "Cloud Engineer", "Cyber Security Analyst", "UI/UX Designer",
-  ".NET Developer", "Python Developer", "Java Developer"
+  "Data Scientist", "DevOps Engineer", "Cloud Engineer", "Cyber Security Analyst", "UI/UX Designer"
+];
+
+const COMPANIES = [
+  "Google", "Amazon", "Microsoft", "TCS Digital", "Infosys", "Accenture", "Standard / Startup"
 ];
 
 const EXPERIENCE_LEVELS = ["Junior", "Mid", "Senior"];
@@ -58,8 +59,8 @@ export default function InterviewSetup() {
   const [selectedRole, setSelectedRole] = useState(ROLES[0]);
   const [selectedExp, setSelectedExp] = useState(EXPERIENCE_LEVELS[2]);
   const [selectedRound, setSelectedRound] = useState(ROUNDS[0].id);
+  const [selectedCompany, setSelectedCompany] = useState(COMPANIES[0]);
 
-  // Check for existing resume
   const resumeQuery = useMemo(() => {
     if (!db || !user?.uid) return null;
     return query(collection(db, 'users', user.uid, 'resumes'), orderBy('createdAt', 'desc'), limit(1));
@@ -89,14 +90,11 @@ export default function InterviewSetup() {
 
       const result = await analyzeResume({ resumeDataUri: base64, targetRole: selectedRole });
       
-      // Store in localStorage for fast session synchronization
       if (typeof window !== 'undefined') {
         localStorage.setItem("resumeAnalysis", JSON.stringify(result));
       }
 
-      // Save to Firestore
-      const resumesRef = collection(db, 'users', user.uid, 'resumes');
-      await addDoc(resumesRef, {
+      await addDoc(collection(db, 'users', user.uid, 'resumes'), {
         userId: user.uid,
         filename: file.name,
         targetRole: selectedRole,
@@ -105,15 +103,14 @@ export default function InterviewSetup() {
         createdAt: serverTimestamp(),
       });
 
-      const userDocRef = doc(db, 'users', user.uid);
-      await updateDoc(userDocRef, {
+      await updateDoc(doc(db, 'users', user.uid), {
         resumeScore: result.atsScore
       });
 
       setStep(2);
       toast({ title: "Blueprint Verified", description: "Your career intelligence has been synchronized." });
     } catch (e) {
-      toast({ variant: "destructive", title: "Audit Failed", description: "Could not parse document. Neural API may be busy." });
+      toast({ variant: "destructive", title: "Audit Failed", description: "Could not parse document." });
     } finally {
       setIsAnalyzing(false);
     }
@@ -121,7 +118,7 @@ export default function InterviewSetup() {
 
   const startInterview = () => {
     const sessionId = Math.random().toString(36).substring(7);
-    router.push(`/interview/${sessionId}?role=${encodeURIComponent(selectedRole)}&exp=${selectedExp}&round=${encodeURIComponent(selectedRound)}`);
+    router.push(`/interview/${sessionId}?role=${encodeURIComponent(selectedRole)}&exp=${selectedExp}&round=${encodeURIComponent(selectedRound)}&company=${encodeURIComponent(selectedCompany)}`);
   };
 
   if (resumeCheckLoading) return <div className="min-h-screen bg-[#050816] flex items-center justify-center"><Loader2 className="w-12 h-12 text-accent animate-spin" /></div>;
@@ -133,13 +130,13 @@ export default function InterviewSetup() {
       <NavigationControls />
       
       <div className="container mx-auto px-4 py-32">
-        <div className="max-w-4xl mx-auto">
+        <div className="max-w-5xl mx-auto">
           
           <header className="text-center mb-16 space-y-4">
-            <Badge className="bg-accent/20 text-accent border-none px-6 py-1.5 font-bold tracking-[0.4em] text-[10px] uppercase">Simulation Calibration v4.0</Badge>
+            <Badge className="bg-accent/20 text-accent border-none px-6 py-1.5 font-bold tracking-[0.4em] text-[10px] uppercase">Simulation Calibration v5.0</Badge>
             <h1 className="text-5xl font-bold tracking-tighter text-premium">Arena <span className="text-gradient-purple">Onboarding.</span></h1>
             <div className="flex items-center justify-center gap-4 mt-6">
-              {[1, 2].map(i => (
+              {[1, 2, 3].map(i => (
                 <div key={i} className={`h-1.5 w-24 rounded-full transition-all duration-500 ${step >= i ? 'bg-accent shadow-[0_0_15px_rgba(34,211,238,0.5)]' : 'bg-white/10'}`} />
               ))}
             </div>
@@ -170,17 +167,8 @@ export default function InterviewSetup() {
                     </div>
                   ) : null}
 
-                  <div 
-                    onClick={() => !isAnalyzing && document.getElementById('resume-upload-calibration')?.click()}
-                    className={`border-2 border-dashed rounded-[2.5rem] p-12 transition-all cursor-pointer group ${file ? 'border-accent bg-accent/5' : 'border-white/10 hover:border-accent/30 hover:bg-white/[0.02]'} ${isAnalyzing ? 'opacity-50 cursor-not-allowed' : ''}`}
-                  >
-                    <input 
-                      type="file" 
-                      id="resume-upload-calibration" 
-                      className="hidden" 
-                      accept=".pdf,.docx"
-                      onChange={handleFileChange} 
-                    />
+                  <div onClick={() => !isAnalyzing && document.getElementById('resume-upload-calibration')?.click()} className={`border-2 border-dashed rounded-[2.5rem] p-12 transition-all cursor-pointer group ${file ? 'border-accent bg-accent/5' : 'border-white/10 hover:border-accent/30 hover:bg-white/[0.02]'} ${isAnalyzing ? 'opacity-50 cursor-not-allowed' : ''}`}>
+                    <input type="file" id="resume-upload-calibration" className="hidden" accept=".pdf,.docx" onChange={handleFileChange} />
                     {isAnalyzing ? (
                       <div className="flex flex-col items-center gap-4">
                         <Loader2 className="w-10 h-10 text-accent animate-spin" />
@@ -202,7 +190,7 @@ export default function InterviewSetup() {
                   )}
                 </Card>
               </motion.div>
-            ) : (
+            ) : step === 2 ? (
               <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} key="step2" className="grid lg:grid-cols-12 gap-8">
                 <div className="lg:col-span-8 space-y-8">
                   <Card className="premium-card bg-white/[0.01] border-white/5 p-8">
@@ -236,13 +224,12 @@ export default function InterviewSetup() {
 
                 <div className="lg:col-span-4">
                   <Card className="premium-card bg-accent/5 border-accent/10 sticky top-32">
-                    <CardHeader><CardTitle className="text-xl font-bold">Mission Config</CardTitle></CardHeader>
+                    <CardHeader><CardTitle className="text-xl font-bold">Calibration</CardTitle></CardHeader>
                     <CardContent className="space-y-8">
                       <div className="space-y-4">
                         {[
-                          { icon: ShieldCheck, label: "Status", val: "RESUME-AWARE", color: "text-accent" },
-                          { icon: Zap, label: "Adaptivity", val: "ACTIVE" },
-                          { icon: Play, label: "Question Pool", val: "10 Nodes" }
+                          { icon: ShieldCheck, label: "Status", val: "READY", color: "text-accent" },
+                          { icon: Zap, label: "Adaptivity", val: "ACTIVE" }
                         ].map((item, i) => (
                           <div key={i} className="flex items-center justify-between p-4 glass rounded-2xl border-white/5">
                             <div className="flex items-center gap-3"><item.icon className={`w-4 h-4 ${item.color || 'text-white/20'}`} /><span className="text-[9px] font-bold uppercase tracking-widest text-white/40">{item.label}</span></div>
@@ -250,17 +237,30 @@ export default function InterviewSetup() {
                           </div>
                         ))}
                       </div>
-                      <div className="pt-8 border-t border-white/10 space-y-6">
-                        <div>
-                          <p className="text-[10px] uppercase tracking-widest text-muted-foreground font-bold mb-2">Active Protocol</p>
-                          <p className="text-lg font-bold text-white leading-tight">{selectedRole}</p>
-                          <p className="text-[10px] text-accent uppercase font-bold mt-1">{selectedExp} • {selectedRound}</p>
-                        </div>
-                        <Button onClick={startInterview} className="w-full h-18 btn-premium uppercase tracking-[0.3em] text-xs">Enter Neural Arena</Button>
-                      </div>
+                      <Button onClick={() => setStep(3)} className="w-full h-18 btn-premium uppercase tracking-[0.3em] text-xs">Next: Company Sync <ChevronRight className="ml-2 w-4 h-4" /></Button>
                     </CardContent>
                   </Card>
                 </div>
+              </motion.div>
+            ) : (
+              <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} key="step3" className="max-w-3xl mx-auto">
+                 <Card className="premium-card bg-white/[0.01] border-white/5 p-12">
+                    <header className="text-center mb-12">
+                       <h2 className="text-3xl font-bold mb-4">Target Company Protocol</h2>
+                       <p className="text-muted-foreground font-light">Calibrate the simulation to a specific corporate hiring culture.</p>
+                    </header>
+                    <div className="grid grid-cols-2 gap-4">
+                       {COMPANIES.map(c => (
+                         <button key={c} onClick={() => setSelectedCompany(c)} className={`p-6 rounded-[2rem] border transition-all flex flex-col items-center gap-3 ${selectedCompany === c ? 'bg-accent/10 border-accent text-accent' : 'glass border-white/5 hover:bg-white/5'}`}>
+                            <Building2 className="w-6 h-6 opacity-50" />
+                            <span className="font-bold text-xs uppercase tracking-widest">{c}</span>
+                         </button>
+                       ))}
+                    </div>
+                    <Button onClick={startInterview} className="w-full h-20 btn-premium text-lg font-bold uppercase tracking-[0.3em] mt-12 shadow-[0_0_50px_rgba(147,51,234,0.3)]">
+                       Initialize Neural Arena <Zap className="ml-3 w-6 h-6" />
+                    </Button>
+                 </Card>
               </motion.div>
             )}
           </AnimatePresence>
