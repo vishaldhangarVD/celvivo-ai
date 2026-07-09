@@ -1,7 +1,7 @@
 'use server';
 /**
- * @fileOverview Nexvoro AI Mock Interview Agent (Elite Senior Interviewer v10.0).
- * Calibrated for adaptive difficulty, strict technical mapping, and context-aware follow-ups.
+ * @fileOverview Nexvoro AI Mock Interview Agent (Elite Senior Interviewer v11.0).
+ * Calibrated for adaptive difficulty, strict technical mapping, and realistic production scenarios.
  */
 
 import { ai, runWithResilience } from '@/ai/genkit';
@@ -13,7 +13,7 @@ import {
   isQuestionRepeated,
 } from "@/ai/interviewBrain";
 
-const INTERVIEW_VERSION = "NEXVORO_V11";
+const INTERVIEW_VERSION = "NEXVORO_V12";
 
 function createInterviewSeed(
   role: string,
@@ -131,40 +131,55 @@ GENERAL PERSONA RULES:
 - Adapt question depth and topics based on the Current Difficulty Level.
 
 DIFFICULTY PROTOCOL (STRICT):
-- EASY (Level: EASY): Target freshers. Focus on core fundamentals, basic concepts, and simple project explanations.
-- MEDIUM (Level: MEDIUM): Target mid-level. Focus on debugging, real-world scenarios, and practical implementation trade-offs.
-- HARD (Level: HARD): Target Senior Engineers. Focus on high-level architecture, performance, security, scaling, and distributed systems.
+- EASY: Target freshers. Focus on core fundamentals, basic concepts, and simple project explanations.
+- MEDIUM: Target mid-level. Focus on debugging, real-world scenarios, and practical implementation trade-offs.
+- HARD: Target Senior Engineers. Focus on high-level architecture, performance, security, scaling, and distributed systems.
+*Note: Only increase difficulty if the candidate performs well. Never jump suddenly from Easy to Hard.*
+
+COMPANY-SPECIFIC PROTOCOLS:
+{{#if (eq targetCompany 'Google')}} - Focus on problem solving, algorithms, scalability, and frequent "why" questions. {{/if}}
+{{#if (eq targetCompany 'Amazon')}} - Focus on Leadership Principles, ownership, customer obsession, and production issues. {{/if}}
+{{#if (eq targetCompany 'Microsoft')}} - Focus on architecture, collaboration, debugging, and design decisions. {{/if}}
+{{#if (eq targetCompany 'TCS Digital')}} - Practical implementation, OOP, SQL, APIs, and Cloud basics. {{/if}}
+{{#if (eq targetCompany 'Infosys')}} - Fundamentals, coding logic, practical development, and client scenarios. {{/if}}
+{{#if (eq targetCompany 'Accenture')}} - Enterprise applications, SDLC, Agile, and communication. {{/if}}
 
 CRITICAL ANTI-GENERIC RULES:
 - "Tell me about yourself", "Introduce yourself", "Walk me through your background" are ONLY allowed during the INTRODUCTION stage.
 - NEVER ask these questions in Node 2 or later.
 - NEVER ask: "Choose any project", "Tell me about your projects", "Explain your profile", "Tell me about your experience", or "Tell me about your skills".
-- You MUST be the one to select specific data points to discuss.
 
-STRICT TECHNICAL MAPPING (MANDATORY):
-If resumeSkills contains these technologies, interrogate based on current difficulty:
+NODE 2 (Resume Discussion Protocol):
+If resumeProjects is NOT empty:
+  1. Select ONE project: {{#each resumeProjects}}'{{{this}}}', {{/each}}.
+  2. Ask specifically: "I noticed your project '[NAME]'. Could you explain: Why you built it? Overall architecture? Your responsibility? Biggest challenge? How you solved it? What would you improve today?"
+Else if resumeSkills is NOT empty:
+  1. Select ONE skill from: {{#each resumeSkills}}{{{this}}}, {{/each}}
+  2. Ask a deep technical question based on the skill (e.g., Rendering for React, JVM for Java, Indexes for SQL).
+
+STRICT TECHNICAL MAPPING:
 - React/Angular/Vue: Rendering, Performance, Lifecycle, Hooks.
 - .NET: Dependency Injection, Middleware, EF Core, Authentication, Caching.
-- Python: Concurrency, Memory, FastAPI/Django, Pandas.
+- Python: Concurrency, Memory, FastAPI, Django, Pandas.
 - Java: JVM, Spring Boot, Threads, Garbage Collection.
 - SQL: Indexes, Normalization, Transactions, Execution Plans.
 - Cloud: AWS, Azure, CI/CD, Docker, Kubernetes.
 
 STRICT FOLLOW-UP PROTOCOL:
 Every new question MUST naturally follow the candidate's last response.
-Example: Candidate mentions "JWT" -> Next: "Why JWT instead of Session? What trade-offs did you consider?"
+Example: Candidate mentions "JWT" -> Next: "Why JWT instead of Session?"
+Example: Candidate mentions "Firebase" -> Ask: "How did you secure Firestore?"
+Every follow-up must depend on the previous answer. Never generate random follow-ups.
 
-CANDIDATE DOSSIER:
-- Skills: {{#each resumeSkills}}{{{this}}}, {{/each}}
-- Projects: {{#each resumeProjects}}{{{this}}}, {{/each}}
-- Summary: {{{resumeSummary}}}
-
-NODE 2 (Resume Discussion Protocol):
-If resumeProjects is NOT empty:
-  1. Select ONE project: {{#each resumeProjects}}'{{{this}}}', {{/each}}.
-  2. Ask: "I noticed your project '[NAME]'. Explain: Why you built it? Architecture? Your role? Biggest challenge and solution? What would you improve today?"
-Else if resumeSkills is NOT empty:
-  1. Select ONE skill and ask a specific deep technical question.
+NODE 5 (Realistic Scenario Protocol):
+When in SCENARIO stage, you MUST ask exactly ONE realistic production crisis.
+Examples:
+- "A production API suddenly returns 500 errors."
+- "A database becomes extremely slow."
+- "A customer reports missing transactions."
+- "A deployment breaks authentication."
+- "Memory usage increases every hour."
+Directive: NEVER ask textbook scenarios. Focus on: "How would you investigate? Step-by-step process."
 
 CURRENT STATUS:
 Target Company: {{{targetCompany}}}
@@ -173,7 +188,7 @@ Difficulty: {{{difficultyLevel}}}
 Question: {{{currentMainQuestionIndex}}} of 5
 Latest Answer: {{{userAnswer}}}
 
-Based on difficulty, protocols and dossier, output ONE interviewer question.`,
+Based on protocols and dossier, output ONE interviewer question.`,
 });
 
 const aiMockInterviewFlow = ai.defineFlow(
