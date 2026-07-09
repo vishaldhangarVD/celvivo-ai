@@ -170,44 +170,43 @@ NODE 1 (Opening):
 If history is empty, you MUST start exactly with: "Hello. Welcome to today's interview. I hope you're doing well. I'll be conducting your interview today. Let's begin with a brief introduction. Could you please introduce yourself and tell me about yourself?"
 
 NODE 2 (Resume Discussion Protocol):
-Acknowledge the candidate's introduction naturally (e.g., "Thank you for that background.", "I appreciate the overview.").
-Then, you MUST strictly follow this hierarchy to generate the next question:
+Acknowledge the candidate's introduction naturally. Then, you MUST reference exact data from the dossier.
+
+BAD: "Tell me about your projects." or "What are your skills?"
+GOOD: "I noticed your project '{{{resumeProjects.[0]}}}'. Explain the architecture and your specific role."
+GOOD: "You have listed '{{{resumeSkills.[0]}}}'. Explain a complex real-world problem where you used it."
 
 1. IF resumeProjects is NOT empty:
-   - You MUST select ONE project from the list: {{#each resumeProjects}}'{{{this}}}', {{/each}}.
-   - Mention the project name EXACTLY as written.
-   - Ask about its architecture, the specific technologies used, your unique responsibilities, and the single biggest technical challenge you faced.
-   - Example: "I noticed your project '{{{resumeProjects.[0]}}}'. Could you explain its architecture, your specific role in the build, and the most difficult technical hurdle you had to overcome?"
+   - You MUST select ONE project from: {{#each resumeProjects}}'{{{this}}}', {{/each}}.
+   - Mention the project name EXACTLY.
+   - Ask about architecture, technical hurdles, and role.
 
 2. ELSE IF resumeSkills is NOT empty:
-   - You MUST select ONE technical skill from the list: {{#each resumeSkills}}{{{this}}}, {{/each}}.
+   - You MUST select ONE skill from: {{#each resumeSkills}}{{{this}}}, {{/each}}.
    - Mention the skill EXACTLY.
-   - Ask a deep, practical question about that skill matching the {{{experienceLevel}}} level.
-   - Example: "I see React listed on your resume. Could you explain how you've used its internal reconciliation or state management patterns to solve performance issues?"
+   - Ask for a practical implementation example or internal mechanics.
 
-3. ELSE (If both are empty):
-   - Ask a professional background question related to their experience summary: {{{resumeSummary}}}.
-
-STRICT RULE: Never ask generic questions like "Tell me about your projects" or "What are your skills" if names are available in the dossier.
+3. ELSE:
+   - Ask a background question related to: {{{resumeSummary}}}.
 
 NODE 3 (Role-Specific Technical):
 Generate practical technical questions based on the role ({{{role}}}).
-- Frontend: Performance, Accessibility, React state management, rendering cycles.
-- Backend: API design, Scaling, DB optimization, Security protocols.
-- Data: ETL pipelines, Business KPIs, Data cleaning strategies.
-- Cloud/DevOps: Kubernetes, CI/CD, Disaster recovery, Cost optimization.
+- Frontend: Performance, React state, reconciliation, CSS architecture.
+- Backend: API design, Scaling, DB optimization, security.
+- Data: ETL, ML model validation, feature engineering.
+- Cloud: K8s, CI/CD, Disaster recovery.
 
 NODE 4 (Follow-up & Adaptivity):
-Listen to the candidate's previous answer. If they mentioned a specific technology or methodology, ask "Why that choice?", "What alternatives did you consider?", or "What challenges did you face?".
+Listen to the candidate. If they mention a technology, ask "Why that choice?", "What alternatives?", or "Challenges?".
 
 NODE 5 (Scenario Questions):
-Ask practical real-world work situations matching the role.
-- "Suppose your production server suddenly crashes, how would you investigate?"
-- "You discover incorrect dashboard values just before a client presentation..."
-- "An API becomes slow after deployment. What are your first 3 steps?"
+Ask practical situations:
+- "Suppose your production server crashes..."
+- "An API becomes slow after deployment..."
+- "You find data inconsistencies before a client demo..."
 
 NODE 6 (Closing):
-If the session is complete (current index >= 5), finish naturally with: "Thank you for your time. That concludes today's interview. It was nice speaking with you."
+If session complete (index >= 5), finish with: "Thank you for your time. That concludes today's interview. It was nice speaking with you."
 
 CURRENT STATUS:
 Current Stage: {{{interviewStage}}}
@@ -215,15 +214,9 @@ Difficulty: {{{difficultyLevel}}}
 Question Number: {{{currentMainQuestionIndex}}} of 5
 Previously Asked: {{#each askedQuestions}}- {{{this}}} {{/each}}
 
-Conversation History:
-{{#each history}}
-Interviewer: {{{this.question}}}
-Candidate: {{{this.answer}}}
-{{/each}}
-
 Latest Candidate Response: {{{userAnswer}}}
 
-Based on the rules and current status, output ONE interviewer question.`,
+Based on rules, output ONE specific interviewer question.`,
 });
 
 const aiMockInterviewFlow = ai.defineFlow(
@@ -292,13 +285,6 @@ for (let attempt = 0; attempt < 3; attempt++) {
 if (!output) {
   throw new Error("Unable to generate unique interview question.");
 }
-      if (!output) throw new Error("Neural synthesis failed.");
-      if (
-        output?.nextQuestion &&
-        isQuestionRepeated(output.nextQuestion, askedQuestions)
-      ) {
-        throw new Error("Repeated question generated by AI.");
-      }
       
       return {
         ...output,
