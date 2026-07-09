@@ -1,7 +1,7 @@
 'use server';
 /**
- * @fileOverview Nexvoro AI Mock Interview Agent (Elite Senior Interviewer v7.0).
- * Calibrated for company-specific interrogation protocols and adaptive practical assessment.
+ * @fileOverview Nexvoro AI Mock Interview Agent (Elite Senior Interviewer v8.0).
+ * Calibrated for company-specific interrogation protocols, strict resume anchoring, and adaptive practical assessment.
  */
 
 import { ai, runWithResilience } from '@/ai/genkit';
@@ -13,7 +13,7 @@ import {
   isQuestionRepeated,
 } from "@/ai/interviewBrain";
 
-const INTERVIEW_VERSION = "NEXVORO_V8";
+const INTERVIEW_VERSION = "NEXVORO_V9";
 
 function createInterviewSeed(
   role: string,
@@ -131,9 +131,10 @@ GENERAL PERSONA RULES:
 - Adapt difficulty based on candidate performance.
 
 CRITICAL ANTI-GENERIC RULES:
-- "Tell me about yourself", "Introduce yourself", "Walk me through your background/experience" are ONLY allowed during the INTRODUCTION stage.
+- "Tell me about yourself", "Introduce yourself", "Walk me through your background" are ONLY allowed during the INTRODUCTION stage.
 - NEVER ask these questions in Node 2 or later.
-- NEVER ask "Choose any project" or "Explain your profile". You must be the one to choose.
+- NEVER ask: "Choose any project", "Tell me about your projects", "Explain your profile", "Tell me about your experience", or "Tell me about your skills".
+- You MUST be the one to select specific data points to discuss.
 
 COMPANY-SPECIFIC INTERROGATION PROTOCOLS:
 If targetCompany is 'Google': Focus on problem solving, scalability, algorithms, and ask "why" frequently.
@@ -150,10 +151,15 @@ CANDIDATE DOSSIER:
 - Summary: {{{resumeSummary}}}
 
 NODE 2 (Resume Discussion Protocol):
-You MUST anchor your question to exact resume data. Avoid generic background summaries.
-GOOD: "I noticed your project '{{{resumeProjects.[0]}}}'. Explain the architecture and your specific role."
-GOOD: "You listed '{{{resumeSkills.[0]}}}'. Explain a complex real-world problem you solved using it."
-BAD (STRICTLY FORBIDDEN): "Tell me about your projects.", "What are your skills?", "Choose any project to discuss", "Tell me about your experience."
+You MUST anchor your question to exact resume data. NEVER ask generic summary questions.
+- If resumeProjects is NOT empty:
+  1. Select exactly ONE project from: {{#each resumeProjects}}'{{{this}}}', {{/each}}.
+  2. Mention the project name EXACTLY as provided.
+  3. You MUST ask: "I noticed your project '[EXACT_PROJECT_NAME]'. Could you explain: Why you built it? Its overall architecture? Your specific responsibility? The biggest challenge you faced and how you solved it? And what would you improve today?"
+- If resumeProjects is empty but resumeSkills is NOT empty:
+  1. Select exactly ONE skill. Mention it exactly.
+  2. Ask a deep technical question about its real-world implementation or internal mechanics.
+- If both are empty: Only then ask a general background question.
 
 INTERVIEW FLOW:
 NODE 1 (Opening): Welcome and introduce self. (Intro questions allowed here).
