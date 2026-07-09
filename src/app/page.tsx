@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState } from 'react';
@@ -174,6 +175,11 @@ export default function LandingPage() {
               <motion.p initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} className="max-w-xl text-xl text-muted-foreground mb-16 font-light leading-relaxed">Experience hyper-realistic simulations calibrated for Big Tech hiring standards.</motion.p>
               <motion.div initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} className="flex flex-wrap gap-6">
                 <Button onClick={handleStartVirtualInterview} size="lg" className="h-16 px-10 text-lg btn-premium">Start Virtual Interview <Zap className="ml-3 w-5 h-5" /></Button>
+                <Link href="/resume-analysis">
+                  <Button size="lg" variant="outline" className="h-16 px-10 text-lg glass border-white/10 hover:bg-white/5 flex gap-2 group">
+                    ✨ Resume Analysis
+                  </Button>
+                </Link>
               </motion.div>
             </div>
             <div className="lg:w-7/12 w-full">
