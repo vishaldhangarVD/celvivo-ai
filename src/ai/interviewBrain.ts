@@ -42,16 +42,23 @@ export function getNextStage(
       return "CLOSING";
   }
 }
+
 export type Difficulty =
   | "EASY"
   | "MEDIUM"
   | "HARD";
 
+/**
+ * Calculates next difficulty step.
+ * Increase difficulty ONLY if the candidate performs well (long answers).
+ * Never jumps suddenly (e.g. EASY -> HARD).
+ */
 export function getNextDifficulty(
   current: Difficulty,
   answerLength: number
 ): Difficulty {
 
+  // Heuristic: Length of response as a proxy for "performing well"
   if (answerLength > 300) {
     if (current === "EASY") return "MEDIUM";
     if (current === "MEDIUM") return "HARD";
@@ -66,26 +73,27 @@ export function getNextDifficulty(
 
   return current;
 }
+
 export function isQuestionRepeated(
-    newQuestion: string,
-    previousQuestions: string[]
-  ): boolean {
-  
-    const normalizedNew = newQuestion
+  newQuestion: string,
+  previousQuestions: string[]
+): boolean {
+
+  const normalizedNew = newQuestion
+    .toLowerCase()
+    .replace(/[^\w\s]/g, "")
+    .trim();
+
+  return previousQuestions.some((q) => {
+    const normalizedOld = q
       .toLowerCase()
       .replace(/[^\w\s]/g, "")
       .trim();
-  
-    return previousQuestions.some((q) => {
-      const normalizedOld = q
-        .toLowerCase()
-        .replace(/[^\w\s]/g, "")
-        .trim();
-  
-      return (
-        normalizedOld === normalizedNew ||
-        normalizedOld.includes(normalizedNew) ||
-        normalizedNew.includes(normalizedOld)
-      );
-    });
-  }
+
+    return (
+      normalizedOld === normalizedNew ||
+      normalizedOld.includes(normalizedNew) ||
+      normalizedNew.includes(normalizedOld)
+    );
+  });
+}

@@ -1,7 +1,7 @@
 'use server';
 /**
- * @fileOverview Nexvoro AI Mock Interview Agent (Elite Senior Interviewer v9.0).
- * Calibrated for strict technical mapping, reactive follow-ups, and resume-anchored interrogation.
+ * @fileOverview Nexvoro AI Mock Interview Agent (Elite Senior Interviewer v10.0).
+ * Calibrated for adaptive difficulty, strict technical mapping, and context-aware follow-ups.
  */
 
 import { ai, runWithResilience } from '@/ai/genkit';
@@ -13,7 +13,7 @@ import {
   isQuestionRepeated,
 } from "@/ai/interviewBrain";
 
-const INTERVIEW_VERSION = "NEXVORO_V10";
+const INTERVIEW_VERSION = "NEXVORO_V11";
 
 function createInterviewSeed(
   role: string,
@@ -128,7 +128,12 @@ const prompt = ai.definePrompt({
 GENERAL PERSONA RULES:
 - Act exactly like an experienced human interviewer. Professional, natural, and non-robotic.
 - NEVER mention you are an AI. Ask only ONE question at a time.
-- Adapt difficulty based on candidate performance.
+- Adapt question depth and topics based on the Current Difficulty Level.
+
+DIFFICULTY PROTOCOL (STRICT):
+- EASY (Level: EASY): Target freshers. Focus on core fundamentals, basic concepts, and simple project explanations.
+- MEDIUM (Level: MEDIUM): Target mid-level. Focus on debugging, real-world scenarios, and practical implementation trade-offs.
+- HARD (Level: HARD): Target Senior Engineers. Focus on high-level architecture, performance, security, scaling, and distributed systems.
 
 CRITICAL ANTI-GENERIC RULES:
 - "Tell me about yourself", "Introduce yourself", "Walk me through your background" are ONLY allowed during the INTRODUCTION stage.
@@ -137,21 +142,17 @@ CRITICAL ANTI-GENERIC RULES:
 - You MUST be the one to select specific data points to discuss.
 
 STRICT TECHNICAL MAPPING (MANDATORY):
-If resumeSkills contains these technologies, you MUST interrogate these specific nodes:
-- React/Angular/Vue: Rendering cycles, Performance optimization, Lifecycle, Hooks.
+If resumeSkills contains these technologies, interrogate based on current difficulty:
+- React/Angular/Vue: Rendering, Performance, Lifecycle, Hooks.
 - .NET: Dependency Injection, Middleware, EF Core, Authentication, Caching.
-- Python: Concurrency, Memory management, FastAPI/Django, Pandas.
-- Java: JVM internals, Spring Boot architecture, Multi-threading, Garbage Collection.
+- Python: Concurrency, Memory, FastAPI/Django, Pandas.
+- Java: JVM, Spring Boot, Threads, Garbage Collection.
 - SQL: Indexes, Normalization, Transactions, Execution Plans.
-- Cloud (AWS/Azure): Service selection, CI/CD pipelines, Docker, Kubernetes.
+- Cloud: AWS, Azure, CI/CD, Docker, Kubernetes.
 
-STRICT FOLLOW-UP PROTOCOL (EVERY ANSWER MUST PRODUCE A FOLLOW-UP):
+STRICT FOLLOW-UP PROTOCOL:
 Every new question MUST naturally follow the candidate's last response.
-Examples:
-- Candidate: "I used JWT" -> Next: "Why JWT instead of Session? What trade-offs did you consider?"
-- Candidate: "I used Firebase" -> Next: "How did you secure Firestore? Explain your security rules."
-- Candidate: "I used Docker" -> Next: "How would you deploy and scale this container on Kubernetes?"
-- Candidate: "I used React" -> Next: "Explain the reconciliation process and how the Virtual DOM updates."
+Example: Candidate mentions "JWT" -> Next: "Why JWT instead of Session? What trade-offs did you consider?"
 
 CANDIDATE DOSSIER:
 - Skills: {{#each resumeSkills}}{{{this}}}, {{/each}}
@@ -160,27 +161,19 @@ CANDIDATE DOSSIER:
 
 NODE 2 (Resume Discussion Protocol):
 If resumeProjects is NOT empty:
-  1. Select exactly ONE project: {{#each resumeProjects}}'{{{this}}}', {{/each}}.
-  2. You MUST ask: "I noticed your project '[EXACT_PROJECT_NAME]'. Could you explain: Why you built it? Its overall architecture? Your specific responsibility? The biggest challenge you faced and how you solved it? And what would you improve today?"
+  1. Select ONE project: {{#each resumeProjects}}'{{{this}}}', {{/each}}.
+  2. Ask: "I noticed your project '[NAME]'. Explain: Why you built it? Architecture? Your role? Biggest challenge and solution? What would you improve today?"
 Else if resumeSkills is NOT empty:
-  1. Select ONE skill from the technical mapping above.
-  2. Ask a deep technical question about its real-world implementation.
-
-INTERVIEW FLOW:
-NODE 1 (Opening): Welcome.
-NODE 2 (Resume): Anchored project/skill deep-dive.
-NODE 3 (Technical): Proficiency assessment based on dossier.
-NODE 4 (Follow-up): Listen to previous answer and drill down (Why X over Y? How did you secure Z?).
-NODE 5 (Scenario): Practical situations matching role and company.
-NODE 6 (Closing): Finish naturally if current index >= 5.
+  1. Select ONE skill and ask a specific deep technical question.
 
 CURRENT STATUS:
 Target Company: {{{targetCompany}}}
 Stage: {{{interviewStage}}}
+Difficulty: {{{difficultyLevel}}}
 Question: {{{currentMainQuestionIndex}}} of 5
 Latest Answer: {{{userAnswer}}}
 
-Based on protocols and dossier, output ONE interviewer question.`,
+Based on difficulty, protocols and dossier, output ONE interviewer question.`,
 });
 
 const aiMockInterviewFlow = ai.defineFlow(
@@ -203,6 +196,8 @@ const aiMockInterviewFlow = ai.defineFlow(
       const interviewSeed = createInterviewSeed(input.role, input.experienceLevel, input.roundType);
       const askedQuestions = input.askedQuestions || [];
       const interviewStage = getNextStage((input.interviewStage as any) || "INTRODUCTION", input.currentMainQuestionIndex);
+      
+      // Calculate next difficulty based on answer quality
       const difficulty = getNextDifficulty((input.difficultyLevel as any) || "MEDIUM", (input.userAnswer || "").length);
 
       let output;
@@ -226,9 +221,7 @@ const aiMockInterviewFlow = ai.defineFlow(
         interviewSeed,
         askedQuestions: [...askedQuestions, output.nextQuestion || ""],
         nextInterviewStage: output.nextInterviewStage ?? interviewStage,
-        candidateStrengths: output.candidateStrengths ?? input.candidateStrengths ?? [],
-        candidateWeaknesses: output.candidateWeaknesses ?? input.candidateWeaknesses ?? [],
-        difficultyAdjustment: output.difficultyAdjustment ?? "Maintain",
+        difficultyAdjustment: output.difficultyAdjustment ?? (difficulty > (input.difficultyLevel || "MEDIUM") ? "Harder" : difficulty < (input.difficultyLevel || "MEDIUM") ? "Easier" : "Maintain"),
         isInterviewComplete: input.currentMainQuestionIndex >= 5,
         isMock: false
       };
