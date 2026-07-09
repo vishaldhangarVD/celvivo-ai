@@ -1,109 +1,130 @@
 "use client";
-import { createDidAgent } from "@/lib/did";
-import { useState, useEffect, Suspense, useMemo, useRef } from 'react';
-import { useSearchParams, useRouter } from 'next/navigation';
-import { motion, AnimatePresence } from 'framer-motion';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { 
-  Send, 
+import { Suspense, useEffect, useMemo, useRef, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { AnimatePresence, motion } from "framer-motion";
+
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+
+import {
   Loader2,
-  LogOut,
-  Zap,
+  Send,
+  Mic,
+  Settings,
+  Timer,
   ShieldCheck,
   Command,
-  Timer,
-  AlertTriangle,
-  Mic,
-  Video,
-  Settings
-} from 'lucide-react';
+  LogOut,
+  Zap,
+} from "lucide-react";
+
 import {
   aiMockInterview,
   type AiMockInterviewOutput,
-} from '@/ai/flows/ai-mock-interview-v2';
-import { useUser, useFirestore, useCollection } from '@/firebase';
-import { collection, addDoc, serverTimestamp, query, orderBy, limit } from 'firebase/firestore';
+} from "@/ai/flows/ai-mock-interview-v2";
+
+import { useUser, useFirestore, useCollection } from "@/firebase";
+
+import {
+  collection,
+  addDoc,
+  serverTimestamp,
+  query,
+  orderBy,
+  limit,
+} from "firebase/firestore";
 
 const TOTAL_QUESTIONS = 5;
 const QUESTION_TIMEOUT = 120;
 
 function InterviewSessionContent() {
-  const searchParams = useSearchParams();
   const router = useRouter();
+  const searchParams = useSearchParams();
+
   const { user } = useUser();
   const db = useFirestore();
-  
-  const role = searchParams.get('role') || 'Software Engineer';
-  const exp = searchParams.get('exp') || 'Senior';
-  const round = searchParams.get('round') || 'Technical';
-  const debugEnabled = searchParams.get('debug') === 'true';
+
+  const role = searchParams.get("role") || "Software Engineer";
+  const exp = searchParams.get("exp") || "Senior";
+  const round = searchParams.get("round") || "Technical";
+  const debugEnabled = searchParams.get("debug") === "true";
 
   const [currentIdx, setCurrentIdx] = useState(0);
   const [history, setHistory] = useState<any[]>([]);
-  const [nextOutput, setNextOutput] = useState<AiMockInterviewOutput | null>(null);
+  const [nextOutput, setNextOutput] =
+    useState<AiMockInterviewOutput | null>(null);
+
   const [askedQuestions, setAskedQuestions] = useState<string[]>([]);
 
+  const [candidateStrengths, setCandidateStrengths] = useState<string[]>([]);
+  const [candidateWeaknesses, setCandidateWeaknesses] = useState<string[]>([]);
+
+  const [difficultyLevel, setDifficultyLevel] =
+    useState<"EASY" | "MEDIUM" | "HARD">("MEDIUM");
+
   const [interviewStage, setInterviewStage] = useState<
-  | "INTRODUCTION"
-  | "RESUME"
-  | "PROJECT"
-  | "TECHNICAL"
-  | "SCENARIO"
-  | "FOLLOW_UP"
-  | "BEHAVIOR"
-  | "RAPID_FIRE"
-  | "CLOSING"
->("TECHNICAL");
+    | "INTRODUCTION"
+    | "RESUME"
+    | "PROJECT"
+    | "TECHNICAL"
+    | "SCENARIO"
+    | "FOLLOW_UP"
+    | "BEHAVIOR"
+    | "RAPID_FIRE"
+    | "CLOSING"
+  >("TECHNICAL");
 
-const [difficultyLevel, setDifficultyLevel] =
-  useState<"EASY" | "MEDIUM" | "HARD">("MEDIUM");
+  const [userAnswer, setUserAnswer] = useState("");
 
-const [candidateStrengths, setCandidateStrengths] =
-  useState<string[]>([]);
-  
-  const [candidateWeaknesses, setCandidateWeaknesses] =
-  useState<string[]>([]);
-
-  const [userAnswer, setUserAnswer] = useState('');
   const [isListening, setIsListening] = useState(false);
-  const recognitionRef = useRef<any>(null);
-  const videoRef = useRef<HTMLVideoElement>(null);
-
-const agentRef = useRef<any>(null);
-  const silenceTimer = useRef<NodeJS.Timeout | null>(null);
-const transcriptRef = useRef("");
-
   const [isProcessing, setIsProcessing] = useState(false);
-  const [hasAttemptedInitial, setHasAttemptedInitial] = useState(false);
-  const [totalTimer, setTotalTimer] = useState(0);
-  const [questionTimer, setQuestionTimer] = useState(QUESTION_TIMEOUT);
   const [isComplete, setIsComplete] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+
   const [resumeReady, setResumeReady] = useState(false);
+
+  const [questionTimer, setQuestionTimer] =
+    useState(QUESTION_TIMEOUT);
+
+  const [totalTimer, setTotalTimer] = useState(0);
+
   const [cachedAnalysis, setCachedAnalysis] = useState<any>(null);
 
+  const recognitionRef = useRef<any>(null);
+
+  const transcriptRef = useRef("");
+
+  const silenceTimer = useRef<NodeJS.Timeout | null>(null);
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const stored = localStorage.getItem("resumeAnalysis");
-      if (stored) {
-        try {
-          const parsed = JSON.parse(stored);
-          setCachedAnalysis(parsed);
-          console.log("[RESUME LOADED] Identified in local cache.");
-          setResumeReady(true);
-        } catch (e) {
-          console.error("Failed to parse cached resume analysis", e);
-        }
+    if (typeof window === "undefined") return;
+
+    const stored = localStorage.getItem("resumeAnalysis");
+
+    if (stored) {
+      try {
+        const parsed = JSON.parse(stored);
+
+        setCachedAnalysis(parsed);
+
+        setResumeReady(true);
+      } catch (e) {
+        console.error(e);
       }
     }
   }, []);
 
   const resumeQuery = useMemo(() => {
     if (!db || !user?.uid) return null;
-    return query(collection(db, 'users', user.uid, 'resumes'), orderBy('createdAt', 'desc'), limit(1));
-  }, [db, user?.uid]);
-  const { data: resumes, loading: resumesLoading } = useCollection(resumeQuery);
+
+    return query(
+      collection(db, "users", user.uid, "resumes"),
+      orderBy("createdAt", "desc"),
+      limit(1)
+    );
+  }, [db, user]);
+
+  const { data: resumes, loading: resumesLoading } =
+    useCollection(resumeQuery);
 
   useEffect(() => {
     if (!resumeReady && !resumesLoading) {
@@ -114,69 +135,28 @@ const transcriptRef = useRef("");
   const resumeContext = useMemo(() => {
     if (cachedAnalysis) {
       return {
-        skills: cachedAnalysis.skillAnalysis?.map((s: any) => s.skill) || [],
-        projects: cachedAnalysis.sections?.projects || [],
-        experienceSummary: cachedAnalysis.sections?.experience?.[0] || "",
-        certifications: cachedAnalysis.sections?.certifications || []
+        skills:
+          cachedAnalysis.skillAnalysis?.map((x: any) => x.skill) || [],
+        projects:
+          cachedAnalysis.sections?.projects || [],
+        experienceSummary:
+          cachedAnalysis.sections?.experience?.[0] || "",
       };
     }
+
     const r = resumes?.[0];
+
     if (!r) return undefined;
+
     return {
-      skills: (r as any).analysis?.skillAnalysis?.map((s: any) => s.skill) || [],
-      projects: (r as any).analysis?.sections?.projects || [],
-      experienceSummary: (r as any).analysis?.sections?.experience?.[0] || "",
-      certifications: (r as any).analysis?.sections?.certifications || []
+      skills:
+        (r as any).analysis?.skillAnalysis?.map((x: any) => x.skill) || [],
+      projects:
+        (r as any).analysis?.sections?.projects || [],
+      experienceSummary:
+        (r as any).analysis?.sections?.experience?.[0] || "",
     };
-  }, [resumes, cachedAnalysis]);
-
-  useEffect(() => {
-    if (!resumeReady || hasAttemptedInitial) return;
-
-    const start = async () => {
-      if (!nextOutput && !isProcessing) {
-        setIsProcessing(true);
-        setHasAttemptedInitial(true);
-        try {
-            const output = await aiMockInterview({
-              role,
-              experienceLevel: exp,
-              roundType: round,
-              currentMainQuestionIndex: 1,
-              history: [],
-            
-              resumeSkills: resumeContext?.skills,
-              resumeProjects: resumeContext?.projects,
-              resumeSummary: resumeContext?.experienceSummary,
-
-              debugMode: debugEnabled,
-              interviewStage: interviewStage,
-
-              difficultyLevel: difficultyLevel,
-
-              askedQuestions: askedQuestions,
-
-              candidateStrengths: candidateStrengths,
-            
-              candidateWeaknesses: [],
-            });
-          setNextOutput(output);
-          console.log("[INTERVIEW INITIALIZED] Intelligence nodes synced.");
-        } catch (err) {
-          console.error("Initial interview load failed", err);
-        } finally {
-          setIsProcessing(false);
-        }
-      }
-    };
-    
-    start();
-
-    const t = setInterval(() => setTotalTimer(s => s + 1), 1000);
-    const qt = setInterval(() => setQuestionTimer(s => Math.max(0, s - 1)), 1000);
-    return () => { clearInterval(t); clearInterval(qt); };
-  }, [resumeReady, hasAttemptedInitial, resumeContext, debugEnabled, role, exp, round, nextOutput, isProcessing]);
-
+  }, [cachedAnalysis, resumes]);
   useEffect(() => {
     if (typeof window === "undefined") return;
   
@@ -195,129 +175,41 @@ const transcriptRef = useRef("");
     recog.onstart = () => {
       setIsListening(true);
     };
-
+  
     recog.onend = () => {
       setIsListening(false);
     };
-
+  
     recog.onresult = (event: any) => {
       let transcript = "";
-    
+  
       for (let i = event.resultIndex; i < event.results.length; i++) {
         transcript += event.results[i][0].transcript;
       }
-    
+  
       transcriptRef.current = transcript;
-    
       setUserAnswer(transcript);
-    
+  
       if (silenceTimer.current) {
         clearTimeout(silenceTimer.current);
       }
+  
       silenceTimer.current = setTimeout(() => {
-        console.log("Auto Submit:", transcriptRef.current);
-      
         recognitionRef.current?.stop();
         handleSend(transcriptRef.current);
-      
       }, 2000);
-    }
+    };
   
     recog.onerror = (event: any) => {
-      if (event.error === "no-speech") {
-        console.warn("Speech Recognition Warning: No speech detected.");
-        return;
+      if (event.error !== "no-speech") {
+        console.error(event.error);
       }
-      
-      console.error("Speech Recognition Error:", event.error);
     };
-
+  
     recognitionRef.current = recog;
   }, []);
- 
-  useEffect(() => {
-    const startInterviewFlow = async () => {
-      if (!nextOutput?.nextQuestion) return;
-      if (!agentRef.current) return;
-      if (currentIdx === 0) return; 
-
-      if (recognitionRef.current) {
-        try {
-          recognitionRef.current.stop();
-        } catch {}
-      }
-  
-      try {
-        // Avatar question बोलेल
-        await agentRef.current.chat(nextOutput.nextQuestion);
-        console.log("Chat Finished");
-        // Safety delay
-        await new Promise((resolve) => setTimeout(resolve, 1000));
-  
-        // Mic ON
-        if (recognitionRef.current && !isListening) {
-          if (isProcessing) return;
-          try {
-            recognitionRef.current.start();
-          } catch (e: any) {
-            if (e.name !== "InvalidStateError") {
-              console.error("Mic start failed", e);
-            }
-          }
-        }
-      } catch (err) {
-        console.error("Interview Flow Error:", err);
-      }
-    };
-  
-    startInterviewFlow();
-  }, [nextOutput]);
-
-  useEffect(() => {
-    let mounted = true;
-  
-    const init = async () => {
-      if (!mounted) return;
-      if (agentRef.current) return;
-      if (!videoRef.current) return;
-  
-      try {
-        agentRef.current = await createDidAgent(
-          "ck_CEDQoCXEV8MPEo2PgycbN",
-          "v2_agt_J2JKp1Oq",
-          videoRef.current
-        );
-        console.log("Video Element:", videoRef.current);
-  
-        console.log("✅ D-ID Connected");
-
-        await new Promise((resolve) => setTimeout(resolve, 1500));
-  
-      } catch (err) {
-        console.error(err);
-      }
-    };
-  
-    init();
-  
-    return () => {
-      mounted = false;
-  
-      if (agentRef.current) {
-        try {
-           agentRef.current.disconnect();
-        } catch (e) {}
-  
-        agentRef.current = null;
-      }
-    };
-  }, []);
-
   const toggleListening = () => {
-    if (!recognitionRef.current) {
-      alert("Speech Recognition is not supported in this browser.");
-      return;
-    }
+    if (!recognitionRef.current) return;
   
     if (isListening) {
       recognitionRef.current.stop();
@@ -331,92 +223,119 @@ const transcriptRef = useRef("");
       }
     }
   };
-
+  useEffect(() => {
+    if (!resumeReady) return;
+    if (nextOutput) return;
+  
+    const startInterview = async () => {
+      try {
+        console.log("Resume Context:", resumeContext);
+        const output = await aiMockInterview({
+          role,
+          experienceLevel: exp,
+          roundType: round,
+          currentMainQuestionIndex: 0,
+          history: [],
+          userAnswer: "",
+          resumeSkills: resumeContext?.skills || [],
+          resumeProjects: resumeContext?.projects || [],
+          resumeSummary: resumeContext?.experienceSummary || "",
+          debugMode: debugEnabled,
+          interviewStage,
+          difficultyLevel,
+          askedQuestions: [],
+          candidateStrengths: [],
+          candidateWeaknesses: [],
+        });
+  
+        console.log("Initial Gemini Output:", output);
+  
+        setNextOutput(output);
+      } catch (err) {
+        console.error("Initial Interview Error:", err);
+      }
+    };
+  
+    startInterview();
+  }, [resumeReady]);
+  
   const handleSend = async (answer?: string) => {
     const ans = answer ?? userAnswer;
-
-    console.log("handleSend Called");
-    console.log("Answer:", ans);
-
+  
     if (!ans.trim() || isProcessing) return;
-
-    if (recognitionRef.current) {
-      try {
-        recognitionRef.current.stop();
-      } catch {}
-    }
-
+  
+    recognitionRef.current?.stop();
+  
     setUserAnswer("");
-    
-    const turn = { 
-      question: nextOutput?.nextQuestion || '', 
-      answer: ans, 
-      feedback: nextOutput?.feedbackOnLastAnswer || null 
+  
+    const turn = {
+      question: nextOutput?.nextQuestion || "",
+      answer: ans,
+      feedback: nextOutput?.feedbackOnLastAnswer || null,
     };
+  
     const newHistory = [...history, turn];
+  
     setHistory(newHistory);
-    setCurrentIdx(i => i + 1);
+    setCurrentIdx((i) => i + 1);
     setQuestionTimer(QUESTION_TIMEOUT);
     setIsProcessing(true);
-
+  
     try {
-      if (agentRef.current) {
-        await agentRef.current.chat("Let me analyze your answer.");
-      }
-
+      console.log("===== REQUEST =====");
+console.log({
+  currentMainQuestionIndex: newHistory.length + 1,
+  history: newHistory,
+  interviewStage,
+  askedQuestions,
+  difficultyLevel,
+});
+  
       const output = await aiMockInterview({
         role,
         experienceLevel: exp,
         roundType: round,
         currentMainQuestionIndex: newHistory.length + 1,
-      
         history: newHistory,
-      
         userAnswer: ans,
-      
-        resumeSkills: resumeContext?.skills,
-        resumeProjects: resumeContext?.projects,
-        resumeSummary: resumeContext?.experienceSummary,
-      
+        resumeSkills: [],
+        resumeProjects: [],
+        resumeSummary: "",
         debugMode: debugEnabled,
-
-        interviewStage: interviewStage,
-
-        difficultyLevel: difficultyLevel,
-
-        askedQuestions: askedQuestions,
-
-        candidateStrengths: candidateStrengths, 
-        candidateWeaknesses:
-        nextOutput?.candidateWeaknesses || [],
+        interviewStage,
+        difficultyLevel,
+        askedQuestions,
+        candidateStrengths,
+        candidateWeaknesses,
       });
-      
+      console.log("Gemini Output:", output);
+      console.log("===== RESPONSE =====");
+      console.log(output);
       setNextOutput(output);
+  
       setInterviewStage(
         output.nextInterviewStage ?? interviewStage
       );
-      if (output.isInterviewComplete) setIsComplete(true);
-     
+  
       setDifficultyLevel(
         output.difficultyAdjustment === "Harder"
           ? "HARD"
           : output.difficultyAdjustment === "Easier"
           ? "EASY"
           : "MEDIUM"
-        );
-        setAskedQuestions(
-         output.askedQuestions ?? askedQuestions
-        );
-      
-      setCandidateStrengths(
-        output.candidateStrengths ?? candidateStrengths
       );
-      
-      setCandidateWeaknesses(
-        output.candidateWeaknesses ?? candidateWeaknesses
-      );
+  
+      setAskedQuestions(output.askedQuestions ?? []);
+  
+      setCandidateStrengths(output.candidateStrengths ?? []);
+  
+      setCandidateWeaknesses(output.candidateWeaknesses ?? []);
+  
+      if (output.isInterviewComplete) {
+        setIsComplete(true);
+      }
     } catch (err) {
-      console.error("Submission failed", err);
+      console.error(err);
     } finally {
       setIsProcessing(false);
     }
@@ -424,247 +343,269 @@ const transcriptRef = useRef("");
 
   const finish = async () => {
     if (!user || !db) return;
+  
     setIsSaving(true);
-    console.log("Audit button clicked");
+  
     try {
-      const sanitizedHistory = history.map(turn => ({
-        question: turn.question || "",
-        answer: turn.answer || "",
-        feedback: turn.feedback || null
+      const sanitizedHistory = history.map((turn) => ({
+        question: turn.question,
+        answer: turn.answer,
+        feedback: turn.feedback,
       }));
-
-      const docRef = await addDoc(collection(db, 'users', user.uid, 'interviews'), {
-        userId: user.uid, 
-        role: role || "Software Engineer", 
-        experienceLevel: exp || "Senior", 
-        round: round || "Technical", 
-        history: sanitizedHistory, 
-        duration: totalTimer || 0, 
-        createdAt: serverTimestamp(), 
-        overallScore: nextOutput?.overallScore ?? 0,
-        finalRecommendation: nextOutput?.finalRecommendation ?? "",
-        hiringDecision: nextOutput?.hiringDecision ?? "Borderline",
-        candidateStrengths: nextOutput?.candidateStrengths ?? [],
-        candidateWeaknesses: nextOutput?.candidateWeaknesses ?? [],
-      });
-      console.log("Session saved successfully:", docRef.id);
-
-      if (agentRef.current) {
-        await agentRef.current.disconnect();
-        agentRef.current = null;
-      }
-
+  
+      const docRef = await addDoc(
+        collection(db, "users", user.uid, "interviews"),
+        {
+          userId: user.uid,
+          role,
+          experienceLevel: exp,
+          round,
+          history: sanitizedHistory,
+          duration: totalTimer,
+          createdAt: serverTimestamp(),
+  
+          overallScore: nextOutput?.overallScore ?? 0,
+          finalRecommendation:
+            nextOutput?.finalRecommendation ?? "",
+          hiringDecision:
+            nextOutput?.hiringDecision ?? "Borderline",
+  
+          candidateStrengths:
+            nextOutput?.candidateStrengths ?? [],
+  
+          candidateWeaknesses:
+            nextOutput?.candidateWeaknesses ?? [],
+        }
+      );
+  
       router.push(`/feedback/${docRef.id}`);
     } catch (e) {
-      console.error("Neural Archival Failed:", e);
+      console.error(e);
       setIsSaving(false);
     }
   };
-
-  useEffect(() => {
-    return () => {
-      if (agentRef.current) {
-        agentRef.current.disconnect();
-      }
-    };
-  }, []);
-
   return (
+    <>
     <div className="h-screen flex flex-col overflow-hidden relative">
-     <video
-     id="agent-video"
-  ref={videoRef}
-  autoPlay
-  playsInline
-  muted
-  className="fixed inset-0 w-full h-full object-cover z-0 bg-[#050816]"
-/>
       <div className="fixed inset-0 bg-black/5 z-10 pointer-events-none" />
-
-      <div className="relative z-20 flex flex-col h-full w-full">
+  
+      <div className="relative z-20 flex flex-col h-full">
+  
         {!resumeReady ? (
-          <div className="flex-1 flex flex-col items-center justify-center space-y-6">
-            <Loader2 className="w-16 h-16 text-accent animate-spin" />
-            <p className="text-[10px] font-bold uppercase tracking-[0.4em] text-accent/60">Establishing Secure Neural Link...</p>
+          <div className="flex-1 flex items-center justify-center">
+            <Loader2 className="w-12 h-12 animate-spin text-cyan-400" />
           </div>
         ) : (
           <>
-            <header className="px-10 py-6 flex flex-col gap-4 bg-gradient-to-b from-black/20 to-transparent">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-6">
-                  <div className="w-12 h-12 rounded-2xl bg-white/10 backdrop-blur-xl flex items-center justify-center border border-white/10 shadow-2xl">
-                    <Command className="w-6 h-6 text-white" />
-                  </div>
-                  <div>
-                    <h1 className="text-sm font-bold text-white tracking-tight">{role} • {round}</h1>
-                    <div className="flex items-center gap-2">
-                      <div className="w-2 h-2 bg-accent rounded-full animate-pulse shadow-[0_0_100px_rgba(34,211,238,0.8)]" />
-                      <p className="text-[10px] font-black uppercase tracking-[0.2em] text-accent">
-                        {nextOutput?.isMock ? "Mock Survival Mode" : "Neural Arena Active"}
-                      </p>
-                    </div>
-                  </div>
+  
+            <header className="px-10 py-6 flex items-center justify-between">
+  
+              <div className="flex items-center gap-5">
+  
+                <div className="w-12 h-12 rounded-2xl bg-white/10 flex items-center justify-center">
+                  <Command className="w-6 h-6 text-white" />
                 </div>
-                
-                <div className="flex items-center gap-4">
-                  {nextOutput?.isMock && (
-                    <Badge className="bg-orange-500/20 text-orange-400 border-orange-500/30 px-4 py-2 text-[8px] font-black tracking-widest uppercase">
-                      <AlertTriangle className="w-3 h-3 mr-2" /> [MOCK MODE]
-                    </Badge>
-                  )}
-                  
-                  <div className="flex items-center gap-4 bg-white/5 backdrop-blur-2xl px-6 py-2.5 rounded-full border border-white/10 shadow-2xl">
-                    <Timer className={`w-4 h-4 ${questionTimer < 15 ? 'text-red-500 animate-bounce' : 'text-accent'}`} />
-                    <span className="tabular-nums font-bold text-sm tracking-widest text-white">{Math.floor(questionTimer / 60)}:{(questionTimer % 60).toString().padStart(2, '0')}</span>
-                  </div>
-
-                  <Button variant="ghost" size="sm" onClick={() => router.push('/dashboard')} className="h-10 rounded-xl glass border-white/10 hover:bg-red-500/20 hover:text-red-400 text-white/40 font-bold uppercase text-[10px] tracking-widest">
-                    <LogOut className="w-4 h-4 mr-2" /> Abort
-                  </Button>
+  
+                <div>
+                  <h1 className="text-white font-bold">
+                    {role} • {round}
+                  </h1>
+  
+                  <p className="text-cyan-400 text-xs">
+                    AI Interview Running
+                  </p>
                 </div>
+  
               </div>
-            </header>
-
-            <AnimatePresence mode="wait">
-              {!isComplete && nextOutput?.nextQuestion && (
-                <motion.div 
-                  key={currentIdx}
-                  initial={{ opacity: 0, x: -50 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: -50 }}
-                  className="fixed top-32 left-10 z-30 w-80 pointer-events-none"
+  
+              <div className="flex items-center gap-4">
+  
+                <div className="flex items-center gap-2 bg-white/10 px-4 py-2 rounded-full">
+  
+                  <Timer className="w-4 h-4 text-cyan-400" />
+  
+                  <span className="text-white">
+                    {Math.floor(questionTimer / 60)}:
+                    {(questionTimer % 60).toString().padStart(2, "0")}
+                  </span>
+  
+                </div>
+  
+                <Button
+                  variant="ghost"
+                  onClick={() => router.push("/dashboard")}
                 >
-                  <div className="bg-[#0a0a0a]/45 backdrop-blur-[8px] border border-accent/40 rounded-2xl p-6 shadow-[0_0_20px_rgba(34,211,238,0.15)] pointer-events-auto">
-                    <div className="flex items-center justify-between mb-4 border-b border-white/10 pb-2">
-                      <div className="flex items-center gap-2">
-                        <Badge className="bg-accent text-black text-[8px] font-black px-2 py-0.5 rounded-sm">NODE {Math.min(currentIdx + 1, TOTAL_QUESTIONS)}</Badge>
-                        <span className="text-[9px] font-bold text-white/40 uppercase tracking-widest">Inquiry Protocol</span>
-                      </div>
-                      <div className="w-1.5 h-1.5 rounded-full bg-accent animate-pulse shadow-[0_0_8px_rgba(34,211,238,1)]" />
-                    </div>
-                    <p className="text-white/90 text-sm md:text-[15px] font-medium leading-relaxed tracking-tight">
-                      {isProcessing && !nextOutput?.nextQuestion ? "Recalibrating Neural Vectors..." : nextOutput.nextQuestion}
-                    </p>
-
-                    {nextOutput?.feedbackOnLastAnswer && (
-                      <div className="mt-4 pt-4 border-t border-white/5 flex items-center gap-2">
-                        <Zap className="w-3 h-3 text-purple-400" />
-                        <span className="text-[9px] font-bold text-purple-400/80 uppercase tracking-widest italic truncate">
-                          "{nextOutput.feedbackOnLastAnswer}"
-                        </span>
-                      </div>
-                    )}
-                  </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
-
-            <main className="flex-1 pointer-events-none relative">
-              <AnimatePresence>
-                {isComplete && (
-                  <div className="absolute inset-0 flex items-center justify-center px-6 z-50">
-                    <motion.div 
-                      initial={{ opacity: 0, scale: 0.9 }}
-                      animate={{ opacity: 1, scale: 1 }}
-                      className="premium-card bg-black/60 backdrop-blur-3xl border-accent/20 p-16 text-center space-y-8 pointer-events-auto shadow-[0_0_100px_rgba(0,0,0,0.5)]"
-                    >
-                      <div className="w-24 h-24 rounded-full bg-accent/20 flex items-center justify-center mx-auto border border-accent/40 shadow-[0_0_50px_rgba(34,211,238,0.3)]">
-                        <ShieldCheck className="w-12 h-12 text-accent" />
-                      </div>
-                      <div>
-                        <h2 className="text-4xl font-bold tracking-tighter text-premium">Simulation Finalized.</h2>
-                        <p className="text-white/60 font-light mt-2 max-w-md mx-auto">Your technical vectors have been archived. The performance auditor is synthesizing your final report.</p>
-                      </div>
-                      <Button onClick={finish} disabled={isSaving} className="h-16 px-12 btn-premium uppercase tracking-[0.3em] font-bold text-xs shadow-2xl">
-                        {isSaving ? (
-                          <><Loader2 className="w-5 h-5 animate-spin mr-3" /> Archiving...</>
-                        ) : (
-                          "Deploy Performance Audit"
-                        )}
-                      </Button>
-                    </motion.div>
-                  </div>
-                )}
-              </AnimatePresence>
-            </main>
-
-            {!isComplete && (
-              <div className="w-full max-w-5xl mx-auto pb-12 px-6 relative z-30">
-                <div className="flex flex-col items-center gap-2 mb-4">
-                  <div className="w-48 h-1 bg-white/5 rounded-full overflow-hidden border border-white/5">
-                    <motion.div 
-                      initial={{ width: 0 }}
-                      animate={{ width: `${(currentIdx / TOTAL_QUESTIONS) * 100}%` }}
-                      className="h-full bg-accent"
-                    />
-                  </div>
-                </div>
-
-                <div className="flex justify-center gap-4 mb-4">
-                  <div className="h-8 px-4 glass rounded-full flex items-center gap-2 text-[10px] font-bold text-white/40 uppercase tracking-widest">
-                    <Mic className="w-3 h-3" /> Voice Active
-                  </div>
-                  <div className="h-8 px-4 glass rounded-full flex items-center gap-2 text-[10px] font-bold text-white/40 uppercase tracking-widest">
-                    <Video className="w-3 h-3" /> Stream Encrypted
-                  </div>
-                </div>
-
-                <div className="glass bg-[#0a0a0a]/40 backdrop-blur-3xl rounded-[2.5rem] p-4 flex items-center gap-4 border border-white/10 shadow-[0_-20px_100px_rgba(0,0,0,0.5)] pointer-events-auto">
-                  <textarea 
-                    value={userAnswer} 
-                    onChange={e => setUserAnswer(e.target.value)} 
-                    onKeyDown={e => e.key === 'Enter' && !e.shiftKey && (e.preventDefault(), handleSend())} 
-                    placeholder="Synthesize your professional response..." 
-                    rows={1} 
-                    disabled={isProcessing}
-                    className="flex-1 bg-transparent border-none rounded-3xl px-6 py-4 text-lg font-light text-white focus:outline-none resize-none transition-all placeholder:text-white/20 disabled:opacity-50" 
-                  />
-                  <Button
-                  type="button"
-                   onClick={toggleListening}
-                   disabled={isProcessing}
-                   className="h-14 w-14 rounded-2xl"
-                  >
-                  <Mic className={isListening ? "text-red-500" : ""} />
-                  </Button>
-                  <Button 
-                    onClick={() => handleSend()}
-                    disabled={isProcessing || !userAnswer.trim()} 
-                    className="h-14 w-14 rounded-2xl btn-premium shrink-0 shadow-2xl flex items-center justify-center group"
-                  >
-                    {isProcessing ? (
-                      <Loader2 className="w-6 h-6 animate-spin" />
-                    ) : (
-                      <Send className="w-6 h-6 group-hover:translate-x-1 group-hover:-translate-y-1 transition-transform" />
-                    )}
-                  </Button>
-                </div>
+                  <LogOut className="w-4 h-4 mr-2" />
+                  Exit
+                </Button>
+  
               </div>
-            )}
+  
+            </header>
+            <AnimatePresence mode="wait">
+  {!isComplete && nextOutput?.nextQuestion && (
+    <motion.div
+      key={currentIdx}
+      initial={{ opacity: 0, x: -50 }}
+      animate={{ opacity: 1, x: 0 }}
+      exit={{ opacity: 0, x: -50 }}
+      className="fixed top-32 left-10 z-30 w-80"
+    >
+      <div className="bg-black/40 backdrop-blur-xl rounded-2xl border border-cyan-500/30 p-6">
 
-            <div className="fixed right-10 top-1/2 -translate-y-1/2 z-50 flex flex-col gap-6">
-              {[
-                { icon: Mic, label: "Mute" },
-                { icon: Video, label: "Video" },
-                { icon: Settings, label: "Config" }
-              ].map((btn, i) => (
-                <button key={i} className="w-12 h-12 rounded-2xl glass border-white/10 flex items-center justify-center text-white/40 hover:text-white hover:bg-white/5 transition-all group shadow-2xl">
-                  <btn.icon className="w-5 h-5" />
-                  <span className="absolute right-16 px-3 py-1 rounded-md bg-black/80 text-[10px] font-bold uppercase tracking-widest opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">{btn.label}</span>
-                </button>
-              ))}
+        <div className="flex items-center justify-between mb-4">
+
+          <Badge className="bg-cyan-400 text-black">
+            Question {currentIdx + 1}/{TOTAL_QUESTIONS}
+          </Badge>
+
+          <div className="w-2 h-2 rounded-full bg-cyan-400 animate-pulse" />
+
+        </div>
+
+        <p className="text-white leading-7">
+          {nextOutput.nextQuestion}
+        </p>
+
+        {nextOutput.feedbackOnLastAnswer && (
+          <div className="mt-4 border-t border-white/10 pt-4">
+
+            <div className="flex items-center gap-2">
+
+              <Zap className="w-4 h-4 text-purple-400" />
+
+              <span className="text-purple-400 text-xs">
+                {nextOutput.feedbackOnLastAnswer}
+              </span>
+
             </div>
-          </>
+
+          </div>
         )}
+
       </div>
-    </div>
-  );
+    </motion.div>
+  )}
+</AnimatePresence>
+<main className="flex-1 relative">
+
+  <AnimatePresence>
+
+    {isComplete && (
+
+      <div className="absolute inset-0 flex items-center justify-center z-50">
+
+        <motion.div
+          initial={{ opacity: 0, scale: 0.9 }}
+          animate={{ opacity: 1, scale: 1 }}
+          className="bg-black/70 backdrop-blur-2xl rounded-3xl p-12 text-center border border-cyan-500/30"
+        >
+
+          <ShieldCheck className="w-16 h-16 text-cyan-400 mx-auto mb-6" />
+
+          <h2 className="text-3xl font-bold text-white">
+            Interview Completed
+          </h2>
+
+          <p className="text-white/60 mt-3">
+            Your interview has been completed successfully.
+          </p>
+
+          <Button
+            onClick={finish}
+            disabled={isSaving}
+            className="mt-8"
+          >
+            {isSaving ? (
+              <>
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                Saving...
+              </>
+            ) : (
+              "View Feedback"
+            )}
+          </Button>
+
+        </motion.div>
+
+      </div>
+
+    )}
+
+  </AnimatePresence>
+
+</main>
+
+{!isComplete && (
+
+<div className="w-full max-w-5xl mx-auto pb-10 px-6">
+
+<div className="bg-black/40 backdrop-blur-xl rounded-3xl border border-white/10 p-4 flex items-center gap-3">
+
+<textarea
+value={userAnswer}
+onChange={(e)=>setUserAnswer(e.target.value)}
+rows={1}
+disabled={isProcessing}
+placeholder="Type your answer..."
+className="flex-1 bg-transparent outline-none resize-none text-white"
+/>
+
+<Button
+type="button"
+onClick={toggleListening}
+disabled={isProcessing}
+>
+<Mic className={isListening ? "text-red-500" : ""}/>
+</Button>
+
+<Button
+onClick={()=>handleSend()}
+disabled={isProcessing || !userAnswer.trim()}
+>
+
+{isProcessing
+? <Loader2 className="w-4 h-4 animate-spin"/>
+: <Send className="w-4 h-4"/>
+}
+
+</Button>
+
+</div>
+
+</div>
+
+)}
+<div className="fixed right-10 top-1/2 -translate-y-1/2 z-50 flex flex-col gap-4">
+
+<button className="w-12 h-12 rounded-2xl bg-black/40 backdrop-blur-xl border border-white/10 flex items-center justify-center">
+  <Mic className="w-5 h-5 text-white/70" />
+</button>
+
+<button className="w-12 h-12 rounded-2xl bg-black/40 backdrop-blur-xl border border-white/10 flex items-center justify-center">
+  <Settings className="w-5 h-5 text-white/70" />
+</button>
+
+</div>
+
+      </>
+    )}
+  </div>
+</div>
+</>
+);
 }
 
 export default function InterviewSession() {
-  return (
-    <Suspense fallback={<div className="h-screen bg-[#050816] flex items-center justify-center"><Loader2 className="w-12 h-12 text-accent animate-spin" /></div>}>
-      <InterviewSessionContent />
-    </Suspense>
-  );
-}
+return (
+  <Suspense
+    fallback={
+      <div className="h-screen flex items-center justify-center bg-[#050816]">
+        <Loader2 className="w-12 h-12 animate-spin text-cyan-400" />
+      </div>
+    }
+  >
+    <InterviewSessionContent />
+  </Suspense>
+);
+}       

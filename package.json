@@ -11,8 +11,7 @@
     "lint": "next lint",
     "typecheck": "tsc --noEmit"
   },
-  "dependencies": {
-    "@d-id/client-sdk": "^1.2.6",
+"dependencies": {
     "@genkit-ai/google-genai": "^1.28.0",
     "@google/genai": "^2.10.0",
     "@hookform/resolvers": "^4.1.3",
