@@ -2,6 +2,7 @@
 /**
  * @fileOverview Nexvoro AI Mock Interview Agent (Elite Senior Interviewer v18.0).
  * Implements strict 9-stage sequence, Strength-based Difficulty, and Tech Mapping.
+ * Fixed: Robust fallback indexing to prevent schema validation failures.
  */
 
 import { ai, runWithResilience } from '@/ai/genkit';
@@ -12,7 +13,7 @@ import {
   isQuestionRepeated,
 } from "@/ai/interviewBrain";
 
-const INTERVIEW_VERSION = "NEXVORO_V18_CONSOLIDATED_STRICT";
+const INTERVIEW_VERSION = "NEXVORO_V18_CONSOLIDATED_STRICT_FIXED";
 
 function createInterviewSeed(
   role: string,
@@ -216,10 +217,11 @@ const aiMockInterviewFlow = ai.defineFlow(
         isMock: false
       };
     } catch (error) {
-      console.error("AI Flow Error:", error);
-      const bankIndex = (input.currentMainQuestionIndex - 1) % FALLBACK_QUESTIONS.length;
+      console.error("AI Flow Error, using fallback:", error);
+      // Fixed: robust indexing to prevent undefined nextQuestion
+      const bankIndex = Math.max(0, input.currentMainQuestionIndex) % FALLBACK_QUESTIONS.length;
       return {
-        nextQuestion: FALLBACK_QUESTIONS[bankIndex],
+        nextQuestion: FALLBACK_QUESTIONS[bankIndex] || FALLBACK_QUESTIONS[0],
         feedbackOnLastAnswer: "I appreciate that context. Let's move forward.",
         isInterviewComplete: input.currentMainQuestionIndex >= 9,
         isMock: true
