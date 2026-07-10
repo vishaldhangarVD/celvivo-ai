@@ -21,10 +21,7 @@ import {
   BrainCircuit,
   Terminal,
   Activity,
-  AlertCircle,
-  FileText,
   Volume2,
-  VolumeX,
   Sparkles
 } from "lucide-react";
 import Navbar from "@/components/layout/Navbar";
@@ -33,12 +30,12 @@ import { aiMockInterview } from "@/ai/flows/ai-mock-interview-v2";
 import { generateInterviewFeedback } from "@/ai/flows/ai-interview-feedback";
 import { synthesizeAudio } from "@/ai/flows/ai-audio-synthesis";
 import { useUser, useFirestore, useCollection } from "@/firebase";
-import { doc, setDoc, serverTimestamp, collection, addDoc, query, orderBy, limit, updateDoc } from "firebase/firestore";
+import { doc, serverTimestamp, collection, addDoc, query, orderBy, limit, updateDoc } from "firebase/firestore";
 import { useToast } from "@/hooks/use-toast";
 import Image from "next/image";
 import { PlaceHolderImages } from "@/lib/placeholder-images";
 
-function TechnicalArenaContent() {
+function VirtualArenaContent() {
   const router = useRouter();
   const params = useParams();
   const searchParams = useSearchParams();
@@ -49,7 +46,7 @@ function TechnicalArenaContent() {
   const role = searchParams.get("role") || "Software Engineer";
   const company = searchParams.get("company") || "Standard Tech";
   const exp = searchParams.get("exp") || "Senior";
-  const round = searchParams.get("round") || "Technical Round";
+  const round = searchParams.get("round") || "Virtual Interview";
 
   const [currentIdx, setCurrentIdx] = useState(1);
   const [transcript, setTranscript] = useState<{role: 'interviewer' | 'candidate', text: string}[]>([]);
@@ -68,7 +65,7 @@ function TechnicalArenaContent() {
   const transcriptEndRef = useRef<HTMLDivElement>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
-  // Fetch previous round context
+  // Fetch Assessment Context
   const aptQuery = useMemo(() => {
     if (!db || !user?.uid) return null;
     return query(collection(db, 'users', user.uid, 'aptitude_results'), orderBy('createdAt', 'desc'), limit(1));
@@ -108,6 +105,7 @@ function TechnicalArenaContent() {
 
   useEffect(() => {
     const initializeSession = async () => {
+      // Wait for assessment data to load
       if (!isInitializing || !latestApt || !latestCod) return;
       
       try {
@@ -121,20 +119,19 @@ function TechnicalArenaContent() {
           resumeSkills: resumeContext?.analysis?.skillAnalysis?.map((s: any) => s.skill) || [],
           resumeProjects: resumeContext?.analysis?.sections?.projects || [],
           resumeSummary: resumeContext?.analysis?.summary || "",
-          aptitudePerformance: latestApt[0]?.feedback?.recommendation || "N/A",
-          codingPerformance: latestCod[0]?.audit?.finalRecommendation || "N/A",
+          aptitudePerformance: latestApt[0]?.feedback?.recommendation || "Standard logic baseline detected.",
+          codingPerformance: latestCod[0]?.audit?.finalRecommendation || "Core syntax mastery verified.",
           difficultyLevel: "MEDIUM"
         });
 
         setTranscript([{ role: 'interviewer', text: response.nextQuestion }]);
         setAskedQuestions([response.nextQuestion]);
         
-        // Wait for Gemini then synthesize audio for Avatar
         await playInterviewerAudio(response.nextQuestion);
 
       } catch (error) {
         console.error("Initialization Failed:", error);
-        toast({ variant: "destructive", title: "Neural Sync Failed", description: "Retrying connection..." });
+        toast({ variant: "destructive", title: "Neural Sync Failed", description: "System attempting to re-establish link..." });
       } finally {
         setIsInitializing(false);
       }
@@ -195,7 +192,6 @@ function TechnicalArenaContent() {
       setAskedQuestions(prev => [...prev, response.nextQuestion]);
       setCurrentIdx(prev => prev + 1);
       
-      // Wait for Gemini then synthesize audio for Avatar
       await playInterviewerAudio(response.nextQuestion);
 
       if (response.isInterviewComplete || currentIdx >= 15) {
@@ -203,7 +199,7 @@ function TechnicalArenaContent() {
       }
     } catch (error) {
       console.error("Transmission Error:", error);
-      toast({ variant: "destructive", title: "Neural Link Dropped", description: "Retrying..." });
+      toast({ variant: "destructive", title: "Neural Link Deviation", description: "Retrying packet transmission..." });
     } finally {
       setIsProcessing(false);
     }
@@ -236,21 +232,24 @@ function TechnicalArenaContent() {
         round,
         history: transcript,
         overallScore: feedback.overallInterviewScore,
+        technicalScore: feedback.technicalKnowledgeScore,
+        communicationScore: feedback.communicationScore,
+        confidenceScore: feedback.confidenceScore,
+        problemSolvingScore: feedback.problemSolvingScore,
         feedback,
         createdAt: serverTimestamp(),
       };
 
       const docRef = await addDoc(collection(db, 'users', user.uid, 'interviews'), interviewData);
       
-      // Update User readiness
       await updateDoc(doc(db, 'users', user.uid), {
         jobReadinessScore: feedback.jobReadinessScore
       });
 
       router.push(`/feedback/${docRef.id}`);
     } catch (e) {
-      console.error("Finalization Failure:", e);
-      toast({ variant: "destructive", title: "Report Generation Failed", description: "System could not synthesize the final performance audit." });
+      console.error("Final Audit Failure:", e);
+      toast({ variant: "destructive", title: "Report Generation Failed", description: "System failed to synthesize the multi-dimensional performance audit." });
     } finally {
       setIsGeneratingReport(false);
     }
@@ -266,8 +265,8 @@ function TechnicalArenaContent() {
           <BrainCircuit className="w-12 h-12 text-accent absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 animate-pulse" />
         </div>
         <div className="text-center space-y-2">
-          <h2 className="text-2xl font-bold tracking-tighter text-premium uppercase">Establishing Neural Link...</h2>
-          <p className="text-[10px] text-muted-foreground uppercase tracking-[0.4em] font-bold">Synchronizing dossier with {company} protocols</p>
+          <h2 className="text-2xl font-bold tracking-tighter text-premium uppercase">Calibrating Virtual Arena...</h2>
+          <p className="text-[10px] text-muted-foreground uppercase tracking-[0.4em] font-bold">Consolidating Aptitude and Syntax results for {company} protocols</p>
         </div>
       </div>
     );
@@ -284,8 +283,8 @@ function TechnicalArenaContent() {
             <Command className="w-5 h-5 text-accent" />
           </div>
           <div>
-            <h1 className="text-sm font-bold tracking-tight text-white uppercase">{company} • Live Arena</h1>
-            <p className="text-[10px] text-accent font-bold uppercase tracking-widest">{role} • Node {currentIdx}/15</p>
+            <h1 className="text-sm font-bold tracking-tight text-white uppercase">{company} • Hybrid Simulation</h1>
+            <p className="text-[10px] text-accent font-bold uppercase tracking-widest">{role} • Assessment Node {currentIdx}/15</p>
           </div>
         </div>
 
@@ -299,7 +298,7 @@ function TechnicalArenaContent() {
             onClick={() => router.push('/dashboard')}
             className="text-[10px] font-bold uppercase tracking-widest text-white/40 hover:text-red-400"
           >
-            <LogOut className="w-4 h-4 mr-2" /> Abort Session
+            <LogOut className="w-4 h-4 mr-2" /> Abort Protocol
           </Button>
         </div>
       </header>
@@ -311,7 +310,7 @@ function TechnicalArenaContent() {
             <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent z-10" />
             <div className="absolute top-6 left-6 z-20 flex items-center gap-3">
               <Badge className={`${isAvatarSpeaking ? 'bg-accent/20 text-accent' : 'bg-white/10 text-white/40'} border-none uppercase text-[8px] font-bold tracking-widest px-3 py-1 transition-colors duration-500`}>
-                {isAvatarSpeaking ? 'Neural Host Speaking' : 'Neural Host Active'}
+                {isAvatarSpeaking ? 'Neural Host Speaking' : 'Neural Host Standby'}
               </Badge>
               <div className={`w-2 h-2 rounded-full ${isAvatarSpeaking ? 'bg-accent animate-ping' : 'bg-accent/40 animate-pulse'}`} />
             </div>
@@ -339,16 +338,16 @@ function TechnicalArenaContent() {
             </div>
 
             <div className="absolute bottom-6 left-6 z-20">
-              <p className="text-xl font-bold text-white">Senior Recruitment Partner</p>
+              <p className="text-xl font-bold text-white">Senior Selection Partner</p>
               <div className="flex items-center gap-2">
-                <p className="text-[10px] text-white/40 uppercase tracking-widest font-bold">Nexvoro AI Simulation Core</p>
+                <p className="text-[10px] text-white/40 uppercase tracking-widest font-bold">Nexvoro Hybrid Simulation Core</p>
                 {isAvatarSpeaking && (
                   <div className="flex items-center gap-1">
-                    {[1, 2, 3].map((i) => (
+                    {[1, 2, 3, 2].map((i, idx) => (
                       <motion.div 
-                        key={i}
+                        key={idx}
                         animate={{ height: [4, 12, 4] }}
-                        transition={{ duration: 0.5, repeat: Infinity, delay: i * 0.1 }}
+                        transition={{ duration: 0.5, repeat: Infinity, delay: idx * 0.1 }}
                         className="w-0.5 bg-accent rounded-full"
                       />
                     ))}
@@ -361,7 +360,7 @@ function TechnicalArenaContent() {
           <Card className="h-48 premium-card bg-black/40 border-white/5 p-0 overflow-hidden relative">
             <div className="absolute inset-0 bg-black/20" />
             <div className="h-full flex flex-col items-center justify-center text-center space-y-3">
-              <div className="w-12 h-12 rounded-full bg-white/5 flex items-center justify-center">
+              <div className="w-12 h-12 rounded-full bg-white/5 flex items-center justify-center border border-white/10">
                 <User className="w-6 h-6 text-white/20" />
               </div>
               <p className="text-[10px] font-bold uppercase tracking-widest text-white/20">Candidate Proctored Feed</p>
@@ -381,22 +380,22 @@ function TechnicalArenaContent() {
           
           <Card className="premium-card bg-[#0b0e1a]/80 border-glow-premium p-8 shrink-0">
             <div className="flex items-center justify-between mb-6">
-              <Badge className="bg-purple-500/20 text-purple-400 border-none uppercase text-[8px] font-bold tracking-[0.3em] px-3 py-1">Node {currentIdx} / 15</Badge>
+              <Badge className="bg-purple-500/20 text-purple-400 border-none uppercase text-[8px] font-bold tracking-[0.3em] px-3 py-1">Simulation Node {currentIdx}</Badge>
               <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-white/20">
                 <Activity className={`w-3 h-3 ${isAvatarSpeaking ? 'text-accent animate-pulse' : 'text-white/20'}`} /> 
-                {isAvatarSpeaking ? 'Vocal Synthesis Active' : 'Analyzing Semantic Vector Integrity'}
+                {isAvatarSpeaking ? 'Neural Audio Synthesis Active' : 'Analyzing Contextual Vectors'}
               </div>
             </div>
             <h2 className="text-xl md:text-2xl font-bold leading-tight tracking-tight text-white/90">
               {isProcessing ? (
                 <div className="flex items-center gap-4">
                   <Loader2 className="w-6 h-6 animate-spin text-accent" />
-                  <span className="text-muted-foreground animate-pulse font-light italic">Synthesizing follow-up node...</span>
+                  <span className="text-muted-foreground animate-pulse font-light italic">Synthesizing next assessment node...</span>
                 </div>
               ) : isAvatarSpeaking ? (
                 <span className="flex items-center gap-3">
                   <Volume2 className="w-5 h-5 text-accent animate-bounce" />
-                  Speaking...
+                  Transmitting...
                 </span>
               ) : (
                 transcript.filter(t => t.role === 'interviewer').slice(-1)[0]?.text
@@ -407,7 +406,7 @@ function TechnicalArenaContent() {
           <Card className="flex-1 premium-card bg-black/40 border-white/5 p-0 overflow-hidden flex flex-col">
             <div className="px-6 py-3 border-b border-white/5 bg-white/[0.02] flex items-center gap-3">
               <Terminal className="w-3.5 h-3.5 text-white/30" />
-              <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-white/30">Neural Transcript Matrix</span>
+              <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-white/30">Intelligence Logs</span>
             </div>
             <div className="flex-1 p-6 overflow-y-auto custom-scrollbar space-y-6">
               {transcript.map((msg, i) => (
@@ -419,12 +418,12 @@ function TechnicalArenaContent() {
                 >
                   <div className={`max-w-[80%] p-5 rounded-2xl border ${
                     msg.role === 'candidate' 
-                    ? 'bg-accent/10 border-accent/20 text-white rounded-tr-none' 
+                    ? 'bg-accent/10 border-accent/20 text-white rounded-tr-none shadow-[0_0_30px_rgba(34,211,238,0.1)]' 
                     : 'glass border-white/5 text-white/70 rounded-tl-none'
                   }`}>
                     <div className="flex items-center gap-2 mb-2">
                       <span className={`text-[8px] font-bold uppercase tracking-widest ${msg.role === 'candidate' ? 'text-accent' : 'text-purple-400'}`}>
-                        {msg.role === 'candidate' ? 'Identity Verified Candidate' : `${company} Senior Interviewer`}
+                        {msg.role === 'candidate' ? 'Identity Verified Candidate' : `${company} Senior Partner`}
                       </span>
                     </div>
                     <p className="text-sm font-light leading-relaxed">{msg.text}</p>
@@ -453,7 +452,7 @@ function TechnicalArenaContent() {
                 value={userAnswer}
                 onChange={(e) => setUserAnswer(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && handleSend()}
-                placeholder={isProcessing ? "Processing response vectors..." : isAvatarSpeaking ? "Neural Audio Protocol active... Listening..." : isMicActive ? "Neural audio link active... speak clearly" : "Transcribe your technical reasoning..."}
+                placeholder={isProcessing ? "Synthesizing response vectors..." : isAvatarSpeaking ? "Listening for audio completion..." : isMicActive ? "Neural audio active... speak clearly" : "Transcribe professional reasoning..."}
                 className="w-full h-full bg-transparent outline-none border-none text-white px-4 text-sm font-light placeholder:text-white/20 disabled:opacity-50"
               />
               {(isMicActive || isAvatarSpeaking) && (
@@ -500,8 +499,8 @@ function TechnicalArenaContent() {
                 {isGeneratingReport ? <Loader2 className="w-12 h-12 text-accent animate-spin" /> : <ShieldCheck className="w-12 h-12 text-accent" />}
               </div>
               <div className="space-y-4">
-                <h2 className="text-4xl font-bold tracking-tighter text-premium uppercase">Simulation Complete</h2>
-                <p className="text-muted-foreground font-light text-lg">Your performance vectors are being synthesized into a final audit report.</p>
+                <h2 className="text-4xl font-bold tracking-tighter text-premium uppercase">Arena Gauntlet Complete</h2>
+                <p className="text-muted-foreground font-light text-lg">Your technical and behavioral vectors are being synthesized into a final performance audit.</p>
               </div>
               <Button 
                 onClick={finalizeSession}
@@ -509,9 +508,9 @@ function TechnicalArenaContent() {
                 className="w-full h-18 btn-premium text-xs font-bold tracking-[0.3em] uppercase"
               >
                 {isGeneratingReport ? (
-                   <><Loader2 className="w-5 h-5 animate-spin mr-3" /> Synthesizing Final Report...</>
+                   <><Loader2 className="w-5 h-5 animate-spin mr-3" /> Constructing Final Audit...</>
                 ) : (
-                   <>Generate Performance Report <ChevronRight className="ml-3 w-5 h-5" /></>
+                   <>View Performance Analysis <ChevronRight className="ml-3 w-5 h-5" /></>
                 )}
               </Button>
             </motion.div>
@@ -522,14 +521,14 @@ function TechnicalArenaContent() {
   );
 }
 
-export default function TechnicalArena() {
+export default function VirtualArena() {
   return (
     <Suspense fallback={
       <div className="min-h-screen bg-[#050816] flex items-center justify-center">
         <Loader2 className="w-12 h-12 text-accent animate-spin" />
       </div>
     }>
-      <TechnicalArenaContent />
+      <VirtualArenaContent />
     </Suspense>
   );
 }

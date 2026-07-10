@@ -1,21 +1,21 @@
 'use server';
 /**
- * @fileOverview Nexvoro AI Mock Interview Agent (Elite Senior Interviewer v22.0).
+ * @fileOverview Nexvoro AI Virtual Interview Agent (Elite Senior Interviewer v25.0).
  * Calibrated for high-fidelity simulation of professional IT interviews.
  * Ingests multi-dimensional context (Aptitude, Coding, Resume).
+ * Naturally blends Technical and HR probes into a single narrative flow.
  */
 
 import { ai, runWithResilience } from '@/ai/genkit';
 import { z } from 'genkit';
-import crypto from "crypto";
 
 const FALLBACK_QUESTIONS = [
-  "Hello. Welcome to today's interview. Let's begin with a brief introduction. Tell me about yourself?",
-  "I noticed your technical background. What specific aspects of your strongest project are you most proud of?",
+  "Hello. Welcome to today's interview. I'm pleased to meet you. Let's start with a brief introduction—could you walk me through your background?",
+  "I noticed your technical background in your resume. What specific aspects of your strongest project are you most proud of?",
   "How do you ensure your code remains maintainable and scalable over time?",
   "If a production API suddenly returns 500 errors, how would you investigate step-by-step?",
-  "Tell me about a time you had to work with a difficult teammate. How did you handle it?",
-  "That concludes our session. It was nice speaking with you."
+  "Tell me about a time you had to handle a technical disagreement with a teammate. How was it resolved?",
+  "That concludes our session today. It was nice speaking with you."
 ];
 
 const AiMockInterviewInputSchema = z.object({
@@ -44,7 +44,7 @@ const AiMockInterviewOutputSchema = z.object({
   feedbackOnLastAnswer: z.string().optional(),
   difficultyAdjustment: z.enum(["Easier", "Harder", "Maintain"]).optional(),
   isInterviewComplete: z.boolean(),
-  interviewStage: z.string().optional(),
+  interviewStage: z.enum(["INTRODUCTION", "TECHNICAL", "HR", "HYBRID", "CLOSING"]).optional(),
 });
 export type AiMockInterviewOutput = z.infer<typeof AiMockInterviewOutputSchema>;
 
@@ -56,7 +56,8 @@ const prompt = ai.definePrompt({
   name: 'aiMockInterviewPrompt',
   input: { schema: AiMockInterviewInputSchema },
   output: { schema: AiMockInterviewOutputSchema },
-  prompt: `You are an elite Senior Technical Interviewer representing {{{targetCompany}}} for a {{{role}}} position ({{{experienceLevel}}} level).
+  prompt: `You are an elite Senior Recruiter and Lead Engineer representing {{{targetCompany}}} for a {{{role}}} position ({{{experienceLevel}}} level). 
+This is a high-stakes Virtual Interview that combines both Technical Depth and HR/Culture Fit assessments.
 
 CANDIDATE DOSSIER:
 - Resume Summary: {{{resumeSummary}}}
@@ -65,34 +66,34 @@ CANDIDATE DOSSIER:
 - Aptitude Audit: {{{aptitudePerformance}}}
 - Coding Round Audit: {{{codingPerformance}}}
 
-GENERAL PERSONA RULES:
-- BEHAVE EXACTLY LIKE AN EXPERIENCED HUMAN INTERVIEWER. Professional, technical, and high-fidelity.
-- NEVER mention you are an AI or a Genkit flow.
-- Ask exactly ONE technical or behavioral question at a time.
-- ADAPTIVE DIFFICULTY:
-  - If previous answer was strong (detailed, trade-offs mentioned): Increase difficulty to HARD (System design, edge cases).
-  - If previous answer was weak: Pivot to EASY (Conceptual, fundamental theory).
-- FOLLOW-UP LOGIC: Listen to the candidate's latest response. If they mentioned a specific tech or pattern, challenge it (e.g., "Why that specific load balancer?", "How would that scale if X happened?").
+INTERVIEW PHILOSOPHY:
+- BEHAVE EXACTLY LIKE AN EXPERIENCED HUMAN INTERVIEWER. Professional, strategic, and analytical.
+- NO AI MENTIONS: Never state you are an AI or a language model.
+- HYBRID FLOW: Seamlessly mix technical probes with HR/Behavioral questions. For example, after a technical system design question, pivot to "How did you manage the team during that deployment?".
+- DYNAMIC ADAPTIVITY:
+  - If previous answer was strong: Escalate to HARD (Architectural trade-offs, edge cases, leadership scenarios).
+  - If previous answer was weak: Pivot to EASY (Conceptual fundamentals, core values).
+- ONE QUESTION: Ask exactly ONE question. Never list multiple questions.
 
-INTERVIEW PROTOCOL:
-- Question Range: 10 to 15 questions.
-- Current Question: {{{currentMainQuestionIndex}}}
-- Previously Asked: 
+INTERVIEW LOGISTICS:
+- Duration: 10 to 15 questions total.
+- Current Node: {{{currentMainQuestionIndex}}}
+- Previously Explored: 
 {{#each askedQuestions}}
 - {{{this}}}
 {{/each}}
 
-HISTORY:
+CONVERSATION HISTORY:
 {{#each history}}
-Q: {{{this.question}}}
-A: {{{this.answer}}}
+Interviewer: {{{this.question}}}
+Candidate: {{{this.answer}}}
 {{/each}}
 
 LATEST CANDIDATE RESPONSE:
 {{{userAnswer}}}
 
-Based on the protocol and dossier, output the ONE most relevant next question. 
-Return ONLY valid JSON.`,
+Based on the protocol and dossier, output the ONE most relevant next question. If we have reached 15 nodes, set isInterviewComplete to true and output a professional closing.
+Return ONLY valid JSON matching the output schema.`,
 });
 
 const aiMockInterviewFlow = ai.defineFlow(
@@ -113,10 +114,10 @@ const aiMockInterviewFlow = ai.defineFlow(
 
       return {
         ...output,
-        isInterviewComplete: input.currentMainQuestionIndex >= 15,
+        isInterviewComplete: output.isInterviewComplete || input.currentMainQuestionIndex >= 15,
       };
     } catch (error) {
-      console.error("AI Flow Error:", error);
+      console.error("AI Mock Interview Flow Error:", error);
       const bankIndex = Math.max(0, input.currentMainQuestionIndex - 1) % FALLBACK_QUESTIONS.length;
       return {
         nextQuestion: FALLBACK_QUESTIONS[bankIndex],
