@@ -19,16 +19,14 @@ import {
   TrendingUp,
   ShieldCheck,
   ChevronRight,
-  FileText,
-  SearchCheck,
   Code2,
   Trophy,
   History,
   Target,
   Activity,
   MessageSquare,
-  AlertCircle,
-  CheckCircle2,
+  CircleAlert,
+  CircleCheck,
   Lightbulb,
   Cpu,
   RefreshCcw,
@@ -86,7 +84,7 @@ export default function FinalReportPage() {
   if (!interviewDoc || !feedback) {
     return (
       <div className="h-screen flex flex-col items-center justify-center bg-[#050816]">
-        <AlertCircle className="w-16 h-16 text-red-400 mb-6" />
+        <CircleAlert className="w-16 h-16 text-red-400 mb-6" />
         <h2 className="text-2xl font-bold text-white">Master Dossier Not Found</h2>
         <p className="text-muted-foreground mt-2">The simulation vectors for this session could not be retrieved.</p>
         <Link href="/dashboard" className="mt-8">
@@ -105,7 +103,6 @@ export default function FinalReportPage() {
       <div className="container mx-auto px-4 pt-32">
         <div className="max-w-7xl mx-auto space-y-12">
           
-          {/* Header Performance Section */}
           <motion.div initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} className="premium-card p-12 border-glow-premium relative overflow-hidden">
             <div className="absolute top-0 right-0 p-12">
               <Badge className={`${getScoreColor(feedback.overallScore)} border-none bg-white/5 font-black tracking-[0.4em] uppercase text-xs px-8 py-3 rounded-2xl`}>
@@ -137,7 +134,6 @@ export default function FinalReportPage() {
           <div className="grid lg:grid-cols-12 gap-12">
             <div className="lg:col-span-8 space-y-12">
               
-              {/* Virtual Interview Breakdown */}
               <Card className="premium-card bg-white/[0.01] border-white/5 p-10">
                 <CardHeader className="px-0 pt-0 mb-12 flex flex-row items-center justify-between border-b border-white/5 pb-8">
                   <CardTitle className="text-2xl font-bold flex items-center gap-4">
@@ -169,11 +165,10 @@ export default function FinalReportPage() {
                 </div>
               </Card>
 
-              {/* Dynamic Feedback Nodes */}
               <div className="grid md:grid-cols-2 gap-8">
                 <Card className="glass p-8 rounded-[2.5rem] border-accent/10 bg-accent/[0.01] space-y-6">
                   <h3 className="text-accent text-lg font-bold flex items-center gap-3 uppercase tracking-tighter">
-                    <CheckCircle2 className="w-6 h-6" /> Strategic Strengths
+                    <CircleCheck className="w-6 h-6" /> Strategic Strengths
                   </h3>
                   <div className="space-y-4">
                     {feedback.aiFeedback.strongSkills.map((s: string, i: number) => (
@@ -185,7 +180,7 @@ export default function FinalReportPage() {
                 </Card>
                 <Card className="glass p-8 rounded-[2.5rem] border-red-500/10 bg-red-500/[0.01] space-y-6">
                   <h3 className="text-red-400 text-lg font-bold flex items-center gap-3 uppercase tracking-tighter">
-                    <AlertCircle className="w-6 h-6" /> Critical Delta Gaps
+                    <CircleAlert className="w-6 h-6" /> Critical Delta Gaps
                   </h3>
                   <div className="space-y-4">
                     {feedback.aiFeedback.weakSkills.map((w: string, i: number) => (
@@ -197,7 +192,6 @@ export default function FinalReportPage() {
                 </Card>
               </div>
 
-              {/* Learning Plan Roadmap */}
               <Card className="premium-card bg-white/[0.01] border-white/5 p-10">
                 <CardHeader className="px-0 pt-0 mb-10">
                   <CardTitle className="text-2xl font-bold flex items-center gap-4">
@@ -231,7 +225,6 @@ export default function FinalReportPage() {
 
             <div className="lg:col-span-4 space-y-8">
               
-              {/* Score Overview Sidebar Cards */}
               <Card className="premium-card bg-accent/5 border-accent/20 p-8 text-center space-y-6">
                 <div className="w-20 h-20 rounded-[2.5rem] bg-accent/20 flex items-center justify-center mx-auto border border-accent/30 shadow-2xl relative">
                   <Award className="w-10 h-10 text-accent" />
@@ -259,26 +252,24 @@ export default function FinalReportPage() {
                 </div>
               </Card>
 
-              {/* Skill Gap Analysis Sidebar */}
               <Card className="premium-card bg-white/[0.01] border-white/5 p-8">
                 <h3 className="text-xl font-bold mb-8 flex items-center gap-3"><Target className="w-6 h-6 text-red-400" /> Delta Gap Analysis</h3>
                 <div className="space-y-4">
                   {feedback.skillGap.missingSkills.map((s: string, i: number) => (
                     <div key={i} className="flex items-center justify-between p-4 glass rounded-xl border-red-500/10 bg-red-500/[0.02]">
                       <span className="text-xs font-bold text-white/70 uppercase tracking-widest">{s}</span>
-                      <AlertCircle className="w-3.5 h-3.5 text-red-400" />
+                      <CircleAlert className="w-3.5 h-3.5 text-red-400" />
                     </div>
                   ))}
                   {feedback.skillGap.missingSkills.length === 0 && (
                     <p className="text-xs text-muted-foreground italic text-center py-8">No critical gaps detected.</p>
                   )}
                 </div>
-                <Link href="/roadmap" className="block mt-8">
-                   <Button variant="ghost" className="w-full h-12 rounded-xl text-accent text-[10px] font-bold uppercase tracking-widest hover:bg-accent/10">Launch Improvement Roadmap</Button>
+                <Link href={`/roadmap/personalized/${docId}`} className="block mt-8">
+                   <Button className="w-full h-12 rounded-xl btn-premium text-white text-[10px] font-bold uppercase tracking-widest">Launch Improvement Roadmap</Button>
                 </Link>
               </Card>
 
-              {/* Action Directives */}
               <div className="space-y-4">
                 <h3 className="text-[10px] font-bold uppercase tracking-[0.4em] text-white/20 ml-2">Session Directives</h3>
                 <div className="grid gap-3">
