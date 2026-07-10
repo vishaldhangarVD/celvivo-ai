@@ -72,7 +72,12 @@ import {
   Lightbulb,
   Cpu,
   Check,
-  Hand
+  Hand,
+  Smartphone,
+  Cloud,
+  Monitor,
+  Shield,
+  SearchX
 } from 'lucide-react';
 import { useUser, useFirestore, useCollection } from '@/firebase';
 import { collection, addDoc, serverTimestamp, doc, updateDoc, query, orderBy, limit } from 'firebase/firestore';
@@ -86,18 +91,99 @@ import { useToast } from '@/hooks/use-toast';
 import { motion, AnimatePresence } from 'framer-motion';
 import Link from 'next/link';
 
-const ROLES_DATA = [
-  { id: 'java', name: "Java Developer", category: "Development", icon: Code2 },
-  { id: 'python', name: "Python Developer", category: "Development", icon: Code2 },
-  { id: 'react', name: "React Developer", category: "Development", icon: Code2 },
-  { id: 'nodejs', name: "Node.js Developer", category: "Development", icon: Code2 },
-  { id: 'fullstack', name: "Full Stack Developer", category: "Development", icon: Code2 },
-  { id: 'data', name: "Data Analyst", category: "Data & Intelligence", icon: Database },
-  { id: 'devops', name: "DevOps Engineer", category: "Operations & Trust", icon: Layers },
-  { id: 'qa', name: "QA Engineer", category: "Operations & Trust", icon: SearchCheck },
-  { id: 'ai', name: "AI Engineer", category: "Data & Intelligence", icon: Zap },
-  { id: 'cyber', name: "Cyber Security Analyst", category: "Operations & Trust", icon: ShieldAlert },
+const ALL_ROLES = [
+  // Software Development
+  { id: 'java', name: "Java Developer", category: "Software Development", icon: Code2 },
+  { id: 'python', name: "Python Developer", category: "Software Development", icon: Code2 },
+  { id: 'c', name: "C Developer", category: "Software Development", icon: Code2 },
+  { id: 'cpp', name: "C++ Developer", category: "Software Development", icon: Code2 },
+  { id: 'csharp', name: "C# Developer", category: "Software Development", icon: Code2 },
+  { id: 'dotnet', name: ".NET Developer", category: "Software Development", icon: Code2 },
+  { id: 'golang', name: "Golang Developer", category: "Software Development", icon: Code2 },
+  { id: 'rust', name: "Rust Developer", category: "Software Development", icon: Code2 },
+  { id: 'php', name: "PHP Developer", category: "Software Development", icon: Code2 },
+
+  // Frontend
+  { id: 'react', name: "React Developer", category: "Frontend", icon: Monitor },
+  { id: 'angular', name: "Angular Developer", category: "Frontend", icon: Monitor },
+  { id: 'vue', name: "Vue.js Developer", category: "Frontend", icon: Monitor },
+  { id: 'frontend', name: "Frontend Developer", category: "Frontend", icon: Monitor },
+
+  // Backend
+  { id: 'nodejs', name: "Node.js Developer", category: "Backend", icon: Database },
+  { id: 'springboot', name: "Spring Boot Developer", category: "Backend", icon: Database },
+  { id: 'django', name: "Django Developer", category: "Backend", icon: Database },
+  { id: 'laravel', name: "Laravel Developer", category: "Backend", icon: Database },
+  { id: 'backend', name: "Backend Developer", category: "Backend", icon: Database },
+
+  // Full Stack
+  { id: 'mern', name: "MERN Stack Developer", category: "Full Stack", icon: Layers },
+  { id: 'mean', name: "MEAN Stack Developer", category: "Full Stack", icon: Layers },
+  { id: 'fullstack-java', name: "Full Stack Java Developer", category: "Full Stack", icon: Layers },
+  { id: 'fullstack', name: "Full Stack Developer", category: "Full Stack", icon: Layers },
+
+  // Mobile
+  { id: 'android', name: "Android Developer", category: "Mobile", icon: Smartphone },
+  { id: 'ios', name: "iOS Developer", category: "Mobile", icon: Smartphone },
+  { id: 'flutter', name: "Flutter Developer", category: "Mobile", icon: Smartphone },
+  { id: 'react-native', name: "React Native Developer", category: "Mobile", icon: Smartphone },
+
+  // Data
+  { id: 'data-analyst', name: "Data Analyst", category: "Data", icon: TrendingUp },
+  { id: 'data-scientist', name: "Data Scientist", category: "Data", icon: Activity },
+  { id: 'data-engineer', name: "Data Engineer", category: "Data", icon: Database },
+  { id: 'bi', name: "BI Developer", category: "Data", icon: TrendingUp },
+  { id: 'db-dev', name: "Database Developer", category: "Data", icon: Database },
+
+  // Cloud & DevOps
+  { id: 'devops', name: "DevOps Engineer", category: "Cloud & DevOps", icon: Cloud },
+  { id: 'aws', name: "AWS Cloud Engineer", category: "Cloud & DevOps", icon: Cloud },
+  { id: 'azure', name: "Azure Engineer", category: "Cloud & DevOps", icon: Cloud },
+  { id: 'gcp', name: "Google Cloud Engineer", category: "Cloud & DevOps", icon: Cloud },
+  { id: 'sre', name: "Site Reliability Engineer (SRE)", category: "Cloud & DevOps", icon: ShieldCheck },
+
+  // Testing
+  { id: 'qa', name: "QA Engineer", category: "Testing", icon: SearchCheck },
+  { id: 'automation', name: "Automation Test Engineer", category: "Testing", icon: SearchCheck },
+  { id: 'manual', name: "Manual Tester", category: "Testing", icon: SearchCheck },
+  { id: 'perf-test', name: "Performance Test Engineer", category: "Testing", icon: SearchCheck },
+
+  // Cyber Security
+  { id: 'cyber', name: "Cyber Security Analyst", category: "Cyber Security", icon: Shield },
+  { id: 'sec-eng', name: "Security Engineer", category: "Cyber Security", icon: Shield },
+  { id: 'soc', name: "SOC Analyst", category: "Cyber Security", icon: Shield },
+  { id: 'pentest', name: "Penetration Tester", category: "Cyber Security", icon: Shield },
+
+  // AI & ML
+  { id: 'ai', name: "AI Engineer", category: "AI & ML", icon: Zap },
+  { id: 'ml', name: "Machine Learning Engineer", category: "AI & ML", icon: Zap },
+  { id: 'dl', name: "Deep Learning Engineer", category: "AI & ML", icon: Zap },
+  { id: 'nlp', name: "NLP Engineer", category: "AI & ML", icon: Zap },
+  { id: 'cv', name: "Computer Vision Engineer", category: "AI & ML", icon: Zap },
+  { id: 'gen-ai', name: "Generative AI Engineer", category: "AI & ML", icon: Sparkles },
+  { id: 'prompt', name: "Prompt Engineer", category: "AI & ML", icon: MessageSquare },
+
+  // Infrastructure
+  { id: 'sys-admin', name: "System Administrator", category: "Infrastructure", icon: MonitorCog },
+  { id: 'net-eng', name: "Network Engineer", category: "Infrastructure", icon: Globe },
+  { id: 'linux', name: "Linux Administrator", category: "Infrastructure", icon: Terminal },
+
+  // ERP
+  { id: 'sap', name: "SAP Consultant", category: "ERP & Enterprise", icon: Building2 },
+  { id: 'salesforce', name: "Salesforce Developer", category: "ERP & Enterprise", icon: Building2 },
+  { id: 'servicenow', name: "ServiceNow Developer", category: "ERP & Enterprise", icon: Building2 },
+
+  // Other
+  { id: 'uiux', name: "UI/UX Designer", category: "Other IT Roles", icon: FileEdit },
+  { id: 'support', name: "Technical Support Engineer", category: "Other IT Roles", icon: Info },
+  { id: 'blockchain', name: "Blockchain Developer", category: "Other IT Roles", icon: Shield },
+  { id: 'embedded', name: "Embedded Systems Engineer", category: "Other IT Roles", icon: MonitorCog },
+  { id: 'iot', name: "IoT Developer", category: "Other IT Roles", icon: Zap },
+  { id: 'game', name: "Game Developer", category: "Other IT Roles", icon: Smartphone },
+  { id: 'arvr', name: "AR/VR Developer", category: "Other IT Roles", icon: Monitor },
 ];
+
+const POPULAR_ROLE_IDS = ['fullstack', 'java', 'python', 'react', 'nodejs', 'data-analyst', 'devops', 'ai'];
 
 const EXPERIENCE_OPTIONS = [
   { id: 'fresher', label: 'Fresher', desc: 'Entry-level talent', icon: Zap },
@@ -189,11 +275,15 @@ export default function InterviewJourney() {
   };
 
   const filteredRoles = useMemo(() => {
-    return ROLES_DATA.filter(role => 
+    return ALL_ROLES.filter(role => 
       role.name.toLowerCase().includes(roleSearch.toLowerCase()) ||
       role.category.toLowerCase().includes(roleSearch.toLowerCase())
     );
   }, [roleSearch]);
+
+  const popularRoles = useMemo(() => {
+    return ALL_ROLES.filter(role => POPULAR_ROLE_IDS.includes(role.id));
+  }, []);
 
   const filteredCompanies = useMemo(() => {
     return COMPANIES.filter(c => c.toLowerCase().includes(companySearch.toLowerCase()));
@@ -494,34 +584,85 @@ export default function InterviewJourney() {
                 className="space-y-8"
               >
                 {currentStep === 1 && (
-                  <Card className="premium-card bg-white/[0.01] border-white/5 p-12 space-y-12">
+                  <Card className="premium-card bg-white/[0.01] border-white/5 p-10 space-y-10">
                     <header className="text-center space-y-4">
                       <div className="w-20 h-20 rounded-[2rem] bg-accent/10 flex items-center justify-center mx-auto border border-accent/20">
                         <Briefcase className="w-10 h-10 text-accent" />
                       </div>
                       <h2 className="text-4xl font-bold tracking-tighter">Choose Your Deployment Track</h2>
-                      <p className="text-muted-foreground font-light max-lg mx-auto">Select the specialized engineering role for your neural calibration.</p>
+                      <p className="text-muted-foreground font-light max-w-lg mx-auto">Select a popular role or search our comprehensive IT library.</p>
                     </header>
+
                     <div className="relative group max-w-2xl mx-auto w-full">
                       <Search className="absolute left-6 top-1/2 -translate-y-1/2 w-5 h-5 text-white/20 group-focus-within:text-accent transition-colors" />
-                      <Input placeholder="Search technical tracks..." value={roleSearch} onChange={(e) => setRoleSearch(e.target.value)} className="h-16 pl-16 rounded-2xl glass border-white/10 bg-transparent text-lg focus:border-accent transition-all" />
+                      <Input 
+                        placeholder="Search all 60+ technical tracks..." 
+                        value={roleSearch} 
+                        onChange={(e) => setRoleSearch(e.target.value)} 
+                        className="h-16 pl-16 rounded-2xl glass border-white/10 bg-transparent text-lg focus:border-accent transition-all placeholder:text-white/10" 
+                      />
                     </div>
+
                     <div className="space-y-10">
-                      {["Development", "Data & Intelligence", "Operations & Trust"].map(cat => (
-                        <div key={cat} className="space-y-6">
-                          <h3 className="text-[10px] font-bold uppercase tracking-[0.4em] text-white/30 flex items-center gap-3"><span className="w-8 h-px bg-white/10" /> {cat}</h3>
+                      {roleSearch === "" ? (
+                        <div className="space-y-6">
+                          <h3 className="text-[10px] font-bold uppercase tracking-[0.4em] text-white/30 flex items-center gap-3">
+                            <span className="w-8 h-px bg-white/10" /> Popular Tracks
+                          </h3>
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            {filteredRoles.filter(r => r.category === cat).map(role => (
-                              <button key={role.id} onClick={() => setSelectedRole(role.name)} className={`p-6 rounded-[2rem] border transition-all text-left flex items-center gap-6 group ${selectedRole === role.name ? 'bg-accent/20 border-accent' : 'glass border-white/5 hover:border-white/20'}`}>
-                                <div className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-colors ${selectedRole === role.name ? 'bg-accent text-black' : 'bg-white/5 text-white/40'}`}><role.icon className="w-6 h-6" /></div>
-                                <div><p className={`font-bold transition-colors ${selectedRole === role.name ? 'text-white' : 'text-white/60'}`}>{role.name}</p></div>
+                            {popularRoles.map(role => (
+                              <button 
+                                key={role.id} 
+                                onClick={() => { setSelectedRole(role.name); nextStep(); }} 
+                                className={`p-6 rounded-[2rem] border transition-all text-left flex items-center gap-6 group ${selectedRole === role.name ? 'bg-accent/20 border-accent' : 'glass border-white/5 hover:border-white/20'}`}
+                              >
+                                <div className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-colors ${selectedRole === role.name ? 'bg-accent text-black' : 'bg-white/5 text-white/40 group-hover:bg-accent/10 group-hover:text-accent'}`}>
+                                  <role.icon className="w-6 h-6" />
+                                </div>
+                                <div>
+                                  <p className={`font-bold transition-colors ${selectedRole === role.name ? 'text-white' : 'text-white/60 group-hover:text-white'}`}>{role.name}</p>
+                                  <p className="text-[8px] text-muted-foreground uppercase font-bold tracking-widest">{role.category}</p>
+                                </div>
                               </button>
                             ))}
                           </div>
                         </div>
-                      ))}
+                      ) : (
+                        <div className="space-y-6">
+                          <h3 className="text-[10px] font-bold uppercase tracking-[0.4em] text-accent flex items-center gap-3">
+                            <span className="w-8 h-px bg-accent/20" /> Search Results
+                          </h3>
+                          {filteredRoles.length > 0 ? (
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                              {filteredRoles.map(role => (
+                                <button 
+                                  key={role.id} 
+                                  onClick={() => { setSelectedRole(role.name); nextStep(); }} 
+                                  className={`p-6 rounded-[2rem] border transition-all text-left flex items-center gap-6 group ${selectedRole === role.name ? 'bg-accent/20 border-accent' : 'glass border-white/5 hover:border-white/20'}`}
+                                >
+                                  <div className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-colors ${selectedRole === role.name ? 'bg-accent text-black' : 'bg-white/5 text-white/40 group-hover:bg-accent/10 group-hover:text-accent'}`}>
+                                    <role.icon className="w-6 h-6" />
+                                  </div>
+                                  <div>
+                                    <p className={`font-bold transition-colors ${selectedRole === role.name ? 'text-white' : 'text-white/60 group-hover:text-white'}`}>{role.name}</p>
+                                    <p className="text-[8px] text-muted-foreground uppercase font-bold tracking-widest">{role.category}</p>
+                                  </div>
+                                </button>
+                              ))}
+                            </div>
+                          ) : (
+                            <div className="py-20 text-center space-y-6 glass rounded-[3rem] border-white/5 border-dashed">
+                              <SearchX className="w-16 h-16 text-white/5 mx-auto" />
+                              <div className="space-y-2">
+                                <h3 className="text-xl font-bold">No matching job role found.</h3>
+                                <p className="text-muted-foreground text-sm font-light">Recalibrate your search parameters or select a popular track.</p>
+                              </div>
+                              <Button variant="ghost" onClick={() => setRoleSearch("")} className="text-[10px] font-bold uppercase tracking-widest text-accent">Clear Neural Buffer</Button>
+                            </div>
+                          )}
+                        </div>
+                      )}
                     </div>
-                    <Button onClick={nextStep} disabled={!selectedRole} className="w-full h-20 btn-premium text-lg font-bold uppercase tracking-[0.3em]">Confirm Role Vector <ChevronRight className="ml-3 w-6 h-6" /></Button>
                   </Card>
                 )}
 
