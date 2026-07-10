@@ -132,6 +132,77 @@ export default function FinalReportPage() {
           </motion.div>
 
           <div className="grid lg:grid-cols-12 gap-12">
+            {/* Sidebar Column (Moved to Left) */}
+            <div className="lg:col-span-4 space-y-8">
+              
+              <Card className="premium-card bg-accent/5 border-accent/20 p-8 text-center space-y-6">
+                <div className="w-20 h-20 rounded-[2.5rem] bg-accent/20 flex items-center justify-center mx-auto border border-accent/30 shadow-2xl relative">
+                  <Award className="w-10 h-10 text-accent" />
+                  <motion.div animate={{ rotate: 360 }} transition={{ duration: 10, repeat: Infinity, ease: "linear" }} className="absolute inset-0 rounded-full border border-dashed border-accent/30 scale-125" />
+                </div>
+                <div>
+                  <h3 className="text-2xl font-bold">Credential Export</h3>
+                  <p className="text-xs text-muted-foreground mt-2 font-light">Performance verified for elite industry placement benchmarks.</p>
+                </div>
+                <div className="space-y-3">
+                  <Button 
+                    onClick={() => generateCertificatePDF({ 
+                      userName: user?.displayName || 'Elite Candidate', 
+                      role: (interviewDoc as any).role, 
+                      score: feedback.overallScore, 
+                      date: new Date().toLocaleDateString() 
+                    })}
+                    className="w-full h-16 rounded-2xl bg-white text-[#050816] font-bold hover:bg-white/90 shadow-[0_0_30px_rgba(255,255,255,0.1)] group"
+                  >
+                    <Download className="w-5 h-5 mr-3 group-hover:translate-y-0.5 transition-transform" /> PDF Master Report
+                  </Button>
+                  <Button variant="outline" className="w-full h-16 rounded-2xl glass border-white/10 text-[10px] font-bold uppercase tracking-[0.3em]">
+                    <ShieldCheck className="w-4 h-4 mr-3" /> Verify Blockchain Link
+                  </Button>
+                </div>
+              </Card>
+
+              <Card className="premium-card bg-white/[0.01] border-white/5 p-8">
+                <h3 className="text-xl font-bold mb-8 flex items-center gap-3"><Target className="w-6 h-6 text-red-400" /> Delta Gap Analysis</h3>
+                <div className="space-y-4">
+                  {feedback.skillGap.missingSkills.map((s: string, i: number) => (
+                    <div key={i} className="flex items-center justify-between p-4 glass rounded-xl border-red-500/10 bg-red-500/[0.02]">
+                      <span className="text-xs font-bold text-white/70 uppercase tracking-widest">{s}</span>
+                      <CircleAlert className="w-3.5 h-3.5 text-red-400" />
+                    </div>
+                  ))}
+                  {feedback.skillGap.missingSkills.length === 0 && (
+                    <p className="text-xs text-muted-foreground italic text-center py-8">No critical gaps detected.</p>
+                  )}
+                </div>
+                <Link href={`/roadmap/personalized/${docId}`} className="block mt-8">
+                   <Button className="w-full h-12 rounded-xl btn-premium text-white text-[10px] font-bold uppercase tracking-widest">Launch Improvement Roadmap</Button>
+                </Link>
+              </Card>
+
+              <div className="space-y-4">
+                <h3 className="text-[10px] font-bold uppercase tracking-[0.4em] text-white/20 ml-2">Session Directives</h3>
+                <div className="grid gap-3">
+                  <Button 
+                    onClick={() => router.push('/dashboard')}
+                    className="h-16 rounded-2xl glass border-white/10 hover:bg-white/5 justify-start px-8 gap-4 group"
+                  >
+                    <LayoutDashboard className="w-5 h-5 text-white/40 group-hover:text-white" />
+                    <span className="text-[10px] font-bold uppercase tracking-widest">Return to Command</span>
+                  </Button>
+                  <Button 
+                    onClick={() => router.push('/interview')}
+                    className="h-16 rounded-2xl glass border-white/10 hover:bg-white/5 justify-start px-8 gap-4 group"
+                  >
+                    <RefreshCcw className="w-5 h-5 text-white/40 group-hover:text-accent" />
+                    <span className="text-[10px] font-bold uppercase tracking-widest">Retry New Protocol</span>
+                  </Button>
+                </div>
+              </div>
+
+            </div>
+
+            {/* Main Content Column (Moved to Right) */}
             <div className="lg:col-span-8 space-y-12">
               
               <Card className="premium-card bg-white/[0.01] border-white/5 p-10">
@@ -221,75 +292,6 @@ export default function FinalReportPage() {
                   </div>
                 </div>
               </Card>
-            </div>
-
-            <div className="lg:col-span-4 space-y-8">
-              
-              <Card className="premium-card bg-accent/5 border-accent/20 p-8 text-center space-y-6">
-                <div className="w-20 h-20 rounded-[2.5rem] bg-accent/20 flex items-center justify-center mx-auto border border-accent/30 shadow-2xl relative">
-                  <Award className="w-10 h-10 text-accent" />
-                  <motion.div animate={{ rotate: 360 }} transition={{ duration: 10, repeat: Infinity, ease: "linear" }} className="absolute inset-0 rounded-full border border-dashed border-accent/30 scale-125" />
-                </div>
-                <div>
-                  <h3 className="text-2xl font-bold">Credential Export</h3>
-                  <p className="text-xs text-muted-foreground mt-2 font-light">Performance verified for elite industry placement benchmarks.</p>
-                </div>
-                <div className="space-y-3">
-                  <Button 
-                    onClick={() => generateCertificatePDF({ 
-                      userName: user?.displayName || 'Elite Candidate', 
-                      role: (interviewDoc as any).role, 
-                      score: feedback.overallScore, 
-                      date: new Date().toLocaleDateString() 
-                    })}
-                    className="w-full h-16 rounded-2xl bg-white text-[#050816] font-bold hover:bg-white/90 shadow-[0_0_30px_rgba(255,255,255,0.1)] group"
-                  >
-                    <Download className="w-5 h-5 mr-3 group-hover:translate-y-0.5 transition-transform" /> PDF Master Report
-                  </Button>
-                  <Button variant="outline" className="w-full h-16 rounded-2xl glass border-white/10 text-[10px] font-bold uppercase tracking-[0.3em]">
-                    <ShieldCheck className="w-4 h-4 mr-3" /> Verify Blockchain Link
-                  </Button>
-                </div>
-              </Card>
-
-              <Card className="premium-card bg-white/[0.01] border-white/5 p-8">
-                <h3 className="text-xl font-bold mb-8 flex items-center gap-3"><Target className="w-6 h-6 text-red-400" /> Delta Gap Analysis</h3>
-                <div className="space-y-4">
-                  {feedback.skillGap.missingSkills.map((s: string, i: number) => (
-                    <div key={i} className="flex items-center justify-between p-4 glass rounded-xl border-red-500/10 bg-red-500/[0.02]">
-                      <span className="text-xs font-bold text-white/70 uppercase tracking-widest">{s}</span>
-                      <CircleAlert className="w-3.5 h-3.5 text-red-400" />
-                    </div>
-                  ))}
-                  {feedback.skillGap.missingSkills.length === 0 && (
-                    <p className="text-xs text-muted-foreground italic text-center py-8">No critical gaps detected.</p>
-                  )}
-                </div>
-                <Link href={`/roadmap/personalized/${docId}`} className="block mt-8">
-                   <Button className="w-full h-12 rounded-xl btn-premium text-white text-[10px] font-bold uppercase tracking-widest">Launch Improvement Roadmap</Button>
-                </Link>
-              </Card>
-
-              <div className="space-y-4">
-                <h3 className="text-[10px] font-bold uppercase tracking-[0.4em] text-white/20 ml-2">Session Directives</h3>
-                <div className="grid gap-3">
-                  <Button 
-                    onClick={() => router.push('/dashboard')}
-                    className="h-16 rounded-2xl glass border-white/10 hover:bg-white/5 justify-start px-8 gap-4 group"
-                  >
-                    <LayoutDashboard className="w-5 h-5 text-white/40 group-hover:text-white" />
-                    <span className="text-[10px] font-bold uppercase tracking-widest">Return to Command</span>
-                  </Button>
-                  <Button 
-                    onClick={() => router.push('/interview')}
-                    className="h-16 rounded-2xl glass border-white/10 hover:bg-white/5 justify-start px-8 gap-4 group"
-                  >
-                    <RefreshCcw className="w-5 h-5 text-white/40 group-hover:text-accent" />
-                    <span className="text-[10px] font-bold uppercase tracking-widest">Retry New Protocol</span>
-                  </Button>
-                </div>
-              </div>
-
             </div>
           </div>
         </div>

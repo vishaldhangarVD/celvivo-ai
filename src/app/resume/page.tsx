@@ -237,8 +237,52 @@ export default function ResumeAnalyzer() {
           </motion.div>
         ) : (
           <div className="grid lg:grid-cols-12 gap-12 max-w-7xl mx-auto">
+            {/* Sidebar Column (Moved to Left) */}
             <motion.div 
               initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              className="lg:col-span-4 space-y-8"
+            >
+              <Card className="premium-card bg-accent/5 border-accent/20 p-10">
+                <h3 className="text-xl font-bold mb-8 flex items-center gap-3">
+                  <Lightbulb className="w-6 h-6 text-accent" /> Strategic Directives
+                </h3>
+                <div className="space-y-6">
+                  {result.improvementSuggestions.map((tip, i) => (
+                    <div key={i} className="flex gap-4 group">
+                      <div className="w-2 h-2 rounded-full bg-accent mt-2 shrink-0 group-hover:scale-125 transition-transform" />
+                      <p className="text-sm font-light text-white/70 leading-relaxed">{tip}</p>
+                    </div>
+                  ))}
+                </div>
+                <Button 
+                  onClick={() => setResult(null)} 
+                  variant="outline" 
+                  className="w-full h-14 rounded-2xl glass border-white/10 mt-12 text-[10px] font-bold uppercase tracking-widest"
+                >
+                  Analyze New Blueprint
+                </Button>
+              </Card>
+
+              <Card className="premium-card bg-white/[0.01] border-white/5 p-10">
+                <h3 className="text-xl font-bold mb-8">Role Compatibility</h3>
+                <div className="space-y-8">
+                  {result.roleMatches.map((match, i) => (
+                    <div key={i} className="space-y-3">
+                      <div className="flex justify-between text-xs font-bold uppercase tracking-widest">
+                        <span>{match.role}</span>
+                        <span className="text-accent">{match.matchPercentage}%</span>
+                      </div>
+                      <Progress value={match.matchPercentage} className="h-1.5 bg-white/5" />
+                    </div>
+                  ))}
+                </div>
+              </Card>
+            </motion.div>
+
+            {/* Main Content Column (Moved to Right) */}
+            <motion.div 
+              initial={{ opacity: 0, x: 20 }}
               animate={{ opacity: 1, x: 0 }}
               className="lg:col-span-8 space-y-12"
             >
@@ -423,48 +467,6 @@ export default function ResumeAnalyzer() {
                   </div>
                 </Card>
               </div>
-            </motion.div>
-
-            <motion.div 
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              className="lg:col-span-4 space-y-8"
-            >
-              <Card className="premium-card bg-accent/5 border-accent/20 p-10">
-                <h3 className="text-xl font-bold mb-8 flex items-center gap-3">
-                  <Lightbulb className="w-6 h-6 text-accent" /> Strategic Directives
-                </h3>
-                <div className="space-y-6">
-                  {result.improvementSuggestions.map((tip, i) => (
-                    <div key={i} className="flex gap-4 group">
-                      <div className="w-2 h-2 rounded-full bg-accent mt-2 shrink-0 group-hover:scale-125 transition-transform" />
-                      <p className="text-sm font-light text-white/70 leading-relaxed">{tip}</p>
-                    </div>
-                  ))}
-                </div>
-                <Button 
-                  onClick={() => setResult(null)} 
-                  variant="outline" 
-                  className="w-full h-14 rounded-2xl glass border-white/10 mt-12 text-[10px] font-bold uppercase tracking-widest"
-                >
-                  Analyze New Blueprint
-                </Button>
-              </Card>
-
-              <Card className="premium-card bg-white/[0.01] border-white/5 p-10">
-                <h3 className="text-xl font-bold mb-8">Role Compatibility</h3>
-                <div className="space-y-8">
-                  {result.roleMatches.map((match, i) => (
-                    <div key={i} className="space-y-3">
-                      <div className="flex justify-between text-xs font-bold uppercase tracking-widest">
-                        <span>{match.role}</span>
-                        <span className="text-accent">{match.matchPercentage}%</span>
-                      </div>
-                      <Progress value={match.matchPercentage} className="h-1.5 bg-white/5" />
-                    </div>
-                  ))}
-                </div>
-              </Card>
             </motion.div>
           </div>
         )}

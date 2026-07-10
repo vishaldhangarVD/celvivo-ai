@@ -160,7 +160,72 @@ export default function PersonalizedRoadmapPage() {
 
           <div className="grid lg:grid-cols-12 gap-12">
             
-            {/* Main Evolution Timeline */}
+            {/* Strategy Sidebar (Moved to Left) */}
+            <div className="lg:col-span-4 space-y-8">
+              
+              <Card className="premium-card bg-accent/5 border-accent/20 p-10 space-y-8">
+                <div className="flex items-center gap-4">
+                  <Flame className="w-8 h-8 text-accent animate-pulse" />
+                  <h3 className="text-xl font-bold">Daily Protocol</h3>
+                </div>
+                <div className="space-y-6">
+                  {roadmap.dailyRoutine.map((item, i) => (
+                    <div key={i} className="flex gap-4 items-start">
+                      <div className="w-1.5 h-1.5 rounded-full bg-accent mt-2 shrink-0" />
+                      <p className="text-sm font-light text-white/80 italic">"{item}"</p>
+                    </div>
+                  ))}
+                </div>
+              </Card>
+
+              <Card className="premium-card bg-white/[0.01] border-white/5 p-10 space-y-8">
+                <h3 className="text-[10px] font-bold uppercase tracking-[0.4em] text-white/30">Weekly Learning Goals</h3>
+                <div className="space-y-4">
+                  {roadmap.weeklyGoals.map((goal, i) => (
+                    <div key={i} className="p-4 glass rounded-xl border-white/5 flex items-center gap-4">
+                      <CheckCircle2 className="w-4 h-4 text-green-400 shrink-0" />
+                      <span className="text-xs font-light text-white/60">{goal}</span>
+                    </div>
+                  ))}
+                </div>
+              </Card>
+
+              <Card className="premium-card bg-white/[0.01] border-white/5 p-10 space-y-8">
+                <h3 className="text-[10px] font-bold uppercase tracking-[0.4em] text-white/30">Syntax Practice Directives</h3>
+                <div className="space-y-4">
+                  {roadmap.codingPracticeSuggestions.map((item, i) => (
+                    <div key={i} className="p-4 glass rounded-xl border-white/5 flex items-center gap-4 group hover:bg-white/5 transition-all">
+                      <Code2 className="w-4 h-4 text-blue-400 shrink-0" />
+                      <span className="text-xs font-light text-white/60 group-hover:text-white transition-colors">{item}</span>
+                    </div>
+                  ))}
+                </div>
+              </Card>
+
+              <Card className="premium-card bg-white/[0.01] border-white/5 p-10 space-y-8">
+                <h3 className="text-[10px] font-bold uppercase tracking-[0.4em] text-white/30">Soft Skill Optimization</h3>
+                <div className="space-y-4">
+                  {roadmap.softSkillDirectives.map((item, i) => (
+                    <div key={i} className="p-4 glass rounded-xl border-white/5 flex items-center gap-4">
+                      <BrainCircuit className="w-4 h-4 text-orange-400 shrink-0" />
+                      <span className="text-xs font-light text-white/60">{item}</span>
+                    </div>
+                  ))}
+                </div>
+              </Card>
+
+              <div className="space-y-4">
+                 <Button onClick={() => router.push('/dashboard')} className="w-full h-16 rounded-2xl glass border-white/10 flex gap-4 uppercase tracking-[0.3em] text-[10px] font-bold">
+                    <LayoutDashboard className="w-4 h-4" /> Return to Command
+                 </Button>
+                 <Button onClick={() => router.push('/interview')} className="w-full h-16 rounded-2xl btn-premium flex gap-4 uppercase tracking-[0.3em] text-[10px] font-bold shadow-2xl">
+                    <Zap className="w-4 h-4" /> Retry Assessment
+                 </Button>
+              </div>
+
+            </div>
+
+            {/* Main Evolution Timeline (Moved to Right) */}
             <div className="lg:col-span-8 space-y-12">
               
               <div className="flex gap-4 p-2 glass rounded-[2.5rem] bg-white/[0.01] border-white/5">
@@ -235,71 +300,6 @@ export default function PersonalizedRoadmapPage() {
                   ))}
                 </div>
               </div>
-            </div>
-
-            {/* Strategy Sidebar */}
-            <div className="lg:col-span-4 space-y-8">
-              
-              <Card className="premium-card bg-accent/5 border-accent/20 p-10 space-y-8">
-                <div className="flex items-center gap-4">
-                  <Flame className="w-8 h-8 text-accent animate-pulse" />
-                  <h3 className="text-xl font-bold">Daily Protocol</h3>
-                </div>
-                <div className="space-y-6">
-                  {roadmap.dailyRoutine.map((item, i) => (
-                    <div key={i} className="flex gap-4 items-start">
-                      <div className="w-1.5 h-1.5 rounded-full bg-accent mt-2 shrink-0" />
-                      <p className="text-sm font-light text-white/80 italic">"{item}"</p>
-                    </div>
-                  ))}
-                </div>
-              </Card>
-
-              <Card className="premium-card bg-white/[0.01] border-white/5 p-10 space-y-8">
-                <h3 className="text-[10px] font-bold uppercase tracking-[0.4em] text-white/30">Weekly Learning Goals</h3>
-                <div className="space-y-4">
-                  {roadmap.weeklyGoals.map((goal, i) => (
-                    <div key={i} className="p-4 glass rounded-xl border-white/5 flex items-center gap-4">
-                      <CheckCircle2 className="w-4 h-4 text-green-400 shrink-0" />
-                      <span className="text-xs font-light text-white/60">{goal}</span>
-                    </div>
-                  ))}
-                </div>
-              </Card>
-
-              <Card className="premium-card bg-white/[0.01] border-white/5 p-10 space-y-8">
-                <h3 className="text-[10px] font-bold uppercase tracking-[0.4em] text-white/30">Syntax Practice Directives</h3>
-                <div className="space-y-4">
-                  {roadmap.codingPracticeSuggestions.map((item, i) => (
-                    <div key={i} className="p-4 glass rounded-xl border-white/5 flex items-center gap-4 group hover:bg-white/5 transition-all">
-                      <Code2 className="w-4 h-4 text-blue-400 shrink-0" />
-                      <span className="text-xs font-light text-white/60 group-hover:text-white transition-colors">{item}</span>
-                    </div>
-                  ))}
-                </div>
-              </Card>
-
-              <Card className="premium-card bg-white/[0.01] border-white/5 p-10 space-y-8">
-                <h3 className="text-[10px] font-bold uppercase tracking-[0.4em] text-white/30">Soft Skill Optimization</h3>
-                <div className="space-y-4">
-                  {roadmap.softSkillDirectives.map((item, i) => (
-                    <div key={i} className="p-4 glass rounded-xl border-white/5 flex items-center gap-4">
-                      <BrainCircuit className="w-4 h-4 text-orange-400 shrink-0" />
-                      <span className="text-xs font-light text-white/60">{item}</span>
-                    </div>
-                  ))}
-                </div>
-              </Card>
-
-              <div className="space-y-4">
-                 <Button onClick={() => router.push('/dashboard')} className="w-full h-16 rounded-2xl glass border-white/10 flex gap-4 uppercase tracking-[0.3em] text-[10px] font-bold">
-                    <LayoutDashboard className="w-4 h-4" /> Return to Command
-                 </Button>
-                 <Button onClick={() => router.push('/interview')} className="w-full h-16 rounded-2xl btn-premium flex gap-4 uppercase tracking-[0.3em] text-[10px] font-bold shadow-2xl">
-                    <Zap className="w-4 h-4" /> Retry Assessment
-                 </Button>
-              </div>
-
             </div>
           </div>
         </div>

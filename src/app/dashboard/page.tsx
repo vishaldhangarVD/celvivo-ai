@@ -216,6 +216,103 @@ export default function Dashboard() {
           </div>
 
           <div className="grid lg:grid-cols-12 gap-8">
+            {/* Sidebar Column (Moved to Left) */}
+            <div className="lg:col-span-4 space-y-8">
+              {/* Daily Challenge Highlight */}
+              <Card className="premium-card bg-orange-500/5 border-orange-500/20 p-8">
+                <CardHeader className="p-0 mb-6 flex items-center justify-between">
+                  <CardTitle className="text-lg font-bold flex items-center gap-3 text-orange-400">
+                    <Flame className="w-5 h-5" /> Neural Streak
+                  </CardTitle>
+                  <Badge className="bg-orange-500/20 text-orange-400 border-none font-bold text-[10px]">ACTIVE</Badge>
+                </CardHeader>
+                <CardContent className="p-0 space-y-8">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <div className="text-4xl font-bold tabular-nums">{profile?.currentStreak || 0}</div>
+                      <p className="text-[9px] uppercase font-bold tracking-[0.2em] text-white/30">Current Streak</p>
+                    </div>
+                    <div className="text-right">
+                      <div className="text-4xl font-bold tabular-nums text-white/60">{profile?.bestStreak || 0}</div>
+                      <p className="text-[9px] uppercase font-bold tracking-[0.2em] text-white/30">Best Streak</p>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-3 gap-2">
+                    {[
+                      { days: 7, icon: Award, label: "Bronze" },
+                      { days: 30, icon: Sparkles, label: "Silver" },
+                      { days: 100, icon: Trophy, label: "Gold" }
+                    ].map((badge, i) => (
+                      <div key={i} className={`p-4 glass rounded-2xl flex flex-col items-center gap-2 border-white/5 ${(profile?.currentStreak || 0) >= badge.days ? 'bg-orange-500/10 border-orange-500/20' : 'opacity-20'}`}>
+                        <badge.icon className={`w-4 h-4 ${(profile?.currentStreak || 0) >= badge.days ? 'text-orange-400' : 'text-white'}`} />
+                        <span className="text-[8px] font-bold uppercase tracking-widest">{badge.label}</span>
+                      </div>
+                    ))}
+                  </div>
+
+                  <Link href="/daily-challenge">
+                    <Button className="w-full h-14 btn-premium bg-gradient-to-r from-orange-600 to-red-600 group">
+                      Take Today's Challenge
+                      <ArrowRight className="ml-2 w-4 h-4 transition-transform group-hover:translate-x-1" />
+                    </Button>
+                  </Link>
+                </CardContent>
+              </Card>
+
+              {/* AI Career Tools Row in Sidebar Style */}
+              <div className="space-y-4">
+                <h3 className="text-xs font-bold uppercase tracking-[0.3em] text-white/30 ml-2">AI Career Tools</h3>
+                <div className="grid gap-4">
+                  {[
+                    { title: "Start Interview", icon: Mic, color: "text-accent", href: "/interview" },
+                    { title: "Resume Analyzer", icon: FileText, color: "text-purple-400", href: "/resume" },
+                    { title: "Certificates", icon: Award, color: "text-orange-300", href: "/certificates" },
+                    { title: "Skill Gap Analysis", icon: Brain, color: "text-yellow-400", href: "/skill-gap" },
+                    { title: "Career Roadmap", icon: Map, color: "text-blue-400", href: "/roadmap" },
+                    { title: "Cover Letter Architect", icon: FileEdit, color: "text-green-400", href: "/cover-letter" }
+                  ].map((action, i) => (
+                    <Link href={action.href} key={i}>
+                      <div className="p-5 glass rounded-2xl border-white/5 group hover:bg-white/[0.05] transition-all flex items-center justify-between">
+                        <div className="flex items-center gap-4">
+                          <div className={`w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center ${action.color} transition-all group-hover:scale-110 group-hover:bg-white/10`}>
+                            <action.icon className="w-5 h-5" />
+                          </div>
+                          <span className="text-sm font-bold">{action.title}</span>
+                        </div>
+                        <ChevronRight className="w-4 h-4 text-white/10 group-hover:text-white transition-all group-hover:translate-x-1" />
+                      </div>
+                    </Link>
+                  ))}
+                </div>
+              </div>
+
+              {/* Deployment Pulse Section (Job Tracker Summary) */}
+              <Card className="premium-card bg-blue-500/5 border-blue-500/20 p-8">
+                <CardHeader className="p-0 mb-6">
+                  <CardTitle className="text-lg font-bold flex items-center gap-3 text-blue-400">
+                    <LayoutGrid className="w-5 h-5" /> Deployment Pulse
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="p-0 space-y-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="p-4 glass rounded-2xl border-white/5 text-center">
+                      <p className="text-2xl font-bold tabular-nums text-blue-400">{stats.tracker.total}</p>
+                      <p className="text-[8px] uppercase font-bold tracking-widest text-muted-foreground">Applications</p>
+                    </div>
+                    <div className="p-4 glass rounded-2xl border-white/5 text-center">
+                      <p className="text-2xl font-bold tabular-nums text-green-400">{stats.tracker.successRate}</p>
+                      <p className="text-[8px] uppercase font-bold tracking-widest text-muted-foreground">Success Rate</p>
+                    </div>
+                  </div>
+                  <Link href="/job-tracker">
+                    <Button variant="outline" className="w-full h-12 rounded-xl glass border-white/10 text-[10px] font-bold uppercase tracking-widest text-blue-400">Manage Tracker</Button>
+                  </Link>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Main Content Column (Moved to Right) */}
             <div className="lg:col-span-8 space-y-8">
               {/* Recent Interviews Card */}
               <Card className="premium-card bg-white/[0.01] border-white/5 p-8">
@@ -350,102 +447,6 @@ export default function Dashboard() {
                       </Link>
                     </div>
                   )}
-                </CardContent>
-              </Card>
-            </div>
-
-            {/* Sidebar Column */}
-            <div className="lg:col-span-4 space-y-8">
-              {/* Daily Challenge Highlight */}
-              <Card className="premium-card bg-orange-500/5 border-orange-500/20 p-8">
-                <CardHeader className="p-0 mb-6 flex items-center justify-between">
-                  <CardTitle className="text-lg font-bold flex items-center gap-3 text-orange-400">
-                    <Flame className="w-5 h-5" /> Neural Streak
-                  </CardTitle>
-                  <Badge className="bg-orange-500/20 text-orange-400 border-none font-bold text-[10px]">ACTIVE</Badge>
-                </CardHeader>
-                <CardContent className="p-0 space-y-8">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <div className="text-4xl font-bold tabular-nums">{profile?.currentStreak || 0}</div>
-                      <p className="text-[9px] uppercase font-bold tracking-[0.2em] text-white/30">Current Streak</p>
-                    </div>
-                    <div className="text-right">
-                      <div className="text-4xl font-bold tabular-nums text-white/60">{profile?.bestStreak || 0}</div>
-                      <p className="text-[9px] uppercase font-bold tracking-[0.2em] text-white/30">Best Streak</p>
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-3 gap-2">
-                    {[
-                      { days: 7, icon: Award, label: "Bronze" },
-                      { days: 30, icon: Sparkles, label: "Silver" },
-                      { days: 100, icon: Trophy, label: "Gold" }
-                    ].map((badge, i) => (
-                      <div key={i} className={`p-4 glass rounded-2xl flex flex-col items-center gap-2 border-white/5 ${(profile?.currentStreak || 0) >= badge.days ? 'bg-orange-500/10 border-orange-500/20' : 'opacity-20'}`}>
-                        <badge.icon className={`w-4 h-4 ${(profile?.currentStreak || 0) >= badge.days ? 'text-orange-400' : 'text-white'}`} />
-                        <span className="text-[8px] font-bold uppercase tracking-widest">{badge.label}</span>
-                      </div>
-                    ))}
-                  </div>
-
-                  <Link href="/daily-challenge">
-                    <Button className="w-full h-14 btn-premium bg-gradient-to-r from-orange-600 to-red-600 group">
-                      Take Today's Challenge
-                      <ArrowRight className="ml-2 w-4 h-4 transition-transform group-hover:translate-x-1" />
-                    </Button>
-                  </Link>
-                </CardContent>
-              </Card>
-
-              {/* AI Career Tools Row in Sidebar Style */}
-              <div className="space-y-4">
-                <h3 className="text-xs font-bold uppercase tracking-[0.3em] text-white/30 ml-2">AI Career Tools</h3>
-                <div className="grid gap-4">
-                  {[
-                    { title: "Start Interview", icon: Mic, color: "text-accent", href: "/interview" },
-                    { title: "Resume Analyzer", icon: FileText, color: "text-purple-400", href: "/resume" },
-                    { title: "Certificates", icon: Award, color: "text-orange-300", href: "/certificates" },
-                    { title: "Skill Gap Analysis", icon: Brain, color: "text-yellow-400", href: "/skill-gap" },
-                    { title: "Career Roadmap", icon: Map, color: "text-blue-400", href: "/roadmap" },
-                    { title: "Cover Letter Architect", icon: FileEdit, color: "text-green-400", href: "/cover-letter" }
-                  ].map((action, i) => (
-                    <Link href={action.href} key={i}>
-                      <div className="p-5 glass rounded-2xl border-white/5 group hover:bg-white/[0.05] transition-all flex items-center justify-between">
-                        <div className="flex items-center gap-4">
-                          <div className={`w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center ${action.color} transition-all group-hover:scale-110 group-hover:bg-white/10`}>
-                            <action.icon className="w-5 h-5" />
-                          </div>
-                          <span className="text-sm font-bold">{action.title}</span>
-                        </div>
-                        <ChevronRight className="w-4 h-4 text-white/10 group-hover:text-white transition-all group-hover:translate-x-1" />
-                      </div>
-                    </Link>
-                  ))}
-                </div>
-              </div>
-
-              {/* Deployment Pulse Section (Job Tracker Summary) */}
-              <Card className="premium-card bg-blue-500/5 border-blue-500/20 p-8">
-                <CardHeader className="p-0 mb-6">
-                  <CardTitle className="text-lg font-bold flex items-center gap-3 text-blue-400">
-                    <LayoutGrid className="w-5 h-5" /> Deployment Pulse
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="p-0 space-y-4">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="p-4 glass rounded-2xl border-white/5 text-center">
-                      <p className="text-2xl font-bold tabular-nums text-blue-400">{stats.tracker.total}</p>
-                      <p className="text-[8px] uppercase font-bold tracking-widest text-muted-foreground">Applications</p>
-                    </div>
-                    <div className="p-4 glass rounded-2xl border-white/5 text-center">
-                      <p className="text-2xl font-bold tabular-nums text-green-400">{stats.tracker.successRate}</p>
-                      <p className="text-[8px] uppercase font-bold tracking-widest text-muted-foreground">Success Rate</p>
-                    </div>
-                  </div>
-                  <Link href="/job-tracker">
-                    <Button variant="outline" className="w-full h-12 rounded-xl glass border-white/10 text-[10px] font-bold uppercase tracking-widest text-blue-400">Manage Tracker</Button>
-                  </Link>
                 </CardContent>
               </Card>
             </div>
