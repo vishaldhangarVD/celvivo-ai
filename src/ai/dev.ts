@@ -9,6 +9,7 @@ import '@/ai/flows/ai-skill-gap-analysis.ts';
 import '@/ai/flows/ai-cover-letter.ts';
 import '@/ai/flows/ai-resume-deep-audit.ts';
 import '@/ai/flows/ai-aptitude-generator.ts';
+import '@/ai/flows/ai-aptitude-evaluator.ts';
 import '@/ai/flows/test-gemini.ts';
 import { ai } from '@/ai/genkit';
 
