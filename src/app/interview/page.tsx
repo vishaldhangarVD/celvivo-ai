@@ -46,7 +46,11 @@ import {
   MessageSquare,
   History,
   LayoutDashboard,
-  Target
+  Target,
+  CheckCircle2,
+  FileSearch2,
+  BarChart3,
+  Lightbulb
 } from 'lucide-react';
 import { useUser, useFirestore } from '@/firebase';
 import { collection, addDoc, serverTimestamp, doc, updateDoc, setDoc, getDoc } from 'firebase/firestore';
@@ -440,8 +444,8 @@ export default function InterviewJourney() {
                 )}
 
                 {currentStep === 3 && (
-                  <Card className="premium-card bg-white/[0.01] border-white/5 p-12 space-y-12">
-                    <h2 className="text-4xl font-bold tracking-tighter text-center">Target Company</h2>
+                  <Card className="premium-card bg-white/[0.01] border-white/5 p-12 space-y-12 text-center">
+                    <h2 className="text-4xl font-bold tracking-tighter">Target Company</h2>
                     <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
                       {COMPANIES.map(c => (
                         <button key={c} onClick={() => { setSelectedCompany(c); nextStep(); }} className={`p-6 rounded-2xl border transition-all text-center group ${selectedCompany === c ? 'bg-accent/20 border-accent' : 'glass border-white/5 hover:bg-white/5'}`}>
@@ -455,28 +459,91 @@ export default function InterviewJourney() {
 
                 {currentStep === 4 && (
                   <Card className="premium-card bg-white/[0.01] border-white/5 p-12 space-y-12 text-center">
-                    <div className="w-20 h-20 rounded-3xl bg-accent/10 flex items-center justify-center mx-auto mb-8"><Upload className="w-10 h-10 text-accent" /></div>
-                    <h2 className="text-4xl font-bold tracking-tighter">Career Blueprint</h2>
-                    <div onClick={() => document.getElementById('resume-journey-upload')?.click()} className="border-2 border-dashed border-white/10 rounded-3xl p-20 cursor-pointer hover:border-accent/30 transition-all bg-white/[0.01]">
-                      <input type="file" id="resume-journey-upload" className="hidden" accept=".pdf" onChange={(e) => e.target.files && setFile(e.target.files[0])} />
-                      {file ? <div className="text-xl font-bold text-accent">{file.name}</div> : <span className="text-muted-foreground uppercase tracking-widest text-[10px] font-bold">Choose PDF Blueprint (Max 5MB)</span>}
+                    <div className="space-y-4">
+                      <Badge className="bg-accent/20 text-accent border-none px-6 py-1.5 font-bold tracking-[0.4em] text-[10px] uppercase">Neural Identity Protocol</Badge>
+                      <h2 className="text-4xl font-bold tracking-tighter">AI Resume Screening</h2>
+                      <p className="text-muted-foreground font-light max-w-xl mx-auto">Upload your latest resume to receive ATS analysis, skill gap detection, resume score, and personalized AI feedback before starting your interview.</p>
                     </div>
-                    <Button onClick={handleResumeSync} disabled={!file || isAnalyzing} className="w-full h-18 btn-premium uppercase tracking-[0.3em] text-xs font-bold">
-                      {isAnalyzing ? <Loader2 className="w-5 h-5 animate-spin mr-3" /> : null} Execute Handshake
+                    
+                    <div 
+                      onClick={() => !isAnalyzing && document.getElementById('resume-journey-upload')?.click()} 
+                      className={`border-2 border-dashed rounded-[2.5rem] p-16 transition-all cursor-pointer group relative overflow-hidden ${file ? 'border-accent bg-accent/5' : 'border-white/10 hover:border-accent/30 hover:bg-white/[0.02]'}`}
+                    >
+                      <input type="file" id="resume-journey-upload" className="hidden" accept=".pdf" onChange={(e) => e.target.files && setFile(e.target.files[0])} />
+                      {isAnalyzing ? (
+                         <div className="flex flex-col items-center gap-4">
+                            <Loader2 className="w-12 h-12 text-accent animate-spin" />
+                            <p className="text-xs font-bold uppercase tracking-[0.3em] text-accent">Extracting Knowledge Nodes...</p>
+                         </div>
+                      ) : (
+                        <div className="space-y-6">
+                           <div className="w-16 h-16 rounded-2xl bg-white/5 flex items-center justify-center mx-auto text-accent group-hover:scale-110 transition-transform"><Upload className="w-8 h-8" /></div>
+                           <div className="space-y-1">
+                             <p className="font-bold text-lg">{file ? file.name : "📄 Drag & Drop your Resume Here"}</p>
+                             <p className="text-[10px] text-muted-foreground uppercase tracking-widest font-bold">Click to Upload PDF (Maximum 5 MB)</p>
+                           </div>
+                        </div>
+                      )}
+                    </div>
+
+                    <Button onClick={handleResumeSync} disabled={!file || isAnalyzing} className="w-full h-18 btn-premium uppercase tracking-[0.3em] text-xs font-bold shadow-[0_0_50px_rgba(147,51,234,0.2)]">
+                      {isAnalyzing ? <><Loader2 className="w-5 h-5 animate-spin mr-3" /> Processing...</> : "Start AI Resume Analysis"}
                     </Button>
                   </Card>
                 )}
 
                 {currentStep === 5 && (
                   <Card className="premium-card bg-white/[0.01] border-white/5 p-12 space-y-12">
-                    <div className="flex justify-between items-center">
-                      <h2 className="text-3xl font-bold">Screening Report</h2>
-                      <div className="text-6xl font-bold text-accent tabular-nums">{resumeAnalysis?.atsScore}%</div>
+                    <div className="flex justify-between items-end border-b border-white/5 pb-10">
+                      <div className="space-y-2">
+                        <Badge className="bg-accent/20 text-accent border-none px-4 py-1 text-[8px] uppercase font-bold tracking-widest">Neural Audit Result</Badge>
+                        <h2 className="text-4xl font-bold tracking-tighter text-premium">Blueprint Intelligence</h2>
+                      </div>
+                      <div className="flex gap-12 text-right">
+                         <div className="space-y-1">
+                           <div className="text-4xl font-bold text-accent tabular-nums">{resumeAnalysis?.atsScore}%</div>
+                           <p className="text-[8px] uppercase font-bold tracking-widest text-muted-foreground">ATS Index</p>
+                         </div>
+                         <div className="space-y-1">
+                           <div className="text-4xl font-bold text-purple-400 tabular-nums">{resumeAnalysis?.resumeQualityScore || 0}%</div>
+                           <p className="text-[8px] uppercase font-bold tracking-widest text-muted-foreground">Resume Score</p>
+                         </div>
+                      </div>
                     </div>
-                    <div className="p-8 glass rounded-[2rem] bg-accent/5 border-accent/10">
-                      <p className="text-sm font-light leading-relaxed text-white/80">{resumeAnalysis?.summary}</p>
+
+                    <div className="grid md:grid-cols-2 gap-8">
+                       <div className="space-y-6">
+                          <h3 className="text-xs font-bold uppercase tracking-widest text-white/40 flex items-center gap-3"><CheckCircle2 className="w-4 h-4 text-accent" /> Intelligence Nodes Found</h3>
+                          <div className="flex flex-wrap gap-2">
+                            {resumeAnalysis?.skillAnalysis?.map((s: any, i: number) => (
+                              <Badge key={i} variant="outline" className="bg-white/5 border-white/10 px-3 py-1.5 text-[10px] font-bold text-white/70">{s.skill}</Badge>
+                            ))}
+                          </div>
+                       </div>
+                       <div className="space-y-6">
+                          <h3 className="text-xs font-bold uppercase tracking-widest text-white/40 flex items-center gap-3"><CircleAlert className="w-4 h-4 text-red-400" /> Delta Gaps Identified</h3>
+                          <div className="flex flex-wrap gap-2">
+                            {resumeAnalysis?.missingSkills?.map((s: string, i: number) => (
+                              <Badge key={i} variant="outline" className="bg-red-500/5 border-red-500/20 text-red-400 px-3 py-1.5 text-[10px] font-bold">{s}</Badge>
+                            ))}
+                          </div>
+                       </div>
                     </div>
-                    <Button onClick={handleStartAptitude} className="w-full h-18 btn-premium uppercase tracking-[0.3em] text-xs font-bold">Initialize Aptitude Round</Button>
+
+                    <div className="p-8 glass rounded-[2rem] bg-accent/[0.02] border-accent/10 space-y-4">
+                       <div className="flex items-center justify-between">
+                         <h3 className="text-xs font-bold uppercase tracking-widest text-accent flex items-center gap-2"><Lightbulb className="w-4 h-4" /> AI Strategic Feedback</h3>
+                         <div className="flex items-center gap-3">
+                            <span className="text-[10px] font-bold uppercase tracking-widest text-white/40">Interview Readiness:</span>
+                            <span className="text-sm font-bold text-accent">{resumeAnalysis?.interviewReadinessScore || 0}%</span>
+                         </div>
+                       </div>
+                       <p className="text-sm font-light leading-relaxed text-white/80 italic">"{resumeAnalysis?.summary}"</p>
+                    </div>
+
+                    <Button onClick={handleStartAptitude} className="w-full h-18 btn-premium uppercase tracking-[0.3em] text-xs font-bold">
+                      Continue to Aptitude Round <ChevronRight className="ml-2 w-4 h-4" />
+                    </Button>
                   </Card>
                 )}
 
