@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useMemo, useEffect } from 'react';
@@ -19,7 +18,7 @@ import {
   DialogTitle,
   DialogDescription,
   DialogFooter,
-} from "@/Dialog";
+} from "@/components/ui/dialog";
 import {
   Select,
   SelectContent,
@@ -82,8 +81,6 @@ import { evaluateAptitude } from '@/ai/flows/ai-aptitude-evaluator';
 import { useToast } from '@/hooks/use-toast';
 import { motion, AnimatePresence } from 'framer-motion';
 import Link from 'next/link';
-import { errorEmitter } from '@/firebase/error-emitter';
-import { FirestorePermissionError } from '@/firebase/errors';
 
 const ROLES_DATA = [
   { id: 'java', name: "Java Developer", category: "Development", icon: Code2 },
@@ -426,7 +423,6 @@ export default function InterviewJourney() {
                 exit={{ opacity: 0, x: -20 }}
                 className="space-y-8"
               >
-                {/* Logic for Step 1-5 omitted for brevity, keeping only focus on Step 6 evaluation */}
                 {currentStep === 1 && (
                   <Card className="premium-card bg-white/[0.01] border-white/5 p-12 space-y-12">
                     <header className="text-center space-y-4">
@@ -459,7 +455,179 @@ export default function InterviewJourney() {
                   </Card>
                 )}
 
-                {/* Step 6: Aptitude and Evaluation */}
+                {currentStep === 2 && (
+                  <Card className="premium-card bg-white/[0.01] border-white/5 p-12 space-y-12">
+                    <header className="text-center space-y-4">
+                      <div className="w-20 h-20 rounded-[2rem] bg-accent/10 flex items-center justify-center mx-auto border border-accent/20">
+                        <GraduationCap className="w-10 h-10 text-accent" />
+                      </div>
+                      <h2 className="text-4xl font-bold tracking-tighter">Calibrate Seniority</h2>
+                      <p className="text-muted-foreground font-light">Determine the complexity level for your technical simulation.</p>
+                    </header>
+                    <div className="grid md:grid-cols-2 gap-6">
+                      {EXPERIENCE_OPTIONS.map(opt => (
+                        <button key={opt.id} onClick={() => setSelectedExp(opt.label)} className={`p-8 rounded-[2.5rem] border transition-all text-left group ${selectedExp === opt.label ? 'bg-accent/20 border-accent' : 'glass border-white/5 hover:border-white/20'}`}>
+                          <div className={`w-14 h-14 rounded-2xl flex items-center justify-center mb-6 transition-colors ${selectedExp === opt.label ? 'bg-accent text-black' : 'bg-white/5 text-white/40'}`}><opt.icon className="w-7 h-7" /></div>
+                          <p className={`text-xl font-bold mb-2 transition-colors ${selectedExp === opt.label ? 'text-white' : 'text-white/60'}`}>{opt.label}</p>
+                          <p className="text-xs text-muted-foreground uppercase font-bold tracking-widest">{opt.desc}</p>
+                        </button>
+                      ))}
+                    </div>
+                    <div className="flex gap-4">
+                      <Button variant="ghost" onClick={prevStep} className="h-16 px-10 rounded-2xl uppercase tracking-widest text-[10px] font-bold">Back</Button>
+                      <Button onClick={nextStep} disabled={!selectedExp} className="flex-1 h-16 btn-premium text-xs font-bold uppercase tracking-[0.3em]">Synchronize Grade <ChevronRight className="ml-2 w-4 h-4" /></Button>
+                    </div>
+                  </Card>
+                )}
+
+                {currentStep === 3 && (
+                  <Card className="premium-card bg-white/[0.01] border-white/5 p-12 space-y-12">
+                    <header className="text-center space-y-4">
+                      <div className="w-20 h-20 rounded-[2rem] bg-accent/10 flex items-center justify-center mx-auto border border-accent/20">
+                        <Building2 className="w-10 h-10 text-accent" />
+                      </div>
+                      <h2 className="text-4xl font-bold tracking-tighter">Target Firm Selection</h2>
+                      <p className="text-muted-foreground font-light">Sync simulation protocol with specific hiring standards.</p>
+                    </header>
+                    <div className="relative group max-w-xl mx-auto w-full">
+                      <Search className="absolute left-6 top-1/2 -translate-y-1/2 w-5 h-5 text-white/20 group-focus-within:text-accent transition-colors" />
+                      <Input placeholder="Search global partners..." value={companySearch} onChange={(e) => setCompanySearch(e.target.value)} className="h-16 pl-16 rounded-2xl glass border-white/10 bg-transparent focus:border-accent" />
+                    </div>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                      {filteredCompanies.map(c => (
+                        <button key={c} onClick={() => setSelectedCompany(c)} className={`p-6 rounded-2xl border transition-all text-center group ${selectedCompany === c ? 'bg-accent/20 border-accent' : 'glass border-white/5 hover:border-white/20'}`}>
+                          <div className={`w-12 h-12 rounded-xl flex items-center justify-center mx-auto mb-4 transition-colors ${selectedCompany === c ? 'bg-accent text-black' : 'bg-white/5 text-white/40'}`}><Building2 className="w-6 h-6" /></div>
+                          <p className={`font-bold text-xs transition-colors ${selectedCompany === c ? 'text-white' : 'text-white/60'}`}>{c}</p>
+                        </button>
+                      ))}
+                    </div>
+                    <div className="flex gap-4">
+                      <Button variant="ghost" onClick={prevStep} className="h-16 px-10 rounded-2xl uppercase tracking-widest text-[10px] font-bold">Back</Button>
+                      <Button onClick={nextStep} disabled={!selectedCompany} className="flex-1 h-16 btn-premium text-xs font-bold uppercase tracking-[0.3em]">Initialize Handshake <ChevronRight className="ml-2 w-4 h-4" /></Button>
+                    </div>
+                  </Card>
+                )}
+
+                {currentStep === 4 && (
+                  <Card className="premium-card bg-white/[0.01] border-white/5 p-12 space-y-12">
+                    <header className="text-center space-y-4">
+                      <div className="w-20 h-20 rounded-[2rem] bg-accent/10 flex items-center justify-center mx-auto border border-accent/20">
+                        <Upload className="w-10 h-10 text-accent" />
+                      </div>
+                      <h2 className="text-4xl font-bold tracking-tighter">Career Blueprint Sync</h2>
+                      <p className="text-muted-foreground font-light">Upload your latest career vectors to architect a personalized arena.</p>
+                    </header>
+                    <div 
+                      onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
+                      onDragLeave={() => setIsDragging(false)}
+                      onDrop={(e) => { e.preventDefault(); setIsDragging(false); if (e.dataTransfer.files[0]) handleFileChange({ target: { files: e.dataTransfer.files } } as any); }}
+                      onClick={() => !isAnalyzing && document.getElementById('resume-journey-upload')?.click()}
+                      className={`border-2 border-dashed rounded-[2.5rem] p-20 text-center transition-all cursor-pointer group relative ${file ? 'border-accent bg-accent/5' : 'border-white/10 hover:border-accent/30'} ${isDragging ? 'scale-105 border-accent bg-accent/10 shadow-[0_0_50px_rgba(34,211,238,0.2)]' : ''}`}
+                    >
+                      <input type="file" id="resume-journey-upload" className="hidden" accept=".pdf" onChange={handleFileChange} />
+                      {!file ? (
+                        <div className="space-y-6">
+                          <div className="w-24 h-24 rounded-3xl bg-accent/10 flex items-center justify-center mx-auto group-hover:scale-110 transition-transform"><Upload className="w-12 h-12 text-accent" /></div>
+                          <div>
+                            <p className="text-2xl font-bold mb-2">Drop PDF Blueprint</p>
+                            <p className="text-[10px] text-muted-foreground uppercase tracking-[0.3em] font-bold">Max 5MB • Validated for ATS v4.2</p>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="flex items-center justify-between p-8 glass rounded-3xl border-accent/30">
+                          <div className="flex items-center gap-8">
+                            <div className="w-20 h-20 rounded-2xl bg-accent/20 flex items-center justify-center text-accent"><FileText className="w-10 h-10" /></div>
+                            <div className="text-left">
+                              <p className="font-bold text-xl">{file.name}</p>
+                              <p className="text-[10px] text-accent uppercase font-bold tracking-widest">PROTOCOL LOADED • READY FOR SCAN</p>
+                            </div>
+                          </div>
+                          <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); setFile(null); }} className="h-14 w-14 rounded-2xl hover:bg-red-500/10 text-red-400"><Trash2 className="w-6 h-6" /></Button>
+                        </div>
+                      )}
+                    </div>
+                    <div className="flex gap-4">
+                      <Button variant="ghost" onClick={prevStep} className="h-16 px-10 rounded-2xl uppercase tracking-widest text-[10px] font-bold">Back</Button>
+                      <Button onClick={handleResumeSync} disabled={!file || isAnalyzing} className="flex-1 h-16 btn-premium text-xs font-bold uppercase tracking-[0.3em]">
+                        {isAnalyzing ? <><Loader2 className="w-4 h-4 animate-spin mr-3" /> Auditing Blueprint...</> : <><Zap className="w-4 h-4 mr-3" /> Execute Handshake</>}
+                      </Button>
+                    </div>
+                  </Card>
+                )}
+
+                {currentStep === 5 && (
+                  <Card className="premium-card bg-[#0b0e1a]/80 border-white/5 p-12 space-y-12">
+                    <header className="flex flex-col md:flex-row justify-between items-center gap-8">
+                      <div>
+                        <Badge className="bg-accent/20 text-accent border-none px-4 py-1 text-[10px] tracking-widest font-bold uppercase mb-4">Initial Intelligence Audit</Badge>
+                        <h2 className="text-4xl font-bold tracking-tighter">Resume Screening <span className="text-gradient-purple">Report.</span></h2>
+                        <p className="text-muted-foreground font-light mt-2 uppercase tracking-widest text-[10px]">Validated for: {selectedRole} at {selectedCompany}</p>
+                      </div>
+                      <div className="text-center">
+                        <div className="relative w-32 h-32 flex items-center justify-center">
+                           <svg className="w-full h-full transform -rotate-90">
+                             <circle className="text-white/5" strokeWidth="6" stroke="currentColor" fill="transparent" r="56" cx="64" cy="64" />
+                             <motion.circle initial={{ strokeDashoffset: 352 }} animate={{ strokeDashoffset: 352 - (352 * (resumeAnalysis?.atsScore || 0)) / 100 }} transition={{ duration: 1.5 }} className="text-accent" strokeWidth="6" strokeDasharray={352} strokeLinecap="round" stroke="currentColor" fill="transparent" r="56" cx="64" cy="64" />
+                           </svg>
+                           <span className="absolute text-3xl font-bold tabular-nums">{resumeAnalysis?.atsScore || 0}%</span>
+                        </div>
+                        <p className="text-[10px] uppercase tracking-[0.3em] font-bold text-muted-foreground mt-4">ATS Compatibility</p>
+                      </div>
+                    </header>
+
+                    {(resumeAnalysis?.atsScore || 0) < 60 && (
+                      <div className="p-8 glass rounded-[2.5rem] border-red-500/20 bg-red-500/5 flex items-start gap-6">
+                        <AlertTriangle className="w-8 h-8 text-red-400 shrink-0 mt-1" />
+                        <div>
+                          <h4 className="text-lg font-bold text-red-400 mb-2">Protocol Warning: Low Blueprint Match</h4>
+                          <p className="text-sm font-light text-white/60">Your career blueprint returned an ATS score below the elite threshold (60%). We highly recommend optimizing your resume using our Deep Audit engine before entering the live simulation.</p>
+                          <Link href="/resume" className="inline-block mt-6"><Button variant="outline" className="h-10 px-6 rounded-xl border-red-500/20 text-red-400 hover:bg-red-500/10 text-[10px] uppercase font-bold tracking-widest">Launch Blueprint Optimizer</Button></Link>
+                        </div>
+                      </div>
+                    )}
+
+                    <div className="grid md:grid-cols-2 gap-8">
+                      <Card className="p-8 glass border-white/5 space-y-6">
+                         <h3 className="text-[10px] font-bold uppercase tracking-[0.4em] text-accent flex items-center gap-3"><Target className="w-4 h-4" /> Detected Vectors</h3>
+                         <div className="flex flex-wrap gap-2">
+                           {(resumeAnalysis?.skillAnalysis || []).map((s: any, i: number) => (
+                             <Badge key={i} className="bg-accent/10 text-accent border-accent/20 text-[9px] uppercase font-bold px-3 py-1">{s.skill}</Badge>
+                           ))}
+                         </div>
+                      </Card>
+                      <Card className="p-8 glass border-white/5 space-y-6">
+                         <h3 className="text-[10px] font-bold uppercase tracking-[0.4em] text-red-400 flex items-center gap-3"><AlertCircle className="w-4 h-4" /> Intelligence Gaps</h3>
+                         <div className="flex flex-wrap gap-2">
+                           {(resumeAnalysis?.missingSkills || []).map((s: string, i: number) => (
+                             <Badge key={i} variant="outline" className="border-red-500/20 text-red-400 bg-red-500/5 text-[9px] uppercase font-bold px-3 py-1">{s}</Badge>
+                           ))}
+                         </div>
+                      </Card>
+                    </div>
+
+                    <div className="grid md:grid-cols-2 gap-8">
+                       <div className="space-y-4">
+                         <h4 className="text-xs font-bold uppercase tracking-widest text-muted-foreground ml-2">Strategic Strengths</h4>
+                         <div className="space-y-3">
+                           {(resumeAnalysis?.strengths || ["Clean architectural reasoning.", "High seniority alignment."]).map((s: string, i: number) => (
+                             <div key={i} className="flex gap-4 p-4 glass rounded-2xl border-white/5 text-sm font-light text-white/70"><CheckCircle2 className="w-4 h-4 text-green-400 shrink-0" /> {s}</div>
+                           ))}
+                         </div>
+                       </div>
+                       <div className="space-y-4">
+                         <h4 className="text-xs font-bold uppercase tracking-widest text-muted-foreground ml-2">Optimization Nodes</h4>
+                         <div className="space-y-3">
+                           {(resumeAnalysis?.improvementSuggestions || ["Add more quantifiable impact metrics.", "Integrate target keywords."]).map((s: string, i: number) => (
+                             <div key={i} className="flex gap-4 p-4 glass rounded-2xl border-white/5 text-sm font-light text-white/70"><Info className="w-4 h-4 text-accent shrink-0" /> {s}</div>
+                           ))}
+                         </div>
+                       </div>
+                    </div>
+
+                    <Button onClick={handleStartAptitude} className="w-full h-20 btn-premium text-lg font-bold uppercase tracking-[0.3em]">Initialize Round 01: Aptitude <ChevronRight className="ml-3 w-6 h-6" /></Button>
+                  </Card>
+                )}
+
                 {currentStep === 6 && (
                   <div className="space-y-8">
                     {isGeneratingAptitude || isAptitudeEvaluating ? (
@@ -520,7 +688,6 @@ export default function InterviewJourney() {
                         </div>
                       </Card>
                     ) : (
-                      /* Professional Aptitude Report */
                       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-8">
                         <Card className="premium-card bg-[#0b0e1a]/80 border-glow-premium p-12 relative overflow-hidden">
                           <div className="absolute top-0 right-0 p-12">
@@ -618,7 +785,176 @@ export default function InterviewJourney() {
                     )}
                   </div>
                 )}
-                {/* Steps 7-10 remain unchanged as per previous logic */}
+
+                {currentStep === 7 && (
+                  <div className="space-y-8">
+                    {!showCodingResult ? (
+                      <Card className="premium-card bg-[#0b0e1a]/80 border-white/5 p-0 overflow-hidden flex flex-col min-h-[750px]">
+                        <div className="p-6 border-b border-white/5 bg-white/[0.02] flex items-center justify-between">
+                          <div className="flex items-center gap-6">
+                            <div className="flex items-center gap-3 bg-accent/10 px-4 py-2 rounded-xl border border-accent/20">
+                              <Timer className="w-4 h-4 text-accent" />
+                              <span className="font-mono text-xl font-bold text-accent">{formatTime(codingTimeLeft)}</span>
+                            </div>
+                            <Select value={selectedLanguage} onValueChange={(val) => { setSelectedLanguage(val); setCode((CODING_PROBLEM.starterCode as any)[val]); }}>
+                              <SelectTrigger className="w-40 glass border-white/10 bg-transparent h-10 px-4 rounded-xl text-[10px] font-bold uppercase tracking-widest">
+                                <SelectValue placeholder="Language" />
+                              </SelectTrigger>
+                              <SelectContent className="glass border-white/10 bg-[#0b0e1a] text-white">
+                                <SelectItem value="javascript">JavaScript</SelectItem>
+                                <SelectItem value="python">Python</SelectItem>
+                                <SelectItem value="java">Java</SelectItem>
+                                <SelectItem value="cpp">C++</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <div className="flex gap-3">
+                            <Button variant="ghost" className="h-10 px-4 rounded-xl text-[10px] font-bold uppercase tracking-widest text-white/40"><RefreshCcw className="w-4 h-4 mr-2" /> Reset</Button>
+                            <Button onClick={() => { setShowCodingResult(true); setIsCodingComplete(true); }} className="btn-premium h-10 px-6 rounded-xl text-[10px] font-bold uppercase tracking-widest">Archive Submission</Button>
+                          </div>
+                        </div>
+
+                        <div className="flex-1 grid lg:grid-cols-2 overflow-hidden">
+                          <div className="p-10 border-r border-white/5 space-y-8 overflow-y-auto custom-scrollbar">
+                            <div className="flex items-center justify-between">
+                              <Badge className="bg-orange-500/20 text-orange-400 border-none uppercase text-[8px] tracking-[0.3em] font-bold px-3 py-1">{CODING_PROBLEM.difficulty} Node</Badge>
+                              <span className="text-[10px] font-bold uppercase text-white/20 tracking-widest">{CODING_PROBLEM.points} Points</span>
+                            </div>
+                            <h3 className="text-3xl font-bold tracking-tight">{CODING_PROBLEM.title}</h3>
+                            <div className="prose prose-invert prose-sm">
+                              <p className="text-lg font-light leading-relaxed text-white/70">{CODING_PROBLEM.description}</p>
+                              <div className="space-y-6 mt-8">
+                                {CODING_PROBLEM.examples.map((ex, i) => (
+                                  <div key={i} className="p-6 glass rounded-2xl border-white/5 bg-white/[0.01] space-y-3">
+                                    <p className="text-[10px] font-bold uppercase tracking-widest text-accent">Example 0{i + 1}</p>
+                                    <div className="space-y-1">
+                                      <p className="text-xs text-white/40"><span className="font-bold text-white/60">Input:</span> {ex.input}</p>
+                                      <p className="text-xs text-white/40"><span className="font-bold text-white/60">Output:</span> {ex.output}</p>
+                                      {ex.explanation && <p className="text-xs text-white/40 italic">{ex.explanation}</p>}
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                              <div className="mt-8 space-y-4">
+                                <h4 className="text-[10px] font-bold uppercase tracking-widest text-white/30">Constraints</h4>
+                                <ul className="list-disc list-inside text-xs text-white/40 font-light space-y-1">
+                                  {CODING_PROBLEM.constraints.map((c, i) => <li key={i}>{c}</li>)}
+                                </ul>
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="flex flex-col bg-black/40">
+                             <div className="flex-1 relative">
+                               <div className="absolute left-0 top-0 bottom-0 w-12 bg-white/[0.02] border-r border-white/5 flex flex-col items-center pt-6 text-[10px] font-mono text-white/10 select-none">
+                                  {Array.from({ length: 30 }).map((_, i) => <div key={i} className="h-6 flex items-center">{i + 1}</div>)}
+                               </div>
+                               <textarea 
+                                 value={code} 
+                                 onChange={(e) => setCode(e.target.value)} 
+                                 spellCheck={false}
+                                 className="w-full h-full bg-transparent outline-none border-none p-6 pl-16 font-mono text-sm leading-6 resize-none text-white/80 selection:bg-accent/20"
+                               />
+                             </div>
+                             <div className="h-64 border-t border-white/5 flex flex-col">
+                                <div className="px-6 py-3 border-b border-white/5 flex items-center justify-between bg-white/[0.01]">
+                                   <div className="flex items-center gap-3 text-[10px] font-bold uppercase tracking-[0.2em] text-white/30"><Terminal className="w-3.5 h-3.5" /> Neural Console</div>
+                                   <Button onClick={() => { setIsRunning(true); setTimeout(() => { setConsoleOutput([...consoleOutput, `[SUCCESS] Tests passed for Input: nums=[2,7,11,15], target=9`, `[SUCCESS] Efficiency verified.`]); setIsRunning(false); }, 1500); }} disabled={isRunning} className="h-8 px-4 rounded-lg glass border-white/10 text-[9px] font-bold uppercase tracking-widest">{isRunning ? <Loader2 className="w-3 h-3 animate-spin mr-2" /> : <PlayCircle className="w-3 h-3 mr-2" />} Run Logic</Button>
+                                </div>
+                                <div className="flex-1 p-6 font-mono text-xs overflow-y-auto custom-scrollbar space-y-2">
+                                   {consoleOutput.map((log, i) => <div key={i} className={log.includes('SUCCESS') ? 'text-green-400' : 'text-white/40'}>{log}</div>)}
+                                   {isRunning && <div className="text-accent animate-pulse">Running neural execution loop...</div>}
+                                </div>
+                             </div>
+                          </div>
+                        </div>
+                      </Card>
+                    ) : (
+                      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-8">
+                         <Card className="premium-card bg-[#0b0e1a]/80 border-glow-premium p-12 relative overflow-hidden">
+                           <div className="absolute top-0 right-0 p-12">
+                              <Badge className="bg-green-500/20 text-green-400 border-none font-bold tracking-[0.3em] uppercase text-xs px-6 py-2">PROTOCOL VALIDATED: PASS</Badge>
+                           </div>
+
+                           <div className="grid lg:grid-cols-12 gap-16">
+                              <div className="lg:col-span-4 text-center border-r border-white/5 pr-16">
+                                <div className="relative w-48 h-48 mx-auto mb-8 flex items-center justify-center">
+                                  <svg className="w-full h-full transform -rotate-90">
+                                    <circle className="text-white/5" strokeWidth="10" stroke="currentColor" fill="transparent" r="88" cx="96" cy="96" />
+                                    <motion.circle initial={{ strokeDashoffset: 553 }} animate={{ strokeDashoffset: 553 - (553 * 92) / 100 }} transition={{ duration: 2 }} className="text-accent" strokeWidth="10" strokeDasharray={553} strokeLinecap="round" stroke="currentColor" fill="transparent" r="88" cx="96" cy="96" />
+                                  </svg>
+                                  <div className="absolute inset-0 flex flex-col items-center justify-center">
+                                    <span className="text-6xl font-bold tracking-tighter">92%</span>
+                                    <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Syntax Index</span>
+                                  </div>
+                                </div>
+                                <h3 className="text-2xl font-bold mb-2">Technical Mastery</h3>
+                                <p className="text-sm text-muted-foreground font-light leading-relaxed">Syntax calibration confirms senior-grade architectural reasoning.</p>
+                              </div>
+
+                              <div className="lg:col-span-8 space-y-12">
+                                <div className="grid md:grid-cols-3 gap-8">
+                                  {[
+                                    { label: "Passed Nodes", val: "8/10", icon: CheckCircle2, color: "text-green-400" },
+                                    { label: "Complexity", val: "O(n)", icon: Activity, color: "text-accent" },
+                                    { label: "Clean Code", val: "Elite", icon: MonitorCog, color: "text-purple-400" }
+                                  ].map((stat, i) => (
+                                    <div key={i} className="p-6 glass rounded-2xl border-white/5 space-y-4">
+                                      <div className="flex justify-between items-center">
+                                        <stat.icon className={`w-5 h-5 ${stat.color}`} />
+                                        <span className="text-xl font-bold">{stat.val}</span>
+                                      </div>
+                                      <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">{stat.label}</p>
+                                    </div>
+                                  ))}
+                                </div>
+
+                                <div className="p-8 glass rounded-[2.5rem] bg-accent/[0.02] border-accent/10">
+                                   <h4 className="text-[10px] font-bold uppercase tracking-[0.3em] text-accent mb-6 flex items-center gap-3"><MonitorCog className="w-4 h-4" /> Neural Optimization Insight</h4>
+                                   <p className="text-lg font-light leading-relaxed text-white/80 italic">"Your implementation logic is highly efficient. The time complexity is optimal for large datasets. Access to the Live Technical Arena is now granted."</p>
+                                </div>
+                                
+                                <div className="space-y-6">
+                                   <h4 className="text-[10px] font-bold uppercase tracking-[0.3em] text-white/30">Verification Log</h4>
+                                   <div className="space-y-3">
+                                      <div className="flex items-center gap-4 p-4 glass rounded-2xl border-white/5"><div className="w-1.5 h-1.5 rounded-full bg-green-400" /> <span className="text-xs font-light text-white/60">Edge case handling: Verified</span></div>
+                                      <div className="flex items-center gap-4 p-4 glass rounded-2xl border-white/5"><div className="w-1.5 h-1.5 rounded-full bg-green-400" /> <span className="text-xs font-light text-white/60">Memory footprint optimization: Verified</span></div>
+                                   </div>
+                                </div>
+                              </div>
+                           </div>
+
+                           <div className="mt-16 pt-12 border-t border-white/5">
+                              <Button onClick={nextStep} className="w-full h-20 btn-premium text-lg font-bold uppercase tracking-[0.3em]">Initialize Live Technical Arena <ChevronRight className="ml-3 w-6 h-6" /></Button>
+                           </div>
+                         </Card>
+                      </motion.div>
+                    )}
+                  </div>
+                )}
+
+                {/* Step 8 (Arena) is navigated via router link usually, but can be embedded if needed */}
+                {currentStep === 8 && (
+                   <Card className="premium-card bg-[#0b0e1a]/80 border-white/5 p-20 text-center space-y-12">
+                      <div className="w-32 h-32 rounded-[2.5rem] bg-accent/20 flex items-center justify-center mx-auto border border-accent/30 shadow-[0_0_50px_rgba(34,211,238,0.2)]">
+                        <Mic className="w-16 h-16 text-accent animate-pulse" />
+                      </div>
+                      <div className="space-y-4">
+                        <h2 className="text-4xl font-bold tracking-tighter text-premium">Arena Simulation Prime</h2>
+                        <p className="text-muted-foreground font-light text-lg max-w-sm mx-auto">Neural host is calibrated for {selectedCompany}. Enter the arena to finalize your performance audit.</p>
+                      </div>
+                      <Button 
+                        onClick={() => {
+                          const sessionId = Math.random().toString(36).substring(7);
+                          router.push(`/interview/${sessionId}?role=${encodeURIComponent(selectedRole)}&company=${encodeURIComponent(selectedCompany)}&exp=${encodeURIComponent(selectedExp)}&round=Technical%20Round`);
+                        }}
+                        className="w-full h-20 btn-premium text-lg font-bold uppercase tracking-[0.3em]"
+                      >
+                        Enter Neural Arena <Zap className="ml-3 w-6 h-6" />
+                      </Button>
+                   </Card>
+                )}
+
               </motion.div>
             </AnimatePresence>
           </main>
