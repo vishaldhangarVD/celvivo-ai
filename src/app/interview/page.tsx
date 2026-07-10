@@ -53,7 +53,10 @@ import {
   Sparkles,
   FileEdit,
   Timer,
-  ChevronLeft
+  ChevronLeft,
+  XCircle,
+  RefreshCcw,
+  Activity
 } from 'lucide-react';
 import { useUser, useFirestore, useCollection } from '@/firebase';
 import { collection, query, orderBy, limit, addDoc, serverTimestamp } from 'firebase/firestore';
@@ -141,13 +144,14 @@ export default function InterviewJourney() {
   const [timeLeft, setTimeLeft] = useState(20 * 60); // 20 minutes
   const [isSubmitDialogOpen, setIsSubmitDialogOpen] = useState(false);
   const [isAptitudeComplete, setIsAptitudeComplete] = useState(false);
+  const [showAptitudeResult, setShowAptitudeResult] = useState(false);
 
   // Timer Effect
   useEffect(() => {
     if (currentStep === 6 && timeLeft > 0 && !isAptitudeComplete) {
       const timer = setInterval(() => setTimeLeft(prev => prev - 1), 1000);
       return () => clearInterval(timer);
-    } else if (timeLeft === 0 && currentStep === 6) {
+    } else if (timeLeft === 0 && currentStep === 6 && !isAptitudeComplete) {
       handleAptitudeSubmit();
     }
   }, [currentStep, timeLeft, isAptitudeComplete]);
@@ -271,8 +275,16 @@ export default function InterviewJourney() {
   const handleAptitudeSubmit = () => {
     setIsAptitudeComplete(true);
     setIsSubmitDialogOpen(false);
+    setShowAptitudeResult(true);
     toast({ title: "Aptitude Node Captured", description: "Logic assessment archived." });
-    nextStep();
+  };
+
+  const resetAptitude = () => {
+    setAptitudeAnswers({});
+    setAptitudeIdx(0);
+    setTimeLeft(20 * 60);
+    setIsAptitudeComplete(false);
+    setShowAptitudeResult(false);
   };
 
   const startActualInterview = () => {
@@ -335,7 +347,7 @@ export default function InterviewJourney() {
           <main className="lg:col-span-9">
             <AnimatePresence mode="wait">
               <motion.div
-                key={currentStep}
+                key={currentStep + (showAptitudeResult ? "-result" : "")}
                 initial={{ opacity: 0, x: 20 }}
                 animate={{ opacity: 1, x: 0 }}
                 exit={{ opacity: 0, x: -20 }}
@@ -720,126 +732,209 @@ export default function InterviewJourney() {
                   </div>
                 )}
 
-                {/* Step 6: Aptitude Round */}
+                {/* Step 6: Aptitude Round (Testing or Result) */}
                 {currentStep === 6 && (
                   <div className="space-y-8">
-                    <Card className="premium-card bg-[#0b0e1a]/80 border-white/5 p-0 overflow-hidden min-h-[600px] flex flex-col">
-                      {/* Top Status Bar */}
-                      <div className="p-6 border-b border-white/5 bg-white/[0.02] flex items-center justify-between">
-                        <div className="flex items-center gap-6">
-                          <div className="flex items-center gap-3 bg-accent/10 px-4 py-2 rounded-xl border border-accent/20">
-                            <Timer className="w-4 h-4 text-accent" />
-                            <span className="font-mono text-xl font-bold text-accent">{formatTime(timeLeft)}</span>
+                    {!showAptitudeResult ? (
+                      <Card className="premium-card bg-[#0b0e1a]/80 border-white/5 p-0 overflow-hidden min-h-[600px] flex flex-col">
+                        {/* Top Status Bar */}
+                        <div className="p-6 border-b border-white/5 bg-white/[0.02] flex items-center justify-between">
+                          <div className="flex items-center gap-6">
+                            <div className="flex items-center gap-3 bg-accent/10 px-4 py-2 rounded-xl border border-accent/20">
+                              <Timer className="w-4 h-4 text-accent" />
+                              <span className="font-mono text-xl font-bold text-accent">{formatTime(timeLeft)}</span>
+                            </div>
+                            <div className="hidden md:block h-8 w-px bg-white/5" />
+                            <div className="hidden md:flex items-center gap-4">
+                              <Badge variant="outline" className="border-white/10 text-muted-foreground uppercase text-[10px] tracking-widest font-bold">Node 01: Logic Efficiency</Badge>
+                              <Progress value={(Object.keys(aptitudeAnswers).length / APTITUDE_QUESTIONS.length) * 100} className="w-32 h-1.5" />
+                            </div>
                           </div>
-                          <div className="hidden md:block h-8 w-px bg-white/5" />
-                          <div className="hidden md:flex items-center gap-4">
-                            <Badge variant="outline" className="border-white/10 text-muted-foreground uppercase text-[10px] tracking-widest font-bold">Node 01: Logic Efficiency</Badge>
-                            <Progress value={(Object.keys(aptitudeAnswers).length / APTITUDE_QUESTIONS.length) * 100} className="w-32 h-1.5" />
-                          </div>
-                        </div>
-                        <Button 
-                          variant="outline" 
-                          onClick={() => setIsSubmitDialogOpen(true)}
-                          className="glass border-accent/20 text-accent hover:bg-accent/10 h-10 px-6 rounded-xl text-[10px] font-bold uppercase tracking-widest"
-                        >
-                          Submit Assessment
-                        </Button>
-                      </div>
-
-                      <div className="flex-1 grid lg:grid-cols-12">
-                        {/* Main Question Area */}
-                        <div className="lg:col-span-8 p-12 space-y-10 border-r border-white/5">
-                          <header className="space-y-2">
-                            <Badge className="bg-purple-500/20 text-purple-400 border-none uppercase text-[8px] tracking-[0.3em] font-bold px-3 py-1">
-                              {APTITUDE_QUESTIONS[aptitudeIdx].category} Track
-                            </Badge>
-                            <h3 className="text-3xl font-bold leading-tight">
-                              {aptitudeIdx + 1}. {APTITUDE_QUESTIONS[aptitudeIdx].question}
-                            </h3>
-                          </header>
-
-                          <RadioGroup 
-                            value={aptitudeAnswers[aptitudeIdx] || ""} 
-                            onValueChange={(val) => setAptitudeAnswers({ ...aptitudeAnswers, [aptitudeIdx]: val })}
-                            className="space-y-4"
+                          <Button 
+                            variant="outline" 
+                            onClick={() => setIsSubmitDialogOpen(true)}
+                            className="glass border-accent/20 text-accent hover:bg-accent/10 h-10 px-6 rounded-xl text-[10px] font-bold uppercase tracking-widest"
                           >
-                            {APTITUDE_QUESTIONS[aptitudeIdx].options.map((opt, i) => (
-                              <div 
-                                key={i}
-                                onClick={() => setAptitudeAnswers({ ...aptitudeAnswers, [aptitudeIdx]: opt })}
-                                className={`flex items-center gap-6 p-6 rounded-2xl border transition-all cursor-pointer group ${
-                                  aptitudeAnswers[aptitudeIdx] === opt 
-                                  ? 'bg-accent/10 border-accent shadow-[0_0_30px_rgba(34,211,238,0.05)]' 
-                                  : 'glass border-white/5 hover:border-white/10'
-                                }`}
+                            Submit Assessment
+                          </Button>
+                        </div>
+
+                        <div className="flex-1 grid lg:grid-cols-12">
+                          {/* Main Question Area */}
+                          <div className="lg:col-span-8 p-12 space-y-10 border-r border-white/5">
+                            <header className="space-y-2">
+                              <Badge className="bg-purple-500/20 text-purple-400 border-none uppercase text-[8px] tracking-[0.3em] font-bold px-3 py-1">
+                                {APTITUDE_QUESTIONS[aptitudeIdx].category} Track
+                              </Badge>
+                              <h3 className="text-3xl font-bold leading-tight">
+                                {aptitudeIdx + 1}. {APTITUDE_QUESTIONS[aptitudeIdx].question}
+                              </h3>
+                            </header>
+
+                            <RadioGroup 
+                              value={aptitudeAnswers[aptitudeIdx] || ""} 
+                              onValueChange={(val) => setAptitudeAnswers({ ...aptitudeAnswers, [aptitudeIdx]: val })}
+                              className="space-y-4"
+                            >
+                              {APTITUDE_QUESTIONS[aptitudeIdx].options.map((opt, i) => (
+                                <div 
+                                  key={i}
+                                  onClick={() => setAptitudeAnswers({ ...aptitudeAnswers, [aptitudeIdx]: opt })}
+                                  className={`flex items-center gap-6 p-6 rounded-2xl border transition-all cursor-pointer group ${
+                                    aptitudeAnswers[aptitudeIdx] === opt 
+                                    ? 'bg-accent/10 border-accent shadow-[0_0_30px_rgba(34,211,238,0.05)]' 
+                                    : 'glass border-white/5 hover:border-white/10'
+                                  }`}
+                                >
+                                  <RadioGroupItem value={opt} id={`opt-${i}`} className="border-white/20 text-accent" />
+                                  <Label htmlFor={`opt-${i}`} className="flex-1 text-lg font-light cursor-pointer group-hover:text-white transition-colors">
+                                    {opt}
+                                  </Label>
+                                </div>
+                              ))}
+                            </RadioGroup>
+
+                            <div className="flex items-center justify-between pt-10 border-t border-white/5">
+                              <Button 
+                                variant="ghost" 
+                                disabled={aptitudeIdx === 0}
+                                onClick={() => setAptitudeIdx(aptitudeIdx - 1)}
+                                className="h-14 px-8 rounded-xl hover:bg-white/5 text-muted-foreground font-bold text-[10px] uppercase tracking-widest"
                               >
-                                <RadioGroupItem value={opt} id={`opt-${i}`} className="border-white/20 text-accent" />
-                                <Label htmlFor={`opt-${i}`} className="flex-1 text-lg font-light cursor-pointer group-hover:text-white transition-colors">
-                                  {opt}
-                                </Label>
+                                <ChevronLeft className="w-4 h-4 mr-2" /> Previous
+                              </Button>
+                              <div className="text-[10px] font-bold uppercase tracking-widest text-white/20">
+                                Question {aptitudeIdx + 1} of {APTITUDE_QUESTIONS.length}
                               </div>
-                            ))}
-                          </RadioGroup>
-
-                          <div className="flex items-center justify-between pt-10 border-t border-white/5">
-                            <Button 
-                              variant="ghost" 
-                              disabled={aptitudeIdx === 0}
-                              onClick={() => setAptitudeIdx(aptitudeIdx - 1)}
-                              className="h-14 px-8 rounded-xl hover:bg-white/5 text-muted-foreground font-bold text-[10px] uppercase tracking-widest"
-                            >
-                              <ChevronLeft className="w-4 h-4 mr-2" /> Previous
-                            </Button>
-                            <div className="text-[10px] font-bold uppercase tracking-widest text-white/20">
-                              Question {aptitudeIdx + 1} of {APTITUDE_QUESTIONS.length}
-                            </div>
-                            <Button 
-                              onClick={() => {
-                                if (aptitudeIdx < APTITUDE_QUESTIONS.length - 1) {
-                                  setAptitudeIdx(aptitudeIdx + 1);
-                                } else {
-                                  setIsSubmitDialogOpen(true);
-                                }
-                              }}
-                              className="h-14 px-10 rounded-xl btn-premium text-[10px] font-bold uppercase tracking-widest"
-                            >
-                              {aptitudeIdx === APTITUDE_QUESTIONS.length - 1 ? "Finish Round" : "Next Question"} <ChevronRight className="ml-2 w-4 h-4" />
-                            </Button>
-                          </div>
-                        </div>
-
-                        {/* Question Palette Sidebar */}
-                        <div className="lg:col-span-4 bg-white/[0.01] p-8 space-y-8">
-                          <div className="space-y-1">
-                            <h4 className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Neural Map</h4>
-                            <p className="text-xs text-white/40">Select a node to jump</p>
-                          </div>
-                          <div className="grid grid-cols-5 gap-3">
-                            {APTITUDE_QUESTIONS.map((q, i) => (
-                              <button
-                                key={q.id}
-                                onClick={() => setAptitudeIdx(i)}
-                                className={`w-10 h-10 rounded-lg border text-[10px] font-bold transition-all ${
-                                  aptitudeIdx === i ? 'bg-accent text-black border-accent' :
-                                  aptitudeAnswers[i] ? 'bg-green-500/20 text-green-400 border-green-500/40' :
-                                  'bg-white/5 text-white/30 border-white/5 hover:border-white/20'
-                                }`}
+                              <Button 
+                                onClick={() => {
+                                  if (aptitudeIdx < APTITUDE_QUESTIONS.length - 1) {
+                                    setAptitudeIdx(aptitudeIdx + 1);
+                                  } else {
+                                    setIsSubmitDialogOpen(true);
+                                  }
+                                }}
+                                className="h-14 px-10 rounded-xl btn-premium text-[10px] font-bold uppercase tracking-widest"
                               >
-                                {i + 1}
-                              </button>
-                            ))}
-                          </div>
-                          <div className="pt-8 space-y-4">
-                            <div className="flex items-center gap-3 text-[9px] font-bold uppercase tracking-widest text-muted-foreground">
-                              <div className="w-2 h-2 rounded-full bg-green-500" /> Captured Nodes: {Object.keys(aptitudeAnswers).length}
+                                {aptitudeIdx === APTITUDE_QUESTIONS.length - 1 ? "Finish Round" : "Next Question"} <ChevronRight className="ml-2 w-4 h-4" />
+                              </Button>
                             </div>
-                            <div className="flex items-center gap-3 text-[9px] font-bold uppercase tracking-widest text-muted-foreground">
-                              <div className="w-2 h-2 rounded-full bg-white/10" /> Pending Nodes: {APTITUDE_QUESTIONS.length - Object.keys(aptitudeAnswers).length}
+                          </div>
+
+                          {/* Question Palette Sidebar */}
+                          <div className="lg:col-span-4 bg-white/[0.01] p-8 space-y-8">
+                            <div className="space-y-1">
+                              <h4 className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Neural Map</h4>
+                              <p className="text-xs text-white/40">Select a node to jump</p>
+                            </div>
+                            <div className="grid grid-cols-5 gap-3">
+                              {APTITUDE_QUESTIONS.map((q, i) => (
+                                <button
+                                  key={q.id}
+                                  onClick={() => setAptitudeIdx(i)}
+                                  className={`w-10 h-10 rounded-lg border text-[10px] font-bold transition-all ${
+                                    aptitudeIdx === i ? 'bg-accent text-black border-accent' :
+                                    aptitudeAnswers[i] ? 'bg-green-500/20 text-green-400 border-green-500/40' :
+                                    'bg-white/5 text-white/30 border-white/5 hover:border-white/20'
+                                  }`}
+                                >
+                                  {i + 1}
+                                </button>
+                              ))}
+                            </div>
+                            <div className="pt-8 space-y-4">
+                              <div className="flex items-center gap-3 text-[9px] font-bold uppercase tracking-widest text-muted-foreground">
+                                <div className="w-2 h-2 rounded-full bg-green-500" /> Captured Nodes: {Object.keys(aptitudeAnswers).length}
+                              </div>
+                              <div className="flex items-center gap-3 text-[9px] font-bold uppercase tracking-widest text-muted-foreground">
+                                <div className="w-2 h-2 rounded-full bg-white/10" /> Pending Nodes: {APTITUDE_QUESTIONS.length - Object.keys(aptitudeAnswers).length}
+                              </div>
                             </div>
                           </div>
                         </div>
-                      </div>
-                    </Card>
+                      </Card>
+                    ) : (
+                      /* Aptitude Result View */
+                      <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="space-y-8">
+                        <Card className="premium-card bg-[#0b0e1a]/80 border-white/5 p-12 text-center relative overflow-hidden">
+                          <div className="absolute top-0 right-0 p-8">
+                            <Badge className="bg-green-500/20 text-green-400 border-none font-bold tracking-widest uppercase text-[10px]">Logic Node Secured</Badge>
+                          </div>
+                          
+                          <div className="max-w-2xl mx-auto space-y-12">
+                            <div className="relative w-48 h-48 mx-auto">
+                              <svg className="w-full h-full transform -rotate-90">
+                                <circle className="text-white/5" strokeWidth="8" stroke="currentColor" fill="transparent" r="88" cx="96" cy="96" />
+                                <motion.circle 
+                                  initial={{ strokeDashoffset: 553 }}
+                                  animate={{ strokeDashoffset: 553 - (553 * 84) / 100 }}
+                                  transition={{ duration: 2, ease: "easeOut" }}
+                                  className="text-accent" 
+                                  strokeWidth="8" 
+                                  strokeDasharray={553} 
+                                  strokeLinecap="round" 
+                                  stroke="currentColor" 
+                                  fill="transparent" 
+                                  r="88" 
+                                  cx="96" 
+                                  cy="96" 
+                                />
+                              </svg>
+                              <div className="absolute inset-0 flex flex-col items-center justify-center">
+                                <span className="text-6xl font-bold tracking-tighter">84%</span>
+                                <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Efficiency Index</span>
+                              </div>
+                            </div>
+
+                            <div className="space-y-4">
+                              <h2 className="text-4xl font-bold tracking-tighter uppercase">Logic Assessment Complete</h2>
+                              <p className="text-muted-foreground font-light text-lg">Your cognitive vectors for {selectedRole} have been archived.</p>
+                            </div>
+
+                            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                               {[
+                                 { label: "Total Nodes", val: APTITUDE_QUESTIONS.length, icon: Layers, color: "text-white/40" },
+                                 { label: "Captured", val: Object.keys(aptitudeAnswers).length, icon: Activity, color: "text-blue-400" },
+                                 { label: "Precision", val: "12", icon: CheckCircle2, color: "text-green-400" },
+                                 { label: "Deviations", val: "3", icon: XCircle, color: "text-red-400" }
+                               ].map((s, i) => (
+                                 <div key={i} className="p-6 glass rounded-2xl border-white/5 text-center space-y-2">
+                                   <s.icon className={`w-5 h-5 mx-auto ${s.color}`} />
+                                   <p className="text-2xl font-bold tabular-nums">{s.val}</p>
+                                   <p className="text-[8px] uppercase font-bold tracking-widest text-muted-foreground">{s.label}</p>
+                                 </div>
+                               ))}
+                            </div>
+
+                            <div className="p-8 glass rounded-[2.5rem] border-accent/20 bg-accent/5">
+                               <div className="flex items-center justify-between mb-4">
+                                 <span className="text-[10px] font-bold uppercase tracking-widest text-accent">Auditor Status</span>
+                                 <Badge className="bg-accent/20 text-accent font-bold uppercase tracking-widest text-[8px] px-3">ELIGIBLE FOR DEPLOYMENT</Badge>
+                               </div>
+                               <p className="text-sm font-light text-white/70 leading-relaxed text-left">
+                                 Your performance in the logic nodes exceeds the {selectedCompany} benchmark. Prepare to initialize Round 02: Syntax Mastery.
+                               </p>
+                            </div>
+
+                            <div className="flex flex-col sm:flex-row gap-4">
+                              <Button 
+                                onClick={resetAptitude}
+                                variant="outline" 
+                                className="h-16 flex-1 rounded-2xl glass border-white/10 hover:bg-white/5 text-[10px] font-bold uppercase tracking-widest"
+                              >
+                                <RefreshCcw className="w-4 h-4 mr-3" /> Recalibrate Logic
+                              </Button>
+                              <Button 
+                                onClick={nextStep}
+                                className="h-16 flex-[2] btn-premium rounded-2xl text-[10px] font-bold uppercase tracking-widest"
+                              >
+                                Continue to Syntax Round <ChevronRight className="w-4 h-4 ml-3" />
+                              </Button>
+                            </div>
+                          </div>
+                        </Card>
+                      </motion.div>
+                    )}
                   </div>
                 )}
 
