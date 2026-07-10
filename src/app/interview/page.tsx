@@ -78,6 +78,9 @@ import { collection, addDoc, serverTimestamp, doc, updateDoc, query, orderBy, li
 import { analyzeResume } from '@/ai/flows/ai-resume-analysis';
 import { generateAptitudeTest } from '@/ai/flows/ai-aptitude-generator';
 import { evaluateAptitude } from '@/ai/flows/ai-aptitude-evaluator';
+import { generateCodingChallenge } from '@/ai/flows/ai-coding-generator';
+import { evaluateCodingSubmission } from '@/ai/flows/ai-coding-evaluator';
+import { executeCode } from '@/lib/piston';
 import { useToast } from '@/hooks/use-toast';
 import { motion, AnimatePresence } from 'framer-motion';
 import Link from 'next/link';
@@ -120,28 +123,6 @@ const INTERVIEW_STEPS = [
   { id: 10, title: 'Report', icon: FileText, desc: 'Final audit' },
 ];
 
-const CODING_PROBLEM = {
-  title: "Two Sum Protocol",
-  difficulty: "Medium",
-  points: 100,
-  description: "Given an array of integers `nums` and an integer `target`, return indices of the two numbers such that they add up to `target`.",
-  examples: [
-    { input: "nums = [2,7,11,15], target = 9", output: "[0,1]", explanation: "Because nums[0] + nums[1] == 9, we return [0, 1]." },
-    { input: "nums = [3,2,4], target = 6", output: "[1,2]" }
-  ],
-  constraints: [
-    "2 <= nums.length <= 10^4",
-    "-10^9 <= nums[i] <= 10^9",
-    "Only one valid answer exists."
-  ],
-  starterCode: {
-    javascript: "function twoSum(nums, target) {\n  // Implement neural logic\n};",
-    python: "class Solution:\n    def twoSum(self, nums: List[int], target: int) -> List[int]:\n        # Implement neural logic",
-    java: "class Solution {\n    public int[] twoSum(int[] nums, int target) {\n        // Implement neural logic\n    }\n}",
-    cpp: "class Solution {\npublic:\n    vector<int> twoSum(vector<int>& nums, int target) {\n        // Implement neural logic\n    }\n};"
-  }
-};
-
 export default function InterviewJourney() {
   const router = useRouter();
   const { user } = useUser();
@@ -164,19 +145,22 @@ export default function InterviewJourney() {
   const [aiAptitudeQuestions, setAiAptitudeQuestions] = useState<any[]>([]);
   const [aptitudeIdx, setAptitudeIdx] = useState(0);
   const [aptitudeAnswers, setAptitudeAnswers] = useState<Record<number, string>>({});
-  const [timeLeft, setTimeLeft] = useState(20 * 60); // 20 minutes
+  const [timeLeft, setTimeLeft] = useState(20 * 60); 
   const [isSubmitDialogOpen, setIsSubmitDialogOpen] = useState(false);
   const [isAptitudeEvaluating, setIsAptitudeEvaluating] = useState(false);
   const [aptitudeReport, setAptitudeReport] = useState<any>(null);
   const [aptitudeStartTime, setAptitudeStartTime] = useState<number | null>(null);
 
   // Coding Round State
+  const [isGeneratingCoding, setIsGeneratingCoding] = useState(false);
+  const [codingProblem, setCodingProblem] = useState<any>(null);
   const [selectedLanguage, setSelectedLanguage] = useState("javascript");
-  const [code, setCode] = useState(CODING_PROBLEM.starterCode.javascript);
-  const [codingTimeLeft, setCodingTimeLeft] = useState(45 * 60); // 45 minutes
+  const [code, setCode] = useState("");
+  const [codingTimeLeft, setCodingTimeLeft] = useState(45 * 60); 
   const [isCodingComplete, setIsCodingComplete] = useState(false);
-  const [showCodingResult, setShowCodingResult] = useState(false);
-  const [consoleOutput, setConsoleOutput] = useState<string[]>(["[SYSTEM] Neural terminal initialized...", "[SYSTEM] Awaiting syntax input..."]);
+  const [isCodingEvaluating, setIsCodingEvaluating] = useState(false);
+  const [codingReport, setCodingReport] = useState<any>(null);
+  const [consoleOutput, setConsoleOutput] = useState<string[]>(["[SYSTEM] Neural terminal initialized..."]);
   const [isRunning, setIsRunning] = useState(false);
 
   // Timer Effect
@@ -191,11 +175,11 @@ export default function InterviewJourney() {
 
   // Coding Timer Effect
   useEffect(() => {
-    if (currentStep === 7 && codingTimeLeft > 0 && !isCodingComplete) {
+    if (currentStep === 7 && codingTimeLeft > 0 && !codingReport && codingProblem) {
       const timer = setInterval(() => setCodingTimeLeft(prev => prev - 1), 1000);
       return () => clearInterval(timer);
     }
-  }, [currentStep, codingTimeLeft, isCodingComplete]);
+  }, [currentStep, codingTimeLeft, codingReport, codingProblem]);
 
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
@@ -247,6 +231,94 @@ export default function InterviewJourney() {
     }
   };
 
+  const handleStartCoding = async () => {
+    setIsGeneratingCoding(true);
+    setCurrentStep(7);
+    try {
+      const result = await generateCodingChallenge({
+        role: selectedRole,
+        company: selectedCompany,
+        experienceLevel: selectedExp,
+        resumeSummary: resumeAnalysis?.summary || "",
+        aptitudePerformance: aptitudeReport?.recommendation || ""
+      });
+      setCodingProblem(result);
+      setCode(result.starterCode.javascript);
+      toast({ title: "Syntax Matrix Assembled", description: "Unique challenge synthesized for this session." });
+    } catch (e) {
+      console.error(e);
+      toast({ variant: "destructive", title: "Synthesis Error", description: "Failed to generate algorithmic node." });
+    } finally {
+      setIsGeneratingCoding(false);
+    }
+  };
+
+  const handleRunCode = async () => {
+    if (isRunning || !code) return;
+    setIsRunning(true);
+    setConsoleOutput(prev => [...prev, `[SYSTEM] Executing ${selectedLanguage} protocol...`]);
+    
+    try {
+      const result = await executeCode(selectedLanguage, code);
+      if (result.stderr) {
+        setConsoleOutput(prev => [...prev, `[ERROR] ${result.stderr}`]);
+      } else {
+        setConsoleOutput(prev => [...prev, `[STDOUT] ${result.stdout || '(No output)'}`]);
+      }
+    } catch (e) {
+      setConsoleOutput(prev => [...prev, `[FATAL] Neural execution link lost.`]);
+    } finally {
+      setIsRunning(false);
+    }
+  };
+
+  const handleCodingSubmit = async () => {
+    if (!user || !db || isCodingEvaluating) return;
+    setIsCodingEvaluating(true);
+    setConsoleOutput(prev => [...prev, `[SYSTEM] Initializing Syntax Audit...`]);
+
+    try {
+      const execResult = await executeCode(selectedLanguage, code);
+      const audit = await evaluateCodingSubmission({
+        problem: codingProblem,
+        code,
+        language: selectedLanguage,
+        executionOutput: execResult.output,
+        executionError: execResult.stderr
+      });
+
+      setCodingReport(audit);
+
+      // Persist to Firestore
+      const assessmentData = {
+        userId: user.uid,
+        type: 'Coding',
+        role: selectedRole,
+        company: selectedCompany,
+        problem: codingProblem,
+        code,
+        language: selectedLanguage,
+        score: audit.score,
+        status: audit.status,
+        audit,
+        createdAt: serverTimestamp()
+      };
+
+      await addDoc(collection(db, 'users', user.uid, 'coding_results'), assessmentData);
+
+      toast({
+        title: audit.status === 'Pass' ? "Syntax Validated" : "Audit Deviation",
+        description: audit.status === 'Pass' ? "Access to Technical Arena granted." : "Architectural gaps detected.",
+      });
+
+    } catch (e) {
+      console.error(e);
+      toast({ variant: "destructive", title: "Audit Failed", description: "System failed to analyze syntax matrix." });
+    } finally {
+      setIsCodingEvaluating(false);
+    }
+  };
+
   const validateFile = (selected: File) => {
     if (selected.type !== 'application/pdf') {
       toast({ variant: "destructive", title: "Invalid Protocol", description: "Only PDF blueprints are accepted." });
@@ -292,7 +364,6 @@ export default function InterviewJourney() {
 
       setAptitudeReport(evaluation);
 
-      // Persist Result to Firestore
       const assessmentData = {
         userId: user.uid,
         type: 'Aptitude',
@@ -373,7 +444,6 @@ export default function InterviewJourney() {
       <div className="container mx-auto px-6 py-32">
         <div className="max-w-7xl mx-auto grid lg:grid-cols-12 gap-12">
           
-          {/* Sidebar */}
           <aside className="lg:col-span-3 space-y-8">
             <div className="space-y-4">
               <Badge className="bg-accent/20 text-accent border-none px-4 py-1 text-[10px] tracking-widest font-bold uppercase">Simulation Pipeline</Badge>
@@ -413,11 +483,10 @@ export default function InterviewJourney() {
             </nav>
           </aside>
 
-          {/* Main Area */}
           <main className="lg:col-span-9">
             <AnimatePresence mode="wait">
               <motion.div
-                key={currentStep + (aptitudeReport ? "-apt-result" : "")}
+                key={currentStep + (aptitudeReport ? "-apt-result" : "") + (codingReport ? "-cod-result" : "")}
                 initial={{ opacity: 0, x: 20 }}
                 animate={{ opacity: 1, x: 0 }}
                 exit={{ opacity: 0, x: -20 }}
@@ -605,25 +674,6 @@ export default function InterviewJourney() {
                       </Card>
                     </div>
 
-                    <div className="grid md:grid-cols-2 gap-8">
-                       <div className="space-y-4">
-                         <h4 className="text-xs font-bold uppercase tracking-widest text-muted-foreground ml-2">Strategic Strengths</h4>
-                         <div className="space-y-3">
-                           {(resumeAnalysis?.strengths || ["Clean architectural reasoning.", "High seniority alignment."]).map((s: string, i: number) => (
-                             <div key={i} className="flex gap-4 p-4 glass rounded-2xl border-white/5 text-sm font-light text-white/70"><CheckCircle2 className="w-4 h-4 text-green-400 shrink-0" /> {s}</div>
-                           ))}
-                         </div>
-                       </div>
-                       <div className="space-y-4">
-                         <h4 className="text-xs font-bold uppercase tracking-widest text-muted-foreground ml-2">Optimization Nodes</h4>
-                         <div className="space-y-3">
-                           {(resumeAnalysis?.improvementSuggestions || ["Add more quantifiable impact metrics.", "Integrate target keywords."]).map((s: string, i: number) => (
-                             <div key={i} className="flex gap-4 p-4 glass rounded-2xl border-white/5 text-sm font-light text-white/70"><Info className="w-4 h-4 text-accent shrink-0" /> {s}</div>
-                           ))}
-                         </div>
-                       </div>
-                    </div>
-
                     <Button onClick={handleStartAptitude} className="w-full h-20 btn-premium text-lg font-bold uppercase tracking-[0.3em]">Initialize Round 01: Aptitude <ChevronRight className="ml-3 w-6 h-6" /></Button>
                   </Card>
                 )}
@@ -642,9 +692,6 @@ export default function InterviewJourney() {
                            <h2 className="text-3xl font-bold tracking-tighter text-premium">
                              {isAptitudeEvaluating ? "Auditing Cognitive Nodes..." : "Synthesizing Logic Matrix..."}
                            </h2>
-                           <p className="text-muted-foreground font-light uppercase tracking-[0.4em] text-[10px]">
-                             {isAptitudeEvaluating ? "Running performance telemetry" : `Assembling 15 unique nodes for ${selectedCompany}`}
-                           </p>
                         </div>
                       </Card>
                     ) : !aptitudeReport ? (
@@ -655,7 +702,6 @@ export default function InterviewJourney() {
                               <Timer className="w-4 h-4 text-accent" />
                               <span className="font-mono text-xl font-bold text-accent">{formatTime(timeLeft)}</span>
                             </div>
-                            <Badge variant="outline" className="border-white/10 text-muted-foreground uppercase text-[10px] tracking-widest font-bold">Node 01: Logic Efficiency</Badge>
                           </div>
                           <Button onClick={() => setIsSubmitDialogOpen(true)} className="glass border-accent/20 text-accent hover:bg-accent/10 h-10 px-6 rounded-xl text-[10px] font-bold uppercase tracking-widest">Submit Assessment</Button>
                         </div>
@@ -708,8 +754,6 @@ export default function InterviewJourney() {
                                   <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Efficiency Index</span>
                                 </div>
                               </div>
-                              <h3 className="text-2xl font-bold mb-2">Node Evaluation</h3>
-                              <p className="text-sm text-muted-foreground font-light leading-relaxed">Performance calibrated for {selectedRole} standards at {selectedCompany}.</p>
                             </div>
 
                             <div className="lg:col-span-8 space-y-12">
@@ -734,50 +778,18 @@ export default function InterviewJourney() {
                                 <h4 className="text-[10px] font-bold uppercase tracking-[0.3em] text-accent mb-6 flex items-center gap-3"><Info className="w-4 h-4" /> Performance Insight</h4>
                                 <p className="text-lg font-light leading-relaxed text-white/80 italic">"{aptitudeReport.recommendation}"</p>
                               </div>
-
-                              <div className="grid md:grid-cols-2 gap-12">
-                                <div className="space-y-6">
-                                  <h4 className="text-[10px] font-bold uppercase tracking-[0.3em] text-green-400">Captured Strengths</h4>
-                                  <ul className="space-y-4">
-                                    {aptitudeReport.feedback.strengths.map((s: string, i: number) => (
-                                      <li key={i} className="flex gap-4 text-sm font-light text-white/70">
-                                        <CheckCircle2 className="w-4 h-4 text-green-400 shrink-0" /> {s}
-                                      </li>
-                                    ))}
-                                  </ul>
-                                </div>
-                                <div className="space-y-6">
-                                  <h4 className="text-[10px] font-bold uppercase tracking-[0.3em] text-red-400">Identified Gaps</h4>
-                                  <ul className="space-y-4">
-                                    {aptitudeReport.feedback.weaknesses.map((w: string, i: number) => (
-                                      <li key={i} className="flex gap-4 text-sm font-light text-white/70">
-                                        <AlertCircle className="w-4 h-4 text-red-400 shrink-0" /> {w}
-                                      </li>
-                                    ))}
-                                  </ul>
-                                </div>
-                              </div>
                             </div>
                           </div>
 
-                          <div className="mt-16 pt-12 border-t border-white/5 flex flex-col md:flex-row gap-6">
+                          <div className="mt-16 pt-12 border-t border-white/5">
                             {aptitudeReport.status === 'Pass' ? (
-                              <Button onClick={nextStep} className="h-20 flex-1 btn-premium text-lg font-bold uppercase tracking-[0.3em]">
-                                Unlock Syntax Round <ChevronRight className="ml-3 w-6 h-6" />
+                              <Button onClick={handleStartCoding} className="h-20 w-full btn-premium text-lg font-bold uppercase tracking-[0.3em]">
+                                Unlock Round 02: Syntax Matrix <ChevronRight className="ml-3 w-6 h-6" />
                               </Button>
                             ) : (
-                              <div className="w-full space-y-6">
-                                <div className="p-8 glass rounded-[2rem] border-red-500/20 bg-red-500/5 text-center">
-                                  <h4 className="text-xl font-bold text-red-400 mb-2">Practice Protocol Active</h4>
-                                  <p className="text-muted-foreground font-light mb-8">System recommendation: Review remedial logic nodes before re-attempting.</p>
-                                  <div className="flex gap-4 justify-center">
-                                    <Button onClick={() => setAptitudeReport(null)} variant="outline" className="h-14 px-10 rounded-2xl glass border-white/10 text-xs font-bold uppercase tracking-widest">Reset Assessment</Button>
-                                    <Link href="/question-bank">
-                                      <Button className="h-14 px-10 rounded-2xl btn-premium text-xs font-bold uppercase tracking-widest">Library Search</Button>
-                                    </Link>
-                                  </div>
-                                </div>
-                              </div>
+                              <Button onClick={() => setAptitudeReport(null)} variant="outline" className="h-20 w-full rounded-2xl glass border-red-500/20 text-red-400 font-bold uppercase tracking-widest">
+                                Protocol Deviation Detected: Reset Round
+                              </Button>
                             )}
                           </div>
                         </Card>
@@ -788,15 +800,27 @@ export default function InterviewJourney() {
 
                 {currentStep === 7 && (
                   <div className="space-y-8">
-                    {!showCodingResult ? (
-                      <Card className="premium-card bg-[#0b0e1a]/80 border-white/5 p-0 overflow-hidden flex flex-col min-h-[750px]">
+                    {isGeneratingCoding || isCodingEvaluating ? (
+                      <Card className="premium-card bg-[#0b0e1a]/80 border-white/5 p-20 text-center space-y-8">
+                        <div className="relative w-32 h-32 mx-auto">
+                           <motion.div animate={{ rotate: 360 }} transition={{ duration: 4, repeat: Infinity, ease: "linear" }} className="absolute inset-0 rounded-full border-t-2 border-accent" />
+                           <div className="absolute inset-0 flex items-center justify-center">
+                             <Terminal className="w-12 h-12 text-accent animate-pulse" />
+                           </div>
+                        </div>
+                        <h2 className="text-3xl font-bold tracking-tighter text-premium">
+                          {isCodingEvaluating ? "Auditing Syntax Matrix..." : "Synthesizing Algorithmic Node..."}
+                        </h2>
+                      </Card>
+                    ) : !codingReport ? (
+                      <Card className="premium-card bg-[#0b0e1a]/80 border-white/5 p-0 overflow-hidden flex flex-col min-h-[800px]">
                         <div className="p-6 border-b border-white/5 bg-white/[0.02] flex items-center justify-between">
                           <div className="flex items-center gap-6">
                             <div className="flex items-center gap-3 bg-accent/10 px-4 py-2 rounded-xl border border-accent/20">
                               <Timer className="w-4 h-4 text-accent" />
                               <span className="font-mono text-xl font-bold text-accent">{formatTime(codingTimeLeft)}</span>
                             </div>
-                            <Select value={selectedLanguage} onValueChange={(val) => { setSelectedLanguage(val); setCode((CODING_PROBLEM.starterCode as any)[val]); }}>
+                            <Select value={selectedLanguage} onValueChange={(val) => { setSelectedLanguage(val); setCode(codingProblem?.starterCode[val] || ""); }}>
                               <SelectTrigger className="w-40 glass border-white/10 bg-transparent h-10 px-4 rounded-xl text-[10px] font-bold uppercase tracking-widest">
                                 <SelectValue placeholder="Language" />
                               </SelectTrigger>
@@ -805,65 +829,72 @@ export default function InterviewJourney() {
                                 <SelectItem value="python">Python</SelectItem>
                                 <SelectItem value="java">Java</SelectItem>
                                 <SelectItem value="cpp">C++</SelectItem>
+                                <SelectItem value="c">C</SelectItem>
+                                <SelectItem value="csharp">C#</SelectItem>
+                                <SelectItem value="go">Go</SelectItem>
                               </SelectContent>
                             </Select>
                           </div>
                           <div className="flex gap-3">
-                            <Button variant="ghost" className="h-10 px-4 rounded-xl text-[10px] font-bold uppercase tracking-widest text-white/40"><RefreshCcw className="w-4 h-4 mr-2" /> Reset</Button>
-                            <Button onClick={() => { setShowCodingResult(true); setIsCodingComplete(true); }} className="btn-premium h-10 px-6 rounded-xl text-[10px] font-bold uppercase tracking-widest">Archive Submission</Button>
+                            <Button onClick={handleRunCode} disabled={isRunning} variant="ghost" className="h-10 px-4 rounded-xl text-[10px] font-bold uppercase tracking-widest text-accent hover:bg-accent/10">
+                              {isRunning ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <PlayCircle className="w-4 h-4 mr-2" />} Run logic
+                            </Button>
+                            <Button onClick={handleCodingSubmit} className="btn-premium h-10 px-6 rounded-xl text-[10px] font-bold uppercase tracking-widest shadow-[0_0_20px_rgba(147,51,234,0.3)]">Archive Submission</Button>
                           </div>
                         </div>
 
                         <div className="flex-1 grid lg:grid-cols-2 overflow-hidden">
                           <div className="p-10 border-r border-white/5 space-y-8 overflow-y-auto custom-scrollbar">
                             <div className="flex items-center justify-between">
-                              <Badge className="bg-orange-500/20 text-orange-400 border-none uppercase text-[8px] tracking-[0.3em] font-bold px-3 py-1">{CODING_PROBLEM.difficulty} Node</Badge>
-                              <span className="text-[10px] font-bold uppercase text-white/20 tracking-widest">{CODING_PROBLEM.points} Points</span>
+                              <Badge className="bg-orange-500/20 text-orange-400 border-none uppercase text-[8px] tracking-[0.3em] font-bold px-3 py-1">{codingProblem?.difficulty} Node</Badge>
+                              <span className="text-[10px] font-bold uppercase text-white/20 tracking-widest">100 Points</span>
                             </div>
-                            <h3 className="text-3xl font-bold tracking-tight">{CODING_PROBLEM.title}</h3>
+                            <h3 className="text-3xl font-bold tracking-tight">{codingProblem?.title}</h3>
                             <div className="prose prose-invert prose-sm">
-                              <p className="text-lg font-light leading-relaxed text-white/70">{CODING_PROBLEM.description}</p>
-                              <div className="space-y-6 mt-8">
-                                {CODING_PROBLEM.examples.map((ex, i) => (
-                                  <div key={i} className="p-6 glass rounded-2xl border-white/5 bg-white/[0.01] space-y-3">
-                                    <p className="text-[10px] font-bold uppercase tracking-widest text-accent">Example 0{i + 1}</p>
-                                    <div className="space-y-1">
-                                      <p className="text-xs text-white/40"><span className="font-bold text-white/60">Input:</span> {ex.input}</p>
-                                      <p className="text-xs text-white/40"><span className="font-bold text-white/60">Output:</span> {ex.output}</p>
-                                      {ex.explanation && <p className="text-xs text-white/40 italic">{ex.explanation}</p>}
-                                    </div>
-                                  </div>
-                                ))}
+                              <p className="text-lg font-light leading-relaxed text-white/70">{codingProblem?.description}</p>
+                              
+                              <div className="grid gap-6 mt-8">
+                                <div className="p-6 glass rounded-2xl border-white/5 bg-white/[0.01]">
+                                   <p className="text-[10px] font-bold uppercase tracking-widest text-accent mb-2">Input Format</p>
+                                   <p className="text-xs text-white/50">{codingProblem?.inputFormat}</p>
+                                </div>
+                                <div className="p-6 glass rounded-2xl border-white/5 bg-white/[0.01]">
+                                   <p className="text-[10px] font-bold uppercase tracking-widest text-accent mb-2">Output Format</p>
+                                   <p className="text-xs text-white/50">{codingProblem?.outputFormat}</p>
+                                </div>
                               </div>
+
                               <div className="mt-8 space-y-4">
-                                <h4 className="text-[10px] font-bold uppercase tracking-widest text-white/30">Constraints</h4>
-                                <ul className="list-disc list-inside text-xs text-white/40 font-light space-y-1">
-                                  {CODING_PROBLEM.constraints.map((c, i) => <li key={i}>{c}</li>)}
-                                </ul>
+                                <h4 className="text-[10px] font-bold uppercase tracking-widest text-white/30">Sample I/O</h4>
+                                <div className="p-6 glass rounded-2xl border-white/5 bg-black/40 font-mono text-xs space-y-3">
+                                  <p><span className="text-accent">Input:</span> {codingProblem?.sampleInput}</p>
+                                  <p><span className="text-purple-400">Output:</span> {codingProblem?.sampleOutput}</p>
+                                </div>
                               </div>
                             </div>
                           </div>
 
                           <div className="flex flex-col bg-black/40">
                              <div className="flex-1 relative">
-                               <div className="absolute left-0 top-0 bottom-0 w-12 bg-white/[0.02] border-r border-white/5 flex flex-col items-center pt-6 text-[10px] font-mono text-white/10 select-none">
-                                  {Array.from({ length: 30 }).map((_, i) => <div key={i} className="h-6 flex items-center">{i + 1}</div>)}
-                               </div>
                                <textarea 
                                  value={code} 
                                  onChange={(e) => setCode(e.target.value)} 
                                  spellCheck={false}
-                                 className="w-full h-full bg-transparent outline-none border-none p-6 pl-16 font-mono text-sm leading-6 resize-none text-white/80 selection:bg-accent/20"
+                                 className="w-full h-full bg-transparent outline-none border-none p-8 font-mono text-sm leading-6 resize-none text-white/80 selection:bg-accent/20"
                                />
                              </div>
-                             <div className="h-64 border-t border-white/5 flex flex-col">
-                                <div className="px-6 py-3 border-b border-white/5 flex items-center justify-between bg-white/[0.01]">
-                                   <div className="flex items-center gap-3 text-[10px] font-bold uppercase tracking-[0.2em] text-white/30"><Terminal className="w-3.5 h-3.5" /> Neural Console</div>
-                                   <Button onClick={() => { setIsRunning(true); setTimeout(() => { setConsoleOutput([...consoleOutput, `[SUCCESS] Tests passed for Input: nums=[2,7,11,15], target=9`, `[SUCCESS] Efficiency verified.`]); setIsRunning(false); }, 1500); }} disabled={isRunning} className="h-8 px-4 rounded-lg glass border-white/10 text-[9px] font-bold uppercase tracking-widest">{isRunning ? <Loader2 className="w-3 h-3 animate-spin mr-2" /> : <PlayCircle className="w-3 h-3 mr-2" />} Run Logic</Button>
+                             <div className="h-72 border-t border-white/5 flex flex-col">
+                                <div className="px-6 py-3 border-b border-white/5 flex items-center gap-3 bg-white/[0.01]">
+                                   <Terminal className="w-3.5 h-3.5 text-white/30" />
+                                   <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-white/30">Neural Console</span>
                                 </div>
-                                <div className="flex-1 p-6 font-mono text-xs overflow-y-auto custom-scrollbar space-y-2">
-                                   {consoleOutput.map((log, i) => <div key={i} className={log.includes('SUCCESS') ? 'text-green-400' : 'text-white/40'}>{log}</div>)}
-                                   {isRunning && <div className="text-accent animate-pulse">Running neural execution loop...</div>}
+                                <div className="flex-1 p-6 font-mono text-xs overflow-y-auto custom-scrollbar space-y-2 bg-[#050816]/50">
+                                   {consoleOutput.map((log, i) => (
+                                     <div key={i} className={log.startsWith('[ERROR]') ? 'text-red-400' : log.startsWith('[STDOUT]') ? 'text-green-400' : 'text-white/40'}>
+                                       {log}
+                                     </div>
+                                   ))}
+                                   {isRunning && <div className="text-accent animate-pulse">Running execution loop...</div>}
                                 </div>
                              </div>
                           </div>
@@ -871,69 +902,72 @@ export default function InterviewJourney() {
                       </Card>
                     ) : (
                       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-8">
-                         <Card className="premium-card bg-[#0b0e1a]/80 border-glow-premium p-12 relative overflow-hidden">
-                           <div className="absolute top-0 right-0 p-12">
-                              <Badge className="bg-green-500/20 text-green-400 border-none font-bold tracking-[0.3em] uppercase text-xs px-6 py-2">PROTOCOL VALIDATED: PASS</Badge>
-                           </div>
+                         <Card className="premium-card bg-[#0b0e1a]/80 border-glow-premium p-12">
+                            <div className="flex justify-between items-start mb-12">
+                              <div>
+                                <Badge className={`${codingReport.status === 'Pass' ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'} border-none font-bold tracking-[0.3em] uppercase text-xs px-6 py-2`}>
+                                  SYNTAX STATUS: {codingReport.status.toUpperCase()}
+                                </Badge>
+                                <h2 className="text-5xl font-bold tracking-tighter text-premium mt-4">Syntax Audit Complete</h2>
+                              </div>
+                              <div className="text-right">
+                                <div className="text-7xl font-bold text-gradient-purple">{codingReport.score}%</div>
+                                <div className="text-[10px] uppercase font-bold tracking-widest text-muted-foreground mt-2">Precision Index</div>
+                              </div>
+                            </div>
 
-                           <div className="grid lg:grid-cols-12 gap-16">
-                              <div className="lg:col-span-4 text-center border-r border-white/5 pr-16">
-                                <div className="relative w-48 h-48 mx-auto mb-8 flex items-center justify-center">
-                                  <svg className="w-full h-full transform -rotate-90">
-                                    <circle className="text-white/5" strokeWidth="10" stroke="currentColor" fill="transparent" r="88" cx="96" cy="96" />
-                                    <motion.circle initial={{ strokeDashoffset: 553 }} animate={{ strokeDashoffset: 553 - (553 * 92) / 100 }} transition={{ duration: 2 }} className="text-accent" strokeWidth="10" strokeDasharray={553} strokeLinecap="round" stroke="currentColor" fill="transparent" r="88" cx="96" cy="96" />
-                                  </svg>
-                                  <div className="absolute inset-0 flex flex-col items-center justify-center">
-                                    <span className="text-6xl font-bold tracking-tighter">92%</span>
-                                    <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Syntax Index</span>
+                            <div className="grid lg:grid-cols-3 gap-8 mb-12">
+                               <div className="p-8 glass rounded-[2rem] border-white/5 space-y-4">
+                                  <div className="flex justify-between items-end">
+                                    <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Readability</span>
+                                    <span className="text-xl font-bold text-accent">{codingReport.readabilityScore}%</span>
                                   </div>
-                                </div>
-                                <h3 className="text-2xl font-bold mb-2">Technical Mastery</h3>
-                                <p className="text-sm text-muted-foreground font-light leading-relaxed">Syntax calibration confirms senior-grade architectural reasoning.</p>
-                              </div>
+                                  <Progress value={codingReport.readabilityScore} className="h-1" />
+                               </div>
+                               <div className="p-8 glass rounded-[2rem] border-white/5">
+                                  <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-2">Time Complexity</p>
+                                  <p className="text-2xl font-bold text-purple-400">{codingReport.timeComplexity}</p>
+                               </div>
+                               <div className="p-8 glass rounded-[2rem] border-white/5">
+                                  <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-2">Space Complexity</p>
+                                  <p className="text-2xl font-bold text-blue-400">{codingReport.spaceComplexity}</p>
+                               </div>
+                            </div>
 
-                              <div className="lg:col-span-8 space-y-12">
-                                <div className="grid md:grid-cols-3 gap-8">
-                                  {[
-                                    { label: "Passed Nodes", val: "8/10", icon: CheckCircle2, color: "text-green-400" },
-                                    { label: "Complexity", val: "O(n)", icon: Activity, color: "text-accent" },
-                                    { label: "Clean Code", val: "Elite", icon: MonitorCog, color: "text-purple-400" }
-                                  ].map((stat, i) => (
-                                    <div key={i} className="p-6 glass rounded-2xl border-white/5 space-y-4">
-                                      <div className="flex justify-between items-center">
-                                        <stat.icon className={`w-5 h-5 ${stat.color}`} />
-                                        <span className="text-xl font-bold">{stat.val}</span>
+                            <div className="grid md:grid-cols-2 gap-12 pt-12 border-t border-white/5">
+                               <div className="space-y-6">
+                                  <h4 className="text-[10px] font-bold uppercase tracking-[0.4em] text-accent">Optimization Directives</h4>
+                                  <div className="space-y-4">
+                                    {codingReport.optimizationTips.map((tip: string, i: number) => (
+                                      <div key={i} className="flex gap-4 p-5 glass rounded-2xl border-white/5 text-sm font-light text-white/70">
+                                        <Zap className="w-4 h-4 text-accent shrink-0" /> {tip}
                                       </div>
-                                      <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">{stat.label}</p>
-                                    </div>
-                                  ))}
-                                </div>
+                                    ))}
+                                  </div>
+                               </div>
+                               <div className="p-10 glass rounded-[2.5rem] bg-accent/[0.02] border-accent/10">
+                                  <h4 className="text-[10px] font-bold uppercase tracking-[0.3em] text-accent mb-6">Staff Auditor Recommendation</h4>
+                                  <p className="text-lg font-light leading-relaxed text-white/80 italic">"{codingReport.finalRecommendation}"</p>
+                               </div>
+                            </div>
 
-                                <div className="p-8 glass rounded-[2.5rem] bg-accent/[0.02] border-accent/10">
-                                   <h4 className="text-[10px] font-bold uppercase tracking-[0.3em] text-accent mb-6 flex items-center gap-3"><MonitorCog className="w-4 h-4" /> Neural Optimization Insight</h4>
-                                   <p className="text-lg font-light leading-relaxed text-white/80 italic">"Your implementation logic is highly efficient. The time complexity is optimal for large datasets. Access to the Live Technical Arena is now granted."</p>
-                                </div>
-                                
-                                <div className="space-y-6">
-                                   <h4 className="text-[10px] font-bold uppercase tracking-[0.3em] text-white/30">Verification Log</h4>
-                                   <div className="space-y-3">
-                                      <div className="flex items-center gap-4 p-4 glass rounded-2xl border-white/5"><div className="w-1.5 h-1.5 rounded-full bg-green-400" /> <span className="text-xs font-light text-white/60">Edge case handling: Verified</span></div>
-                                      <div className="flex items-center gap-4 p-4 glass rounded-2xl border-white/5"><div className="w-1.5 h-1.5 rounded-full bg-green-400" /> <span className="text-xs font-light text-white/60">Memory footprint optimization: Verified</span></div>
-                                   </div>
-                                </div>
-                              </div>
-                           </div>
-
-                           <div className="mt-16 pt-12 border-t border-white/5">
-                              <Button onClick={nextStep} className="w-full h-20 btn-premium text-lg font-bold uppercase tracking-[0.3em]">Initialize Live Technical Arena <ChevronRight className="ml-3 w-6 h-6" /></Button>
-                           </div>
+                            <div className="mt-16 pt-12 border-t border-white/5">
+                              {codingReport.status === 'Pass' ? (
+                                <Button onClick={nextStep} className="h-20 w-full btn-premium text-lg font-bold uppercase tracking-[0.3em]">
+                                  Enter Live Technical Arena <Mic className="ml-3 w-6 h-6" />
+                                </Button>
+                              ) : (
+                                <Button onClick={() => setCodingReport(null)} variant="outline" className="h-20 w-full rounded-2xl glass border-red-500/20 text-red-400 font-bold uppercase tracking-widest">
+                                  Recalibrate Syntax Matrix
+                                </Button>
+                              )}
+                            </div>
                          </Card>
                       </motion.div>
                     )}
                   </div>
                 )}
 
-                {/* Step 8 (Arena) is navigated via router link usually, but can be embedded if needed */}
                 {currentStep === 8 && (
                    <Card className="premium-card bg-[#0b0e1a]/80 border-white/5 p-20 text-center space-y-12">
                       <div className="w-32 h-32 rounded-[2.5rem] bg-accent/20 flex items-center justify-center mx-auto border border-accent/30 shadow-[0_0_50px_rgba(34,211,238,0.2)]">
