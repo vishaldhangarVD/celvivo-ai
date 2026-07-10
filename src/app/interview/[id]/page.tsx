@@ -11,7 +11,6 @@ import {
   Loader2, 
   Send, 
   Mic, 
-  MicOff,
   Video, 
   LogOut, 
   Timer, 
@@ -29,8 +28,8 @@ import NavigationControls from "@/components/NavigationControls";
 import { aiMockInterview } from "@/ai/flows/ai-mock-interview-v2";
 import { generateInterviewFeedback } from "@/ai/flows/ai-interview-feedback";
 import { synthesizeAudio } from "@/ai/flows/ai-audio-synthesis";
-import { useUser, useFirestore, useCollection } from "@/firebase";
-import { doc, serverTimestamp, collection, addDoc, query, orderBy, limit, updateDoc, getDoc } from "firebase/firestore";
+import { useUser, useFirestore } from "@/firebase";
+import { doc, serverTimestamp, collection, addDoc, updateDoc, getDoc, setDoc } from "firebase/firestore";
 import { useToast } from "@/hooks/use-toast";
 import Image from "next/image";
 import { PlaceHolderImages } from "@/lib/placeholder-images";
@@ -209,11 +208,11 @@ function VirtualArenaContent() {
 
       const docRef = await addDoc(collection(db, 'users', user.uid, 'interviews'), interviewData);
       
-      // Update journey to report step
-      await updateDoc(doc(db, 'users', user.uid, 'journey', 'active'), {
+      // Update journey to report step (11)
+      await setDoc(doc(db, 'users', user.uid, 'journey', 'active'), {
         step: 11,
         finalReportId: docRef.id
-      });
+      }, { merge: true });
 
       router.push(`/feedback/${docRef.id}`);
     } catch (e) {
@@ -304,3 +303,4 @@ export default function VirtualArena() {
     </Suspense>
   );
 }
+

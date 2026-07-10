@@ -8,25 +8,7 @@ import NavigationControls from '@/components/NavigationControls';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Progress } from '@/components/ui/progress';
 import { Input } from '@/components/ui/input';
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Label } from "@/components/ui/label";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-  DialogFooter,
-} from "@/components/ui/dialog";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { 
   Briefcase, 
   Building2, 
@@ -35,12 +17,9 @@ import {
   Zap, 
   Code2, 
   Mic, 
-  Users, 
   FileText, 
-  ChevronRight, 
   Loader2, 
   CircleCheck, 
-  Lock, 
   Play, 
   ShieldCheck, 
   Search, 
@@ -54,26 +33,22 @@ import {
   CircleAlert,
   TrendingUp,
   Sparkles,
-  FileEdit,
   Timer,
+  ChevronRight,
   ChevronLeft,
   CircleX,
   Activity,
   Terminal,
   CirclePlay,
-  Save,
   MonitorCog,
-  Info,
   Cpu,
-  Hand,
-  Smartphone,
-  Cloud,
   Monitor,
-  Shield,
-  SearchX,
-  MessageSquare
+  Cloud,
+  MessageSquare,
+  History,
+  LayoutDashboard
 } from 'lucide-react';
-import { useUser, useFirestore, useDoc } from '@/firebase';
+import { useUser, useFirestore } from '@/firebase';
 import { collection, addDoc, serverTimestamp, doc, updateDoc, setDoc, getDoc } from 'firebase/firestore';
 import { analyzeResume } from '@/ai/flows/ai-resume-analysis';
 import { generateAptitudeTest } from '@/ai/flows/ai-aptitude-generator';
@@ -83,42 +58,46 @@ import { evaluateCodingSubmission } from '@/ai/flows/ai-coding-evaluator';
 import { executeCode } from '@/lib/piston';
 import { useToast } from '@/hooks/use-toast';
 import { motion, AnimatePresence } from 'framer-motion';
-import Link from 'next/link';
 
 const ALL_ROLES = [
+  { id: 'fullstack', name: "Full Stack Developer", category: "Full Stack", icon: Layers },
   { id: 'java', name: "Java Developer", category: "Software Development", icon: Code2 },
   { id: 'python', name: "Python Developer", category: "Software Development", icon: Code2 },
   { id: 'react', name: "React Developer", category: "Frontend", icon: Monitor },
   { id: 'nodejs', name: "Node.js Developer", category: "Backend", icon: Database },
-  { id: 'fullstack', name: "Full Stack Developer", category: "Full Stack", icon: Layers },
   { id: 'data-analyst', name: "Data Analyst", category: "Data", icon: TrendingUp },
   { id: 'devops', name: "DevOps Engineer", category: "Cloud & DevOps", icon: Cloud },
   { id: 'ai', name: "AI Engineer", category: "AI & ML", icon: Zap },
-  // ... (Full list maintained)
+  { id: 'gen-ai', name: "Generative AI Engineer", category: "AI & ML", icon: Sparkles },
+  { id: 'prompt', name: "Prompt Engineer", category: "AI & ML", icon: MessageSquare },
+  { id: 'sys-admin', name: "System Administrator", category: "Infrastructure", icon: MonitorCog },
 ];
-
-const POPULAR_ROLE_IDS = ['fullstack', 'java', 'python', 'react', 'nodejs', 'data-analyst', 'devops', 'ai'];
 
 const EXPERIENCE_OPTIONS = [
   { id: 'fresher', label: 'Fresher', desc: 'Entry-level talent', icon: Zap },
-  { id: '1-2', label: '1–2 Years', desc: 'Junior / Mid-level', icon: Clock },
-  { id: '3-5', label: '3–5 Years', desc: 'Mid / Senior grade', icon: Award },
-  { id: '5+', label: '5+ Years', desc: 'Expert / Lead grade', icon: ShieldCheck },
+  { id: '0-1', label: '0–1 Years', desc: 'Early career', icon: Clock },
+  { id: '1-3', label: '1–3 Years', desc: 'Junior / Mid-level', icon: Award },
+  { id: '3-5', label: '3–5 Years', desc: 'Mid / Senior grade', icon: ShieldCheck },
+  { id: '5+', label: '5+ Years', desc: 'Expert / Lead grade', icon: Target },
 ];
 
-const COMPANIES = ["Google", "Amazon", "Microsoft", "TCS", "Infosys", "Wipro", "Accenture", "Deloitte"];
+const COMPANIES = ["Google", "Amazon", "Microsoft", "Meta", "TCS", "Infosys", "Wipro", "Accenture", "Deloitte"];
 
 const INTERVIEW_STEPS = [
-  { id: 1, title: 'Job Role', icon: Briefcase, desc: 'Target track' },
-  { id: 2, title: 'Experience', icon: GraduationCap, desc: 'Seniority' },
-  { id: 3, title: 'Company', icon: Building2, desc: 'Culture sync' },
-  { id: 4, title: 'Resume', icon: Upload, desc: 'Intelligence sync' },
-  { id: 5, title: 'Screening', icon: SearchCheck, desc: 'ATS Audit' },
-  { id: 6, title: 'Aptitude', icon: Zap, desc: 'Logic Round' },
-  { id: 7, title: 'Aptitude Result', icon: FileText, desc: 'Performance' },
-  { id: 8, title: 'Coding Round', icon: Code2, desc: 'Syntax Matrix' },
-  { id: 9, title: 'Coding Result', icon: Award, desc: 'Architecture' },
-  { id: 10, title: 'Arena Entrance', icon: Mic, desc: 'Live Simulation' },
+  { id: 1, title: 'Job Role', icon: Briefcase },
+  { id: 2, title: 'Experience', icon: GraduationCap },
+  { id: 3, title: 'Company', icon: Building2 },
+  { id: 4, title: 'Resume', icon: Upload },
+  { id: 5, title: 'Analysis', icon: SearchCheck },
+  { id: 6, title: 'Aptitude', icon: Zap },
+  { id: 7, title: 'Aptitude Result', icon: FileText },
+  { id: 8, title: 'Coding Round', icon: Code2 },
+  { id: 9, title: 'Coding Result', icon: Award },
+  { id: 10, title: 'Virtual Interview', icon: Mic },
+  { id: 11, title: 'AI Report', icon: TrendingUp },
+  { id: 12, title: 'Roadmap', icon: Globe },
+  { id: 13, title: 'History', icon: History },
+  { id: 14, title: 'Dashboard', icon: LayoutDashboard },
 ];
 
 export default function InterviewJourney() {
@@ -132,33 +111,25 @@ export default function InterviewJourney() {
   const [selectedExp, setSelectedExp] = useState("");
   const [selectedCompany, setSelectedCompany] = useState("");
   const [roleSearch, setRoleSearch] = useState("");
-  const [companySearch, setCompanySearch] = useState("");
   const [file, setFile] = useState<File | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [resumeAnalysis, setResumeAnalysis] = useState<any>(null);
   
-  // Aptitude Round State
   const [isGeneratingAptitude, setIsGeneratingAptitude] = useState(false);
   const [aiAptitudeQuestions, setAiAptitudeQuestions] = useState<any[]>([]);
   const [aptitudeIdx, setAptitudeIdx] = useState(0);
   const [aptitudeAnswers, setAptitudeAnswers] = useState<Record<number, string>>({});
-  const [timeLeft, setTimeLeft] = useState(20 * 60); 
   const [isAptitudeEvaluating, setIsAptitudeEvaluating] = useState(false);
   const [aptitudeReport, setAptitudeReport] = useState<any>(null);
   const [aptitudeStartTime, setAptitudeStartTime] = useState<number | null>(null);
 
-  // Coding Round State
   const [isGeneratingCoding, setIsGeneratingCoding] = useState(false);
   const [codingProblem, setCodingProblem] = useState<any>(null);
   const [selectedLanguage, setSelectedLanguage] = useState("javascript");
   const [code, setCode] = useState("");
-  const [codingTimeLeft, setCodingTimeLeft] = useState(45 * 60); 
   const [isCodingEvaluating, setIsCodingEvaluating] = useState(false);
   const [codingReport, setCodingReport] = useState<any>(null);
-  const [consoleOutput, setConsoleOutput] = useState<string[]>(["[SYSTEM] Neural terminal initialized..."]);
-  const [isRunning, setIsRunning] = useState(false);
 
-  // Load Persistence
   useEffect(() => {
     async function loadActiveSession() {
       if (!user || !db) return;
@@ -166,19 +137,20 @@ export default function InterviewJourney() {
       const snap = await getDoc(docRef);
       if (snap.exists()) {
         const data = snap.data();
-        setCurrentStep(data.step || 1);
-        setSelectedRole(data.role || "");
-        setSelectedExp(data.experience || "");
-        setSelectedCompany(data.company || "");
-        setResumeAnalysis(data.resumeAnalysis || null);
-        setAptitudeReport(data.aptitudeReport || null);
-        setCodingReport(data.codingReport || null);
+        if (data.step < 10) {
+          setCurrentStep(data.step || 1);
+          setSelectedRole(data.role || "");
+          setSelectedExp(data.experience || "");
+          setSelectedCompany(data.company || "");
+          setResumeAnalysis(data.resumeAnalysis || null);
+          setAptitudeReport(data.aptitudeReport || null);
+          setCodingReport(data.codingReport || null);
+        }
       }
     }
     loadActiveSession();
   }, [user, db]);
 
-  // Save Persistence
   const saveProgress = async (step: number, extra = {}) => {
     if (!user || !db) return;
     const docRef = doc(db, 'users', user.uid, 'journey', 'active');
@@ -201,10 +173,28 @@ export default function InterviewJourney() {
     saveProgress(nextS);
   };
 
-  const prevStep = () => {
-    if (currentStep > 1) {
-      setCurrentStep(currentStep - 1);
-      saveProgress(currentStep - 1);
+  const handleResumeSync = async () => {
+    if (!file) return;
+    setIsAnalyzing(true);
+    try {
+      const base64 = await new Promise<string>((res) => {
+        const reader = new FileReader();
+        reader.onload = () => res(reader.result as string);
+        reader.readAsDataURL(file);
+      });
+      const result = await analyzeResume({ 
+        resumeDataUri: base64, 
+        targetRole: selectedRole,
+        experienceLevel: selectedExp,
+        targetCompany: selectedCompany
+      });
+      setResumeAnalysis(result);
+      saveProgress(5, { resumeAnalysis: result });
+      setCurrentStep(5);
+    } catch (e) {
+      toast({ variant: "destructive", title: "Sync Failed" });
+    } finally {
+      setIsAnalyzing(false);
     }
   };
 
@@ -221,7 +211,7 @@ export default function InterviewJourney() {
       setAptitudeStartTime(Date.now());
       nextStep(6);
     } catch (e) {
-      toast({ variant: "destructive", title: "Synthesis Error", description: "Failed to generate dynamic logic nodes." });
+      toast({ variant: "destructive", title: "Synthesis Error" });
     } finally {
       setIsGeneratingAptitude(false);
     }
@@ -250,7 +240,7 @@ export default function InterviewJourney() {
       saveProgress(7, { aptitudeReport: evaluation });
       setCurrentStep(7);
     } catch (e) {
-      toast({ variant: "destructive", title: "Audit Error", description: "Failed to evaluate logic nodes." });
+      toast({ variant: "destructive", title: "Audit Error" });
     } finally {
       setIsAptitudeEvaluating(false);
     }
@@ -270,7 +260,7 @@ export default function InterviewJourney() {
       setCode(result.starterCode.javascript);
       nextStep(8);
     } catch (e) {
-      toast({ variant: "destructive", title: "Synthesis Error", description: "Failed to architect algorithmic challenge." });
+      toast({ variant: "destructive", title: "Synthesis Error" });
     } finally {
       setIsGeneratingCoding(false);
     }
@@ -291,35 +281,16 @@ export default function InterviewJourney() {
       saveProgress(9, { codingReport: audit });
       setCurrentStep(9);
     } catch (e) {
-      toast({ variant: "destructive", title: "Audit Error", description: "Failed to evaluate syntax matrix." });
+      toast({ variant: "destructive", title: "Audit Error" });
     } finally {
       setIsCodingEvaluating(false);
     }
   };
 
-  const handleResumeSync = async () => {
-    if (!file) return;
-    setIsAnalyzing(true);
-    try {
-      const base64 = await new Promise<string>((res) => {
-        const reader = new FileReader();
-        reader.onload = () => res(reader.result as string);
-        reader.readAsDataURL(file);
-      });
-      const result = await analyzeResume({ 
-        resumeDataUri: base64, 
-        targetRole: selectedRole,
-        experienceLevel: selectedExp,
-        targetCompany: selectedCompany
-      });
-      setResumeAnalysis(result);
-      saveProgress(5, { resumeAnalysis: result });
-      setCurrentStep(5);
-    } catch (e) {
-      toast({ variant: "destructive", title: "Sync Failed", description: "Blueprint extraction interrupted." });
-    } finally {
-      setIsAnalyzing(false);
-    }
+  const startArena = async () => {
+    const sessId = Math.random().toString(36).substring(7);
+    await saveProgress(10, { sessionId: sessId });
+    router.push(`/interview/${sessId}?role=${encodeURIComponent(selectedRole)}&company=${encodeURIComponent(selectedCompany)}&exp=${encodeURIComponent(selectedExp)}&round=Virtual%20Interview`);
   };
 
   const filteredRoles = useMemo(() => {
@@ -345,14 +316,13 @@ export default function InterviewJourney() {
               {INTERVIEW_STEPS.map((step) => {
                 const isCompleted = step.id < currentStep;
                 const isActive = step.id === currentStep;
+                const isLocked = step.id > currentStep;
                 return (
-                  <div key={step.id} className={`flex items-center gap-4 p-4 rounded-2xl border transition-all ${isActive ? 'bg-accent/10 border-accent/30' : isCompleted ? 'bg-green-500/10 border-green-500/20 opacity-60' : 'opacity-20'}`}>
+                  <div key={step.id} className={`flex items-center gap-4 p-4 rounded-2xl border transition-all ${isActive ? 'bg-accent/10 border-accent/30 shadow-[0_0_20px_rgba(34,211,238,0.1)]' : isCompleted ? 'bg-green-500/10 border-green-500/20' : 'opacity-20 grayscale'}`}>
                     <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${isCompleted ? 'bg-green-500/20 text-green-400' : isActive ? 'bg-accent/20 text-accent' : 'bg-white/5 text-white/40'}`}>
                       {isCompleted ? <CircleCheck className="w-4 h-4" /> : <step.icon className="w-4 h-4" />}
                     </div>
-                    <div>
-                      <p className={`text-[10px] font-bold uppercase tracking-widest ${isActive ? 'text-white' : 'text-white/40'}`}>{step.title}</p>
-                    </div>
+                    <p className={`text-[10px] font-bold uppercase tracking-widest ${isActive ? 'text-white' : 'text-white/40'}`}>{step.title}</p>
                   </div>
                 );
               })}
@@ -372,7 +342,7 @@ export default function InterviewJourney() {
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       {filteredRoles.map(role => (
-                        <button key={role.id} onClick={() => { setSelectedRole(role.name); nextStep(); }} className={`p-6 rounded-2xl border transition-all text-left flex items-center gap-6 ${selectedRole === role.name ? 'bg-accent/20 border-accent' : 'glass border-white/5'}`}>
+                        <button key={role.id} onClick={() => { setSelectedRole(role.name); nextStep(); }} className={`p-6 rounded-2xl border transition-all text-left flex items-center gap-6 ${selectedRole === role.name ? 'bg-accent/20 border-accent' : 'glass border-white/5 hover:bg-white/5'}`}>
                           <div className="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center text-accent"><role.icon className="w-5 h-5" /></div>
                           <span className="font-bold text-sm">{role.name}</span>
                         </button>
@@ -384,9 +354,9 @@ export default function InterviewJourney() {
                 {currentStep === 2 && (
                   <Card className="premium-card bg-white/[0.01] border-white/5 p-12 space-y-12">
                     <h2 className="text-4xl font-bold tracking-tighter text-center">Seniority Grade</h2>
-                    <div className="grid md:grid-cols-2 gap-6">
+                    <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
                       {EXPERIENCE_OPTIONS.map(opt => (
-                        <button key={opt.id} onClick={() => { setSelectedExp(opt.label); nextStep(); }} className={`p-8 rounded-3xl border transition-all text-left group ${selectedExp === opt.label ? 'bg-accent/20 border-accent' : 'glass border-white/5'}`}>
+                        <button key={opt.id} onClick={() => { setSelectedExp(opt.label); nextStep(); }} className={`p-8 rounded-3xl border transition-all text-left group ${selectedExp === opt.label ? 'bg-accent/20 border-accent' : 'glass border-white/5 hover:bg-white/5'}`}>
                           <opt.icon className="w-8 h-8 text-accent mb-4" />
                           <p className="text-xl font-bold">{opt.label}</p>
                           <p className="text-xs text-muted-foreground">{opt.desc}</p>
@@ -399,9 +369,9 @@ export default function InterviewJourney() {
                 {currentStep === 3 && (
                   <Card className="premium-card bg-white/[0.01] border-white/5 p-12 space-y-12">
                     <h2 className="text-4xl font-bold tracking-tighter text-center">Target Company</h2>
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
                       {COMPANIES.map(c => (
-                        <button key={c} onClick={() => { setSelectedCompany(c); nextStep(); }} className={`p-6 rounded-2xl border transition-all text-center ${selectedCompany === c ? 'bg-accent/20 border-accent' : 'glass border-white/5'}`}>
+                        <button key={c} onClick={() => { setSelectedCompany(c); nextStep(); }} className={`p-6 rounded-2xl border transition-all text-center ${selectedCompany === c ? 'bg-accent/20 border-accent' : 'glass border-white/5 hover:bg-white/5'}`}>
                           <Building2 className="w-6 h-6 text-accent mx-auto mb-3" />
                           <p className="text-xs font-bold">{c}</p>
                         </button>
@@ -430,7 +400,9 @@ export default function InterviewJourney() {
                       <h2 className="text-3xl font-bold">Screening Report</h2>
                       <div className="text-5xl font-bold text-accent">{resumeAnalysis?.atsScore}%</div>
                     </div>
-                    <p className="text-muted-foreground">{resumeAnalysis?.summary}</p>
+                    <div className="p-8 glass rounded-[2rem] bg-accent/5">
+                      <p className="text-sm font-light leading-relaxed">{resumeAnalysis?.summary}</p>
+                    </div>
                     <Button onClick={handleStartAptitude} className="w-full h-18 btn-premium uppercase tracking-widest text-xs">Initialize Aptitude Round</Button>
                   </Card>
                 )}
@@ -451,7 +423,7 @@ export default function InterviewJourney() {
                         <h3 className="text-2xl font-bold">{aiAptitudeQuestions[aptitudeIdx]?.question}</h3>
                         <div className="grid gap-4">
                           {aiAptitudeQuestions[aptitudeIdx]?.options.map((opt: any, i: number) => (
-                            <button key={i} onClick={() => setAptitudeAnswers({...aptitudeAnswers, [aptitudeIdx]: opt})} className={`p-6 rounded-2xl border text-left transition-all ${aptitudeAnswers[aptitudeIdx] === opt ? 'bg-accent/20 border-accent' : 'glass border-white/5'}`}>{opt}</button>
+                            <button key={i} onClick={() => setAptitudeAnswers({...aptitudeAnswers, [aptitudeIdx]: opt})} className={`p-6 rounded-2xl border text-left transition-all ${aptitudeAnswers[aptitudeIdx] === opt ? 'bg-accent/20 border-accent' : 'glass border-white/5 hover:bg-white/5'}`}>{opt}</button>
                           ))}
                         </div>
                         <Button onClick={() => aptitudeIdx < 14 ? setAptitudeIdx(aptitudeIdx + 1) : handleAptitudeSubmit()} className="w-full h-16 btn-premium">{aptitudeIdx < 14 ? "Next Protocol" : "Submit Assessment"}</Button>
@@ -479,9 +451,11 @@ export default function InterviewJourney() {
                         <div className="p-12 space-y-8">
                            <Badge className="bg-orange-500/20 text-orange-400">{codingProblem?.difficulty} NODE</Badge>
                            <h3 className="text-3xl font-bold">{codingProblem?.title}</h3>
-                           <p className="text-muted-foreground">{codingProblem?.description}</p>
-                           <textarea value={code} onChange={(e) => setCode(e.target.value)} className="w-full h-64 glass border-white/10 bg-transparent p-6 font-mono text-sm resize-none rounded-2xl" />
-                           <Button onClick={handleCodingSubmit} className="w-full h-16 btn-premium">Finalize Submission</Button>
+                           <p className="text-sm text-muted-foreground">{codingProblem?.description}</p>
+                           <textarea value={code} onChange={(e) => setCode(e.target.value)} className="w-full h-64 glass border-white/10 bg-transparent p-6 font-mono text-sm resize-none rounded-2xl focus:outline-none focus:border-accent" />
+                           <Button onClick={handleCodingSubmit} disabled={isCodingEvaluating} className="w-full h-16 btn-premium">
+                             {isCodingEvaluating ? <Loader2 className="w-5 h-5 animate-spin mr-3" /> : null} Finalize Submission
+                           </Button>
                         </div>
                       )}
                    </Card>
@@ -500,10 +474,7 @@ export default function InterviewJourney() {
                             <p className="text-xl font-bold text-purple-400">{codingReport?.readabilityScore}%</p>
                          </div>
                       </div>
-                      <Button onClick={() => {
-                        const sessId = Math.random().toString(36).substring(7);
-                        router.push(`/interview/${sessId}?role=${encodeURIComponent(selectedRole)}&company=${encodeURIComponent(selectedCompany)}&exp=${encodeURIComponent(selectedExp)}&round=Technical%20Round`);
-                      }} className="w-full h-18 btn-premium uppercase tracking-widest text-xs">Enter Virtual Arena</Button>
+                      <Button onClick={startArena} className="w-full h-18 btn-premium uppercase tracking-widest text-xs">Enter Virtual Arena</Button>
                    </Card>
                 )}
 
@@ -515,3 +486,4 @@ export default function InterviewJourney() {
     </div>
   );
 }
+

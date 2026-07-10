@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect, useMemo } from 'react';
@@ -34,7 +35,7 @@ import {
   Loader2
 } from 'lucide-react';
 import { useUser, useFirestore, useDoc } from '@/firebase';
-import { doc } from 'firebase/firestore';
+import { doc, setDoc } from 'firebase/firestore';
 import { generateCertificatePDF } from '@/lib/certificate-generator';
 import { useToast } from '@/hooks/use-toast';
 import Link from 'next/link';
@@ -55,15 +56,21 @@ export default function FinalReportPage() {
   const { data: interviewDoc, loading: docLoading } = useDoc(interviewRef);
   const feedback = (interviewDoc as any)?.feedback;
 
+  useEffect(() => {
+    if (user && db && docId) {
+      // Sync journey to Roadmap step (12)
+      setDoc(doc(db, 'users', user.uid, 'journey', 'active'), {
+        step: 12,
+        lastReportId: docId
+      }, { merge: true });
+    }
+  }, [user, db, docId]);
+
   const getScoreColor = (score: number) => {
     if (score >= 85) return "text-accent";
     if (score >= 70) return "text-green-400";
     if (score >= 50) return "text-orange-400";
     return "text-red-400";
-  };
-
-  const handleDownloadReport = () => {
-    toast({ title: "Export Protocol Initialized", description: "Your comprehensive performance PDF is being synthesized." });
   };
 
   if (docLoading) {
@@ -132,13 +139,11 @@ export default function FinalReportPage() {
           </motion.div>
 
           <div className="grid lg:grid-cols-12 gap-12">
-            {/* Sidebar Column (Moved to Left) */}
             <div className="lg:col-span-4 space-y-8">
               
               <Card className="premium-card bg-accent/5 border-accent/20 p-8 text-center space-y-6">
                 <div className="w-20 h-20 rounded-[2.5rem] bg-accent/20 flex items-center justify-center mx-auto border border-accent/30 shadow-2xl relative">
                   <Award className="w-10 h-10 text-accent" />
-                  <motion.div animate={{ rotate: 360 }} transition={{ duration: 10, repeat: Infinity, ease: "linear" }} className="absolute inset-0 rounded-full border border-dashed border-accent/30 scale-125" />
                 </div>
                 <div>
                   <h3 className="text-2xl font-bold">Credential Export</h3>
@@ -152,12 +157,9 @@ export default function FinalReportPage() {
                       score: feedback.overallScore, 
                       date: new Date().toLocaleDateString() 
                     })}
-                    className="w-full h-16 rounded-2xl bg-white text-[#050816] font-bold hover:bg-white/90 shadow-[0_0_30px_rgba(255,255,255,0.1)] group"
+                    className="w-full h-16 rounded-2xl bg-white text-[#050816] font-bold hover:bg-white/90"
                   >
-                    <Download className="w-5 h-5 mr-3 group-hover:translate-y-0.5 transition-transform" /> PDF Master Report
-                  </Button>
-                  <Button variant="outline" className="w-full h-16 rounded-2xl glass border-white/10 text-[10px] font-bold uppercase tracking-[0.3em]">
-                    <ShieldCheck className="w-4 h-4 mr-3" /> Verify Blockchain Link
+                    <Download className="w-5 h-5 mr-3" /> PDF Master Report
                   </Button>
                 </div>
               </Card>
@@ -171,9 +173,6 @@ export default function FinalReportPage() {
                       <CircleAlert className="w-3.5 h-3.5 text-red-400" />
                     </div>
                   ))}
-                  {feedback.skillGap.missingSkills.length === 0 && (
-                    <p className="text-xs text-muted-foreground italic text-center py-8">No critical gaps detected.</p>
-                  )}
                 </div>
                 <Link href={`/roadmap/personalized/${docId}`} className="block mt-8">
                    <Button className="w-full h-12 rounded-xl btn-premium text-white text-[10px] font-bold uppercase tracking-widest">Launch Improvement Roadmap</Button>
@@ -183,40 +182,30 @@ export default function FinalReportPage() {
               <div className="space-y-4">
                 <h3 className="text-[10px] font-bold uppercase tracking-[0.4em] text-white/20 ml-2">Session Directives</h3>
                 <div className="grid gap-3">
-                  <Button 
-                    onClick={() => router.push('/dashboard')}
-                    className="h-16 rounded-2xl glass border-white/10 hover:bg-white/5 justify-start px-8 gap-4 group"
-                  >
-                    <LayoutDashboard className="w-5 h-5 text-white/40 group-hover:text-white" />
+                  <Button onClick={() => router.push('/dashboard')} className="h-16 rounded-2xl glass border-white/10 hover:bg-white/5 justify-start px-8 gap-4">
+                    <LayoutDashboard className="w-5 h-5 text-white/40" />
                     <span className="text-[10px] font-bold uppercase tracking-widest">Return to Command</span>
                   </Button>
-                  <Button 
-                    onClick={() => router.push('/interview')}
-                    className="h-16 rounded-2xl glass border-white/10 hover:bg-white/5 justify-start px-8 gap-4 group"
-                  >
-                    <RefreshCcw className="w-5 h-5 text-white/40 group-hover:text-accent" />
+                  <Button onClick={() => router.push('/interview')} className="h-16 rounded-2xl glass border-white/10 hover:bg-white/5 justify-start px-8 gap-4">
+                    <RefreshCcw className="w-5 h-5 text-white/40" />
                     <span className="text-[10px] font-bold uppercase tracking-widest">Retry New Protocol</span>
                   </Button>
                 </div>
               </div>
-
             </div>
 
-            {/* Main Content Column (Moved to Right) */}
             <div className="lg:col-span-8 space-y-12">
-              
               <Card className="premium-card bg-white/[0.01] border-white/5 p-10">
                 <CardHeader className="px-0 pt-0 mb-12 flex flex-row items-center justify-between border-b border-white/5 pb-8">
                   <CardTitle className="text-2xl font-bold flex items-center gap-4">
                     <BrainCircuit className="w-8 h-8 text-accent" /> Virtual Interview Audit
                   </CardTitle>
-                  <Badge variant="outline" className="border-accent/30 text-accent">Node 04: Active</Badge>
                 </CardHeader>
                 <div className="grid md:grid-cols-2 gap-x-16 gap-y-10">
                   {[
                     { label: "Technical Knowledge", score: feedback.virtualInterviewResult.technicalKnowledge, icon: Cpu, color: "text-blue-400" },
                     { label: "Communication", score: feedback.virtualInterviewResult.communication, icon: MessageSquare, color: "text-green-400" },
-                    { label: "Operational Presence", score: feedback.virtualInterviewResult.confidence, icon: Zap, color: "text-yellow-400" },
+                    { label: "Confidence", score: feedback.virtualInterviewResult.confidence, icon: Zap, color: "text-yellow-400" },
                     { label: "Problem Solving", score: feedback.virtualInterviewResult.problemSolving, icon: Target, color: "text-purple-400" },
                     { label: "Professionalism", score: feedback.virtualInterviewResult.professionalism, icon: ShieldCheck, color: "text-cyan-400" },
                     { label: "Culture Fit", score: feedback.virtualInterviewResult.hrSkills, icon: Award, color: "text-orange-400" }
@@ -229,7 +218,7 @@ export default function FinalReportPage() {
                         <span className="text-xl font-bold tabular-nums">{m.score}%</span>
                       </div>
                       <div className="h-1.5 bg-white/5 rounded-full overflow-hidden">
-                        <motion.div initial={{ width: 0 }} animate={{ width: `${m.score}%` }} transition={{ duration: 1, delay: i * 0.1 }} className={`h-full bg-current ${m.color}`} />
+                        <motion.div initial={{ width: 0 }} animate={{ width: `${m.score}%` }} className={`h-full bg-current ${m.color}`} />
                       </div>
                     </div>
                   ))}
@@ -243,8 +232,8 @@ export default function FinalReportPage() {
                   </h3>
                   <div className="space-y-4">
                     {feedback.aiFeedback.strongSkills.map((s: string, i: number) => (
-                      <div key={i} className="flex gap-4 text-sm font-light text-white/80 leading-relaxed group">
-                        <div className="w-1.5 h-1.5 rounded-full bg-accent mt-2 shrink-0 group-hover:scale-125 transition-transform" /> {s}
+                      <div key={i} className="flex gap-4 text-sm font-light text-white/80">
+                        <div className="w-1.5 h-1.5 rounded-full bg-accent mt-2 shrink-0" /> {s}
                       </div>
                     ))}
                   </div>
@@ -255,8 +244,8 @@ export default function FinalReportPage() {
                   </h3>
                   <div className="space-y-4">
                     {feedback.aiFeedback.weakSkills.map((w: string, i: number) => (
-                      <div key={i} className="flex gap-4 text-sm font-light text-white/80 leading-relaxed group">
-                        <div className="w-1.5 h-1.5 rounded-full bg-red-400 mt-2 shrink-0 group-hover:scale-125 transition-transform" /> {w}
+                      <div key={i} className="flex gap-4 text-sm font-light text-white/80">
+                        <div className="w-1.5 h-1.5 rounded-full bg-red-400 mt-2 shrink-0" /> {w}
                       </div>
                     ))}
                   </div>
@@ -274,7 +263,7 @@ export default function FinalReportPage() {
                     <h4 className="text-[10px] font-bold uppercase tracking-[0.4em] text-white/30">Theoretical Nodes</h4>
                     <div className="grid gap-3">
                       {feedback.learningPlan.topicsToStudy.map((t: string, i: number) => (
-                        <div key={i} className="p-4 glass rounded-xl border-white/5 text-sm font-light text-white/60 flex items-center gap-4 hover:bg-white/5 transition-all">
+                        <div key={i} className="p-4 glass rounded-xl border-white/5 text-sm font-light text-white/60 flex items-center gap-4">
                           <div className="w-1 h-1 rounded-full bg-blue-400" /> {t}
                         </div>
                       ))}
@@ -284,7 +273,7 @@ export default function FinalReportPage() {
                     <h4 className="text-[10px] font-bold uppercase tracking-[0.4em] text-white/30">Practice Nodes</h4>
                     <div className="grid gap-3">
                       {feedback.learningPlan.codingPractice.map((p: string, i: number) => (
-                        <div key={i} className="p-4 glass rounded-xl border-white/5 text-sm font-light text-white/60 flex items-center gap-4 hover:bg-white/5 transition-all">
+                        <div key={i} className="p-4 glass rounded-xl border-white/5 text-sm font-light text-white/60 flex items-center gap-4">
                           <Code2 className="w-3.5 h-3.5 text-accent" /> {p}
                         </div>
                       ))}
@@ -299,3 +288,4 @@ export default function FinalReportPage() {
     </div>
   );
 }
+
