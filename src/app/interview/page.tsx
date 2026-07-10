@@ -19,7 +19,14 @@ import {
   DialogTitle,
   DialogDescription,
   DialogFooter,
-} from "@/components/ui/dialog";
+} from "@/Dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { 
   Briefcase, 
   Building2, 
@@ -56,7 +63,11 @@ import {
   ChevronLeft,
   XCircle,
   RefreshCcw,
-  Activity
+  Activity,
+  Terminal,
+  PlayCircle,
+  Save,
+  MonitorCode
 } from 'lucide-react';
 import { useUser, useFirestore, useCollection } from '@/firebase';
 import { collection, query, orderBy, limit, addDoc, serverTimestamp } from 'firebase/firestore';
@@ -121,6 +132,28 @@ const APTITUDE_QUESTIONS = [
   { id: 15, category: "English", question: "Choose the most appropriate meaning of the idiom: 'Beat around the bush'", options: ["To talk vaguely", "To punish someone", "To cut trees", "To work hard"], answer: "To talk vaguely" },
 ];
 
+const CODING_PROBLEM = {
+  title: "Two Sum Protocol",
+  difficulty: "Medium",
+  points: 100,
+  description: "Given an array of integers `nums` and an integer `target`, return indices of the two numbers such that they add up to `target`.",
+  examples: [
+    { input: "nums = [2,7,11,15], target = 9", output: "[0,1]", explanation: "Because nums[0] + nums[1] == 9, we return [0, 1]." },
+    { input: "nums = [3,2,4], target = 6", output: "[1,2]" }
+  ],
+  constraints: [
+    "2 <= nums.length <= 10^4",
+    "-10^9 <= nums[i] <= 10^9",
+    "Only one valid answer exists."
+  ],
+  starterCode: {
+    javascript: "function twoSum(nums, target) {\n  // Implement neural logic\n};",
+    python: "class Solution:\n    def twoSum(self, nums: List[int], target: int) -> List[int]:\n        # Implement neural logic",
+    java: "class Solution {\n    public int[] twoSum(int[] nums, int target) {\n        // Implement neural logic\n    }\n}",
+    cpp: "class Solution {\npublic:\n    vector<int> twoSum(vector<int>& nums, int target) {\n        // Implement neural logic\n    }\n};"
+  }
+};
+
 export default function InterviewJourney() {
   const router = useRouter();
   const { user } = useUser();
@@ -146,6 +179,14 @@ export default function InterviewJourney() {
   const [isAptitudeComplete, setIsAptitudeComplete] = useState(false);
   const [showAptitudeResult, setShowAptitudeResult] = useState(false);
 
+  // Coding Round State
+  const [selectedLanguage, setSelectedLanguage] = useState("javascript");
+  const [code, setCode] = useState(CODING_PROBLEM.starterCode.javascript);
+  const [codingTimeLeft, setCodingTimeLeft] = useState(45 * 60); // 45 minutes
+  const [isCodingComplete, setIsCodingComplete] = useState(false);
+  const [consoleOutput, setConsoleOutput] = useState<string[]>(["[SYSTEM] Neural terminal initialized...", "[SYSTEM] Awaiting syntax input..."]);
+  const [isRunning, setIsRunning] = useState(false);
+
   // Timer Effect
   useEffect(() => {
     if (currentStep === 6 && timeLeft > 0 && !isAptitudeComplete) {
@@ -155,6 +196,14 @@ export default function InterviewJourney() {
       handleAptitudeSubmit();
     }
   }, [currentStep, timeLeft, isAptitudeComplete]);
+
+  // Coding Timer Effect
+  useEffect(() => {
+    if (currentStep === 7 && codingTimeLeft > 0 && !isCodingComplete) {
+      const timer = setInterval(() => setCodingTimeLeft(prev => prev - 1), 1000);
+      return () => clearInterval(timer);
+    }
+  }, [currentStep, codingTimeLeft, isCodingComplete]);
 
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
@@ -287,6 +336,28 @@ export default function InterviewJourney() {
     setShowAptitudeResult(false);
   };
 
+  const handleRunCode = () => {
+    setIsRunning(true);
+    setConsoleOutput(prev => [...prev, `[EXEC] Running ${selectedLanguage} syntax audit...`]);
+    
+    setTimeout(() => {
+      setIsRunning(false);
+      setConsoleOutput(prev => [...prev, "[SUCCESS] Syntax validated. No memory leaks detected.", "[INFO] Runtime: 12ms", "[INFO] Memory: 42MB"]);
+    }, 1500);
+  };
+
+  const handleSubmitCode = () => {
+    setIsCodingComplete(true);
+    toast({ title: "Syntax Matrix Archived", description: "Your implementation has been successfully submitted." });
+    nextStep();
+  };
+
+  const handleLanguageChange = (lang: string) => {
+    setSelectedLanguage(lang);
+    setCode(CODING_PROBLEM.starterCode[lang as keyof typeof CODING_PROBLEM.starterCode]);
+    setConsoleOutput(prev => [...prev, `[SYSTEM] Language switched to ${lang.toUpperCase()}.`]);
+  };
+
   const startActualInterview = () => {
     const sessionId = Math.random().toString(36).substring(7);
     router.push(`/interview/${sessionId}?role=${encodeURIComponent(selectedRole)}&company=${encodeURIComponent(selectedCompany || "Standard")}&exp=${encodeURIComponent(selectedExp)}&round=Technical`);
@@ -412,13 +483,9 @@ export default function InterviewJourney() {
                       })}
                     </div>
 
-                    <Button 
-                      onClick={nextStep} 
-                      disabled={!selectedRole}
-                      className="w-full h-20 btn-premium text-lg font-bold uppercase tracking-[0.3em]"
-                    >
-                      Confirm Role Vector <ChevronRight className="ml-3 w-6 h-6" />
-                    </Button>
+                    <div className="flex gap-4">
+                      <Button onClick={nextStep} disabled={!selectedRole} className="w-full h-20 btn-premium text-lg font-bold uppercase tracking-[0.3em]">Confirm Role Vector <ChevronRight className="ml-3 w-6 h-6" /></Button>
+                    </div>
                   </Card>
                 )}
 
@@ -906,16 +973,6 @@ export default function InterviewJourney() {
                                ))}
                             </div>
 
-                            <div className="p-8 glass rounded-[2.5rem] border-accent/20 bg-accent/5">
-                               <div className="flex items-center justify-between mb-4">
-                                 <span className="text-[10px] font-bold uppercase tracking-widest text-accent">Auditor Status</span>
-                                 <Badge className="bg-accent/20 text-accent font-bold uppercase tracking-widest text-[8px] px-3">ELIGIBLE FOR DEPLOYMENT</Badge>
-                               </div>
-                               <p className="text-sm font-light text-white/70 leading-relaxed text-left">
-                                 Your performance in the logic nodes exceeds the {selectedCompany} benchmark. Prepare to initialize Round 02: Syntax Mastery.
-                               </p>
-                            </div>
-
                             <div className="flex flex-col sm:flex-row gap-4">
                               <Button 
                                 onClick={resetAptitude}
@@ -938,23 +995,137 @@ export default function InterviewJourney() {
                   </div>
                 )}
 
-                {/* Submit Confirmation Dialog */}
-                <Dialog open={isSubmitDialogOpen} onOpenChange={setIsSubmitDialogOpen}>
-                  <DialogContent className="glass border-white/10 bg-[#0b0e1a] text-white rounded-[2rem]">
-                    <DialogHeader>
-                      <DialogTitle className="text-2xl font-bold tracking-tighter">Submit Logic Assessment?</DialogTitle>
-                      <DialogDescription className="text-muted-foreground pt-2">
-                        You have answered {Object.keys(aptitudeAnswers).length} of {APTITUDE_QUESTIONS.length} questions. Once submitted, your intelligence nodes for this round cannot be modified.
-                      </DialogDescription>
-                    </DialogHeader>
-                    <DialogFooter className="gap-4 pt-6">
-                      <Button variant="ghost" onClick={() => setIsSubmitDialogOpen(false)} className="rounded-xl font-bold text-[10px] uppercase tracking-widest">Keep Solving</Button>
-                      <Button onClick={handleAptitudeSubmit} className="btn-premium h-12 px-10 rounded-xl font-bold text-[10px] uppercase tracking-widest">Execute Submission</Button>
-                    </DialogFooter>
-                  </DialogContent>
-                </Dialog>
+                {/* Step 7: Coding Round (IDE Interface) */}
+                {currentStep === 7 && (
+                  <div className="space-y-6">
+                    <Card className="premium-card bg-[#0b0e1a]/80 border-white/5 p-0 overflow-hidden flex flex-col min-h-[750px]">
+                      {/* IDE Header */}
+                      <div className="p-4 border-b border-white/5 bg-white/[0.02] flex items-center justify-between">
+                        <div className="flex items-center gap-6">
+                          <div className="flex items-center gap-3 px-4 py-1.5 glass rounded-xl border-accent/20">
+                            <Timer className="w-4 h-4 text-accent" />
+                            <span className="font-mono text-lg font-bold text-accent">{formatTime(codingTimeLeft)}</span>
+                          </div>
+                          <Select value={selectedLanguage} onValueChange={handleLanguageChange}>
+                            <SelectTrigger className="w-32 h-10 glass border-white/10 bg-transparent text-[10px] font-bold uppercase tracking-widest">
+                              <SelectValue placeholder="Language" />
+                            </SelectTrigger>
+                            <SelectContent className="glass border-white/10 bg-[#0b0e1a] text-white">
+                              <SelectItem value="javascript">JavaScript</SelectItem>
+                              <SelectItem value="python">Python 3</SelectItem>
+                              <SelectItem value="java">Java 17</SelectItem>
+                              <SelectItem value="cpp">C++ 20</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <Button 
+                            onClick={handleRunCode}
+                            disabled={isRunning}
+                            variant="outline" 
+                            className="glass border-green-500/20 text-green-400 hover:bg-green-500/10 h-10 px-6 rounded-xl text-[10px] font-bold uppercase tracking-widest"
+                          >
+                            {isRunning ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <PlayCircle className="w-4 h-4 mr-2" />}
+                            Run Syntax
+                          </Button>
+                          <Button 
+                            onClick={handleSubmitCode}
+                            className="btn-premium h-10 px-8 rounded-xl text-[10px] font-bold uppercase tracking-widest"
+                          >
+                            <Save className="w-4 h-4 mr-2" />
+                            Archive Submission
+                          </Button>
+                        </div>
+                      </div>
 
-                {currentStep >= 7 && currentStep <= 9 && (
+                      {/* Main IDE Body */}
+                      <div className="flex-1 grid lg:grid-cols-12 overflow-hidden">
+                        {/* Problem Description Panel */}
+                        <div className="lg:col-span-4 p-8 border-r border-white/5 bg-black/20 overflow-y-auto custom-scrollbar space-y-8">
+                          <header className="space-y-2">
+                            <div className="flex items-center justify-between mb-2">
+                              <Badge className="bg-orange-500/20 text-orange-400 border-none uppercase text-[8px] tracking-[0.2em] font-bold px-2 py-0.5">
+                                Syntax Round
+                              </Badge>
+                              <span className="text-[10px] font-bold text-white/20 uppercase tracking-widest">{CODING_PROBLEM.points} Points</span>
+                            </div>
+                            <h3 className="text-2xl font-bold tracking-tight">{CODING_PROBLEM.title}</h3>
+                            <Badge variant="outline" className="border-accent/30 text-accent text-[8px] uppercase tracking-widest font-bold">{CODING_PROBLEM.difficulty}</Badge>
+                          </header>
+
+                          <div className="space-y-6">
+                            <section className="space-y-3">
+                              <h4 className="text-[10px] font-bold uppercase tracking-widest text-white/40">Objective</h4>
+                              <p className="text-sm font-light leading-relaxed text-white/70">{CODING_PROBLEM.description}</p>
+                            </section>
+
+                            <section className="space-y-4">
+                              <h4 className="text-[10px] font-bold uppercase tracking-widest text-white/40">Examples</h4>
+                              {CODING_PROBLEM.examples.map((ex, i) => (
+                                <div key={i} className="p-4 glass rounded-xl border-white/5 space-y-2">
+                                  <p className="text-[10px] font-mono text-accent"><span className="text-white/40">Input:</span> {ex.input}</p>
+                                  <p className="text-[10px] font-mono text-green-400"><span className="text-white/40">Output:</span> {ex.output}</p>
+                                  {ex.explanation && <p className="text-[9px] text-white/30 italic">Note: {ex.explanation}</p>}
+                                </div>
+                              ))}
+                            </section>
+
+                            <section className="space-y-3">
+                              <h4 className="text-[10px] font-bold uppercase tracking-widest text-white/40">Constraints</h4>
+                              <ul className="space-y-1.5">
+                                {CODING_PROBLEM.constraints.map((c, i) => (
+                                  <li key={i} className="flex gap-3 text-[11px] font-light text-white/40">
+                                    <div className="w-1 h-1 rounded-full bg-white/10 mt-1.5 shrink-0" /> {c}
+                                  </li>
+                                ))}
+                              </ul>
+                            </section>
+                          </div>
+                        </div>
+
+                        {/* Editor and Console Panel */}
+                        <div className="lg:col-span-8 flex flex-col h-full overflow-hidden">
+                          {/* Code Editor */}
+                          <div className="flex-1 bg-[#050816]/50 p-4 relative group">
+                             <div className="absolute left-0 top-0 bottom-0 w-12 bg-black/40 border-r border-white/5 flex flex-col items-center pt-8 pointer-events-none">
+                                {[...Array(20)].map((_, i) => (
+                                  <span key={i} className="text-[10px] font-mono text-white/10 h-6 leading-6">{i + 1}</span>
+                                ))}
+                             </div>
+                             <textarea 
+                               value={code}
+                               onChange={(e) => setCode(e.target.value)}
+                               className="w-full h-full bg-transparent outline-none resize-none text-sm font-mono pl-12 pt-4 leading-6 text-white/90 selection:bg-accent/20"
+                               spellCheck={false}
+                               placeholder="// Initialize your logic here..."
+                             />
+                             <div className="absolute top-4 right-8 opacity-0 group-hover:opacity-100 transition-opacity">
+                               <Badge variant="outline" className="border-white/10 text-white/20 uppercase text-[8px] font-mono">Editor Active</Badge>
+                             </div>
+                          </div>
+
+                          {/* Console Footer */}
+                          <div className="h-48 border-t border-white/5 bg-black/40 flex flex-col">
+                             <div className="px-4 py-2 border-b border-white/5 flex items-center gap-3">
+                               <Terminal className="w-3.5 h-3.5 text-white/30" />
+                               <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-white/30">Neural Console</span>
+                             </div>
+                             <div className="flex-1 p-4 overflow-y-auto custom-scrollbar font-mono text-[11px] space-y-1">
+                               {consoleOutput.map((line, i) => (
+                                 <div key={i} className={`${line.includes('[SUCCESS]') ? 'text-green-400' : line.includes('[EXEC]') ? 'text-accent' : 'text-white/40'}`}>
+                                   {line}
+                                 </div>
+                               ))}
+                             </div>
+                          </div>
+                        </div>
+                      </div>
+                    </Card>
+                  </div>
+                )}
+
+                {/* Step 8-9 placeholders */}
+                {currentStep >= 8 && currentStep <= 9 && (
                   <Card className="premium-card bg-[#0b0e1a]/80 border-white/5 p-20 text-center space-y-12">
                     <header className="space-y-6">
                       <div className="w-24 h-24 rounded-full bg-accent/10 flex items-center justify-center mx-auto border border-accent/20 relative">
@@ -1017,6 +1188,22 @@ export default function InterviewJourney() {
           </main>
         </div>
       </div>
+
+      {/* Submit Confirmation Dialog */}
+      <Dialog open={isSubmitDialogOpen} onOpenChange={setIsSubmitDialogOpen}>
+        <DialogContent className="glass border-white/10 bg-[#0b0e1a] text-white rounded-[2rem]">
+          <DialogHeader>
+            <DialogTitle className="text-2xl font-bold tracking-tighter">Submit Logic Assessment?</DialogTitle>
+            <DialogDescription className="text-muted-foreground pt-2">
+              You have answered {Object.keys(aptitudeAnswers).length} of {APTITUDE_QUESTIONS.length} questions. Once submitted, your intelligence nodes for this round cannot be modified.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="gap-4 pt-6">
+            <Button variant="ghost" onClick={() => setIsSubmitDialogOpen(false)} className="rounded-xl font-bold text-[10px] uppercase tracking-widest">Keep Solving</Button>
+            <Button onClick={handleAptitudeSubmit} className="btn-premium h-12 px-10 rounded-xl font-bold text-[10px] uppercase tracking-widest">Execute Submission</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
