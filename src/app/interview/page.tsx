@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useMemo, useEffect } from 'react';
@@ -68,7 +69,8 @@ import {
   Save,
   MonitorCog,
   AlertTriangle,
-  Info
+  Info,
+  Lightbulb
 } from 'lucide-react';
 import { useUser, useFirestore, useCollection } from '@/firebase';
 import { collection, query, orderBy, limit, addDoc, serverTimestamp, doc, updateDoc } from 'firebase/firestore';
@@ -76,6 +78,8 @@ import { analyzeResume } from '@/ai/flows/ai-resume-analysis';
 import { useToast } from '@/hooks/use-toast';
 import { motion, AnimatePresence } from 'framer-motion';
 import Link from 'next/link';
+import { errorEmitter } from '@/firebase/error-emitter';
+import { FirestorePermissionError } from '@/firebase/errors';
 
 const ROLES_DATA = [
   { id: 'java', name: "Java Developer", category: "Development", icon: Code2 },
@@ -309,17 +313,34 @@ export default function InterviewJourney() {
         localStorage.setItem("resumeAnalysis", JSON.stringify(result));
       }
 
-      await addDoc(collection(db, 'users', user.uid, 'resumes'), {
+      // Save to Firestore (Non-blocking following guidelines)
+      const resumesRef = collection(db, 'users', user.uid, 'resumes');
+      const resumeData = {
         userId: user.uid,
         filename: file.name,
         targetRole: selectedRole,
         atsScore: result.atsScore,
         analysis: result,
         createdAt: serverTimestamp(),
+      };
+
+      addDoc(resumesRef, resumeData).catch(async (e) => {
+          const permissionError = new FirestorePermissionError({
+            path: `users/${user.uid}/resumes`,
+            operation: 'create',
+            requestResourceData: resumeData,
+          });
+          errorEmitter.emit('permission-error', permissionError);
       });
 
-      await updateDoc(doc(db, 'users', user.uid), {
-        resumeScore: result.atsScore
+      const userDocRef = doc(db, 'users', user.uid);
+      updateDoc(userDocRef, { resumeScore: result.atsScore }).catch(async (e) => {
+          const permissionError = new FirestorePermissionError({
+            path: `users/${user.uid}`,
+            operation: 'update',
+            requestResourceData: { resumeScore: result.atsScore },
+          });
+          errorEmitter.emit('permission-error', permissionError);
       });
 
       setResumeAnalysis(result);
@@ -707,37 +728,54 @@ export default function InterviewJourney() {
                     <Card className="premium-card bg-[#0b0e1a]/80 border-white/5 p-12 relative overflow-hidden">
                       <div className="absolute top-0 right-0 p-8"><Badge className="bg-accent/20 text-accent font-bold tracking-widest uppercase text-[10px]">Neural Audit Live</Badge></div>
                       
-                      <div className="grid lg:grid-cols-12 gap-12 items-center">
-                        <div className="lg:col-span-4 text-center space-y-6 border-r border-white/5 pr-12">
-                          <div className="relative w-48 h-48 mx-auto">
-                            <div className="absolute inset-0 rounded-full border-4 border-white/5" />
-                            <motion.div 
-                              initial={{ rotate: 0 }}
-                              animate={{ rotate: 360 }} 
-                              transition={{ duration: 3, repeat: Infinity, ease: "linear" }}
-                              className="absolute inset-0 rounded-full border-4 border-t-accent border-r-transparent border-b-transparent border-l-transparent" 
-                            />
-                            <div className="absolute inset-0 flex flex-col items-center justify-center">
-                              <span className="text-6xl font-bold tracking-tighter text-premium">{resumeAnalysis?.atsScore || 0}%</span>
-                              <span className="text-[9px] uppercase font-bold tracking-widest text-muted-foreground">ATS Index</span>
+                      <div className="grid lg:grid-cols-12 gap-12">
+                        {/* Left Column: Scores */}
+                        <div className="lg:col-span-4 text-center space-y-8 border-r border-white/5 pr-12">
+                          <div className="space-y-6">
+                            <div className="relative w-48 h-48 mx-auto">
+                              <div className="absolute inset-0 rounded-full border-4 border-white/5" />
+                              <motion.div 
+                                initial={{ rotate: 0 }}
+                                animate={{ rotate: 360 }} 
+                                transition={{ duration: 3, repeat: Infinity, ease: "linear" }}
+                                className="absolute inset-0 rounded-full border-4 border-t-accent border-r-transparent border-b-transparent border-l-transparent" 
+                              />
+                              <div className="absolute inset-0 flex flex-col items-center justify-center">
+                                <span className="text-6xl font-bold tracking-tighter text-premium">{resumeAnalysis?.atsScore || 0}%</span>
+                                <span className="text-[9px] uppercase font-bold tracking-widest text-muted-foreground">ATS Index</span>
+                              </div>
+                            </div>
+                            <div className="space-y-2">
+                              <h3 className="text-2xl font-bold">Calibration Match</h3>
+                              <p className="text-[10px] text-muted-foreground uppercase tracking-widest leading-relaxed">
+                                Aligned for {selectedCompany} <br />{selectedRole} standards.
+                              </p>
                             </div>
                           </div>
-                          <div className="space-y-2">
-                            <h3 className="text-2xl font-bold">Protocol Match Optimal</h3>
-                            <p className="text-[10px] text-muted-foreground uppercase tracking-widest leading-relaxed">
-                              Your blueprint is calibrated for {selectedCompany}'s <br />{selectedRole} standards.
-                            </p>
+
+                          <div className="p-6 glass rounded-[2rem] border-purple-500/20 bg-purple-500/5">
+                            <div className="text-4xl font-bold text-purple-400 mb-1">{resumeAnalysis?.interviewReadinessScore || 0}%</div>
+                            <p className="text-[9px] uppercase tracking-widest font-bold text-muted-foreground">Readiness Index</p>
                           </div>
                         </div>
 
+                        {/* Right Column: Details */}
                         <div className="lg:col-span-8 space-y-10">
+                          {/* Summary */}
+                          <div className="space-y-4">
+                            <h4 className="text-[10px] font-bold uppercase tracking-[0.3em] text-white/30">Executive Summary Audit</h4>
+                            <div className="p-6 glass rounded-2xl bg-white/[0.01] border-white/5">
+                              <p className="text-sm font-light leading-relaxed text-white/80 italic">"{resumeAnalysis?.summary}"</p>
+                            </div>
+                          </div>
+
                           <div className="grid md:grid-cols-2 gap-8">
                             <div className="space-y-4">
                               <h4 className="text-[10px] font-bold uppercase tracking-[0.3em] text-accent flex items-center gap-2">
                                 <ChevronUp className="w-4 h-4" /> Strategic Assets
                               </h4>
                               <div className="space-y-2">
-                                {(resumeAnalysis?.strengths || ["Strong Technical Core", "Modern Framework Mastery", "Problem-Solving Depth"]).map((s: string, i: number) => (
+                                {(resumeAnalysis?.strengths || []).map((s: string, i: number) => (
                                   <div key={i} className="flex items-center gap-3 p-3 glass rounded-xl border-white/5">
                                     <CheckCircle2 className="w-4 h-4 text-green-400" />
                                     <span className="text-xs font-light text-white/80">{s}</span>
@@ -750,7 +788,7 @@ export default function InterviewJourney() {
                                 <ChevronDown className="w-4 h-4" /> Optimization Gaps
                               </h4>
                               <div className="space-y-2">
-                                {(resumeAnalysis?.weaknesses || ["Missing Cloud Certification", "Low Keyword Density (AWS)", "Experience Node Depth"]).map((w: string, i: number) => (
+                                {(resumeAnalysis?.weaknesses || []).map((w: string, i: number) => (
                                   <div key={i} className="flex items-center gap-3 p-3 glass rounded-xl border-white/5">
                                     <AlertCircle className="w-4 h-4 text-red-400" />
                                     <span className="text-xs font-light text-white/80">{w}</span>
@@ -760,16 +798,29 @@ export default function InterviewJourney() {
                             </div>
                           </div>
 
+                          {/* Missing Skills */}
                           <div className="space-y-4">
-                            <div className="flex justify-between items-center">
-                              <h4 className="text-[10px] font-bold uppercase tracking-[0.3em] text-white/30">Skill Vector Mapping</h4>
-                              <span className="text-[10px] font-bold text-accent uppercase tracking-widest">{resumeAnalysis?.skillAnalysis?.length || 0} Nodes Found</span>
-                            </div>
+                            <h4 className="text-[10px] font-bold uppercase tracking-[0.3em] text-white/30">Critical Missing Nodes</h4>
                             <div className="flex flex-wrap gap-2">
-                              {(resumeAnalysis?.skillAnalysis || []).map((s: any, i: number) => (
-                                <Badge key={i} variant="outline" className="bg-white/5 border-white/10 text-white/60 text-[8px] uppercase tracking-widest font-bold py-1.5 px-3">
-                                  {s.skill} <span className="text-accent ml-2">[{s.proficiency}]</span>
+                              {(resumeAnalysis?.missingSkills || []).map((s: string, i: number) => (
+                                <Badge key={i} variant="outline" className="border-red-500/20 text-red-400 text-[8px] uppercase tracking-widest font-bold py-1.5 px-3">
+                                  {s}
                                 </Badge>
+                              ))}
+                            </div>
+                          </div>
+
+                          {/* Optimization Directives */}
+                          <div className="space-y-4">
+                            <h4 className="text-[10px] font-bold uppercase tracking-[0.3em] text-accent flex items-center gap-2">
+                              <Lightbulb className="w-4 h-4" /> Strategic Optimization Directives
+                            </h4>
+                            <div className="grid gap-3">
+                              {(resumeAnalysis?.improvementSuggestions || []).map((tip: string, i: number) => (
+                                <div key={i} className="flex items-start gap-4 p-4 glass rounded-2xl border-white/5">
+                                  <div className="w-1.5 h-1.5 rounded-full bg-accent mt-2 shrink-0" />
+                                  <p className="text-xs font-light text-white/60 leading-relaxed">{tip}</p>
+                                </div>
                               ))}
                             </div>
                           </div>
@@ -777,13 +828,17 @@ export default function InterviewJourney() {
                       </div>
 
                       {/* Warning if score < 60 */}
-                      {resumeAnalysis?.atsScore < 60 && (
-                        <div className="mt-12 p-6 glass rounded-[2rem] border-red-500/20 bg-red-500/5 flex items-start gap-4">
-                          <AlertTriangle className="w-6 h-6 text-red-400 shrink-0 mt-1" />
-                          <div className="space-y-1">
-                            <p className="font-bold text-red-400 text-sm">Protocol Warning: Low Calibration Score</p>
-                            <p className="text-xs text-red-400/60 leading-relaxed font-light">
-                              Your career blueprint scored below the elite threshold (60%). We strongly recommend utilizing the Neural Optimizer before entering the live simulation rounds to maximize placement probability.
+                      {(resumeAnalysis?.atsScore < 60) && (
+                        <div className="mt-12 p-8 glass rounded-[2.5rem] border-red-500/30 bg-red-500/5 flex items-start gap-6">
+                          <div className="w-12 h-12 rounded-2xl bg-red-500/20 flex items-center justify-center text-red-400 shrink-0">
+                            <AlertTriangle className="w-6 h-6" />
+                          </div>
+                          <div className="space-y-2">
+                            <p className="font-bold text-red-400 text-lg">Critical Calibration Warning</p>
+                            <p className="text-sm text-red-400/70 leading-relaxed font-light">
+                              Your career blueprint ATS index ({resumeAnalysis.atsScore}%) is below the elite deployment threshold (60%). 
+                              Entering the simulation with a sub-optimal blueprint will negatively impact your final Performance Audit. 
+                              We strongly recommend utilizing the <span className="font-bold text-red-400">Resume Optimizer</span> to bridge these intelligence gaps before proceeding.
                             </p>
                           </div>
                         </div>
@@ -797,8 +852,8 @@ export default function InterviewJourney() {
                             <Sparkles className="w-7 h-7" />
                           </div>
                           <div>
-                            <h4 className="font-bold text-lg">Neural Optimization</h4>
-                            <p className="text-xs text-muted-foreground">Improve blueprint for {selectedCompany} standards.</p>
+                            <h4 className="font-bold text-lg">Resume Optimizer</h4>
+                            <p className="text-xs text-muted-foreground">Automated blueprint reconstruction.</p>
                           </div>
                         </div>
                         <Link href="/resume-analysis">
@@ -818,7 +873,7 @@ export default function InterviewJourney() {
                           </div>
                           <div>
                             <h4 className="font-bold text-lg text-white">Initialize Simulation</h4>
-                            <p className="text-xs text-white/60">Enter Round 01: Logic & Aptitude Nodes.</p>
+                            <p className="text-xs text-white/60">Launch Round 01: Cognitive Logic.</p>
                           </div>
                         </div>
                         <ChevronRight className="w-6 h-6 group-hover:translate-x-1 transition-transform" />
@@ -1324,3 +1379,4 @@ export default function InterviewJourney() {
     </div>
   );
 }
+
