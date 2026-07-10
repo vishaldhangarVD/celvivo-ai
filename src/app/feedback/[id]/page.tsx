@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useMemo } from 'react';
-import { useParams } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import Navbar from '@/components/layout/Navbar';
 import NavigationControls from '@/components/NavigationControls';
@@ -9,30 +9,41 @@ import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { 
   BrainCircuit, 
-  MessageSquare, 
   Zap,
   Map,
   Download,
   Award,
   TrendingUp,
   ShieldCheck,
-  ChevronDown,
-  ChevronUp,
+  ChevronRight,
   FileText,
   SearchCheck,
-  Code2
+  Code2,
+  Trophy,
+  History,
+  Target,
+  Activity,
+  MessageSquare,
+  AlertCircle,
+  CheckCircle2,
+  Lightbulb,
+  Cpu,
+  RefreshCcw,
+  LayoutDashboard,
+  Loader2
 } from 'lucide-react';
-import { generateInterviewFeedback, type InterviewFeedbackOutput } from '@/ai/flows/ai-interview-feedback';
-import { useUser, useFirestore, useDoc, useCollection } from '@/firebase';
-import { doc, updateDoc, collection, query, orderBy, limit } from 'firebase/firestore';
+import { useUser, useFirestore, useDoc } from '@/firebase';
+import { doc } from 'firebase/firestore';
 import { generateCertificatePDF } from '@/lib/certificate-generator';
 import { useToast } from '@/hooks/use-toast';
 import Link from 'next/link';
 
-export default function FeedbackReport() {
+export default function FinalReportPage() {
   const params = useParams();
+  const router = useRouter();
   const { user } = useUser();
   const db = useFirestore();
   const { toast } = useToast();
@@ -44,78 +55,20 @@ export default function FeedbackReport() {
   }, [db, user?.uid, docId]);
   
   const { data: interviewDoc, loading: docLoading } = useDoc(interviewRef);
+  const feedback = (interviewDoc as any)?.feedback;
 
-  const resumesQuery = useMemo(() => {
-    if (!db || !user?.uid) return null;
-    return query(
-      collection(db, 'users', user.uid, 'resumes'),
-      orderBy('createdAt', 'desc'),
-      limit(1)
-    );
-  }, [db, user?.uid]);
-  const { data: latestResumes } = useCollection(resumesQuery);
-  
-  const [feedback, setFeedback] = useState<InterviewFeedbackOutput | null>(null);
-  const [isProcessing, setIsProcessing] = useState(false);
-  const [hasAttempted, setHasAttempted] = useState(false);
+  const getScoreColor = (score: number) => {
+    if (score >= 85) return "text-accent";
+    if (score >= 70) return "text-green-400";
+    if (score >= 50) return "text-orange-400";
+    return "text-red-400";
+  };
 
-  useEffect(() => {
-    const processAudit = async () => {
-      if (!interviewDoc || isProcessing || hasAttempted) return;
-      
-      if ((interviewDoc as any).feedback && (interviewDoc as any).overallScore > 0) {
-        setFeedback((interviewDoc as any).feedback);
-        setHasAttempted(true);
-        return;
-      }
+  const handleDownloadReport = () => {
+    toast({ title: "Export Protocol Initialized", description: "Your comprehensive performance PDF is being synthesized." });
+  };
 
-      setIsProcessing(true);
-      setHasAttempted(true);
-      try {
-        const transcript = ((interviewDoc as any).history || []).map((h: any) => `Q: ${h.question}\nA: ${h.answer}`).join('\n\n');
-        
-        const resume = latestResumes?.[0];
-        const resumeContext = resume ? {
-          skills: (resume as any).analysis?.skillAnalysis?.map((s: any) => s.skill) || [],
-          projects: (resume as any).analysis?.sections?.projects || [],
-          experienceSummary: (resume as any).analysis?.sections?.experience?.[0] || "",
-          atsScore: (resume as any).atsScore || 0
-        } : undefined;
-
-        const storedFeedback = (interviewDoc as any).feedback;
-
-        if (!storedFeedback) {
-          toast({
-            variant: "destructive",
-            title: "Feedback Missing",
-            description: "Interview feedback was not found."
-          });
-          return;
-        }
-        
-        setFeedback(storedFeedback);
-
-        if (interviewRef) {
-          
-          if (user?.uid && db) {
-            const userRef = doc(db, 'users', user.uid);
-            await updateDoc(userRef, {
-              jobReadinessScore: Math.round(storedFeedback.jobReadinessScore || 0)
-            });
-          }
-        }
-      } catch (e) {
-        console.error("Audit Synthesis Failure", e);
-        toast({ variant: "destructive", title: "Audit Failed", description: "System could not synthesize the final report." });
-      } finally {
-        setIsProcessing(false);
-      }
-    };
-
-    if (!docLoading && interviewDoc) processAudit();
-  }, [interviewDoc, docLoading, user?.uid, db, interviewRef, toast, isProcessing, hasAttempted, latestResumes]);
-
-  if (docLoading || isProcessing) {
+  if (docLoading) {
     return (
       <div className="h-screen flex flex-col items-center justify-center bg-[#050816] space-y-8">
         <div className="relative">
@@ -123,20 +76,21 @@ export default function FeedbackReport() {
           <BrainCircuit className="w-12 h-12 text-accent absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 animate-pulse" />
         </div>
         <div className="text-center space-y-4">
-          <h2 className="text-3xl font-bold tracking-tighter text-premium">Synthesizing Neural Audit...</h2>
-          <p className="text-muted-foreground font-light uppercase tracking-[0.4em] text-[10px]">Processing Contextual Intelligence Nodes</p>
+          <h2 className="text-3xl font-bold tracking-tighter text-premium uppercase">Synthesizing Neural Audit...</h2>
+          <p className="text-muted-foreground font-light uppercase tracking-[0.4em] text-[10px]">Processing Master Dossier v15.2</p>
         </div>
       </div>
     );
   }
 
-  if (!feedback) {
+  if (!interviewDoc || !feedback) {
     return (
       <div className="h-screen flex flex-col items-center justify-center bg-[#050816]">
-        <h2 className="text-2xl font-bold text-red-400">Audit Not Found</h2>
-        <p className="text-muted-foreground mt-2">The requested simulation vectors could not be retrieved.</p>
+        <AlertCircle className="w-16 h-16 text-red-400 mb-6" />
+        <h2 className="text-2xl font-bold text-white">Master Dossier Not Found</h2>
+        <p className="text-muted-foreground mt-2">The simulation vectors for this session could not be retrieved.</p>
         <Link href="/dashboard" className="mt-8">
-          <Button variant="outline">Return to Command</Button>
+          <Button variant="outline" className="rounded-xl font-bold uppercase tracking-widest text-[10px]">Return to command</Button>
         </Link>
       </div>
     );
@@ -148,147 +102,203 @@ export default function FeedbackReport() {
       <Navbar />
       <NavigationControls />
       
-      <div className="container mx-auto px-4 py-32">
-        <div className="max-w-6xl mx-auto space-y-12">
+      <div className="container mx-auto px-4 pt-32">
+        <div className="max-w-7xl mx-auto space-y-12">
           
-          <motion.div initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} className="premium-card p-12 border-glow-premium relative overflow-hidden flex flex-col md:flex-row items-center justify-between gap-8">
-            <div className="z-10 text-center md:text-left">
-              <Badge className="bg-accent/20 text-accent border-none px-4 py-1 mb-6 text-[10px] tracking-widest font-bold">EXECUTIVE PERFORMANCE REPORT</Badge>
-              <h1 className="text-6xl font-bold tracking-tighter text-premium mb-2">{(interviewDoc as any)?.role}</h1>
-              <div className="flex items-center justify-center md:justify-start gap-4 text-muted-foreground">
-                <span className="text-accent font-bold uppercase tracking-widest text-xs">{(interviewDoc as any)?.experienceLevel} Grade</span>
-                <span className="w-1.5 h-1.5 rounded-full bg-white/20" />
-                <Badge variant="outline" className="border-purple-500/40 text-purple-400 font-bold">{feedback.hiringRecommendation}</Badge>
-              </div>
+          {/* Header Performance Section */}
+          <motion.div initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} className="premium-card p-12 border-glow-premium relative overflow-hidden">
+            <div className="absolute top-0 right-0 p-12">
+              <Badge className={`${getScoreColor(feedback.overallScore)} border-none bg-white/5 font-black tracking-[0.4em] uppercase text-xs px-8 py-3 rounded-2xl`}>
+                STATUS: {feedback.hiringRecommendation.toUpperCase()}
+              </Badge>
             </div>
             
-            <div className="flex items-center gap-12 z-10">
-              <div className="text-center">
-                <div className="text-6xl font-bold text-gradient-purple mb-1">{feedback.overallInterviewScore}%</div>
-                <div className="text-[9px] uppercase tracking-widest text-muted-foreground font-bold">Overall Rating</div>
+            <div className="grid lg:grid-cols-12 gap-16 items-center">
+              <div className="lg:col-span-4 text-center lg:text-left space-y-6">
+                <Badge className="bg-accent/20 text-accent border-none px-4 py-1 text-[10px] tracking-widest font-bold uppercase">Final Performance Audit</Badge>
+                <h1 className="text-6xl font-bold tracking-tighter text-premium leading-tight">{(interviewDoc as any).role}<br /><span className="text-gradient-purple">Dossier.</span></h1>
+                <p className="text-muted-foreground font-light uppercase tracking-widest text-xs">Target: {(interviewDoc as any).company} • {(interviewDoc as any).experienceLevel} Grade</p>
               </div>
-              <div className="w-px h-16 bg-white/10" />
-              <div className="text-center">
-                <div className="text-6xl font-bold text-accent mb-1">{Math.round(feedback.jobReadinessScore)}%</div>
-                <div className="text-[9px] uppercase tracking-widest text-muted-foreground font-bold">Market Ready</div>
+
+              <div className="lg:col-span-8 flex flex-col md:flex-row items-center gap-12 lg:justify-end">
+                <div className="text-center">
+                  <div className={`text-8xl font-bold tracking-tighter tabular-nums ${getScoreColor(feedback.overallScore)}`}>{feedback.overallScore}%</div>
+                  <div className="text-[10px] uppercase tracking-[0.4em] text-muted-foreground font-bold mt-2">Master Performance Index</div>
+                </div>
+                <div className="hidden md:block w-px h-24 bg-white/10" />
+                <div className="text-center">
+                  <div className="text-6xl font-bold text-white tabular-nums">{feedback.interviewReadiness}%</div>
+                  <div className="text-[10px] uppercase tracking-[0.4em] text-accent font-bold mt-2">Interview Readiness</div>
+                </div>
               </div>
             </div>
           </motion.div>
 
           <div className="grid lg:grid-cols-12 gap-12">
             <div className="lg:col-span-8 space-y-12">
-              <Card className="premium-card bg-white/[0.01]">
-                <CardHeader>
-                  <CardTitle className="text-xl font-bold flex items-center gap-3">
-                    <TrendingUp className="w-6 h-6 text-accent" /> Node Evaluation
+              
+              {/* Virtual Interview Breakdown */}
+              <Card className="premium-card bg-white/[0.01] border-white/5 p-10">
+                <CardHeader className="px-0 pt-0 mb-12 flex flex-row items-center justify-between border-b border-white/5 pb-8">
+                  <CardTitle className="text-2xl font-bold flex items-center gap-4">
+                    <BrainCircuit className="w-8 h-8 text-accent" /> Virtual Interview Audit
                   </CardTitle>
+                  <Badge variant="outline" className="border-accent/30 text-accent">Node 04: Active</Badge>
                 </CardHeader>
-                <CardContent className="grid md:grid-cols-2 gap-10">
+                <div className="grid md:grid-cols-2 gap-x-16 gap-y-10">
                   {[
-                    { label: "Technical Logic", score: feedback.technicalKnowledgeScore, icon: BrainCircuit, color: "text-blue-400" },
-                    { label: "Strategic Communication", score: feedback.communicationScore, icon: MessageSquare, color: "text-green-400" },
-                    { label: "Operational Presence", score: feedback.confidenceScore, icon: Zap, color: "text-yellow-400" },
-                    { label: "Resume Skill Match", score: feedback.resumeSkillMatchScore, icon: FileText, color: "text-purple-400" },
-                    { label: "Claim Validation", score: feedback.resumeClaimValidationScore, icon: SearchCheck, color: "text-orange-400" },
-                    { label: "Project Knowledge", score: feedback.projectKnowledgeScore, icon: Code2, color: "text-cyan-400" }
+                    { label: "Technical Knowledge", score: feedback.virtualInterviewResult.technicalKnowledge, icon: Cpu, color: "text-blue-400" },
+                    { label: "Communication", score: feedback.virtualInterviewResult.communication, icon: MessageSquare, color: "text-green-400" },
+                    { label: "Operational Presence", score: feedback.virtualInterviewResult.confidence, icon: Zap, color: "text-yellow-400" },
+                    { label: "Problem Solving", score: feedback.virtualInterviewResult.problemSolving, icon: Target, color: "text-purple-400" },
+                    { label: "Professionalism", score: feedback.virtualInterviewResult.professionalism, icon: ShieldCheck, color: "text-cyan-400" },
+                    { label: "Culture Fit", score: feedback.virtualInterviewResult.hrSkills, icon: Award, color: "text-orange-400" }
                   ].map((m, i) => (
                     <div key={i} className="space-y-4">
                       <div className="flex justify-between items-end">
-                        <span className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-white/50">
+                        <span className="flex items-center gap-3 text-[10px] font-bold uppercase tracking-widest text-white/50">
                           <m.icon className={`w-4 h-4 ${m.color}`} /> {m.label}
                         </span>
-                        <span className="text-xl font-bold">{m.score}%</span>
+                        <span className="text-xl font-bold tabular-nums">{m.score}%</span>
                       </div>
-                      <Progress value={m.score} className="h-1.5" />
+                      <div className="h-1.5 bg-white/5 rounded-full overflow-hidden">
+                        <motion.div initial={{ width: 0 }} animate={{ width: `${m.score}%` }} transition={{ duration: 1, delay: i * 0.1 }} className={`h-full bg-current ${m.color}`} />
+                      </div>
                     </div>
                   ))}
-                </CardContent>
+                </div>
               </Card>
 
+              {/* Dynamic Feedback Nodes */}
               <div className="grid md:grid-cols-2 gap-8">
-                <Card className="glass p-8 rounded-[2rem] border-green-500/10 bg-green-500/[0.01]">
-                  <h3 className="text-green-400 text-lg font-bold flex items-center gap-2 mb-6">
-                    <ChevronUp className="w-5 h-5" /> Core Assets
+                <Card className="glass p-8 rounded-[2.5rem] border-accent/10 bg-accent/[0.01] space-y-6">
+                  <h3 className="text-accent text-lg font-bold flex items-center gap-3 uppercase tracking-tighter">
+                    <CheckCircle2 className="w-6 h-6" /> Strategic Strengths
                   </h3>
                   <div className="space-y-4">
-                    {feedback.strengths.map((s, i) => (
-                      <div key={i} className="flex gap-3 text-sm font-light text-white/70">
-                        <div className="w-1.5 h-1.5 rounded-full bg-green-400 mt-1.5 shrink-0" /> {s}
+                    {feedback.aiFeedback.strongSkills.map((s: string, i: number) => (
+                      <div key={i} className="flex gap-4 text-sm font-light text-white/80 leading-relaxed group">
+                        <div className="w-1.5 h-1.5 rounded-full bg-accent mt-2 shrink-0 group-hover:scale-125 transition-transform" /> {s}
                       </div>
                     ))}
                   </div>
                 </Card>
-                <Card className="glass p-8 rounded-[2rem] border-red-500/10 bg-red-500/[0.01]">
-                  <h3 className="text-red-400 text-lg font-bold flex items-center gap-2 mb-6">
-                    <ChevronDown className="w-5 h-5" /> Delta Gaps
+                <Card className="glass p-8 rounded-[2.5rem] border-red-500/10 bg-red-500/[0.01] space-y-6">
+                  <h3 className="text-red-400 text-lg font-bold flex items-center gap-3 uppercase tracking-tighter">
+                    <AlertCircle className="w-6 h-6" /> Critical Delta Gaps
                   </h3>
                   <div className="space-y-4">
-                    {feedback.weaknesses.map((w, i) => (
-                      <div key={i} className="flex gap-3 text-sm font-light text-white/70">
-                        <div className="w-1.5 h-1.5 rounded-full bg-red-400 mt-1.5 shrink-0" /> {w}
+                    {feedback.aiFeedback.weakSkills.map((w: string, i: number) => (
+                      <div key={i} className="flex gap-4 text-sm font-light text-white/80 leading-relaxed group">
+                        <div className="w-1.5 h-1.5 rounded-full bg-red-400 mt-2 shrink-0 group-hover:scale-125 transition-transform" /> {w}
                       </div>
                     ))}
                   </div>
                 </Card>
               </div>
 
-              <Card className="premium-card bg-white/[0.01]">
-                <CardHeader>
-                  <CardTitle className="text-xl font-bold flex items-center gap-3">
-                    <Map className="w-6 h-6 text-accent" /> 30-Day Evolution Plan
+              {/* Learning Plan Roadmap */}
+              <Card className="premium-card bg-white/[0.01] border-white/5 p-10">
+                <CardHeader className="px-0 pt-0 mb-10">
+                  <CardTitle className="text-2xl font-bold flex items-center gap-4">
+                    <Map className="w-8 h-8 text-blue-400" /> Next Learning Protocol
                   </CardTitle>
                 </CardHeader>
-                <CardContent className="space-y-6">
-                  {feedback.improvementPlan.map((plan, i) => (
-                    <div key={i} className="p-6 glass rounded-2xl border-white/5 group hover:bg-white/[0.03] transition-all">
-                      <div className="flex gap-6">
-                        <div className="w-10 h-10 rounded-xl bg-accent/10 flex items-center justify-center text-accent shrink-0 font-bold">0{i+1}</div>
-                        <div>
-                          <h4 className="font-bold mb-1">{plan.title}</h4>
-                          <p className="text-sm font-light text-white/50">{plan.description}</p>
+                <div className="grid md:grid-cols-2 gap-10">
+                  <div className="space-y-6">
+                    <h4 className="text-[10px] font-bold uppercase tracking-[0.4em] text-white/30">Theoretical Nodes</h4>
+                    <div className="grid gap-3">
+                      {feedback.learningPlan.topicsToStudy.map((t: string, i: number) => (
+                        <div key={i} className="p-4 glass rounded-xl border-white/5 text-sm font-light text-white/60 flex items-center gap-4 hover:bg-white/5 transition-all">
+                          <div className="w-1 h-1 rounded-full bg-blue-400" /> {t}
                         </div>
-                      </div>
+                      ))}
                     </div>
-                  ))}
-                </CardContent>
+                  </div>
+                  <div className="space-y-6">
+                    <h4 className="text-[10px] font-bold uppercase tracking-[0.4em] text-white/30">Practice Nodes</h4>
+                    <div className="grid gap-3">
+                      {feedback.learningPlan.codingPractice.map((p: string, i: number) => (
+                        <div key={i} className="p-4 glass rounded-xl border-white/5 text-sm font-light text-white/60 flex items-center gap-4 hover:bg-white/5 transition-all">
+                          <Code2 className="w-3.5 h-3.5 text-accent" /> {p}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
               </Card>
             </div>
 
             <div className="lg:col-span-4 space-y-8">
+              
+              {/* Score Overview Sidebar Cards */}
               <Card className="premium-card bg-accent/5 border-accent/20 p-8 text-center space-y-6">
-                <div className="w-16 h-16 rounded-full bg-accent/20 flex items-center justify-center mx-auto border border-accent/20">
-                  <Award className="w-8 h-8 text-accent" />
+                <div className="w-20 h-20 rounded-[2.5rem] bg-accent/20 flex items-center justify-center mx-auto border border-accent/30 shadow-2xl relative">
+                  <Award className="w-10 h-10 text-accent" />
+                  <motion.div animate={{ rotate: 360 }} transition={{ duration: 10, repeat: Infinity, ease: "linear" }} className="absolute inset-0 rounded-full border border-dashed border-accent/30 scale-125" />
                 </div>
                 <div>
-                  <h3 className="text-xl font-bold">Credential Vault</h3>
-                  <p className="text-xs text-muted-foreground mt-2">Achievement recognized for elite performance (&gt;70%).</p>
+                  <h3 className="text-2xl font-bold">Credential Export</h3>
+                  <p className="text-xs text-muted-foreground mt-2 font-light">Performance verified for elite industry placement benchmarks.</p>
                 </div>
-                <Button 
-                  onClick={() => generateCertificatePDF({ 
-                    userName: user?.displayName || 'Candidate', 
-                    role: (interviewDoc as any)?.role || 'Engineer', 
-                    score: feedback.overallInterviewScore, 
-                    date: new Date().toLocaleDateString() 
-                  })}
-                  className="w-full h-14 rounded-2xl bg-white text-black font-bold hover:bg-white/90"
-                >
-                  <Download className="w-4 h-4 mr-2" /> PDF Export
-                </Button>
-                <Link href="/certificates" className="block text-[10px] uppercase font-bold tracking-widest text-accent hover:opacity-80">View All Credentials</Link>
+                <div className="space-y-3">
+                  <Button 
+                    onClick={() => generateCertificatePDF({ 
+                      userName: user?.displayName || 'Elite Candidate', 
+                      role: (interviewDoc as any).role, 
+                      score: feedback.overallScore, 
+                      date: new Date().toLocaleDateString() 
+                    })}
+                    className="w-full h-16 rounded-2xl bg-white text-[#050816] font-bold hover:bg-white/90 shadow-[0_0_30px_rgba(255,255,255,0.1)] group"
+                  >
+                    <Download className="w-5 h-5 mr-3 group-hover:translate-y-0.5 transition-transform" /> PDF Master Report
+                  </Button>
+                  <Button variant="outline" className="w-full h-16 rounded-2xl glass border-white/10 text-[10px] font-bold uppercase tracking-[0.3em]">
+                    <ShieldCheck className="w-4 h-4 mr-3" /> Verify Blockchain Link
+                  </Button>
+                </div>
               </Card>
 
+              {/* Skill Gap Analysis Sidebar */}
               <Card className="premium-card bg-white/[0.01] border-white/5 p-8">
-                <h3 className="text-lg font-bold mb-6 flex items-center gap-3">
-                  <ShieldCheck className="w-5 h-5 text-accent" /> Auditor Notes
-                </h3>
+                <h3 className="text-xl font-bold mb-8 flex items-center gap-3"><Target className="w-6 h-6 text-red-400" /> Delta Gap Analysis</h3>
                 <div className="space-y-4">
-                  {feedback.improvementSuggestions.map((tip, i) => (
-                    <div key={i} className="p-4 glass rounded-xl text-xs font-light text-white/60 border-white/5 italic">
-                      &quot;{tip}&quot;
+                  {feedback.skillGap.missingSkills.map((s: string, i: number) => (
+                    <div key={i} className="flex items-center justify-between p-4 glass rounded-xl border-red-500/10 bg-red-500/[0.02]">
+                      <span className="text-xs font-bold text-white/70 uppercase tracking-widest">{s}</span>
+                      <AlertCircle className="w-3.5 h-3.5 text-red-400" />
                     </div>
                   ))}
+                  {feedback.skillGap.missingSkills.length === 0 && (
+                    <p className="text-xs text-muted-foreground italic text-center py-8">No critical gaps detected.</p>
+                  )}
                 </div>
+                <Link href="/roadmap" className="block mt-8">
+                   <Button variant="ghost" className="w-full h-12 rounded-xl text-accent text-[10px] font-bold uppercase tracking-widest hover:bg-accent/10">Launch Improvement Roadmap</Button>
+                </Link>
               </Card>
+
+              {/* Action Directives */}
+              <div className="space-y-4">
+                <h3 className="text-[10px] font-bold uppercase tracking-[0.4em] text-white/20 ml-2">Session Directives</h3>
+                <div className="grid gap-3">
+                  <Button 
+                    onClick={() => router.push('/dashboard')}
+                    className="h-16 rounded-2xl glass border-white/10 hover:bg-white/5 justify-start px-8 gap-4 group"
+                  >
+                    <LayoutDashboard className="w-5 h-5 text-white/40 group-hover:text-white" />
+                    <span className="text-[10px] font-bold uppercase tracking-widest">Return to Command</span>
+                  </Button>
+                  <Button 
+                    onClick={() => router.push('/interview')}
+                    className="h-16 rounded-2xl glass border-white/10 hover:bg-white/5 justify-start px-8 gap-4 group"
+                  >
+                    <RefreshCcw className="w-5 h-5 text-white/40 group-hover:text-accent" />
+                    <span className="text-[10px] font-bold uppercase tracking-widest">Retry New Protocol</span>
+                  </Button>
+                </div>
+              </div>
+
             </div>
           </div>
         </div>

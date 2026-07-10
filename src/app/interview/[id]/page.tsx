@@ -65,7 +65,7 @@ function VirtualArenaContent() {
   const transcriptEndRef = useRef<HTMLDivElement>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
-  // Fetch Assessment Context
+  // Fetch Full Assessment Context for Master Audit
   const aptQuery = useMemo(() => {
     if (!db || !user?.uid) return null;
     return query(collection(db, 'users', user.uid, 'aptitude_results'), orderBy('createdAt', 'desc'), limit(1));
@@ -76,14 +76,14 @@ function VirtualArenaContent() {
     return query(collection(db, 'users', user.uid, 'coding_results'), orderBy('createdAt', 'desc'), limit(1));
   }, [db, user?.uid]);
 
+  const resQuery = useMemo(() => {
+    if (!db || !user?.uid) return null;
+    return query(collection(db, 'users', user.uid, 'resumes'), orderBy('createdAt', 'desc'), limit(1));
+  }, [db, user?.uid]);
+
   const { data: latestApt } = useCollection(aptQuery);
   const { data: latestCod } = useCollection(codQuery);
-
-  const resumeContext = useMemo(() => {
-    if (typeof window === 'undefined') return null;
-    const stored = localStorage.getItem("resumeAnalysis");
-    return stored ? JSON.parse(stored) : null;
-  }, []);
+  const { data: latestRes } = useCollection(resQuery);
 
   const interviewerImg = useMemo(() => {
     return PlaceHolderImages.find(img => img.id === 'ai-hr-interviewer')?.imageUrl || "https://picsum.photos/seed/nexvoro_hr/800/1000";
@@ -105,10 +105,10 @@ function VirtualArenaContent() {
 
   useEffect(() => {
     const initializeSession = async () => {
-      // Wait for assessment data to load
-      if (!isInitializing || !latestApt || !latestCod) return;
+      if (!isInitializing || !latestApt || !latestCod || !latestRes) return;
       
       try {
+        const resumeAnalysis = latestRes[0]?.analysis;
         const response = await aiMockInterview({
           role,
           experienceLevel: exp,
@@ -116,9 +116,9 @@ function VirtualArenaContent() {
           currentMainQuestionIndex: 1,
           history: [],
           targetCompany: company,
-          resumeSkills: resumeContext?.analysis?.skillAnalysis?.map((s: any) => s.skill) || [],
-          resumeProjects: resumeContext?.analysis?.sections?.projects || [],
-          resumeSummary: resumeContext?.analysis?.summary || "",
+          resumeSkills: resumeAnalysis?.skillAnalysis?.map((s: any) => s.skill) || [],
+          resumeProjects: resumeAnalysis?.sections?.projects || [],
+          resumeSummary: resumeAnalysis?.summary || "",
           aptitudePerformance: latestApt[0]?.feedback?.recommendation || "Standard logic baseline detected.",
           codingPerformance: latestCod[0]?.audit?.finalRecommendation || "Core syntax mastery verified.",
           difficultyLevel: "MEDIUM"
@@ -138,7 +138,7 @@ function VirtualArenaContent() {
     };
 
     initializeSession();
-  }, [role, company, exp, round, resumeContext, latestApt, latestCod, isInitializing, toast]);
+  }, [role, company, exp, round, latestApt, latestCod, latestRes, isInitializing, toast]);
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -169,6 +169,7 @@ function VirtualArenaContent() {
     setUserAnswer("");
 
     try {
+      const resumeAnalysis = latestRes?.[0]?.analysis;
       const response = await aiMockInterview({
         role,
         experienceLevel: exp,
@@ -181,8 +182,8 @@ function VirtualArenaContent() {
         userAnswer: currentAnswer,
         targetCompany: company,
         askedQuestions,
-        resumeSkills: resumeContext?.analysis?.skillAnalysis?.map((s: any) => s.skill) || [],
-        resumeProjects: resumeContext?.analysis?.sections?.projects || [],
+        resumeSkills: resumeAnalysis?.skillAnalysis?.map((s: any) => s.skill) || [],
+        resumeProjects: resumeAnalysis?.sections?.projects || [],
         aptitudePerformance: latestApt?.[0]?.feedback?.recommendation || "N/A",
         codingPerformance: latestCod?.[0]?.audit?.finalRecommendation || "N/A",
         difficultyLevel: difficulty
@@ -211,44 +212,58 @@ function VirtualArenaContent() {
     
     try {
       const transcriptStr = transcript.map(t => `${t.role.toUpperCase()}: ${t.text}`).join('\n\n');
+      const resumeAnalysis = latestRes?.[0];
+      const aptitudeResults = latestApt?.[0];
+      const codingResults = latestCod?.[0];
       
-      const feedback = await generateInterviewFeedback({
-        interviewTranscript: transcriptStr,
+      const finalAudit = await generateInterviewFeedback({
         role,
+        company,
         experienceLevel: exp,
-        round,
+        interviewTranscript: transcriptStr,
         resumeContext: {
-          skills: resumeContext?.analysis?.skillAnalysis?.map((s: any) => s.skill) || [],
-          projects: resumeContext?.analysis?.sections?.projects || [],
-          atsScore: resumeContext?.atsScore
+          atsScore: resumeAnalysis?.atsScore || 0,
+          strengths: resumeAnalysis?.analysis?.strengths || [],
+          weaknesses: resumeAnalysis?.analysis?.weaknesses || [],
+          missingSkills: resumeAnalysis?.analysis?.missingSkills || [],
+        },
+        aptitudeContext: {
+          overallScore: aptitudeResults?.overallScore || 0,
+          quantitative: aptitudeResults?.categoryScores?.quantitative || 0,
+          logical: aptitudeResults?.categoryScores?.logical || 0,
+          english: aptitudeResults?.categoryScores?.english || 0,
+          status: aptitudeResults?.status || 'N/A',
+        },
+        codingContext: {
+          score: codingResults?.score || 0,
+          readability: codingResults?.audit?.readabilityScore || 0,
+          timeComplexity: codingResults?.audit?.timeComplexity || 'N/A',
+          spaceComplexity: codingResults?.audit?.spaceComplexity || 'N/A',
+          status: codingResults?.status || 'N/A',
         }
       });
 
       const interviewData = {
         userId: user.uid,
         role,
-        experienceLevel: exp,
         company,
+        experienceLevel: exp,
         round,
         history: transcript,
-        overallScore: feedback.overallInterviewScore,
-        technicalScore: feedback.technicalKnowledgeScore,
-        communicationScore: feedback.communicationScore,
-        confidenceScore: feedback.confidenceScore,
-        problemSolvingScore: feedback.problemSolvingScore,
-        feedback,
+        overallScore: finalAudit.overallScore,
+        feedback: finalAudit,
         createdAt: serverTimestamp(),
       };
 
       const docRef = await addDoc(collection(db, 'users', user.uid, 'interviews'), interviewData);
       
       await updateDoc(doc(db, 'users', user.uid), {
-        jobReadinessScore: feedback.jobReadinessScore
+        jobReadinessScore: finalAudit.interviewReadiness
       });
 
       router.push(`/feedback/${docRef.id}`);
     } catch (e) {
-      console.error("Final Audit Failure:", e);
+      console.error("Master Audit Failure:", e);
       toast({ variant: "destructive", title: "Report Generation Failed", description: "System failed to synthesize the multi-dimensional performance audit." });
     } finally {
       setIsGeneratingReport(false);
@@ -257,7 +272,7 @@ function VirtualArenaContent() {
 
   const toggleMic = () => setIsMicActive(!isMicActive);
 
-  if (isInitializing || !latestApt || !latestCod) {
+  if (isInitializing || !latestApt || !latestCod || !latestRes) {
     return (
       <div className="h-screen flex flex-col items-center justify-center bg-[#050816] space-y-8">
         <div className="relative">
@@ -266,7 +281,7 @@ function VirtualArenaContent() {
         </div>
         <div className="text-center space-y-2">
           <h2 className="text-2xl font-bold tracking-tighter text-premium uppercase">Calibrating Virtual Arena...</h2>
-          <p className="text-[10px] text-muted-foreground uppercase tracking-[0.4em] font-bold">Consolidating Aptitude and Syntax results for {company} protocols</p>
+          <p className="text-[10px] text-muted-foreground uppercase tracking-[0.4em] font-bold">Consolidating Aptitude, Syntax, and Resume intelligence for {company}</p>
         </div>
       </div>
     );
@@ -380,7 +395,7 @@ function VirtualArenaContent() {
           
           <Card className="premium-card bg-[#0b0e1a]/80 border-glow-premium p-8 shrink-0">
             <div className="flex items-center justify-between mb-6">
-              <Badge className="bg-purple-500/20 text-purple-400 border-none uppercase text-[8px] font-bold tracking-[0.3em] px-3 py-1">Simulation Node {currentIdx}</Badge>
+              <Badge className="bg-purple-500/20 text-purple-400 border-none uppercase text-[8px] tracking-[0.3em] font-bold px-3 py-1">Simulation Node {currentIdx}</Badge>
               <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-white/20">
                 <Activity className={`w-3 h-3 ${isAvatarSpeaking ? 'text-accent animate-pulse' : 'text-white/20'}`} /> 
                 {isAvatarSpeaking ? 'Neural Audio Synthesis Active' : 'Analyzing Contextual Vectors'}
@@ -500,7 +515,7 @@ function VirtualArenaContent() {
               </div>
               <div className="space-y-4">
                 <h2 className="text-4xl font-bold tracking-tighter text-premium uppercase">Arena Gauntlet Complete</h2>
-                <p className="text-muted-foreground font-light text-lg">Your technical and behavioral vectors are being synthesized into a final performance audit.</p>
+                <p className="text-muted-foreground font-light text-lg">Your multi-round technical and behavioral vectors are being synthesized into a final master performance audit.</p>
               </div>
               <Button 
                 onClick={finalizeSession}
@@ -508,9 +523,9 @@ function VirtualArenaContent() {
                 className="w-full h-18 btn-premium text-xs font-bold tracking-[0.3em] uppercase"
               >
                 {isGeneratingReport ? (
-                   <><Loader2 className="w-5 h-5 animate-spin mr-3" /> Constructing Final Audit...</>
+                   <><Loader2 className="w-5 h-5 animate-spin mr-3" /> Synthesizing Master Audit...</>
                 ) : (
-                   <>View Performance Analysis <ChevronRight className="ml-3 w-5 h-5" /></>
+                   <>View Final AI Report <ChevronRight className="ml-3 w-5 h-5" /></>
                 )}
               </Button>
             </motion.div>
