@@ -55,7 +55,13 @@ import {
   User,
   FileStack,
   Calendar,
-  ClipboardCheck
+  ClipboardCheck,
+  RotateCcw,
+  BookOpen,
+  ArrowRight,
+  XCircle,
+  ChevronDown,
+  ChevronUp
 } from 'lucide-react';
 import { useUser, useFirestore } from '@/firebase';
 import { collection, addDoc, serverTimestamp, doc, updateDoc, setDoc, getDoc } from 'firebase/firestore';
@@ -179,6 +185,7 @@ export default function InterviewJourney() {
   const [aptitudeStartTime, setAptitudeStartTime] = useState<number | null>(null);
   const [aptitudeRemainingTime, setAptitudeRemainingTime] = useState<number | null>(null);
   const [hasWarnedTime, setHasWarnedTime] = useState(false);
+  const [showReview, setShowReview] = useState(false);
 
   const [isGeneratingCoding, setIsGeneratingCoding] = useState(false);
   const [codingProblem, setCodingProblem] = useState<any>(null);
@@ -333,8 +340,11 @@ export default function InterviewJourney() {
     try {
       const timeTaken = aptitudeStartTime ? Math.round((Date.now() - aptitudeStartTime) / 1000) : 900;
       const results = aiAptitudeQuestions.map((q, idx) => ({
+        question: q.question,
         category: q.category,
         difficulty: q.difficulty,
+        userAnswer: aptitudeAnswers[idx] || "Skipped",
+        correctAnswer: q.answer,
         isCorrect: aptitudeAnswers[idx] === q.answer
       }));
 
@@ -416,7 +426,7 @@ export default function InterviewJourney() {
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
-    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+    return `${mins} min ${secs} sec`;
   };
 
   const getTimerColor = (seconds: number) => {
@@ -673,7 +683,7 @@ export default function InterviewJourney() {
                             <div className="flex flex-col">
                               <span className="text-[8px] uppercase font-bold text-white/30 tracking-widest">Time Left</span>
                               <span className={`text-xl font-bold tabular-nums ${getTimerColor(aptitudeRemainingTime || 0)}`}>
-                                {formatTime(aptitudeRemainingTime || 0)}
+                                {Math.floor((aptitudeRemainingTime || 0)/60)}:{(aptitudeRemainingTime || 0)%60 < 10 ? '0' : ''}{(aptitudeRemainingTime || 0)%60}
                               </span>
                             </div>
                           </div>
@@ -755,7 +765,9 @@ export default function InterviewJourney() {
                               >
                                 {aptitudeIdx < 14 ? (
                                   <>Next Protocol <ChevronRight className="ml-2 w-4 h-4" /></>
-                                ) : "Submit Assessment"}
+                                ) : (
+                                  isAptitudeEvaluating ? <Loader2 className="w-4 h-4 animate-spin" /> : "Submit Assessment"
+                                )}
                               </Button>
                             </div>
 
@@ -793,17 +805,209 @@ export default function InterviewJourney() {
                   </div>
                 )}
 
-                {currentStep === 7 && (
-                  <Card className="premium-card bg-white/[0.01] border-white/5 p-12 space-y-12">
-                    <div className="flex justify-between items-center">
-                       <h2 className="text-3xl font-bold">Aptitude Result</h2>
-                       <div className="text-6xl font-bold text-accent tabular-nums">{aptitudeReport?.overallScore}%</div>
+                {currentStep === 7 && aptitudeReport && (
+                  <div className="space-y-12 max-w-5xl mx-auto">
+                    <header className="text-center space-y-4">
+                      <Badge className="bg-accent/20 text-accent px-4 py-1 text-[10px] font-bold uppercase tracking-widest border-none">Assessment Intelligence Node</Badge>
+                      <h2 className="text-5xl font-bold tracking-tighter text-premium">Aptitude Assessment Result</h2>
+                      <div className="flex flex-wrap justify-center gap-8 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                        <span className="flex items-center gap-2"><Building2 className="w-3 h-3" /> {selectedCompany}</span>
+                        <span className="flex items-center gap-2"><Briefcase className="w-3 h-3" /> {selectedRole}</span>
+                        <span className="flex items-center gap-2"><Clock className="w-3 h-3" /> {new Date().toLocaleString()}</span>
+                      </div>
+                    </header>
+
+                    <div className="grid lg:grid-cols-12 gap-8">
+                      {/* Overall Score Circle */}
+                      <Card className="lg:col-span-4 premium-card bg-white/[0.01] border-white/5 flex flex-col items-center justify-center p-12 text-center relative overflow-hidden">
+                        <div className="absolute inset-0 bg-gradient-to-br from-accent/5 to-transparent pointer-events-none" />
+                        <div className="relative w-48 h-48 mb-8 flex items-center justify-center">
+                          <svg className="w-full h-full transform -rotate-90">
+                            <circle className="text-white/5" strokeWidth="8" stroke="currentColor" fill="transparent" r="88" cx="96" cy="96" />
+                            <motion.circle 
+                              initial={{ strokeDashoffset: 553 }}
+                              animate={{ strokeDashoffset: 553 - (553 * aptitudeReport.overallScore) / 100 }}
+                              transition={{ duration: 2, ease: "easeOut" }}
+                              className={aptitudeReport.status === 'Pass' ? "text-accent" : "text-red-400"} 
+                              strokeWidth="8" 
+                              strokeDasharray={553} 
+                              strokeLinecap="round" 
+                              stroke="currentColor" 
+                              fill="transparent" 
+                              r="88" 
+                              cx="96" 
+                              cy="96" 
+                            />
+                          </svg>
+                          <div className="absolute inset-0 flex flex-col items-center justify-center">
+                            <span className="text-6xl font-bold tracking-tighter">{aptitudeReport.overallScore}%</span>
+                            <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Overall Index</span>
+                          </div>
+                        </div>
+                        <Badge className={`${aptitudeReport.status === 'Pass' ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'} border-none px-10 py-2 text-xs font-black tracking-[0.4em]`}>
+                          {aptitudeReport.status.toUpperCase()}
+                        </Badge>
+                      </Card>
+
+                      {/* Statistics Matrix */}
+                      <div className="lg:col-span-8 grid grid-cols-2 md:grid-cols-3 gap-4">
+                        {[
+                          { label: "Correct Answers", val: `${aptitudeReport.correctCount} / 15`, icon: CheckCircle2, color: "text-green-400" },
+                          { label: "Wrong Answers", val: `${aptitudeReport.wrongCount} / 15`, icon: XCircle, color: "text-red-400" },
+                          { label: "Skipped", val: aptitudeReport.skippedCount, icon: RotateCcw, color: "text-white/20" },
+                          { label: "Accuracy", val: `${aptitudeReport.accuracy}%`, icon: Target, color: "text-accent" },
+                          { label: "Time Taken", val: formatTime(900 - (aptitudeRemainingTime || 0)), icon: TimerIcon, color: "text-purple-400" },
+                          { label: "Percentile", val: aptitudeReport.percentile, icon: Award, color: "text-yellow-400" }
+                        ].map((stat, i) => (
+                          <Card key={i} className="glass p-6 rounded-2xl border-white/5 flex flex-col items-center text-center group hover:bg-white/5 transition-all">
+                            <stat.icon className={`w-6 h-6 ${stat.color} mb-3 transition-transform group-hover:scale-110`} />
+                            <div className="text-xl font-bold tabular-nums">{stat.val}</div>
+                            <div className="text-[8px] uppercase font-bold tracking-widest text-muted-foreground">{stat.label}</div>
+                          </Card>
+                        ))}
+                      </div>
                     </div>
-                    <div className="p-8 glass rounded-2xl italic text-white/70 bg-white/[0.01]">
-                      "{aptitudeReport?.recommendation}"
+
+                    <div className="grid lg:grid-cols-2 gap-8">
+                      {/* Performance Breakdown */}
+                      <Card className="premium-card bg-white/[0.01] border-white/5 p-10 space-y-10">
+                        <h3 className="text-xl font-bold flex items-center gap-3"><BarChart3 className="w-6 h-6 text-accent" /> Performance Breakdown</h3>
+                        <div className="space-y-8">
+                          {[
+                            { label: "Quantitative Aptitude", score: aptitudeReport.categoryScores.quantitative, color: "bg-blue-400" },
+                            { label: "Logical Reasoning", score: aptitudeReport.categoryScores.logical, color: "bg-purple-400" },
+                            { label: "Verbal Ability", score: aptitudeReport.categoryScores.english, color: "bg-accent" }
+                          ].map((cat, i) => (
+                            <div key={i} className="space-y-3">
+                              <div className="flex justify-between text-[10px] font-bold uppercase tracking-widest">
+                                <span>{cat.label}</span>
+                                <span className="text-white">{cat.score}%</span>
+                              </div>
+                              <div className="h-1.5 bg-white/5 rounded-full overflow-hidden">
+                                <motion.div initial={{ width: 0 }} animate={{ width: `${cat.score}%` }} className={`h-full ${cat.color}`} />
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </Card>
+
+                      {/* AI Strategic Feedback */}
+                      <Card className="premium-card bg-accent/5 border-accent/10 p-10 space-y-10">
+                        <h3 className="text-xl font-bold flex items-center gap-3 text-accent"><Sparkles className="w-6 h-6" /> AI Strategic Audit</h3>
+                        <div className="space-y-8">
+                          <div className="space-y-4">
+                            <p className="text-[10px] font-bold uppercase tracking-widest text-white/30 flex items-center gap-2"><CheckCircle2 className="w-3 h-3 text-green-400" /> Neural Strengths</p>
+                            <div className="space-y-2">
+                              {aptitudeReport.feedback.strengths.map((s: string, i: number) => (
+                                <div key={i} className="flex gap-3 text-sm font-light text-white/70 italic">
+                                  <div className="w-1 h-1 rounded-full bg-accent mt-2 shrink-0" /> {s}
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                          <div className="space-y-4">
+                            <p className="text-[10px] font-bold uppercase tracking-widest text-white/30 flex items-center gap-2"><CircleAlert className="w-3 h-3 text-red-400" /> Delta Gaps</p>
+                            <div className="space-y-2">
+                              {aptitudeReport.feedback.improvementTips.map((tip: string, i: number) => (
+                                <div key={i} className="flex gap-3 text-sm font-light text-white/70 italic">
+                                  <div className="w-1 h-1 rounded-full bg-red-400 mt-2 shrink-0" /> {tip}
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        </div>
+                      </Card>
                     </div>
-                    <Button onClick={handleStartCoding} className="w-full h-18 btn-premium uppercase tracking-[0.3em] text-xs font-bold">Unlock Coding Round</Button>
-                  </Card>
+
+                    {/* Question Review Section */}
+                    <div className="space-y-6">
+                      <Button 
+                        onClick={() => setShowReview(!showReview)}
+                        variant="outline" 
+                        className="w-full h-16 rounded-2xl glass border-white/10 flex gap-3 text-[10px] font-bold uppercase tracking-[0.3em]"
+                      >
+                        <BookOpen className="w-4 h-4" /> 
+                        {showReview ? "Close Intelligence Review" : "Review Intelligence Nodes"}
+                        {showReview ? <ChevronUp className="ml-auto w-4 h-4" /> : <ChevronDown className="ml-auto w-4 h-4" />}
+                      </Button>
+
+                      <AnimatePresence>
+                        {showReview && (
+                          <motion.div 
+                            initial={{ height: 0, opacity: 0 }} 
+                            animate={{ height: "auto", opacity: 1 }} 
+                            exit={{ height: 0, opacity: 0 }}
+                            className="space-y-4 overflow-hidden"
+                          >
+                            {aiAptitudeQuestions.map((q, idx) => {
+                              const review = aptitudeReport.questionReviews[idx];
+                              const isCorrect = aptitudeAnswers[idx] === q.answer;
+                              return (
+                                <Card key={idx} className="glass p-8 rounded-3xl border-white/5 bg-white/[0.01]">
+                                  <div className="flex justify-between items-start mb-6">
+                                    <Badge variant="outline" className="border-white/10 text-[8px] uppercase tracking-widest font-bold text-white/40">Node {idx + 1}</Badge>
+                                    <Badge className={`${isCorrect ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'} border-none uppercase text-[8px] font-bold`}>
+                                      {isCorrect ? "✅ Correct" : "❌ Wrong"}
+                                    </Badge>
+                                  </div>
+                                  <h4 className="text-xl font-bold mb-6">{q.question}</h4>
+                                  <div className="grid md:grid-cols-2 gap-8 mb-8">
+                                    <div className="p-4 glass rounded-xl border-white/5">
+                                      <p className="text-[8px] uppercase font-bold text-white/30 tracking-widest mb-2">Candidate Input</p>
+                                      <p className={isCorrect ? "text-green-400" : "text-red-400"}>{aptitudeAnswers[idx] || "Skipped"}</p>
+                                    </div>
+                                    <div className="p-4 glass rounded-xl border-accent/10 bg-accent/[0.02]">
+                                      <p className="text-[8px] uppercase font-bold text-accent/50 tracking-widest mb-2">Neural Answer</p>
+                                      <p className="text-accent font-bold">{q.answer}</p>
+                                    </div>
+                                  </div>
+                                  <div className="p-6 glass rounded-2xl bg-white/[0.02] border-white/5">
+                                    <div className="flex items-center gap-3 text-white/40 mb-3">
+                                      <Lightbulb className="w-4 h-4" />
+                                      <span className="text-[10px] font-bold uppercase tracking-widest">Neural Logic Explanation</span>
+                                    </div>
+                                    <p className="text-sm font-light text-white/60 leading-relaxed italic">"{review?.explanation || "Logic explanation node offline."}"</p>
+                                  </div>
+                                </Card>
+                              );
+                            })}
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
+                    </div>
+
+                    {/* Final CTA Flow */}
+                    <AnimatePresence mode="wait">
+                      {aptitudeReport.status === 'Pass' ? (
+                        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="p-12 glass rounded-[3rem] border-green-500/20 bg-green-500/[0.02] text-center space-y-8">
+                          <div className="w-20 h-20 rounded-full bg-green-500/20 flex items-center justify-center mx-auto shadow-[0_0_50px_rgba(34,197,94,0.1)]">
+                             <CheckCircle2 className="w-10 h-10 text-green-400" />
+                          </div>
+                          <div>
+                            <h3 className="text-3xl font-bold tracking-tighter">🎉 Congratulations!</h3>
+                            <p className="text-muted-foreground font-light mt-2">Your logic matrix matches the firm's requirements. You have cleared the Aptitude Round.</p>
+                          </div>
+                          <Button onClick={handleStartCoding} disabled={isGeneratingCoding} className="h-18 px-12 btn-premium text-xs font-bold uppercase tracking-[0.3em]">
+                            {isGeneratingCoding ? <><Loader2 className="w-4 h-4 animate-spin mr-3" /> Architecting Challenges...</> : <>Continue to Coding Round <ArrowRight className="ml-3 w-4 h-4" /></>}
+                          </Button>
+                        </motion.div>
+                      ) : (
+                        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="p-12 glass rounded-[3rem] border-red-500/20 bg-red-500/[0.02] text-center space-y-8">
+                          <div className="w-20 h-20 rounded-full bg-red-500/20 flex items-center justify-center mx-auto">
+                             <XCircle className="w-10 h-10 text-red-400" />
+                          </div>
+                          <div>
+                            <h3 className="text-3xl font-bold tracking-tighter">Qualification Not Met</h3>
+                            <p className="text-muted-foreground font-light mt-2">You did not meet the qualifying score (70%). The Coding Round remains locked until the logic matrix is satisfied.</p>
+                          </div>
+                          <div className="flex flex-wrap justify-center gap-4">
+                             <Button onClick={() => router.push('/question-bank')} variant="outline" className="h-14 px-8 rounded-2xl glass border-white/10 text-[10px] font-bold uppercase tracking-widest">Practice Aptitude</Button>
+                             <Button onClick={() => nextStep(6)} className="h-14 px-10 btn-premium text-[10px] font-bold uppercase tracking-widest"><RotateCcw className="w-4 h-4 mr-2" /> Retake Aptitude Test</Button>
+                          </div>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+                  </div>
                 )}
 
                 {currentStep === 8 && (

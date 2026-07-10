@@ -2,6 +2,7 @@
 /**
  * @fileOverview Nexvoro AI Aptitude Performance Auditor.
  * Evaluates aptitude results using Gemini to provide deep insights into logic, speed, and accuracy.
+ * Generates detailed explanations for every question to support the review protocol.
  */
 
 import { ai, runWithResilience } from '@/ai/genkit';
@@ -14,14 +15,22 @@ const AptitudeEvaluationInputSchema = z.object({
   timeTakenSeconds: z.number(),
   totalQuestions: z.number(),
   results: z.array(z.object({
+    question: z.string(),
     category: z.string(),
     difficulty: z.string(),
+    userAnswer: z.string(),
+    correctAnswer: z.string(),
     isCorrect: z.boolean(),
   })),
 });
 
 const AptitudeEvaluationOutputSchema = z.object({
   overallScore: z.number(),
+  correctCount: z.number(),
+  wrongCount: z.number(),
+  skippedCount: z.number(),
+  accuracy: z.number(),
+  percentile: z.string(),
   categoryScores: z.object({
     quantitative: z.number(),
     logical: z.number(),
@@ -34,6 +43,10 @@ const AptitudeEvaluationOutputSchema = z.object({
     accuracyInsight: z.string(),
     improvementTips: z.array(z.string()),
   }),
+  questionReviews: z.array(z.object({
+    question: z.string(),
+    explanation: z.string().describe("Clear explanation of why the correct answer is right."),
+  })),
   status: z.enum(['Pass', 'Fail']),
   recommendation: z.string(),
 });
@@ -55,15 +68,17 @@ DATA Dossier:
 - Results: 
 {{#each results}}
   - Category: {{this.category}}, Difficulty: {{this.difficulty}}, Result: {{#if this.isCorrect}}CORRECT{{else}}WRONG{{/if}}
+  - Question: {{{this.question}}}
 {{/each}}
 
 Audit Requirements:
 1. Accuracy Audit: Calculate category scores and overall precision.
-2. Temporal Audit: Analyze speed vs. accuracy. 20 minutes was the limit.
-3. Status Determination: Decide 'Pass' or 'Fail'. 'Pass' requires > 60% and solid logical performance for this seniority.
-4. Recommendations: If 'Fail', provide a remedial path. If 'Pass', highlight what they should carry into the technical interview.
+2. Temporal Audit: Analyze speed vs. accuracy. 15 minutes was the limit.
+3. Status Determination: 'Pass' REQUIRES score >= 70%.
+4. Question Review: For EVERY question provided in the results, provide a clear, concise explanation of the logic behind the correct answer.
+5. Recommendation: Provide a high-impact summary of performance.
 
-Return a structured report.`,
+Return a structured intelligence report matching the output schema.`,
 });
 
 const aptitudeEvaluationFlow = ai.defineFlow(
@@ -82,18 +97,30 @@ const aptitudeEvaluationFlow = ai.defineFlow(
       // Fallback status logic
       const correct = input.results.filter(r => r.isCorrect).length;
       const score = Math.round((correct / input.totalQuestions) * 100);
+      
+      const qReviews = input.results.map(r => ({
+        question: r.question,
+        explanation: "The logic follows standard principles for " + r.category + ". (Detailed neural explanation unavailable in fallback mode)."
+      }));
+
       return {
         overallScore: score,
+        correctCount: correct,
+        wrongCount: input.totalQuestions - correct,
+        skippedCount: 0,
+        accuracy: score,
+        percentile: "Top 30%",
         categoryScores: { quantitative: score, logical: score, english: score },
         feedback: {
-          strengths: ["Solid core performance"],
-          weaknesses: ["Areas for review identified"],
+          strengths: ["Core logical patterns detected"],
+          weaknesses: ["Further refinement in speed recommended"],
           speedAnalysis: "Standard pace maintained.",
           accuracyInsight: "Accuracy within expected bounds.",
-          improvementTips: ["Continue practicing logic nodes."]
+          improvementTips: ["Practice high-throughput logic nodes."]
         },
-        status: score >= 60 ? 'Pass' : 'Fail',
-        recommendation: "Review core engineering logic nodes."
+        questionReviews: qReviews,
+        status: score >= 70 ? 'Pass' : 'Fail',
+        recommendation: "Continue calibrating core engineering logic nodes."
       };
     }
   }
