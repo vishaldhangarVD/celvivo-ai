@@ -47,7 +47,10 @@ import {
   CircleAlert,
   FlaskConical,
   Building2,
-  Hand
+  Hand,
+  Rocket,
+  Mic,
+  BarChart3
 } from 'lucide-react';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
 import { useUser, useFirestore } from '@/firebase';
@@ -85,9 +88,6 @@ export default function LandingPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [isUploading, setIsUploading] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
-
-  const [testResult, setTestResult] = useState<any>(null);
-  const [isTesting, setIsTesting] = useState(false);
 
   const hrImg = PlaceHolderImages.find(img => img.id === 'ai-hr-interviewer')?.imageUrl || "https://picsum.photos/seed/nexvoro_hr/800/1000";
 
@@ -184,25 +184,47 @@ export default function LandingPage() {
             <div className="lg:w-7/12 w-full">
               <motion.div initial={{ opacity: 0, x: 50 }} animate={{ opacity: 1, x: 0 }} className="relative group">
                 <Card className="premium-card border-glow-premium p-0 overflow-hidden border-white/10 bg-[#0b0e1a]/80 shadow-[0_0_100px_rgba(147,51,234,0.15)] flex flex-col md:flex-row min-h-[550px]">
-                  <div className="flex-1 p-10 md:p-12 flex flex-col justify-between relative z-10">
+                  <div className="md:w-[65%] p-10 md:p-12 flex flex-col justify-between relative z-10">
                     <div className="space-y-6">
                       <h2 className="text-3xl font-bold tracking-tighter text-premium">Virtual HR Arena</h2>
-                      <p className="text-sm text-muted-foreground font-light leading-relaxed">Company-specific protocols for Google, Amazon, Microsoft, and more.</p>
-                      <div className="grid grid-cols-1 gap-6 pt-2">
-                        {[
-                          { val: "Custom", label: "Company Protocols", icon: Building2, color: "text-blue-400" },
-                          { val: "Deep", label: "Resume Context", icon: FileSearch2, color: "text-purple-400" }
-                        ].map((stat, i) => (
-                          <div key={i} className="flex items-center gap-4">
-                            <div className={`w-10 h-10 rounded-xl glass flex items-center justify-center ${stat.color}`}><stat.icon className="w-5 h-5" /></div>
-                            <div><span className="text-xl font-bold block">{stat.val}</span><span className="text-[10px] uppercase font-bold tracking-widest text-muted-foreground">{stat.label}</span></div>
-                          </div>
-                        ))}
+                      
+                      <div className="space-y-4 py-2">
+                        <div className="flex items-center gap-2 text-accent font-bold text-[10px] uppercase tracking-[0.4em]">
+                          <Rocket className="w-3 h-3" /> Interview Journey
+                        </div>
+                        <div className="space-y-1 pl-2">
+                          {[
+                            { label: "Resume Analysis", emoji: "📄" },
+                            { label: "Aptitude Test", emoji: "🧠" },
+                            { label: "Coding Challenge", emoji: "💻" },
+                            { label: "Virtual Interview", emoji: "🎤" },
+                            { label: "AI Performance Report", emoji: "📊" }
+                          ].map((step, idx, arr) => (
+                            <div key={idx} className="flex flex-col items-start">
+                              <motion.div 
+                                initial={{ opacity: 0, x: -10 }}
+                                animate={{ opacity: 1, x: 0 }}
+                                transition={{ delay: 0.1 * idx }}
+                                className="flex items-center gap-3"
+                              >
+                                <div className="w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center text-sm border border-white/5">
+                                  {step.emoji}
+                                </div>
+                                <span className="text-[10px] font-bold text-white/60 uppercase tracking-widest">{step.label}</span>
+                              </motion.div>
+                              {idx < arr.length - 1 && (
+                                <div className="pl-3.5 py-0.5 text-white/10 text-[10px]">
+                                  ↓
+                                </div>
+                              )}
+                            </div>
+                          ))}
+                        </div>
                       </div>
                     </div>
-                    <Button onClick={handleStartVirtualInterview} className="w-full h-18 btn-orange-premium text-sm font-bold tracking-[0.3em] uppercase mt-12">Launch Simulation <ChevronRight className="ml-3 w-5 h-5" /></Button>
+                    <Button onClick={handleStartVirtualInterview} className="w-full h-18 btn-orange-premium text-sm font-bold tracking-[0.3em] uppercase mt-8">Start Virtual Interview <ChevronRight className="ml-3 w-5 h-5" /></Button>
                   </div>
-                  <div className="md:w-[48%] relative min-h-[550px] flex items-center justify-center p-6 bg-black/20">
+                  <div className="md:w-[35%] relative min-h-[550px] flex items-center justify-center p-6 bg-black/20 border-l border-white/5">
                     <div className="relative w-full h-full rounded-3xl overflow-hidden glass border border-white/20">
                       <Image src={hrImg} alt="HR Manager" fill className="object-cover opacity-80" priority />
                       <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent" />
