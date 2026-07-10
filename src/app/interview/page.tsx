@@ -425,6 +425,11 @@ export default function InterviewJourney() {
     return "text-red-400";
   };
 
+  const navigateAptitude = (idx: number) => {
+    setAptitudeIdx(idx);
+    saveProgress(6, { aptitudeIdx: idx });
+  };
+
   return (
     <div className="min-h-screen bg-[#050816]">
       <div className="particles-bg" />
@@ -585,7 +590,6 @@ export default function InterviewJourney() {
                     </div>
 
                     <div className="grid lg:grid-cols-3 gap-8">
-                       {/* Resume Preview Card */}
                        <Card className="p-8 glass border-white/5 bg-white/[0.01] space-y-6">
                           <h3 className="text-[10px] font-bold uppercase tracking-[0.3em] text-accent flex items-center gap-3">
                             <FileSearch2 className="w-4 h-4" /> Resume Preview
@@ -661,7 +665,6 @@ export default function InterviewJourney() {
 
                 {currentStep === 6 && (
                   <div className="space-y-8 relative">
-                    {/* Fixed Assessment Header */}
                     <div className="sticky top-24 z-[40] space-y-4">
                       <div className="flex flex-wrap gap-4 items-center justify-between">
                         <Card className="flex items-center gap-6 px-8 py-4 glass border-white/10 rounded-2xl">
@@ -694,68 +697,94 @@ export default function InterviewJourney() {
                       </div>
                     </div>
 
-                    <Card className="premium-card bg-white/[0.01] border-white/5 p-12 text-center space-y-8 min-h-[500px] flex flex-col justify-center">
+                    <Card className="premium-card bg-white/[0.01] border-white/5 p-0 overflow-hidden min-h-[500px] flex flex-col">
                       {isGeneratingAptitude ? (
-                        <div className="py-20 space-y-6">
+                        <div className="flex-1 flex flex-col items-center justify-center py-20 space-y-6">
                           <Cpu className="w-12 h-12 text-accent animate-pulse mx-auto" />
                           <p className="text-xl font-bold uppercase tracking-widest">Synthesizing Logic Matrix...</p>
                         </div>
                       ) : aiAptitudeQuestions.length > 0 ? (
-                        <div className="space-y-10 text-left">
-                          <div className="flex justify-between items-center">
-                             <Badge className="bg-accent/20 text-accent border-none px-4 py-1 text-[8px] uppercase font-bold tracking-widest">{aiAptitudeQuestions[aptitudeIdx]?.category}</Badge>
-                             <div className="flex gap-2">
-                               {Array.from({length: 15}).map((_, i) => (
-                                 <div key={i} className={`h-1 w-4 rounded-full transition-all ${i === aptitudeIdx ? 'bg-accent' : aptitudeAnswers[i] ? 'bg-green-500/40' : 'bg-white/5'}`} />
-                               ))}
-                             </div>
+                        <div className="flex flex-col h-full">
+                          <div className="p-12 space-y-10 flex-1">
+                            <div className="flex justify-between items-center">
+                               <Badge className="bg-accent/20 text-accent border-none px-4 py-1 text-[8px] uppercase font-bold tracking-widest">{aiAptitudeQuestions[aptitudeIdx]?.category}</Badge>
+                               <Badge variant="outline" className="border-white/10 text-white/40 text-[8px] uppercase font-bold px-3 py-1">Difficulty: {aiAptitudeQuestions[aptitudeIdx]?.difficulty}</Badge>
+                            </div>
+                            <h3 className="text-3xl font-bold leading-tight tracking-tight text-white/90">{aiAptitudeQuestions[aptitudeIdx]?.question}</h3>
+                            <div className="grid md:grid-cols-2 gap-4">
+                              {aiAptitudeQuestions[aptitudeIdx]?.options.map((opt: any, i: number) => (
+                                <button 
+                                  key={i} 
+                                  onClick={() => handleAptitudeAnswerSelection(aptitudeIdx, opt)} 
+                                  className={`p-8 rounded-[2rem] border text-left transition-all duration-300 relative group overflow-hidden ${aptitudeAnswers[aptitudeIdx] === opt ? 'bg-accent/10 border-accent shadow-[0_0_30px_rgba(34,211,238,0.1)]' : 'glass border-white/5 hover:bg-white/5'}`}
+                                >
+                                  <div className="flex items-center gap-6 relative z-10">
+                                     <div className={`w-8 h-8 rounded-full border flex items-center justify-center font-bold text-xs transition-colors ${aptitudeAnswers[aptitudeIdx] === opt ? 'bg-accent border-accent text-black' : 'border-white/20 text-white/40'}`}>
+                                        {String.fromCharCode(65 + i)}
+                                     </div>
+                                     <span className="text-lg font-light">{opt}</span>
+                                  </div>
+                                  {aptitudeAnswers[aptitudeIdx] === opt && (
+                                     <motion.div layoutId="apt-opt" className="absolute inset-0 bg-accent/5 z-0" />
+                                  )}
+                                </button>
+                              ))}
+                            </div>
                           </div>
-                          <h3 className="text-3xl font-bold leading-tight tracking-tight text-white/90">{aiAptitudeQuestions[aptitudeIdx]?.question}</h3>
-                          <div className="grid md:grid-cols-2 gap-4">
-                            {aiAptitudeQuestions[aptitudeIdx]?.options.map((opt: any, i: number) => (
-                              <button 
-                                key={i} 
-                                onClick={() => handleAptitudeAnswerSelection(aptitudeIdx, opt)} 
-                                className={`p-8 rounded-[2rem] border text-left transition-all duration-300 relative group overflow-hidden ${aptitudeAnswers[aptitudeIdx] === opt ? 'bg-accent/10 border-accent shadow-[0_0_30px_rgba(34,211,238,0.1)]' : 'glass border-white/5 hover:bg-white/5'}`}
+
+                          <div className="p-8 bg-black/20 border-t border-white/5 space-y-8">
+                            <div className="flex justify-between items-center px-4">
+                              <Button 
+                                onClick={() => aptitudeIdx > 0 && navigateAptitude(aptitudeIdx - 1)}
+                                disabled={aptitudeIdx === 0}
+                                variant="ghost" 
+                                className="h-14 px-8 rounded-xl glass border-white/5 flex gap-3 text-xs font-bold uppercase tracking-widest disabled:opacity-20"
                               >
-                                <div className="flex items-center gap-6 relative z-10">
-                                   <div className={`w-8 h-8 rounded-full border flex items-center justify-center font-bold text-xs transition-colors ${aptitudeAnswers[aptitudeIdx] === opt ? 'bg-accent border-accent text-black' : 'border-white/20 text-white/40'}`}>
-                                      {String.fromCharCode(65 + i)}
-                                   </div>
-                                   <span className="text-lg font-light">{opt}</span>
-                                </div>
-                                {aptitudeAnswers[aptitudeIdx] === opt && (
-                                   <motion.div layoutId="apt-opt" className="absolute inset-0 bg-accent/5 z-0" />
-                                )}
-                              </button>
-                            ))}
-                          </div>
-                          
-                          <div className="flex gap-4 pt-10">
-                            {aptitudeIdx > 0 && (
-                               <Button onClick={() => setAptitudeIdx(prev => prev - 1)} variant="outline" className="h-16 px-10 rounded-2xl glass border-white/10 flex gap-3 text-xs font-bold uppercase tracking-widest">
-                                  <ChevronLeft className="w-4 h-4" /> Previous
-                               </Button>
-                            )}
-                            <Button 
-                              onClick={() => {
-                                if (aptitudeIdx < 14) {
-                                  setAptitudeIdx(prev => prev + 1);
-                                  saveProgress(6, { aptitudeIdx: aptitudeIdx + 1 });
-                                } else {
-                                  handleAptitudeSubmit();
-                                }
-                              }} 
-                              className="flex-1 h-16 btn-premium text-xs font-bold uppercase tracking-[0.3em] shadow-2xl"
-                            >
-                              {aptitudeIdx < 14 ? (
-                                <>Next Protocol <ChevronRight className="ml-2 w-4 h-4" /></>
-                              ) : "Submit Assessment"}
-                            </Button>
+                                <ChevronLeft className="w-4 h-4" /> Previous
+                              </Button>
+                              
+                              <Button 
+                                onClick={() => {
+                                  if (aptitudeIdx < 14) {
+                                    navigateAptitude(aptitudeIdx + 1);
+                                  } else {
+                                    handleAptitudeSubmit();
+                                  }
+                                }} 
+                                className="h-14 px-10 btn-premium text-xs font-bold uppercase tracking-[0.2em] shadow-xl"
+                              >
+                                {aptitudeIdx < 14 ? (
+                                  <>Next Protocol <ChevronRight className="ml-2 w-4 h-4" /></>
+                                ) : "Submit Assessment"}
+                              </Button>
+                            </div>
+
+                            <div className="space-y-4">
+                               <p className="text-[8px] font-bold uppercase tracking-[0.4em] text-white/20 text-center">Logic Matrix Navigator</p>
+                               <div className="flex flex-wrap justify-center gap-3">
+                                 {Array.from({length: 15}).map((_, i) => {
+                                   const isCurrent = i === aptitudeIdx;
+                                   const isAnswered = aptitudeAnswers[i] !== undefined;
+                                   return (
+                                     <button
+                                       key={i}
+                                       onClick={() => navigateAptitude(i)}
+                                       className={`w-10 h-10 rounded-xl border flex items-center justify-center font-bold text-xs transition-all duration-300 ${
+                                         isCurrent ? 'bg-accent border-accent text-black scale-110 shadow-[0_0_20px_rgba(34,211,238,0.3)]' : 
+                                         isAnswered ? 'bg-green-500/20 border-green-500/40 text-green-400' : 
+                                         'glass border-white/5 text-white/20 hover:bg-white/10'
+                                       }`}
+                                     >
+                                       {i + 1}
+                                     </button>
+                                   );
+                                 })}
+                               </div>
+                            </div>
                           </div>
                         </div>
                       ) : (
-                        <div className="py-20">
+                        <div className="py-20 flex flex-col items-center">
                            <CircleAlert className="w-12 h-12 text-red-400 mx-auto mb-4" />
                            <p className="text-muted-foreground italic">Logic matrix initialization failed. Attempting recovery...</p>
                         </div>
