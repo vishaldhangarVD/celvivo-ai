@@ -10,6 +10,16 @@ import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Input } from '@/components/ui/input';
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Label } from "@/components/ui/label";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog";
 import { 
   Briefcase, 
   Building2, 
@@ -41,7 +51,9 @@ import {
   ChevronUp,
   ChevronDown,
   Sparkles,
-  FileEdit
+  FileEdit,
+  Timer,
+  ChevronLeft
 } from 'lucide-react';
 import { useUser, useFirestore, useCollection } from '@/firebase';
 import { collection, query, orderBy, limit, addDoc, serverTimestamp } from 'firebase/firestore';
@@ -88,6 +100,24 @@ const INTERVIEW_STEPS = [
   { id: 10, title: 'Report', icon: FileText, desc: 'Final audit' },
 ];
 
+const APTITUDE_QUESTIONS = [
+  { id: 1, category: "Quantitative", question: "If a train 110m long passes a telegraph pole in 3 seconds, what is its speed in km/h?", options: ["132", "135", "142", "120"], answer: "132" },
+  { id: 2, category: "Quantitative", question: "The average of first five prime numbers is?", options: ["5.6", "6.2", "7.0", "5.2"], answer: "5.6" },
+  { id: 3, category: "Quantitative", question: "A sum of money doubles itself in 10 years at simple interest. What is the rate of interest?", options: ["5%", "10%", "12.5%", "15%"], answer: "10%" },
+  { id: 4, category: "Quantitative", question: "If 20% of a = b, then b% of 20 is the same as?", options: ["4% of a", "5% of a", "20% of a", "None"], answer: "4% of a" },
+  { id: 5, category: "Quantitative", question: "Find the odd one out: 3, 5, 11, 14, 17, 21", options: ["14", "17", "21", "11"], answer: "14" },
+  { id: 6, category: "Logical", question: "Find the missing number: 2, 6, 12, 20, 30, ?", options: ["40", "42", "44", "38"], answer: "42" },
+  { id: 7, category: "Logical", question: "If 'WATER' is written as 'YCVGT', then 'H2O' is written as?", options: ["J4Q", "K4Q", "J3P", "L4R"], answer: "J4Q" },
+  { id: 8, category: "Logical", question: "Pointing to a man, a woman said, 'His mother is the only daughter of my mother.' How is the woman related to the man?", options: ["Mother", "Sister", "Aunt", "Daughter"], answer: "Mother" },
+  { id: 9, category: "Logical", question: "Look at this series: 7, 10, 8, 11, 9, 12, ... What number should come next?", options: ["7", "10", "12", "13"], answer: "10" },
+  { id: 10, category: "Logical", question: "Which word does NOT belong with the others?", options: ["Index", "Glossary", "Chapter", "Book"], answer: "Book" },
+  { id: 11, category: "English", question: "Choose the synonym for 'EPHEMERAL':", options: ["Permanent", "Short-lived", "Transparent", "Mysterious"], answer: "Short-lived" },
+  { id: 12, category: "English", question: "Choose the correctly spelled word:", options: ["Accomodate", "Acommodate", "Accommodate", "Accomoddat"], answer: "Accommodate" },
+  { id: 13, category: "English", question: "Fill in the blank: He is ___ honest man.", options: ["a", "an", "the", "no article"], answer: "an" },
+  { id: 14, category: "English", question: "Select the antonym for 'PLACID':", options: ["Calm", "Stormy", "Quiet", "Serious"], answer: "Stormy" },
+  { id: 15, category: "English", question: "Choose the most appropriate meaning of the idiom: 'Beat around the bush'", options: ["To talk vaguely", "To punish someone", "To cut trees", "To work hard"], answer: "To talk vaguely" },
+];
+
 export default function InterviewJourney() {
   const router = useRouter();
   const { user } = useUser();
@@ -104,6 +134,29 @@ export default function InterviewJourney() {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [resumeAnalysis, setResumeAnalysis] = useState<any>(null);
   const [isDragging, setIsDragging] = useState(false);
+
+  // Aptitude Round State
+  const [aptitudeIdx, setAptitudeIdx] = useState(0);
+  const [aptitudeAnswers, setAptitudeAnswers] = useState<Record<number, string>>({});
+  const [timeLeft, setTimeLeft] = useState(20 * 60); // 20 minutes
+  const [isSubmitDialogOpen, setIsSubmitDialogOpen] = useState(false);
+  const [isAptitudeComplete, setIsAptitudeComplete] = useState(false);
+
+  // Timer Effect
+  useEffect(() => {
+    if (currentStep === 6 && timeLeft > 0 && !isAptitudeComplete) {
+      const timer = setInterval(() => setTimeLeft(prev => prev - 1), 1000);
+      return () => clearInterval(timer);
+    } else if (timeLeft === 0 && currentStep === 6) {
+      handleAptitudeSubmit();
+    }
+  }, [currentStep, timeLeft, isAptitudeComplete]);
+
+  const formatTime = (seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+  };
 
   // Resume check
   const resumeQuery = useMemo(() => {
@@ -213,6 +266,13 @@ export default function InterviewJourney() {
     } finally {
       setIsAnalyzing(false);
     }
+  };
+
+  const handleAptitudeSubmit = () => {
+    setIsAptitudeComplete(true);
+    setIsSubmitDialogOpen(false);
+    toast({ title: "Aptitude Node Captured", description: "Logic assessment archived." });
+    nextStep();
   };
 
   const startActualInterview = () => {
@@ -660,7 +720,146 @@ export default function InterviewJourney() {
                   </div>
                 )}
 
-                {currentStep >= 6 && currentStep <= 9 && (
+                {/* Step 6: Aptitude Round */}
+                {currentStep === 6 && (
+                  <div className="space-y-8">
+                    <Card className="premium-card bg-[#0b0e1a]/80 border-white/5 p-0 overflow-hidden min-h-[600px] flex flex-col">
+                      {/* Top Status Bar */}
+                      <div className="p-6 border-b border-white/5 bg-white/[0.02] flex items-center justify-between">
+                        <div className="flex items-center gap-6">
+                          <div className="flex items-center gap-3 bg-accent/10 px-4 py-2 rounded-xl border border-accent/20">
+                            <Timer className="w-4 h-4 text-accent" />
+                            <span className="font-mono text-xl font-bold text-accent">{formatTime(timeLeft)}</span>
+                          </div>
+                          <div className="hidden md:block h-8 w-px bg-white/5" />
+                          <div className="hidden md:flex items-center gap-4">
+                            <Badge variant="outline" className="border-white/10 text-muted-foreground uppercase text-[10px] tracking-widest font-bold">Node 01: Logic Efficiency</Badge>
+                            <Progress value={(Object.keys(aptitudeAnswers).length / APTITUDE_QUESTIONS.length) * 100} className="w-32 h-1.5" />
+                          </div>
+                        </div>
+                        <Button 
+                          variant="outline" 
+                          onClick={() => setIsSubmitDialogOpen(true)}
+                          className="glass border-accent/20 text-accent hover:bg-accent/10 h-10 px-6 rounded-xl text-[10px] font-bold uppercase tracking-widest"
+                        >
+                          Submit Assessment
+                        </Button>
+                      </div>
+
+                      <div className="flex-1 grid lg:grid-cols-12">
+                        {/* Main Question Area */}
+                        <div className="lg:col-span-8 p-12 space-y-10 border-r border-white/5">
+                          <header className="space-y-2">
+                            <Badge className="bg-purple-500/20 text-purple-400 border-none uppercase text-[8px] tracking-[0.3em] font-bold px-3 py-1">
+                              {APTITUDE_QUESTIONS[aptitudeIdx].category} Track
+                            </Badge>
+                            <h3 className="text-3xl font-bold leading-tight">
+                              {aptitudeIdx + 1}. {APTITUDE_QUESTIONS[aptitudeIdx].question}
+                            </h3>
+                          </header>
+
+                          <RadioGroup 
+                            value={aptitudeAnswers[aptitudeIdx] || ""} 
+                            onValueChange={(val) => setAptitudeAnswers({ ...aptitudeAnswers, [aptitudeIdx]: val })}
+                            className="space-y-4"
+                          >
+                            {APTITUDE_QUESTIONS[aptitudeIdx].options.map((opt, i) => (
+                              <div 
+                                key={i}
+                                onClick={() => setAptitudeAnswers({ ...aptitudeAnswers, [aptitudeIdx]: opt })}
+                                className={`flex items-center gap-6 p-6 rounded-2xl border transition-all cursor-pointer group ${
+                                  aptitudeAnswers[aptitudeIdx] === opt 
+                                  ? 'bg-accent/10 border-accent shadow-[0_0_30px_rgba(34,211,238,0.05)]' 
+                                  : 'glass border-white/5 hover:border-white/10'
+                                }`}
+                              >
+                                <RadioGroupItem value={opt} id={`opt-${i}`} className="border-white/20 text-accent" />
+                                <Label htmlFor={`opt-${i}`} className="flex-1 text-lg font-light cursor-pointer group-hover:text-white transition-colors">
+                                  {opt}
+                                </Label>
+                              </div>
+                            ))}
+                          </RadioGroup>
+
+                          <div className="flex items-center justify-between pt-10 border-t border-white/5">
+                            <Button 
+                              variant="ghost" 
+                              disabled={aptitudeIdx === 0}
+                              onClick={() => setAptitudeIdx(aptitudeIdx - 1)}
+                              className="h-14 px-8 rounded-xl hover:bg-white/5 text-muted-foreground font-bold text-[10px] uppercase tracking-widest"
+                            >
+                              <ChevronLeft className="w-4 h-4 mr-2" /> Previous
+                            </Button>
+                            <div className="text-[10px] font-bold uppercase tracking-widest text-white/20">
+                              Question {aptitudeIdx + 1} of {APTITUDE_QUESTIONS.length}
+                            </div>
+                            <Button 
+                              onClick={() => {
+                                if (aptitudeIdx < APTITUDE_QUESTIONS.length - 1) {
+                                  setAptitudeIdx(aptitudeIdx + 1);
+                                } else {
+                                  setIsSubmitDialogOpen(true);
+                                }
+                              }}
+                              className="h-14 px-10 rounded-xl btn-premium text-[10px] font-bold uppercase tracking-widest"
+                            >
+                              {aptitudeIdx === APTITUDE_QUESTIONS.length - 1 ? "Finish Round" : "Next Question"} <ChevronRight className="ml-2 w-4 h-4" />
+                            </Button>
+                          </div>
+                        </div>
+
+                        {/* Question Palette Sidebar */}
+                        <div className="lg:col-span-4 bg-white/[0.01] p-8 space-y-8">
+                          <div className="space-y-1">
+                            <h4 className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Neural Map</h4>
+                            <p className="text-xs text-white/40">Select a node to jump</p>
+                          </div>
+                          <div className="grid grid-cols-5 gap-3">
+                            {APTITUDE_QUESTIONS.map((q, i) => (
+                              <button
+                                key={q.id}
+                                onClick={() => setAptitudeIdx(i)}
+                                className={`w-10 h-10 rounded-lg border text-[10px] font-bold transition-all ${
+                                  aptitudeIdx === i ? 'bg-accent text-black border-accent' :
+                                  aptitudeAnswers[i] ? 'bg-green-500/20 text-green-400 border-green-500/40' :
+                                  'bg-white/5 text-white/30 border-white/5 hover:border-white/20'
+                                }`}
+                              >
+                                {i + 1}
+                              </button>
+                            ))}
+                          </div>
+                          <div className="pt-8 space-y-4">
+                            <div className="flex items-center gap-3 text-[9px] font-bold uppercase tracking-widest text-muted-foreground">
+                              <div className="w-2 h-2 rounded-full bg-green-500" /> Captured Nodes: {Object.keys(aptitudeAnswers).length}
+                            </div>
+                            <div className="flex items-center gap-3 text-[9px] font-bold uppercase tracking-widest text-muted-foreground">
+                              <div className="w-2 h-2 rounded-full bg-white/10" /> Pending Nodes: {APTITUDE_QUESTIONS.length - Object.keys(aptitudeAnswers).length}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </Card>
+                  </div>
+                )}
+
+                {/* Submit Confirmation Dialog */}
+                <Dialog open={isSubmitDialogOpen} onOpenChange={setIsSubmitDialogOpen}>
+                  <DialogContent className="glass border-white/10 bg-[#0b0e1a] text-white rounded-[2rem]">
+                    <DialogHeader>
+                      <DialogTitle className="text-2xl font-bold tracking-tighter">Submit Logic Assessment?</DialogTitle>
+                      <DialogDescription className="text-muted-foreground pt-2">
+                        You have answered {Object.keys(aptitudeAnswers).length} of {APTITUDE_QUESTIONS.length} questions. Once submitted, your intelligence nodes for this round cannot be modified.
+                      </DialogDescription>
+                    </DialogHeader>
+                    <DialogFooter className="gap-4 pt-6">
+                      <Button variant="ghost" onClick={() => setIsSubmitDialogOpen(false)} className="rounded-xl font-bold text-[10px] uppercase tracking-widest">Keep Solving</Button>
+                      <Button onClick={handleAptitudeSubmit} className="btn-premium h-12 px-10 rounded-xl font-bold text-[10px] uppercase tracking-widest">Execute Submission</Button>
+                    </DialogFooter>
+                  </DialogContent>
+                </Dialog>
+
+                {currentStep >= 7 && currentStep <= 9 && (
                   <Card className="premium-card bg-[#0b0e1a]/80 border-white/5 p-20 text-center space-y-12">
                     <header className="space-y-6">
                       <div className="w-24 h-24 rounded-full bg-accent/10 flex items-center justify-center mx-auto border border-accent/20 relative">
@@ -726,4 +925,3 @@ export default function InterviewJourney() {
     </div>
   );
 }
-
