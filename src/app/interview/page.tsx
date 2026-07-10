@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import Navbar from '@/components/layout/Navbar';
 import NavigationControls from '@/components/NavigationControls';
 import { Button } from '@/components/ui/button';
-import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
+import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Input } from '@/components/ui/input';
@@ -19,28 +19,27 @@ import {
   Code2, 
   Mic, 
   Users, 
-  FileText,
-  ChevronRight,
-  ChevronLeft,
-  Loader2,
-  CheckCircle2,
-  Lock,
-  ArrowRight,
-  Play,
-  ShieldCheck,
-  Building,
-  Target,
-  Search,
-  Layers,
-  Database,
-  ShieldAlert,
-  GraduationCap,
-  Clock,
-  Award,
-  Globe
+  FileText, 
+  ChevronRight, 
+  Loader2, 
+  CheckCircle2, 
+  Lock, 
+  Play, 
+  ShieldCheck, 
+  Search, 
+  Layers, 
+  Database, 
+  ShieldAlert, 
+  GraduationCap, 
+  Clock, 
+  Award, 
+  Globe,
+  Trash2,
+  FileUp,
+  AlertCircle
 } from 'lucide-react';
 import { useUser, useFirestore, useCollection } from '@/firebase';
-import { collection, query, orderBy, limit, addDoc, serverTimestamp, doc, updateDoc } from 'firebase/firestore';
+import { collection, query, orderBy, limit, addDoc, serverTimestamp } from 'firebase/firestore';
 import { analyzeResume } from '@/ai/flows/ai-resume-analysis';
 import { useToast } from '@/hooks/use-toast';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -98,13 +97,14 @@ export default function InterviewJourney() {
   const [file, setFile] = useState<File | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [resumeAtsScore, setResumeScore] = useState<number | null>(null);
+  const [isDragging, setIsDragging] = useState(false);
 
   // Resume check
   const resumeQuery = useMemo(() => {
     if (!db || !user?.uid) return null;
     return query(collection(db, 'users', user.uid, 'resumes'), orderBy('createdAt', 'desc'), limit(1));
   }, [db, user?.uid]);
-  const { data: resumes, loading: resumeCheckLoading } = useCollection(resumeQuery);
+  const { loading: resumeCheckLoading } = useCollection(resumeQuery);
 
   const filteredRoles = useMemo(() => {
     return ROLES_DATA.filter(role => 
@@ -129,15 +129,49 @@ export default function InterviewJourney() {
     }
   };
 
+  const validateFile = (selected: File) => {
+    if (selected.type !== 'application/pdf') {
+      toast({ variant: "destructive", title: "Invalid Protocol", description: "Only PDF blueprints are accepted." });
+      return false;
+    }
+    if (selected.size > 5 * 1024 * 1024) {
+      toast({ variant: "destructive", title: "File Too Large", description: "Max file size: 5MB" });
+      return false;
+    }
+    return true;
+  };
+
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const selected = e.target.files[0];
-      if (selected.size > 10 * 1024 * 1024) {
-        toast({ variant: "destructive", title: "File Too Large", description: "Limit: 10MB" });
-        return;
+      if (validateFile(selected)) {
+        setFile(selected);
       }
-      setFile(selected);
     }
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = () => {
+    setIsDragging(false);
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+      const dropped = e.dataTransfer.files[0];
+      if (validateFile(dropped)) {
+        setFile(dropped);
+      }
+    }
+  };
+
+  const removeFile = () => {
+    setFile(null);
   };
 
   const handleResumeSync = async () => {
@@ -209,7 +243,7 @@ export default function InterviewJourney() {
                     key={step.id} 
                     className={`flex items-center gap-4 p-4 rounded-2xl border transition-all duration-500 ${
                       isActive ? 'bg-accent/10 border-accent/30 shadow-[0_0_20px_rgba(34,211,238,0.1)]' : 
-                      isCompleted ? 'bg-white/[0.02] border-white/5 opacity-50' : 
+                      isCompleted ? 'bg-green-500/20 text-green-400 border-green-500/20' : 
                       'border-transparent opacity-20'
                     }`}
                   >
@@ -425,40 +459,84 @@ export default function InterviewJourney() {
                       <div className="w-20 h-20 rounded-[2rem] bg-accent/10 flex items-center justify-center mx-auto border border-accent/20">
                         <Upload className="w-10 h-10 text-accent" />
                       </div>
-                      <h2 className="text-4xl font-bold tracking-tighter">Intelligence Audit</h2>
-                      <p className="text-muted-foreground font-light max-w-lg mx-auto">Upload your latest career blueprint for ATS compatibility scanning and simulation anchoring.</p>
+                      <h2 className="text-4xl font-bold tracking-tighter">Intelligence Handshake</h2>
+                      <p className="text-muted-foreground font-light max-w-lg mx-auto">Upload your PDF career blueprint for neural ATS screening and simulation calibration.</p>
                     </header>
                     
-                    <div 
-                      onClick={() => !isAnalyzing && document.getElementById('journey-upload')?.click()}
-                      className={`border-2 border-dashed rounded-[2.5rem] p-16 transition-all cursor-pointer group ${file ? 'border-accent bg-accent/5' : 'border-white/10 hover:border-accent/30'} ${isAnalyzing ? 'opacity-50' : ''}`}
-                    >
-                      <input type="file" id="journey-upload" className="hidden" accept=".pdf,.docx" onChange={handleFileChange} />
-                      {isAnalyzing ? (
-                        <div className="space-y-4"><Loader2 className="w-12 h-12 text-accent animate-spin mx-auto" /><p className="text-[10px] font-bold uppercase tracking-[0.4em] text-accent">Extracting Knowledge Nodes...</p></div>
-                      ) : (
-                        <div className="space-y-4">
-                          <Upload className="w-12 h-12 text-muted-foreground group-hover:text-accent mx-auto transition-colors" />
-                          <p className="text-xl font-bold">{file ? file.name : "Select Career Blueprint"}</p>
-                          <p className="text-[10px] text-muted-foreground uppercase tracking-widest font-bold">PDF or DOCX • 10MB Limit</p>
+                    {!file ? (
+                      <div 
+                        onDragOver={handleDragOver}
+                        onDragLeave={handleDragLeave}
+                        onDrop={handleDrop}
+                        onClick={() => !isAnalyzing && document.getElementById('journey-upload')?.click()}
+                        className={`border-2 border-dashed rounded-[2.5rem] p-20 transition-all cursor-pointer group flex flex-col items-center justify-center gap-6 ${
+                          isDragging ? 'border-accent bg-accent/10 scale-[1.02]' : 'border-white/10 hover:border-accent/30 hover:bg-white/[0.02]'
+                        } ${isAnalyzing ? 'opacity-50 cursor-not-allowed' : ''}`}
+                      >
+                        <input type="file" id="journey-upload" className="hidden" accept=".pdf" onChange={handleFileChange} />
+                        <div className="w-16 h-16 rounded-2xl bg-white/5 flex items-center justify-center text-white/40 group-hover:text-accent transition-colors">
+                          <FileUp className="w-8 h-8" />
                         </div>
-                      )}
-                    </div>
+                        <div>
+                          <p className="text-xl font-bold mb-1">Drag & drop your blueprint</p>
+                          <p className="text-sm text-muted-foreground">or <span className="text-accent underline">browse your terminal</span></p>
+                        </div>
+                        <div className="flex gap-4">
+                           <Badge variant="outline" className="border-white/5 text-[10px] font-bold text-white/20 uppercase tracking-widest">PDF ONLY</Badge>
+                           <Badge variant="outline" className="border-white/5 text-[10px] font-bold text-white/20 uppercase tracking-widest">MAX 5MB</Badge>
+                        </div>
+                      </div>
+                    ) : (
+                      <motion.div 
+                        initial={{ opacity: 0, scale: 0.95 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        className="p-8 glass rounded-[2.5rem] border-accent/20 bg-accent/5 flex items-center justify-between"
+                      >
+                        <div className="flex items-center gap-6">
+                          <div className="w-14 h-14 rounded-2xl bg-accent/20 flex items-center justify-center text-accent">
+                            <FileText className="w-8 h-8" />
+                          </div>
+                          <div className="text-left">
+                            <p className="text-lg font-bold text-white truncate max-w-[200px] md:max-w-[400px]">{file.name}</p>
+                            <p className="text-[10px] text-accent uppercase font-bold tracking-widest">{(file.size / (1024 * 1024)).toFixed(2)} MB • Protocol Active</p>
+                          </div>
+                        </div>
+                        <Button 
+                          onClick={removeFile}
+                          disabled={isAnalyzing}
+                          variant="ghost" 
+                          size="icon" 
+                          className="h-12 w-12 rounded-xl hover:bg-red-500/10 text-red-400"
+                        >
+                          <Trash2 className="w-6 h-6" />
+                        </Button>
+                      </motion.div>
+                    )}
 
                     <div className="flex gap-4">
-                      <Button variant="ghost" onClick={prevStep} className="h-20 px-8 rounded-3xl border border-white/5 uppercase tracking-widest text-[10px] font-bold">Back</Button>
+                      <Button variant="ghost" onClick={prevStep} className="h-20 px-10 rounded-[2.5rem] border border-white/5 uppercase tracking-widest text-[10px] font-bold">Back</Button>
                       <Button 
                         onClick={handleResumeSync} 
                         disabled={!file || isAnalyzing}
                         className="flex-1 h-20 btn-premium text-lg font-bold uppercase tracking-[0.3em]"
                       >
-                        Execute Handshake <Zap className="ml-3 w-6 h-6" />
+                        {isAnalyzing ? (
+                          <div className="flex items-center gap-3">
+                            <Loader2 className="w-6 h-6 animate-spin" />
+                            <span>Synchronizing...</span>
+                          </div>
+                        ) : (
+                          <div className="flex items-center gap-3">
+                            <Zap className="w-6 h-6" />
+                            <span>Execute Handshake</span>
+                          </div>
+                        )}
                       </Button>
                     </div>
                   </Card>
                 )}
 
-                {/* Remaining Steps Logic Offset (Step 5-10) */}
+                {/* Step 5: Live Screening Analysis */}
                 {currentStep === 5 && (
                   <Card className="premium-card bg-[#0b0e1a]/80 border-white/5 p-16 text-center space-y-12 overflow-hidden relative">
                     <div className="absolute top-0 right-0 p-8"><Badge className="bg-accent/20 text-accent">LIVE ANALYSIS</Badge></div>
@@ -500,7 +578,7 @@ export default function InterviewJourney() {
                     </header>
                     <div className="grid md:grid-cols-3 gap-6">
                       {[
-                        { label: "Difficulty", val: selectedExp + " Grade" },
+                        { label: "Difficulty", val: (selectedExp || "Senior") + " Grade" },
                         { label: "Time Limit", val: "45 Minutes" },
                         { label: "Focus", val: "Practical Logic" }
                       ].map((s, i) => (
