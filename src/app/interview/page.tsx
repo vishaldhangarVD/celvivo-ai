@@ -19,7 +19,7 @@ import {
   DialogTitle,
   DialogDescription,
   DialogFooter,
-} from "@/Dialog";
+} from "@/components/ui/dialog";
 import {
   Select,
   SelectContent,
@@ -184,6 +184,7 @@ export default function InterviewJourney() {
   const [code, setCode] = useState(CODING_PROBLEM.starterCode.javascript);
   const [codingTimeLeft, setCodingTimeLeft] = useState(45 * 60); // 45 minutes
   const [isCodingComplete, setIsCodingComplete] = useState(false);
+  const [showCodingResult, setShowCodingResult] = useState(false);
   const [consoleOutput, setConsoleOutput] = useState<string[]>(["[SYSTEM] Neural terminal initialized...", "[SYSTEM] Awaiting syntax input..."]);
   const [isRunning, setIsRunning] = useState(false);
 
@@ -348,8 +349,16 @@ export default function InterviewJourney() {
 
   const handleSubmitCode = () => {
     setIsCodingComplete(true);
+    setShowCodingResult(true);
     toast({ title: "Syntax Matrix Archived", description: "Your implementation has been successfully submitted." });
-    nextStep();
+  };
+
+  const resetCoding = () => {
+    setCode(CODING_PROBLEM.starterCode[selectedLanguage as keyof typeof CODING_PROBLEM.starterCode]);
+    setCodingTimeLeft(45 * 60);
+    setIsCodingComplete(false);
+    setShowCodingResult(false);
+    setConsoleOutput(["[SYSTEM] Neural terminal recalibrated.", "[SYSTEM] Awaiting fresh syntax input..."]);
   };
 
   const handleLanguageChange = (lang: string) => {
@@ -418,7 +427,7 @@ export default function InterviewJourney() {
           <main className="lg:col-span-9">
             <AnimatePresence mode="wait">
               <motion.div
-                key={currentStep + (showAptitudeResult ? "-result" : "")}
+                key={currentStep + (showAptitudeResult ? "-apt-result" : "") + (showCodingResult ? "-code-result" : "")}
                 initial={{ opacity: 0, x: 20 }}
                 animate={{ opacity: 1, x: 0 }}
                 exit={{ opacity: 0, x: -20 }}
@@ -681,7 +690,7 @@ export default function InterviewJourney() {
                   </Card>
                 )}
 
-                {/* Step 5: Live Screening Analysis Dashboard */}
+                {/* Step 5: Resume Screening Analysis Dashboard */}
                 {currentStep === 5 && (
                   <div className="space-y-8">
                     <Card className="premium-card bg-[#0b0e1a]/80 border-white/5 p-12 relative overflow-hidden">
@@ -995,132 +1004,221 @@ export default function InterviewJourney() {
                   </div>
                 )}
 
-                {/* Step 7: Coding Round (IDE Interface) */}
+                {/* Step 7: Coding Round (IDE Interface or Result) */}
                 {currentStep === 7 && (
                   <div className="space-y-6">
-                    <Card className="premium-card bg-[#0b0e1a]/80 border-white/5 p-0 overflow-hidden flex flex-col min-h-[750px]">
-                      {/* IDE Header */}
-                      <div className="p-4 border-b border-white/5 bg-white/[0.02] flex items-center justify-between">
-                        <div className="flex items-center gap-6">
-                          <div className="flex items-center gap-3 px-4 py-1.5 glass rounded-xl border-accent/20">
-                            <Timer className="w-4 h-4 text-accent" />
-                            <span className="font-mono text-lg font-bold text-accent">{formatTime(codingTimeLeft)}</span>
-                          </div>
-                          <Select value={selectedLanguage} onValueChange={handleLanguageChange}>
-                            <SelectTrigger className="w-32 h-10 glass border-white/10 bg-transparent text-[10px] font-bold uppercase tracking-widest">
-                              <SelectValue placeholder="Language" />
-                            </SelectTrigger>
-                            <SelectContent className="glass border-white/10 bg-[#0b0e1a] text-white">
-                              <SelectItem value="javascript">JavaScript</SelectItem>
-                              <SelectItem value="python">Python 3</SelectItem>
-                              <SelectItem value="java">Java 17</SelectItem>
-                              <SelectItem value="cpp">C++ 20</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </div>
-                        <div className="flex items-center gap-3">
-                          <Button 
-                            onClick={handleRunCode}
-                            disabled={isRunning}
-                            variant="outline" 
-                            className="glass border-green-500/20 text-green-400 hover:bg-green-500/10 h-10 px-6 rounded-xl text-[10px] font-bold uppercase tracking-widest"
-                          >
-                            {isRunning ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <PlayCircle className="w-4 h-4 mr-2" />}
-                            Run Syntax
-                          </Button>
-                          <Button 
-                            onClick={handleSubmitCode}
-                            className="btn-premium h-10 px-8 rounded-xl text-[10px] font-bold uppercase tracking-widest"
-                          >
-                            <Save className="w-4 h-4 mr-2" />
-                            Archive Submission
-                          </Button>
-                        </div>
-                      </div>
-
-                      {/* Main IDE Body */}
-                      <div className="flex-1 grid lg:grid-cols-12 overflow-hidden">
-                        {/* Problem Description Panel */}
-                        <div className="lg:col-span-4 p-8 border-r border-white/5 bg-black/20 overflow-y-auto custom-scrollbar space-y-8">
-                          <header className="space-y-2">
-                            <div className="flex items-center justify-between mb-2">
-                              <Badge className="bg-orange-500/20 text-orange-400 border-none uppercase text-[8px] tracking-[0.2em] font-bold px-2 py-0.5">
-                                Syntax Round
-                              </Badge>
-                              <span className="text-[10px] font-bold text-white/20 uppercase tracking-widest">{CODING_PROBLEM.points} Points</span>
+                    {!showCodingResult ? (
+                      <Card className="premium-card bg-[#0b0e1a]/80 border-white/5 p-0 overflow-hidden flex flex-col min-h-[750px]">
+                        {/* IDE Header */}
+                        <div className="p-4 border-b border-white/5 bg-white/[0.02] flex items-center justify-between">
+                          <div className="flex items-center gap-6">
+                            <div className="flex items-center gap-3 px-4 py-1.5 glass rounded-xl border-accent/20">
+                              <Timer className="w-4 h-4 text-accent" />
+                              <span className="font-mono text-lg font-bold text-accent">{formatTime(codingTimeLeft)}</span>
                             </div>
-                            <h3 className="text-2xl font-bold tracking-tight">{CODING_PROBLEM.title}</h3>
-                            <Badge variant="outline" className="border-accent/30 text-accent text-[8px] uppercase tracking-widest font-bold">{CODING_PROBLEM.difficulty}</Badge>
-                          </header>
-
-                          <div className="space-y-6">
-                            <section className="space-y-3">
-                              <h4 className="text-[10px] font-bold uppercase tracking-widest text-white/40">Objective</h4>
-                              <p className="text-sm font-light leading-relaxed text-white/70">{CODING_PROBLEM.description}</p>
-                            </section>
-
-                            <section className="space-y-4">
-                              <h4 className="text-[10px] font-bold uppercase tracking-widest text-white/40">Examples</h4>
-                              {CODING_PROBLEM.examples.map((ex, i) => (
-                                <div key={i} className="p-4 glass rounded-xl border-white/5 space-y-2">
-                                  <p className="text-[10px] font-mono text-accent"><span className="text-white/40">Input:</span> {ex.input}</p>
-                                  <p className="text-[10px] font-mono text-green-400"><span className="text-white/40">Output:</span> {ex.output}</p>
-                                  {ex.explanation && <p className="text-[9px] text-white/30 italic">Note: {ex.explanation}</p>}
-                                </div>
-                              ))}
-                            </section>
-
-                            <section className="space-y-3">
-                              <h4 className="text-[10px] font-bold uppercase tracking-widest text-white/40">Constraints</h4>
-                              <ul className="space-y-1.5">
-                                {CODING_PROBLEM.constraints.map((c, i) => (
-                                  <li key={i} className="flex gap-3 text-[11px] font-light text-white/40">
-                                    <div className="w-1 h-1 rounded-full bg-white/10 mt-1.5 shrink-0" /> {c}
-                                  </li>
-                                ))}
-                              </ul>
-                            </section>
+                            <Select value={selectedLanguage} onValueChange={handleLanguageChange}>
+                              <SelectTrigger className="w-32 h-10 glass border-white/10 bg-transparent text-[10px] font-bold uppercase tracking-widest">
+                                <SelectValue placeholder="Language" />
+                              </SelectTrigger>
+                              <SelectContent className="glass border-white/10 bg-[#0b0e1a] text-white">
+                                <SelectItem value="javascript">JavaScript</SelectItem>
+                                <SelectItem value="python">Python 3</SelectItem>
+                                <SelectItem value="java">Java 17</SelectItem>
+                                <SelectItem value="cpp">C++ 20</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <div className="flex items-center gap-3">
+                            <Button 
+                              onClick={handleRunCode}
+                              disabled={isRunning}
+                              variant="outline" 
+                              className="glass border-green-500/20 text-green-400 hover:bg-green-500/10 h-10 px-6 rounded-xl text-[10px] font-bold uppercase tracking-widest"
+                            >
+                              {isRunning ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <PlayCircle className="w-4 h-4 mr-2" />}
+                              Run Syntax
+                            </Button>
+                            <Button 
+                              onClick={handleSubmitCode}
+                              className="btn-premium h-10 px-8 rounded-xl text-[10px] font-bold uppercase tracking-widest"
+                            >
+                              <Save className="w-4 h-4 mr-2" />
+                              Archive Submission
+                            </Button>
                           </div>
                         </div>
 
-                        {/* Editor and Console Panel */}
-                        <div className="lg:col-span-8 flex flex-col h-full overflow-hidden">
-                          {/* Code Editor */}
-                          <div className="flex-1 bg-[#050816]/50 p-4 relative group">
-                             <div className="absolute left-0 top-0 bottom-0 w-12 bg-black/40 border-r border-white/5 flex flex-col items-center pt-8 pointer-events-none">
-                                {[...Array(20)].map((_, i) => (
-                                  <span key={i} className="text-[10px] font-mono text-white/10 h-6 leading-6">{i + 1}</span>
+                        {/* Main IDE Body */}
+                        <div className="flex-1 grid lg:grid-cols-12 overflow-hidden">
+                          {/* Problem Description Panel */}
+                          <div className="lg:col-span-4 p-8 border-r border-white/5 bg-black/20 overflow-y-auto custom-scrollbar space-y-8">
+                            <header className="space-y-2">
+                              <div className="flex items-center justify-between mb-2">
+                                <Badge className="bg-orange-500/20 text-orange-400 border-none uppercase text-[8px] tracking-[0.2em] font-bold px-2 py-0.5">
+                                  Syntax Round
+                                </Badge>
+                                <span className="text-[10px] font-bold text-white/20 uppercase tracking-widest">{CODING_PROBLEM.points} Points</span>
+                              </div>
+                              <h3 className="text-2xl font-bold tracking-tight">{CODING_PROBLEM.title}</h3>
+                              <Badge variant="outline" className="border-accent/30 text-accent text-[8px] uppercase tracking-widest font-bold">{CODING_PROBLEM.difficulty}</Badge>
+                            </header>
+
+                            <div className="space-y-6">
+                              <section className="space-y-3">
+                                <h4 className="text-[10px] font-bold uppercase tracking-widest text-white/40">Objective</h4>
+                                <p className="text-sm font-light leading-relaxed text-white/70">{CODING_PROBLEM.description}</p>
+                              </section>
+
+                              <section className="space-y-4">
+                                <h4 className="text-[10px] font-bold uppercase tracking-widest text-white/40">Examples</h4>
+                                {CODING_PROBLEM.examples.map((ex, i) => (
+                                  <div key={i} className="p-4 glass rounded-xl border-white/5 space-y-2">
+                                    <p className="text-[10px] font-mono text-accent"><span className="text-white/40">Input:</span> {ex.input}</p>
+                                    <p className="text-[10px] font-mono text-green-400"><span className="text-white/40">Output:</span> {ex.output}</p>
+                                    {ex.explanation && <p className="text-[9px] text-white/30 italic">Note: {ex.explanation}</p>}
+                                  </div>
                                 ))}
-                             </div>
-                             <textarea 
-                               value={code}
-                               onChange={(e) => setCode(e.target.value)}
-                               className="w-full h-full bg-transparent outline-none resize-none text-sm font-mono pl-12 pt-4 leading-6 text-white/90 selection:bg-accent/20"
-                               spellCheck={false}
-                               placeholder="// Initialize your logic here..."
-                             />
-                             <div className="absolute top-4 right-8 opacity-0 group-hover:opacity-100 transition-opacity">
-                               <Badge variant="outline" className="border-white/10 text-white/20 uppercase text-[8px] font-mono">Editor Active</Badge>
-                             </div>
+                              </section>
+
+                              <section className="space-y-3">
+                                <h4 className="text-[10px] font-bold uppercase tracking-widest text-white/40">Constraints</h4>
+                                <ul className="space-y-1.5">
+                                  {CODING_PROBLEM.constraints.map((c, i) => (
+                                    <li key={i} className="flex gap-3 text-[11px] font-light text-white/40">
+                                      <div className="w-1 h-1 rounded-full bg-white/10 mt-1.5 shrink-0" /> {c}
+                                    </li>
+                                  ))}
+                                </ul>
+                              </section>
+                            </div>
                           </div>
 
-                          {/* Console Footer */}
-                          <div className="h-48 border-t border-white/5 bg-black/40 flex flex-col">
-                             <div className="px-4 py-2 border-b border-white/5 flex items-center gap-3">
-                               <Terminal className="w-3.5 h-3.5 text-white/30" />
-                               <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-white/30">Neural Console</span>
-                             </div>
-                             <div className="flex-1 p-4 overflow-y-auto custom-scrollbar font-mono text-[11px] space-y-1">
-                               {consoleOutput.map((line, i) => (
-                                 <div key={i} className={`${line.includes('[SUCCESS]') ? 'text-green-400' : line.includes('[EXEC]') ? 'text-accent' : 'text-white/40'}`}>
-                                   {line}
+                          {/* Editor and Console Panel */}
+                          <div className="lg:col-span-8 flex flex-col h-full overflow-hidden">
+                            {/* Code Editor */}
+                            <div className="flex-1 bg-[#050816]/50 p-4 relative group">
+                               <div className="absolute left-0 top-0 bottom-0 w-12 bg-black/40 border-r border-white/5 flex flex-col items-center pt-8 pointer-events-none">
+                                  {[...Array(20)].map((_, i) => (
+                                    <span key={i} className="text-[10px] font-mono text-white/10 h-6 leading-6">{i + 1}</span>
+                                  ))}
+                               </div>
+                               <textarea 
+                                 value={code}
+                                 onChange={(e) => setCode(e.target.value)}
+                                 className="w-full h-full bg-transparent outline-none resize-none text-sm font-mono pl-12 pt-4 leading-6 text-white/90 selection:bg-accent/20"
+                                 spellCheck={false}
+                                 placeholder="// Initialize your logic here..."
+                               />
+                               <div className="absolute top-4 right-8 opacity-0 group-hover:opacity-100 transition-opacity">
+                                 <Badge variant="outline" className="border-white/10 text-white/20 uppercase text-[8px] font-mono">Editor Active</Badge>
+                               </div>
+                            </div>
+
+                            {/* Console Footer */}
+                            <div className="h-48 border-t border-white/5 bg-black/40 flex flex-col">
+                               <div className="px-4 py-2 border-b border-white/5 flex items-center gap-3">
+                                 <Terminal className="w-3.5 h-3.5 text-white/30" />
+                                 <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-white/30">Neural Console</span>
+                               </div>
+                               <div className="flex-1 p-4 overflow-y-auto custom-scrollbar font-mono text-[11px] space-y-1">
+                                 {consoleOutput.map((line, i) => (
+                                   <div key={i} className={`${line.includes('[SUCCESS]') ? 'text-green-400' : line.includes('[EXEC]') ? 'text-accent' : 'text-white/40'}`}>
+                                     {line}
+                                   </div>
+                                 ))}
+                               </div>
+                            </div>
+                          </div>
+                        </div>
+                      </Card>
+                    ) : (
+                      /* Coding Result View */
+                      <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="space-y-8">
+                        <Card className="premium-card bg-[#0b0e1a]/80 border-white/5 p-12 text-center relative overflow-hidden">
+                          <div className="absolute top-0 right-0 p-8">
+                            <Badge className="bg-orange-500/20 text-orange-400 border-none font-bold tracking-widest uppercase text-[10px]">Syntax Node Secured</Badge>
+                          </div>
+                          
+                          <div className="max-w-2xl mx-auto space-y-12">
+                            <div className="relative w-48 h-48 mx-auto">
+                              <svg className="w-full h-full transform -rotate-90">
+                                <circle className="text-white/5" strokeWidth="8" stroke="currentColor" fill="transparent" r="88" cx="96" cy="96" />
+                                <motion.circle 
+                                  initial={{ strokeDashoffset: 553 }}
+                                  animate={{ strokeDashoffset: 553 - (553 * 92) / 100 }}
+                                  transition={{ duration: 2, ease: "easeOut" }}
+                                  className="text-orange-400" 
+                                  strokeWidth="8" 
+                                  strokeDasharray={553} 
+                                  strokeLinecap="round" 
+                                  stroke="currentColor" 
+                                  fill="transparent" 
+                                  r="88" 
+                                  cx="96" 
+                                  cy="96" 
+                                />
+                              </svg>
+                              <div className="absolute inset-0 flex flex-col items-center justify-center">
+                                <span className="text-6xl font-bold tracking-tighter">92%</span>
+                                <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Syntax Index</span>
+                              </div>
+                            </div>
+
+                            <div className="space-y-4">
+                              <h2 className="text-4xl font-bold tracking-tighter uppercase">Technical Round Complete</h2>
+                              <p className="text-muted-foreground font-light text-lg">Your syntax implementation for {CODING_PROBLEM.title} has been evaluated.</p>
+                            </div>
+
+                            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                               {[
+                                 { label: "Problems", val: "1/1", icon: MonitorCode, color: "text-white/40" },
+                                 { label: "Test Cases", val: "8/10", icon: CheckCircle2, color: "text-green-400" },
+                                 { label: "Deviations", val: "2", icon: XCircle, color: "text-red-400" },
+                                 { label: "Efficiency", val: "Optimal", icon: TrendingUp, color: "text-accent" }
+                               ].map((s, i) => (
+                                 <div key={i} className="p-6 glass rounded-2xl border-white/5 text-center space-y-2">
+                                   <s.icon className={`w-5 h-5 mx-auto ${s.color}`} />
+                                   <p className="text-xl font-bold tabular-nums">{s.val}</p>
+                                   <p className="text-[8px] uppercase font-bold tracking-widest text-muted-foreground">{s.label}</p>
                                  </div>
                                ))}
-                             </div>
+                            </div>
+
+                            <div className="grid md:grid-cols-3 gap-6 pt-4">
+                               {[
+                                 { label: "Logic Accuracy", val: 95 },
+                                 { label: "Scalability", val: 88 },
+                                 { label: "Clean Code", val: 90 }
+                               ].map((m, i) => (
+                                 <div key={i} className="space-y-2">
+                                   <div className="flex justify-between text-[8px] font-bold uppercase tracking-widest text-white/30">
+                                     <span>{m.label}</span>
+                                     <span>{m.val}%</span>
+                                   </div>
+                                   <Progress value={m.val} className="h-1 bg-white/5" />
+                                 </div>
+                               ))}
+                            </div>
+
+                            <div className="flex flex-col sm:flex-row gap-4">
+                              <Button 
+                                onClick={resetCoding}
+                                variant="outline" 
+                                className="h-16 flex-1 rounded-2xl glass border-white/10 hover:bg-white/5 text-[10px] font-bold uppercase tracking-widest"
+                              >
+                                <RefreshCcw className="w-4 h-4 mr-3" /> Reset Syntax Matrix
+                              </Button>
+                              <Button 
+                                onClick={nextStep}
+                                className="h-16 flex-[2] btn-premium rounded-2xl text-[10px] font-bold uppercase tracking-widest"
+                              >
+                                Initialize Deep Probe <ChevronRight className="w-4 h-4 ml-3" />
+                              </Button>
+                            </div>
                           </div>
-                        </div>
-                      </div>
-                    </Card>
+                        </Card>
+                      </motion.div>
+                    )}
                   </div>
                 )}
 
