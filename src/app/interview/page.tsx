@@ -35,7 +35,9 @@ import {
   Database,
   ShieldAlert,
   GraduationCap,
-  Clock
+  Clock,
+  Award,
+  Globe
 } from 'lucide-react';
 import { useUser, useFirestore, useCollection } from '@/firebase';
 import { collection, query, orderBy, limit, addDoc, serverTimestamp, doc, updateDoc } from 'firebase/firestore';
@@ -57,16 +59,15 @@ const ROLES_DATA = [
 ];
 
 const EXPERIENCE_OPTIONS = [
-  { id: 'fresher', label: 'Fresher', desc: 'Entry-level talent', icon: Star },
+  { id: 'fresher', label: 'Fresher', desc: 'Entry-level talent', icon: Zap },
   { id: '1-2', label: '1–2 Years', desc: 'Junior / Mid-level', icon: Clock },
   { id: '3-5', label: '3–5 Years', desc: 'Mid / Senior grade', icon: Award },
   { id: '5+', label: '5+ Years', desc: 'Expert / Lead grade', icon: ShieldCheck },
 ];
 
-function Star(props: any) { return <Zap {...props} /> } // Helper since star is generic
-
 const COMPANIES = [
-  "Google", "Amazon", "Microsoft", "TCS Digital", "Infosys", "Accenture", "Standard / Startup"
+  "Google", "Amazon", "Microsoft", "TCS", "Infosys", "Wipro", 
+  "Accenture", "Capgemini", "Cognizant", "Deloitte", "EY", "PwC"
 ];
 
 const INTERVIEW_STEPS = [
@@ -91,8 +92,9 @@ export default function InterviewJourney() {
   const [currentStep, setCurrentStep] = useState(1);
   const [selectedRole, setSelectedRole] = useState("");
   const [selectedExp, setSelectedExp] = useState("");
-  const [selectedCompany, setSelectedCompany] = useState(COMPANIES[0]);
+  const [selectedCompany, setSelectedCompany] = useState("");
   const [roleSearch, setRoleSearch] = useState("");
+  const [companySearch, setCompanySearch] = useState("");
   const [file, setFile] = useState<File | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [resumeAtsScore, setResumeScore] = useState<number | null>(null);
@@ -110,6 +112,10 @@ export default function InterviewJourney() {
       role.category.toLowerCase().includes(roleSearch.toLowerCase())
     );
   }, [roleSearch]);
+
+  const filteredCompanies = useMemo(() => {
+    return COMPANIES.filter(c => c.toLowerCase().includes(companySearch.toLowerCase()));
+  }, [companySearch]);
 
   const nextStep = () => {
     if (currentStep < INTERVIEW_STEPS.length) {
@@ -171,7 +177,7 @@ export default function InterviewJourney() {
 
   const startActualInterview = () => {
     const sessionId = Math.random().toString(36).substring(7);
-    router.push(`/interview/${sessionId}?role=${encodeURIComponent(selectedRole)}&company=${encodeURIComponent(selectedCompany)}&exp=${encodeURIComponent(selectedExp)}&round=Technical`);
+    router.push(`/interview/${sessionId}?role=${encodeURIComponent(selectedRole)}&company=${encodeURIComponent(selectedCompany || "Standard")}&exp=${encodeURIComponent(selectedExp)}&round=Technical`);
   };
 
   if (resumeCheckLoading) return <div className="min-h-screen bg-[#050816] flex items-center justify-center"><Loader2 className="w-12 h-12 text-accent animate-spin" /></div>;
@@ -243,7 +249,7 @@ export default function InterviewJourney() {
                         <Briefcase className="w-10 h-10 text-accent" />
                       </div>
                       <h2 className="text-4xl font-bold tracking-tighter">Choose Your Deployment Track</h2>
-                      <p className="text-muted-foreground font-light max-w-lg mx-auto">Select the specialized engineering role for your neural calibration.</p>
+                      <p className="text-muted-foreground font-light max-lg mx-auto">Select the specialized engineering role for your neural calibration.</p>
                     </header>
 
                     <div className="relative group max-w-2xl mx-auto w-full">
@@ -354,29 +360,58 @@ export default function InterviewJourney() {
 
                 {/* Step 3: Company Sync */}
                 {currentStep === 3 && (
-                  <Card className="premium-card bg-white/[0.01] border-white/5 p-12 text-center space-y-12">
-                    <header className="space-y-4">
+                  <Card className="premium-card bg-white/[0.01] border-white/5 p-12 space-y-12">
+                    <header className="text-center space-y-4">
                       <div className="w-20 h-20 rounded-[2rem] bg-purple-500/10 flex items-center justify-center mx-auto border border-purple-500/20">
                         <Building2 className="w-10 h-10 text-purple-400" />
                       </div>
                       <h2 className="text-4xl font-bold tracking-tighter">Target Corporate Protocol</h2>
                       <p className="text-muted-foreground font-light max-w-lg mx-auto">Calibrate the simulation to mirror the culture and rigor of a specific tech firm.</p>
                     </header>
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                      {COMPANIES.map(comp => (
+
+                    <div className="relative group max-w-2xl mx-auto w-full">
+                      <Search className="absolute left-6 top-1/2 -translate-y-1/2 w-5 h-5 text-white/20 group-focus-within:text-accent transition-colors" />
+                      <Input 
+                        placeholder="Search target company..." 
+                        value={companySearch}
+                        onChange={(e) => setCompanySearch(e.target.value)}
+                        className="h-16 pl-16 rounded-2xl glass border-white/10 bg-transparent text-lg focus:border-accent transition-all"
+                      />
+                    </div>
+
+                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 overflow-y-auto max-h-[400px] pr-2 custom-scrollbar">
+                      {filteredCompanies.map(comp => (
                         <button 
                           key={comp} 
                           onClick={() => setSelectedCompany(comp)}
-                          className={`p-6 rounded-3xl border transition-all text-[10px] font-bold uppercase tracking-[0.2em] flex flex-col items-center gap-4 ${selectedCompany === comp ? 'bg-purple-500/20 border-purple-500/40 text-purple-400' : 'glass border-white/5'}`}
+                          className={`p-6 rounded-[2rem] border transition-all text-center flex flex-col items-center gap-4 group ${
+                            selectedCompany === comp 
+                            ? 'bg-purple-500/20 border-purple-500/40 shadow-[0_0_30px_rgba(168,85,247,0.1)]' 
+                            : 'glass border-white/5 hover:border-white/20'
+                          }`}
                         >
-                          <Building className="w-6 h-6 opacity-40" />
-                          {comp}
+                          <div className={`w-14 h-14 rounded-full flex items-center justify-center transition-all ${
+                            selectedCompany === comp ? 'bg-purple-500 text-white scale-110 shadow-lg' : 'bg-white/5 text-white/40 group-hover:bg-white/10'
+                          }`}>
+                            <span className="text-xl font-black">{comp[0]}</span>
+                          </div>
+                          <div>
+                            <p className={`text-xs font-bold uppercase tracking-widest transition-colors ${selectedCompany === comp ? 'text-white' : 'text-white/60'}`}>{comp}</p>
+                          </div>
                         </button>
                       ))}
+                      {filteredCompanies.length === 0 && (
+                        <div className="col-span-full py-12 text-center opacity-30 italic">No protocols found for "{companySearch}"</div>
+                      )}
                     </div>
+
                     <div className="flex gap-4">
-                      <Button variant="ghost" onClick={prevStep} className="h-20 px-8 rounded-3xl border border-white/5 uppercase tracking-widest text-[10px] font-bold">Back</Button>
-                      <Button onClick={nextStep} className="flex-1 h-20 btn-premium text-lg font-bold uppercase tracking-[0.3em]">
+                      <Button variant="ghost" onClick={prevStep} className="h-20 px-10 rounded-[2rem] border border-white/5 uppercase tracking-widest text-[10px] font-bold">Back</Button>
+                      <Button 
+                        onClick={nextStep} 
+                        disabled={!selectedCompany}
+                        className="flex-1 h-20 btn-premium text-lg font-bold uppercase tracking-[0.3em]"
+                      >
                         Sync Protocol <ChevronRight className="ml-3 w-6 h-6" />
                       </Button>
                     </div>
@@ -435,13 +470,13 @@ export default function InterviewJourney() {
                         className="absolute inset-0 rounded-full border-4 border-t-accent border-r-transparent border-b-transparent border-l-transparent" 
                       />
                       <div className="absolute inset-0 flex flex-col items-center justify-center">
-                        <span className="text-5xl font-bold tracking-tighter">84%</span>
+                        <span className="text-5xl font-bold tracking-tighter">{resumeAtsScore || 84}%</span>
                         <span className="text-[9px] uppercase font-bold tracking-widest text-muted-foreground">ATS INDEX</span>
                       </div>
                     </div>
                     <div className="space-y-4">
                       <h3 className="text-3xl font-bold">Protocol Match Optimal</h3>
-                      <p className="text-muted-foreground font-light max-w-sm mx-auto">Your blueprint matches 84% of industry standards for {selectedRole} at {selectedCompany}.</p>
+                      <p className="text-muted-foreground font-light max-w-sm mx-auto">Your blueprint matches {resumeAtsScore || 84}% of industry standards for {selectedRole} at {selectedCompany}.</p>
                     </div>
                     <div className="flex gap-4">
                       <Button variant="ghost" onClick={prevStep} className="h-18 px-8 rounded-2xl border border-white/5">Back</Button>
