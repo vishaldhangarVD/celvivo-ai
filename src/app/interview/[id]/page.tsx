@@ -21,13 +21,15 @@ import {
   BrainCircuit,
   Terminal,
   Activity,
-  AlertCircle
+  AlertCircle,
+  FileText
 } from "lucide-react";
 import Navbar from "@/components/layout/Navbar";
 import NavigationControls from "@/components/NavigationControls";
 import { aiMockInterview } from "@/ai/flows/ai-mock-interview-v2";
-import { useUser, useFirestore } from "@/firebase";
-import { doc, setDoc, serverTimestamp, collection, addDoc } from "firebase/firestore";
+import { generateInterviewFeedback } from "@/ai/flows/ai-interview-feedback";
+import { useUser, useFirestore, useCollection } from "@/firebase";
+import { doc, setDoc, serverTimestamp, collection, addDoc, query, orderBy, limit, updateDoc } from "firebase/firestore";
 import { useToast } from "@/hooks/use-toast";
 
 function TechnicalArenaContent() {
@@ -51,15 +53,27 @@ function TechnicalArenaContent() {
   const [isSimulationComplete, setIsSimulationComplete] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [isInitializing, setIsInitializing] = useState(true);
+  const [isGeneratingReport, setIsGeneratingReport] = useState(false);
   
-  // AI State Tracking
   const [askedQuestions, setAskedQuestions] = useState<string[]>([]);
-  const [currentStage, setCurrentStage] = useState<any>("INTRODUCTION");
   const [difficulty, setDifficulty] = useState<any>("MEDIUM");
 
   const transcriptEndRef = useRef<HTMLDivElement>(null);
 
-  // Resume context from local storage (synced during screening)
+  // Fetch previous round context
+  const aptQuery = useMemo(() => {
+    if (!db || !user?.uid) return null;
+    return query(collection(db, 'users', user.uid, 'aptitude_results'), orderBy('createdAt', 'desc'), limit(1));
+  }, [db, user?.uid]);
+  
+  const codQuery = useMemo(() => {
+    if (!db || !user?.uid) return null;
+    return query(collection(db, 'users', user.uid, 'coding_results'), orderBy('createdAt', 'desc'), limit(1));
+  }, [db, user?.uid]);
+
+  const { data: latestApt } = useCollection(aptQuery);
+  const { data: latestCod } = useCollection(codQuery);
+
   const resumeContext = useMemo(() => {
     if (typeof window === 'undefined') return null;
     const stored = localStorage.getItem("resumeAnalysis");
@@ -68,6 +82,8 @@ function TechnicalArenaContent() {
 
   useEffect(() => {
     const initializeSession = async () => {
+      if (!isInitializing || !latestApt || !latestCod) return;
+      
       try {
         const response = await aiMockInterview({
           role,
@@ -79,23 +95,23 @@ function TechnicalArenaContent() {
           resumeSkills: resumeContext?.analysis?.skillAnalysis?.map((s: any) => s.skill) || [],
           resumeProjects: resumeContext?.analysis?.sections?.projects || [],
           resumeSummary: resumeContext?.analysis?.summary || "",
-          interviewStage: "INTRODUCTION",
+          aptitudePerformance: latestApt[0]?.feedback?.recommendation || "N/A",
+          codingPerformance: latestCod[0]?.audit?.finalRecommendation || "N/A",
           difficultyLevel: "MEDIUM"
         });
 
         setTranscript([{ role: 'interviewer', text: response.nextQuestion }]);
         setAskedQuestions([response.nextQuestion]);
-        setCurrentStage(response.nextInterviewStage);
       } catch (error) {
         console.error("Initialization Failed:", error);
-        toast({ variant: "destructive", title: "Neural Sync Failed", description: "Could not initialize simulation persona." });
+        toast({ variant: "destructive", title: "Neural Sync Failed", description: "Retrying connection..." });
       } finally {
         setIsInitializing(false);
       }
     };
 
     initializeSession();
-  }, [role, company, exp, round, resumeContext, toast]);
+  }, [role, company, exp, round, resumeContext, latestApt, latestCod, isInitializing, toast]);
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -119,12 +135,9 @@ function TechnicalArenaContent() {
     
     setIsProcessing(true);
     const newEntry = { role: 'candidate' as const, text: userAnswer };
-    const updatedHistory = [...transcript, newEntry].map(t => ({
-      question: t.role === 'interviewer' ? t.text : '',
-      answer: t.role === 'candidate' ? t.text : ''
-    })).filter(h => h.question || h.answer);
-
-    setTranscript(prev => [...prev, newEntry]);
+    const updatedTranscript = [...transcript, newEntry];
+    setTranscript(updatedTranscript);
+    
     const currentAnswer = userAnswer;
     setUserAnswer("");
 
@@ -134,55 +147,85 @@ function TechnicalArenaContent() {
         experienceLevel: exp,
         roundType: round,
         currentMainQuestionIndex: currentIdx + 1,
-        history: updatedHistory as any,
+        history: updatedTranscript.map(t => ({
+          question: t.role === 'interviewer' ? t.text : '',
+          answer: t.role === 'candidate' ? t.text : ''
+        })).filter(h => h.question || h.answer) as any,
         userAnswer: currentAnswer,
         targetCompany: company,
         askedQuestions,
-        interviewStage: currentStage,
-        difficultyLevel: difficulty,
         resumeSkills: resumeContext?.analysis?.skillAnalysis?.map((s: any) => s.skill) || [],
-        resumeProjects: resumeContext?.analysis?.sections?.projects || []
+        resumeProjects: resumeContext?.analysis?.sections?.projects || [],
+        aptitudePerformance: latestApt?.[0]?.feedback?.recommendation || "N/A",
+        codingPerformance: latestCod?.[0]?.audit?.finalRecommendation || "N/A",
+        difficultyLevel: difficulty
       });
 
       setTranscript(prev => [...prev, { role: 'interviewer', text: response.nextQuestion }]);
       setAskedQuestions(prev => [...prev, response.nextQuestion]);
-      setCurrentStage(response.nextInterviewStage);
       setCurrentIdx(prev => prev + 1);
       
-      if (response.isInterviewComplete || currentIdx >= 9) {
+      if (response.isInterviewComplete || currentIdx >= 15) {
         setIsSimulationComplete(true);
-        archiveSession([...transcript, newEntry, { role: 'interviewer', text: response.nextQuestion }]);
       }
     } catch (error) {
       console.error("Transmission Error:", error);
-      toast({ variant: "destructive", title: "Neural Link Dropped", description: "Retrying connection to simulation host..." });
+      toast({ variant: "destructive", title: "Neural Link Dropped", description: "Retrying..." });
     } finally {
       setIsProcessing(false);
     }
   };
 
-  const archiveSession = async (finalTranscript: any[]) => {
-    if (!user || !db) return;
+  const finalizeSession = async () => {
+    if (!user || !db || isGeneratingReport) return;
+    setIsGeneratingReport(true);
+    
     try {
+      const transcriptStr = transcript.map(t => `${t.role.toUpperCase()}: ${t.text}`).join('\n\n');
+      
+      const feedback = await generateInterviewFeedback({
+        interviewTranscript: transcriptStr,
+        role,
+        experienceLevel: exp,
+        round,
+        resumeContext: {
+          skills: resumeContext?.analysis?.skillAnalysis?.map((s: any) => s.skill) || [],
+          projects: resumeContext?.analysis?.sections?.projects || [],
+          atsScore: resumeContext?.atsScore
+        }
+      });
+
       const interviewData = {
         userId: user.uid,
         role,
         experienceLevel: exp,
         company,
         round,
-        history: finalTranscript,
+        history: transcript,
+        overallScore: feedback.overallInterviewScore,
+        feedback,
         createdAt: serverTimestamp(),
-        overallScore: 0, // Calculated in feedback phase
       };
-      await addDoc(collection(db, 'users', user.uid, 'interviews'), interviewData);
+
+      const docRef = await addDoc(collection(db, 'users', user.uid, 'interviews'), interviewData);
+      
+      // Update User readiness
+      await updateDoc(doc(db, 'users', user.uid), {
+        jobReadinessScore: feedback.jobReadinessScore
+      });
+
+      router.push(`/feedback/${docRef.id}`);
     } catch (e) {
-      console.error("Archive Failure:", e);
+      console.error("Finalization Failure:", e);
+      toast({ variant: "destructive", title: "Report Generation Failed", description: "System could not synthesize the final performance audit." });
+    } finally {
+      setIsGeneratingReport(false);
     }
   };
 
   const toggleMic = () => setIsMicActive(!isMicActive);
 
-  if (isInitializing) {
+  if (isInitializing || !latestApt || !latestCod) {
     return (
       <div className="h-screen flex flex-col items-center justify-center bg-[#050816] space-y-8">
         <div className="relative">
@@ -190,8 +233,8 @@ function TechnicalArenaContent() {
           <BrainCircuit className="w-12 h-12 text-accent absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 animate-pulse" />
         </div>
         <div className="text-center space-y-2">
-          <h2 className="text-2xl font-bold tracking-tighter text-premium">Establishing Neural Link...</h2>
-          <p className="text-[10px] text-muted-foreground uppercase tracking-[0.4em] font-bold">Calibrating {company} Simulation Persona</p>
+          <h2 className="text-2xl font-bold tracking-tighter text-premium uppercase">Establishing Neural Link...</h2>
+          <p className="text-[10px] text-muted-foreground uppercase tracking-[0.4em] font-bold">Synchronizing dossier with {company} protocols</p>
         </div>
       </div>
     );
@@ -208,7 +251,7 @@ function TechnicalArenaContent() {
           </div>
           <div>
             <h1 className="text-sm font-bold tracking-tight text-white uppercase">{company} • Live Arena</h1>
-            <p className="text-[10px] text-accent font-bold uppercase tracking-widest">{role} • Round {currentIdx}/9</p>
+            <p className="text-[10px] text-accent font-bold uppercase tracking-widest">{role} • Node {currentIdx}/15</p>
           </div>
         </div>
 
@@ -233,7 +276,7 @@ function TechnicalArenaContent() {
           <Card className="flex-1 premium-card bg-black/40 border-white/5 p-0 overflow-hidden relative group">
             <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent z-10" />
             <div className="absolute top-6 left-6 z-20 flex items-center gap-3">
-              <Badge className="bg-accent/20 text-accent border-none uppercase text-[8px] font-bold tracking-widest px-3 py-1">Neural Host Connected</Badge>
+              <Badge className="bg-accent/20 text-accent border-none uppercase text-[8px] font-bold tracking-widest px-3 py-1">Neural Host Live</Badge>
               <div className="w-2 h-2 rounded-full bg-accent animate-pulse" />
             </div>
             
@@ -247,8 +290,8 @@ function TechnicalArenaContent() {
             </div>
 
             <div className="absolute bottom-6 left-6 z-20">
-              <p className="text-xl font-bold text-white">Senior Recruiter</p>
-              <p className="text-[10px] text-white/40 uppercase tracking-widest font-bold">Nexvoro Engine v7.2</p>
+              <p className="text-xl font-bold text-white">Senior Recruitment Partner</p>
+              <p className="text-[10px] text-white/40 uppercase tracking-widest font-bold">Nexvoro AI Simulation Core</p>
             </div>
           </Card>
 
@@ -258,7 +301,7 @@ function TechnicalArenaContent() {
               <div className="w-12 h-12 rounded-full bg-white/5 flex items-center justify-center">
                 <User className="w-6 h-6 text-white/20" />
               </div>
-              <p className="text-[10px] font-bold uppercase tracking-widest text-white/20">Candidate Deployment Feed</p>
+              <p className="text-[10px] font-bold uppercase tracking-widest text-white/20">Candidate Proctored Feed</p>
             </div>
             <div className="absolute bottom-4 right-4 flex gap-2">
               <div className={`w-8 h-8 rounded-lg flex items-center justify-center glass border-white/10 ${isMicActive ? 'text-accent' : 'text-red-400'}`}>
@@ -275,16 +318,16 @@ function TechnicalArenaContent() {
           
           <Card className="premium-card bg-[#0b0e1a]/80 border-glow-premium p-8 shrink-0">
             <div className="flex items-center justify-between mb-6">
-              <Badge className="bg-purple-500/20 text-purple-400 border-none uppercase text-[8px] font-bold tracking-[0.3em] px-3 py-1">Mission Node {currentIdx} / 9</Badge>
+              <Badge className="bg-purple-500/20 text-purple-400 border-none uppercase text-[8px] font-bold tracking-[0.3em] px-3 py-1">Node {currentIdx} / 15</Badge>
               <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-white/20">
-                <Activity className="w-3 h-3 text-accent" /> Analyzing Semantic Vectors
+                <Activity className="w-3 h-3 text-accent" /> Analyzing Semantic Vector Integrity
               </div>
             </div>
             <h2 className="text-xl md:text-2xl font-bold leading-tight tracking-tight text-white/90">
               {isProcessing ? (
                 <div className="flex items-center gap-4">
                   <Loader2 className="w-6 h-6 animate-spin text-accent" />
-                  <span className="text-muted-foreground animate-pulse font-light italic">Synthesizing next probe...</span>
+                  <span className="text-muted-foreground animate-pulse font-light italic">Synthesizing follow-up node...</span>
                 </div>
               ) : (
                 transcript.filter(t => t.role === 'interviewer').slice(-1)[0]?.text
@@ -385,17 +428,22 @@ function TechnicalArenaContent() {
               className="max-w-md w-full text-center space-y-8"
             >
               <div className="w-24 h-24 rounded-[2.5rem] bg-accent/20 flex items-center justify-center mx-auto border border-accent/30 shadow-[0_0_50px_rgba(34,211,238,0.2)]">
-                <ShieldCheck className="w-12 h-12 text-accent" />
+                {isGeneratingReport ? <Loader2 className="w-12 h-12 text-accent animate-spin" /> : <ShieldCheck className="w-12 h-12 text-accent" />}
               </div>
               <div className="space-y-4">
-                <h2 className="text-4xl font-bold tracking-tighter text-premium uppercase">Arena Protocol Complete</h2>
-                <p className="text-muted-foreground font-light text-lg">Simulation terminated. Technical performance nodes for {company} have been archived.</p>
+                <h2 className="text-4xl font-bold tracking-tighter text-premium uppercase">Simulation Complete</h2>
+                <p className="text-muted-foreground font-light text-lg">Your performance vectors are being synthesized into a final audit report.</p>
               </div>
               <Button 
-                onClick={() => router.push('/dashboard')}
+                onClick={finalizeSession}
+                disabled={isGeneratingReport}
                 className="w-full h-18 btn-premium text-xs font-bold tracking-[0.3em] uppercase"
               >
-                Finalize Performance Audit <ChevronRight className="ml-3 w-5 h-5" />
+                {isGeneratingReport ? (
+                   <><Loader2 className="w-5 h-5 animate-spin mr-3" /> Synthesizing Final Report...</>
+                ) : (
+                   <>Generate Performance Report <ChevronRight className="ml-3 w-5 h-5" /></>
+                )}
               </Button>
             </motion.div>
           </motion.div>
