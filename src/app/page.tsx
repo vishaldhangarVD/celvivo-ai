@@ -184,37 +184,41 @@ export default function LandingPage() {
             <div className="lg:w-7/12 w-full">
               <motion.div initial={{ opacity: 0, x: 50 }} animate={{ opacity: 1, x: 0 }} className="relative group">
                 <Card className="premium-card border-glow-premium p-0 overflow-hidden border-white/10 bg-[#0b0e1a]/80 shadow-[0_0_100px_rgba(147,51,234,0.15)] flex flex-col md:flex-row min-h-[550px]">
-                  <div className="md:w-[65%] p-10 md:p-12 flex flex-col justify-between relative z-10">
-                    <div className="space-y-6">
-                      <h2 className="text-3xl font-bold tracking-tighter text-premium">Virtual HR Arena</h2>
+                  <div className="md:w-[75%] p-10 md:p-12 flex flex-col justify-between relative z-10">
+                    <div className="space-y-8">
+                      <h2 className="text-4xl font-bold tracking-tighter text-premium">Virtual HR Arena</h2>
                       
-                      <div className="space-y-4 py-2">
-                        <div className="flex items-center gap-2 text-accent font-bold text-[10px] uppercase tracking-[0.4em]">
-                          <Rocket className="w-3 h-3" /> Interview Journey
+                      <div className="space-y-6">
+                        <div className="flex items-center gap-3 text-accent font-bold text-xs uppercase tracking-[0.4em]">
+                          <Rocket className="w-4 h-4" /> Interview Journey
                         </div>
-                        <div className="space-y-1 pl-2">
+                        
+                        <div className="space-y-3 pl-2">
                           {[
-                            { label: "Resume Analysis", emoji: "📄" },
-                            { label: "Aptitude Test", emoji: "🧠" },
-                            { label: "Coding Challenge", emoji: "💻" },
-                            { label: "Virtual Interview", emoji: "🎤" },
-                            { label: "AI Performance Report", emoji: "📊" }
+                            { label: "Resume Analysis", emoji: "📄", desc: "Intelligence Sync" },
+                            { label: "Aptitude Test", emoji: "🧠", desc: "Logic Nodes" },
+                            { label: "Coding Challenge", emoji: "💻", desc: "Syntax Matrix" },
+                            { label: "Virtual Interview", emoji: "🎤", desc: "Neural Arena" },
+                            { label: "AI Performance Report", emoji: "📊", desc: "Master Audit" }
                           ].map((step, idx, arr) => (
-                            <div key={idx} className="flex flex-col items-start">
+                            <div key={idx} className="flex flex-col">
                               <motion.div 
                                 initial={{ opacity: 0, x: -10 }}
                                 animate={{ opacity: 1, x: 0 }}
                                 transition={{ delay: 0.1 * idx }}
-                                className="flex items-center gap-3"
+                                className="flex items-center gap-4 group/step"
                               >
-                                <div className="w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center text-sm border border-white/5">
+                                <div className="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center text-lg border border-white/10 group-hover/step:border-accent/30 transition-colors">
                                   {step.emoji}
                                 </div>
-                                <span className="text-[10px] font-bold text-white/60 uppercase tracking-widest">{step.label}</span>
+                                <div className="flex flex-col">
+                                  <span className="text-xs font-bold text-white group-hover/step:text-accent transition-colors uppercase tracking-widest">{step.label}</span>
+                                  <span className="text-[10px] text-muted-foreground uppercase font-medium">{step.desc}</span>
+                                </div>
                               </motion.div>
                               {idx < arr.length - 1 && (
-                                <div className="pl-3.5 py-0.5 text-white/10 text-[10px]">
-                                  ↓
+                                <div className="pl-5 py-2">
+                                  <div className="w-px h-6 bg-gradient-to-b from-white/10 to-transparent ml-[3px]" />
                                 </div>
                               )}
                             </div>
@@ -222,12 +226,14 @@ export default function LandingPage() {
                         </div>
                       </div>
                     </div>
-                    <Button onClick={handleStartVirtualInterview} className="w-full h-18 btn-orange-premium text-sm font-bold tracking-[0.3em] uppercase mt-8">Start Virtual Interview <ChevronRight className="ml-3 w-5 h-5" /></Button>
+                    <Button onClick={handleStartVirtualInterview} className="w-full h-18 btn-orange-premium text-sm font-bold tracking-[0.3em] uppercase mt-12">
+                      Start Virtual Interview <ChevronRight className="ml-3 w-5 h-5" />
+                    </Button>
                   </div>
-                  <div className="md:w-[35%] relative min-h-[550px] flex items-center justify-center p-6 bg-black/20 border-l border-white/5">
-                    <div className="relative w-full h-full rounded-3xl overflow-hidden glass border border-white/20">
-                      <Image src={hrImg} alt="HR Manager" fill className="object-cover opacity-80" priority />
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent" />
+                  <div className="md:w-[25%] relative min-h-[550px] flex items-center justify-center bg-black/20 border-l border-white/5">
+                    <div className="relative w-full h-full">
+                      <Image src={hrImg} alt="HR Manager" fill className="object-cover opacity-60 grayscale hover:grayscale-0 hover:opacity-100 transition-all duration-700" priority />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent" />
                     </div>
                   </div>
                 </Card>

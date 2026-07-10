@@ -77,7 +77,8 @@ import {
   Cloud,
   Monitor,
   Shield,
-  SearchX
+  SearchX,
+  MessageSquare
 } from 'lucide-react';
 import { useUser, useFirestore, useCollection } from '@/firebase';
 import { collection, addDoc, serverTimestamp, doc, updateDoc, query, orderBy, limit } from 'firebase/firestore';
