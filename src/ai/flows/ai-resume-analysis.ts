@@ -19,6 +19,8 @@ const AiResumeAnalysisInputSchema = z.object({
     .describe(
       "The target job role for which the resume is being analyzed (e.g., 'Frontend Developer', 'Data Scientist')."
     ),
+  experienceLevel: z.string().optional().describe("Candidate's seniority grade."),
+  targetCompany: z.string().optional().describe("The company the candidate is aiming for."),
 });
 export type AiResumeAnalysisInput = z.infer<
   typeof AiResumeAnalysisInputSchema
@@ -31,9 +33,13 @@ const AiResumeAnalysisOutputSchema = z.object({
     phone: z.string().optional(),
   }),
   atsScore: z.number().min(0).max(100),
+  interviewReadinessScore: z.number().min(0).max(100),
   resumeQualityScore: z.number().min(0).max(100),
   technicalSkillsScore: z.number().min(0).max(100),
   keywordOptimizationScore: z.number().min(0).max(100),
+  summary: z.string().describe("Synthesized professional summary from the resume."),
+  strengths: z.array(z.string()).describe("Key professional strengths found."),
+  weaknesses: z.array(z.string()).describe("Critical gaps or weaknesses."),
   skillAnalysis: z.array(
     z.object({
       skill: z.string(),
@@ -72,14 +78,21 @@ const prompt = ai.definePrompt({
   input: {schema: AiResumeAnalysisInputSchema},
   output: {schema: AiResumeAnalysisOutputSchema},
   prompt: `You are an elite HR auditor and ATS (Applicant Tracking System) expert. 
-Your mission is to conduct a multi-dimensional neural audit of the provided resume against the requirements for a "{{targetRole}}".
+Your mission is to conduct a multi-dimensional neural audit of the provided resume.
+
+CONTEXT:
+Target Role: {{targetRole}}
+Experience Level: {{experienceLevel}}
+Target Company: {{targetCompany}}
 
 Instructions:
 1. Extract personal identifiers and professional history.
-2. Calculate a precise ATS Compatibility Index (0-100) based on modern hiring benchmarks.
-3. Identify exactly which technical nodes are missing for a top-tier "{{targetRole}}".
-4. Analyze existing skills and assign proficiency tiers (Beginner to Expert).
-5. Provide high-impact optimization suggestions to improve market leveling.
+2. Calculate a precise ATS Compatibility Index (0-100) based on requirements for a {{targetRole}} at {{targetCompany}}.
+3. Identify exactly which technical nodes are missing for a top-tier candidate at this level.
+4. Provide a synthesized "summary" of the candidate.
+5. List "strengths" (what they excel at) and "weaknesses" (critical gaps).
+6. Calculate an "interviewReadinessScore" reflecting how prepared they are for a technical simulation.
+7. Provide high-impact optimization suggestions.
 
 Resume Document: {{media url=resumeDataUri}}`,
 });
@@ -93,9 +106,13 @@ function generateFallbackAnalysis(targetRole: string): AiResumeAnalysisOutput {
       email: "identity@nexus.ai",
     },
     atsScore: 68,
+    interviewReadinessScore: 65,
     resumeQualityScore: 72,
     technicalSkillsScore: 65,
     keywordOptimizationScore: 60,
+    summary: "A focused technical professional with strong core engineering nodes.",
+    strengths: ["Clean Architectural Reasoning", "Strategic Problem Solving"],
+    weaknesses: ["Missing Quantifiable Impact", "Low Cloud-Native Keywords"],
     skillAnalysis: [
       { skill: "Technical Core Nodes", proficiency: "Advanced" },
       { skill: "Architecture Awareness", proficiency: "Intermediate" },
@@ -129,31 +146,13 @@ const aiResumeAnalysisFlow = ai.defineFlow(
     outputSchema: AiResumeAnalysisOutputSchema,
   },
   async (input) => {
-    console.log('[RESUME ANALYSIS START]', { role: input.targetRole });
-    
     try {
       const { output } = await runWithResilience(prompt, input);
-      
-      if (!output) {
-        return generateFallbackAnalysis(input.targetRole);
-      }
-
-      console.log('[RESUME ANALYSIS GEMINI SUCCESS]');
-      console.log('[RESUME ANALYSIS COMPLETE]');
-      return {
-        ...output,
-        isOffline: false
-      };
+      if (!output) return generateFallbackAnalysis(input.targetRole);
+      return { ...output, isOffline: false };
     } catch (error) {
-      console.error("========== GEMINI ERROR ==========");
-      console.error(error);
-      console.error("==================================");
-    
-      const result = generateFallbackAnalysis(input.targetRole);
-    
-      console.log('[RESUME ANALYSIS COMPLETE]');
-    
-      return result;
+      console.error("Gemini Error:", error);
+      return generateFallbackAnalysis(input.targetRole);
     }
   }
 );

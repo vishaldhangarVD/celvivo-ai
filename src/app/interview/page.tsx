@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useMemo, useEffect } from 'react';
@@ -67,10 +66,12 @@ import {
   Terminal,
   PlayCircle,
   Save,
-  MonitorCode
+  MonitorCog,
+  AlertTriangle,
+  Info
 } from 'lucide-react';
 import { useUser, useFirestore, useCollection } from '@/firebase';
-import { collection, query, orderBy, limit, addDoc, serverTimestamp } from 'firebase/firestore';
+import { collection, query, orderBy, limit, addDoc, serverTimestamp, doc, updateDoc } from 'firebase/firestore';
 import { analyzeResume } from '@/ai/flows/ai-resume-analysis';
 import { useToast } from '@/hooks/use-toast';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -297,7 +298,12 @@ export default function InterviewJourney() {
         reader.readAsDataURL(file);
       });
 
-      const result = await analyzeResume({ resumeDataUri: base64, targetRole: selectedRole });
+      const result = await analyzeResume({ 
+        resumeDataUri: base64, 
+        targetRole: selectedRole,
+        experienceLevel: selectedExp,
+        targetCompany: selectedCompany
+      });
       
       if (typeof window !== 'undefined') {
         localStorage.setItem("resumeAnalysis", JSON.stringify(result));
@@ -312,10 +318,15 @@ export default function InterviewJourney() {
         createdAt: serverTimestamp(),
       });
 
+      await updateDoc(doc(db, 'users', user.uid), {
+        resumeScore: result.atsScore
+      });
+
       setResumeAnalysis(result);
       nextStep();
       toast({ title: "Blueprint Verified", description: "Career intelligence synchronized." });
     } catch (e) {
+      console.error(e);
       toast({ variant: "destructive", title: "Audit Failed", description: "System could not parse blueprint." });
     } finally {
       setIsAnalyzing(false);
@@ -707,7 +718,7 @@ export default function InterviewJourney() {
                               className="absolute inset-0 rounded-full border-4 border-t-accent border-r-transparent border-b-transparent border-l-transparent" 
                             />
                             <div className="absolute inset-0 flex flex-col items-center justify-center">
-                              <span className="text-6xl font-bold tracking-tighter text-premium">{resumeAnalysis?.atsScore || 84}%</span>
+                              <span className="text-6xl font-bold tracking-tighter text-premium">{resumeAnalysis?.atsScore || 0}%</span>
                               <span className="text-[9px] uppercase font-bold tracking-widest text-muted-foreground">ATS Index</span>
                             </div>
                           </div>
@@ -726,7 +737,7 @@ export default function InterviewJourney() {
                                 <ChevronUp className="w-4 h-4" /> Strategic Assets
                               </h4>
                               <div className="space-y-2">
-                                {(resumeAnalysis?.analysis?.strengths || ["Strong Technical Core", "Modern Framework Mastery", "Problem-Solving Depth"]).map((s: string, i: number) => (
+                                {(resumeAnalysis?.strengths || ["Strong Technical Core", "Modern Framework Mastery", "Problem-Solving Depth"]).map((s: string, i: number) => (
                                   <div key={i} className="flex items-center gap-3 p-3 glass rounded-xl border-white/5">
                                     <CheckCircle2 className="w-4 h-4 text-green-400" />
                                     <span className="text-xs font-light text-white/80">{s}</span>
@@ -739,7 +750,7 @@ export default function InterviewJourney() {
                                 <ChevronDown className="w-4 h-4" /> Optimization Gaps
                               </h4>
                               <div className="space-y-2">
-                                {(resumeAnalysis?.analysis?.weaknesses || ["Missing Cloud Certification", "Low Keyword Density (AWS)", "Experience Node Depth"]).map((w: string, i: number) => (
+                                {(resumeAnalysis?.weaknesses || ["Missing Cloud Certification", "Low Keyword Density (AWS)", "Experience Node Depth"]).map((w: string, i: number) => (
                                   <div key={i} className="flex items-center gap-3 p-3 glass rounded-xl border-white/5">
                                     <AlertCircle className="w-4 h-4 text-red-400" />
                                     <span className="text-xs font-light text-white/80">{w}</span>
@@ -752,15 +763,10 @@ export default function InterviewJourney() {
                           <div className="space-y-4">
                             <div className="flex justify-between items-center">
                               <h4 className="text-[10px] font-bold uppercase tracking-[0.3em] text-white/30">Skill Vector Mapping</h4>
-                              <span className="text-[10px] font-bold text-accent uppercase tracking-widest">{resumeAnalysis?.analysis?.skillAnalysis?.length || 8} Nodes Found</span>
+                              <span className="text-[10px] font-bold text-accent uppercase tracking-widest">{resumeAnalysis?.skillAnalysis?.length || 0} Nodes Found</span>
                             </div>
                             <div className="flex flex-wrap gap-2">
-                              {(resumeAnalysis?.analysis?.skillAnalysis || [
-                                { skill: "React", proficiency: "Expert" },
-                                { skill: "TypeScript", proficiency: "Advanced" },
-                                { skill: "Next.js", proficiency: "Expert" },
-                                { skill: "Tailwind", proficiency: "Advanced" }
-                              ]).map((s: any, i: number) => (
+                              {(resumeAnalysis?.skillAnalysis || []).map((s: any, i: number) => (
                                 <Badge key={i} variant="outline" className="bg-white/5 border-white/10 text-white/60 text-[8px] uppercase tracking-widest font-bold py-1.5 px-3">
                                   {s.skill} <span className="text-accent ml-2">[{s.proficiency}]</span>
                                 </Badge>
@@ -769,6 +775,19 @@ export default function InterviewJourney() {
                           </div>
                         </div>
                       </div>
+
+                      {/* Warning if score < 60 */}
+                      {resumeAnalysis?.atsScore < 60 && (
+                        <div className="mt-12 p-6 glass rounded-[2rem] border-red-500/20 bg-red-500/5 flex items-start gap-4">
+                          <AlertTriangle className="w-6 h-6 text-red-400 shrink-0 mt-1" />
+                          <div className="space-y-1">
+                            <p className="font-bold text-red-400 text-sm">Protocol Warning: Low Calibration Score</p>
+                            <p className="text-xs text-red-400/60 leading-relaxed font-light">
+                              Your career blueprint scored below the elite threshold (60%). We strongly recommend utilizing the Neural Optimizer before entering the live simulation rounds to maximize placement probability.
+                            </p>
+                          </div>
+                        </div>
+                      )}
                     </Card>
 
                     <div className="grid md:grid-cols-2 gap-6">
@@ -1171,7 +1190,7 @@ export default function InterviewJourney() {
 
                             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                                {[
-                                 { label: "Problems", val: "1/1", icon: MonitorCode, color: "text-white/40" },
+                                 { label: "Problems", val: "1/1", icon: MonitorCog, color: "text-white/40" },
                                  { label: "Test Cases", val: "8/10", icon: CheckCircle2, color: "text-green-400" },
                                  { label: "Deviations", val: "2", icon: XCircle, color: "text-red-400" },
                                  { label: "Efficiency", val: "Optimal", icon: TrendingUp, color: "text-accent" }
