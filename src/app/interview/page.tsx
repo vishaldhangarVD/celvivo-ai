@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Navbar from '@/components/layout/Navbar';
 import NavigationControls from '@/components/NavigationControls';
@@ -36,13 +36,19 @@ import {
   Globe,
   Trash2,
   FileUp,
-  AlertCircle
+  AlertCircle,
+  TrendingUp,
+  ChevronUp,
+  ChevronDown,
+  Sparkles,
+  FileEdit
 } from 'lucide-react';
 import { useUser, useFirestore, useCollection } from '@/firebase';
 import { collection, query, orderBy, limit, addDoc, serverTimestamp } from 'firebase/firestore';
 import { analyzeResume } from '@/ai/flows/ai-resume-analysis';
 import { useToast } from '@/hooks/use-toast';
 import { motion, AnimatePresence } from 'framer-motion';
+import Link from 'next/link';
 
 const ROLES_DATA = [
   { id: 'java', name: "Java Developer", category: "Development", icon: Code2 },
@@ -96,7 +102,7 @@ export default function InterviewJourney() {
   const [companySearch, setCompanySearch] = useState("");
   const [file, setFile] = useState<File | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
-  const [resumeAtsScore, setResumeScore] = useState<number | null>(null);
+  const [resumeAnalysis, setResumeAnalysis] = useState<any>(null);
   const [isDragging, setIsDragging] = useState(false);
 
   // Resume check
@@ -199,7 +205,7 @@ export default function InterviewJourney() {
         createdAt: serverTimestamp(),
       });
 
-      setResumeScore(result.atsScore);
+      setResumeAnalysis(result);
       nextStep();
       toast({ title: "Blueprint Verified", description: "Career intelligence synchronized." });
     } catch (e) {
@@ -536,31 +542,122 @@ export default function InterviewJourney() {
                   </Card>
                 )}
 
-                {/* Step 5: Live Screening Analysis */}
+                {/* Step 5: Live Screening Analysis Dashboard */}
                 {currentStep === 5 && (
-                  <Card className="premium-card bg-[#0b0e1a]/80 border-white/5 p-16 text-center space-y-12 overflow-hidden relative">
-                    <div className="absolute top-0 right-0 p-8"><Badge className="bg-accent/20 text-accent">LIVE ANALYSIS</Badge></div>
-                    <div className="relative w-48 h-48 mx-auto">
-                      <div className="absolute inset-0 rounded-full border-4 border-white/5" />
-                      <motion.div 
-                        animate={{ rotate: 360 }} 
-                        transition={{ duration: 3, repeat: Infinity, ease: "linear" }}
-                        className="absolute inset-0 rounded-full border-4 border-t-accent border-r-transparent border-b-transparent border-l-transparent" 
-                      />
-                      <div className="absolute inset-0 flex flex-col items-center justify-center">
-                        <span className="text-5xl font-bold tracking-tighter">{resumeAtsScore || 84}%</span>
-                        <span className="text-[9px] uppercase font-bold tracking-widest text-muted-foreground">ATS INDEX</span>
+                  <div className="space-y-8">
+                    <Card className="premium-card bg-[#0b0e1a]/80 border-white/5 p-12 relative overflow-hidden">
+                      <div className="absolute top-0 right-0 p-8"><Badge className="bg-accent/20 text-accent font-bold tracking-widest uppercase text-[10px]">Neural Audit Live</Badge></div>
+                      
+                      <div className="grid lg:grid-cols-12 gap-12 items-center">
+                        <div className="lg:col-span-4 text-center space-y-6 border-r border-white/5 pr-12">
+                          <div className="relative w-48 h-48 mx-auto">
+                            <div className="absolute inset-0 rounded-full border-4 border-white/5" />
+                            <motion.div 
+                              initial={{ rotate: 0 }}
+                              animate={{ rotate: 360 }} 
+                              transition={{ duration: 3, repeat: Infinity, ease: "linear" }}
+                              className="absolute inset-0 rounded-full border-4 border-t-accent border-r-transparent border-b-transparent border-l-transparent" 
+                            />
+                            <div className="absolute inset-0 flex flex-col items-center justify-center">
+                              <span className="text-6xl font-bold tracking-tighter text-premium">{resumeAnalysis?.atsScore || 84}%</span>
+                              <span className="text-[9px] uppercase font-bold tracking-widest text-muted-foreground">ATS Index</span>
+                            </div>
+                          </div>
+                          <div className="space-y-2">
+                            <h3 className="text-2xl font-bold">Protocol Match Optimal</h3>
+                            <p className="text-[10px] text-muted-foreground uppercase tracking-widest leading-relaxed">
+                              Your blueprint is calibrated for {selectedCompany}'s <br />{selectedRole} standards.
+                            </p>
+                          </div>
+                        </div>
+
+                        <div className="lg:col-span-8 space-y-10">
+                          <div className="grid md:grid-cols-2 gap-8">
+                            <div className="space-y-4">
+                              <h4 className="text-[10px] font-bold uppercase tracking-[0.3em] text-accent flex items-center gap-2">
+                                <ChevronUp className="w-4 h-4" /> Strategic Assets
+                              </h4>
+                              <div className="space-y-2">
+                                {(resumeAnalysis?.analysis?.strengths || ["Strong Technical Core", "Modern Framework Mastery", "Problem-Solving Depth"]).map((s: string, i: number) => (
+                                  <div key={i} className="flex items-center gap-3 p-3 glass rounded-xl border-white/5">
+                                    <CheckCircle2 className="w-4 h-4 text-green-400" />
+                                    <span className="text-xs font-light text-white/80">{s}</span>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                            <div className="space-y-4">
+                              <h4 className="text-[10px] font-bold uppercase tracking-[0.3em] text-red-400 flex items-center gap-2">
+                                <ChevronDown className="w-4 h-4" /> Optimization Gaps
+                              </h4>
+                              <div className="space-y-2">
+                                {(resumeAnalysis?.analysis?.weaknesses || ["Missing Cloud Certification", "Low Keyword Density (AWS)", "Experience Node Depth"]).map((w: string, i: number) => (
+                                  <div key={i} className="flex items-center gap-3 p-3 glass rounded-xl border-white/5">
+                                    <AlertCircle className="w-4 h-4 text-red-400" />
+                                    <span className="text-xs font-light text-white/80">{w}</span>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="space-y-4">
+                            <div className="flex justify-between items-center">
+                              <h4 className="text-[10px] font-bold uppercase tracking-[0.3em] text-white/30">Skill Vector Mapping</h4>
+                              <span className="text-[10px] font-bold text-accent uppercase tracking-widest">{resumeAnalysis?.analysis?.skillAnalysis?.length || 8} Nodes Found</span>
+                            </div>
+                            <div className="flex flex-wrap gap-2">
+                              {(resumeAnalysis?.analysis?.skillAnalysis || [
+                                { skill: "React", proficiency: "Expert" },
+                                { skill: "TypeScript", proficiency: "Advanced" },
+                                { skill: "Next.js", proficiency: "Expert" },
+                                { skill: "Tailwind", proficiency: "Advanced" }
+                              ]).map((s: any, i: number) => (
+                                <Badge key={i} variant="outline" className="bg-white/5 border-white/10 text-white/60 text-[8px] uppercase tracking-widest font-bold py-1.5 px-3">
+                                  {s.skill} <span className="text-accent ml-2">[{s.proficiency}]</span>
+                                </Badge>
+                              ))}
+                            </div>
+                          </div>
+                        </div>
                       </div>
+                    </Card>
+
+                    <div className="grid md:grid-cols-2 gap-6">
+                      <Card className="premium-card bg-accent/5 border-accent/20 p-8 flex items-center justify-between group cursor-pointer hover:bg-accent/10 transition-all">
+                        <div className="flex items-center gap-6">
+                          <div className="w-14 h-14 rounded-2xl bg-accent/20 flex items-center justify-center text-accent">
+                            <Sparkles className="w-7 h-7" />
+                          </div>
+                          <div>
+                            <h4 className="font-bold text-lg">Neural Optimization</h4>
+                            <p className="text-xs text-muted-foreground">Improve blueprint for {selectedCompany} standards.</p>
+                          </div>
+                        </div>
+                        <Link href="/resume-analysis">
+                          <Button size="icon" variant="ghost" className="rounded-full group-hover:translate-x-1 transition-transform">
+                            <ChevronRight className="w-6 h-6" />
+                          </Button>
+                        </Link>
+                      </Card>
+
+                      <Button 
+                        onClick={nextStep}
+                        className="h-auto btn-premium flex-1 p-8 rounded-[2.5rem] flex items-center justify-between group"
+                      >
+                        <div className="flex items-center gap-6 text-left">
+                          <div className="w-14 h-14 rounded-2xl bg-white/10 flex items-center justify-center">
+                            <Play className="w-7 h-7 fill-current" />
+                          </div>
+                          <div>
+                            <h4 className="font-bold text-lg text-white">Initialize Simulation</h4>
+                            <p className="text-xs text-white/60">Enter Round 01: Logic & Aptitude Nodes.</p>
+                          </div>
+                        </div>
+                        <ChevronRight className="w-6 h-6 group-hover:translate-x-1 transition-transform" />
+                      </Button>
                     </div>
-                    <div className="space-y-4">
-                      <h3 className="text-3xl font-bold">Protocol Match Optimal</h3>
-                      <p className="text-muted-foreground font-light max-w-sm mx-auto">Your blueprint matches {resumeAtsScore || 84}% of industry standards for {selectedRole} at {selectedCompany}.</p>
-                    </div>
-                    <div className="flex gap-4">
-                      <Button variant="ghost" onClick={prevStep} className="h-18 px-8 rounded-2xl border border-white/5">Back</Button>
-                      <Button onClick={nextStep} className="flex-1 h-18 btn-premium text-xs font-bold uppercase tracking-[0.3em]">Initialize Round 01: Aptitude <ChevronRight className="ml-2 w-4 h-4" /></Button>
-                    </div>
-                  </Card>
+                  </div>
                 )}
 
                 {currentStep >= 6 && currentStep <= 9 && (
@@ -574,7 +671,7 @@ export default function InterviewJourney() {
                         })()}
                       </div>
                       <h2 className="text-5xl font-bold tracking-tighter uppercase">{INTERVIEW_STEPS[currentStep - 1].title}</h2>
-                      <p className="text-xl text-muted-foreground font-light max-w-xl mx-auto">Simulation node active. Calibrate your mindset for {INTERVIEW_STEPS[currentStep - 1].desc}.</p>
+                      <p className="text-xl text-muted-foreground font-light max-xl mx-auto">Simulation node active. Calibrate your mindset for {INTERVIEW_STEPS[currentStep - 1].desc}.</p>
                     </header>
                     <div className="grid md:grid-cols-3 gap-6">
                       {[
@@ -606,7 +703,7 @@ export default function InterviewJourney() {
                     </div>
                     <div className="space-y-4">
                       <h2 className="text-5xl font-bold tracking-tighter">Full Performance Audit</h2>
-                      <p className="text-muted-foreground font-light max-w-md mx-auto">Your journey across all 10 simulation nodes has been archived. Final intelligence report is ready.</p>
+                      <p className="text-muted-foreground font-light max-md mx-auto">Your journey across all 10 simulation nodes has been archived. Final intelligence report is ready.</p>
                     </div>
                     <div className="p-8 glass rounded-[3rem] border-white/10 bg-white/[0.02]">
                        <div className="flex justify-between items-center mb-8">
@@ -629,3 +726,4 @@ export default function InterviewJourney() {
     </div>
   );
 }
+
