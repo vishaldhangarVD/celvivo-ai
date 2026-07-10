@@ -70,11 +70,13 @@ import {
   MonitorCog,
   AlertTriangle,
   Info,
-  Lightbulb
+  Lightbulb,
+  Cpu
 } from 'lucide-react';
 import { useUser, useFirestore, useCollection } from '@/firebase';
 import { collection, query, orderBy, limit, addDoc, serverTimestamp, doc, updateDoc } from 'firebase/firestore';
 import { analyzeResume } from '@/ai/flows/ai-resume-analysis';
+import { generateAptitudeTest } from '@/ai/flows/ai-aptitude-generator';
 import { useToast } from '@/hooks/use-toast';
 import { motion, AnimatePresence } from 'framer-motion';
 import Link from 'next/link';
@@ -119,7 +121,7 @@ const INTERVIEW_STEPS = [
   { id: 10, title: 'Report', icon: FileText, desc: 'Final audit' },
 ];
 
-const APTITUDE_QUESTIONS = [
+const FALLBACK_APTITUDE_QUESTIONS = [
   { id: 1, category: "Quantitative", question: "If a train 110m long passes a telegraph pole in 3 seconds, what is its speed in km/h?", options: ["132", "135", "142", "120"], answer: "132" },
   { id: 2, category: "Quantitative", question: "The average of first five prime numbers is?", options: ["5.6", "6.2", "7.0", "5.2"], answer: "5.6" },
   { id: 3, category: "Quantitative", question: "A sum of money doubles itself in 10 years at simple interest. What is the rate of interest?", options: ["5%", "10%", "12.5%", "15%"], answer: "10%" },
@@ -177,12 +179,16 @@ export default function InterviewJourney() {
   const [isDragging, setIsDragging] = useState(false);
 
   // Aptitude Round State
+  const [isGeneratingAptitude, setIsGeneratingAptitude] = useState(false);
+  const [aiAptitudeQuestions, setAiAptitudeQuestions] = useState<any[]>([]);
   const [aptitudeIdx, setAptitudeIdx] = useState(0);
   const [aptitudeAnswers, setAptitudeAnswers] = useState<Record<number, string>>({});
   const [timeLeft, setTimeLeft] = useState(20 * 60); // 20 minutes
   const [isSubmitDialogOpen, setIsSubmitDialogOpen] = useState(false);
   const [isAptitudeComplete, setIsAptitudeComplete] = useState(false);
   const [showAptitudeResult, setShowAptitudeResult] = useState(false);
+  const [aptitudeScore, setAptitudeScore] = useState(0);
+  const [aptitudeStartTime, setAptitudeStartTime] = useState<number | null>(null);
 
   // Coding Round State
   const [selectedLanguage, setSelectedLanguage] = useState("javascript");
@@ -195,13 +201,13 @@ export default function InterviewJourney() {
 
   // Timer Effect
   useEffect(() => {
-    if (currentStep === 6 && timeLeft > 0 && !isAptitudeComplete) {
+    if (currentStep === 6 && timeLeft > 0 && !isAptitudeComplete && aiAptitudeQuestions.length > 0) {
       const timer = setInterval(() => setTimeLeft(prev => prev - 1), 1000);
       return () => clearInterval(timer);
     } else if (timeLeft === 0 && currentStep === 6 && !isAptitudeComplete) {
       handleAptitudeSubmit();
     }
-  }, [currentStep, timeLeft, isAptitudeComplete]);
+  }, [currentStep, timeLeft, isAptitudeComplete, aiAptitudeQuestions]);
 
   // Coding Timer Effect
   useEffect(() => {
@@ -244,6 +250,29 @@ export default function InterviewJourney() {
   const prevStep = () => {
     if (currentStep > 1) {
       setCurrentStep(currentStep - 1);
+    }
+  };
+
+  const handleStartAptitude = async () => {
+    setIsGeneratingAptitude(true);
+    setCurrentStep(6);
+    try {
+      const result = await generateAptitudeTest({
+        role: selectedRole,
+        company: selectedCompany,
+        experienceLevel: selectedExp,
+        resumeSummary: resumeAnalysis?.summary || ""
+      });
+      setAiAptitudeQuestions(result.questions);
+      setAptitudeStartTime(Date.now());
+      toast({ title: "Neural Synthesis Success", description: "15 logical nodes calibrated for your profile." });
+    } catch (e) {
+      console.error(e);
+      setAiAptitudeQuestions(FALLBACK_APTITUDE_QUESTIONS);
+      setAptitudeStartTime(Date.now());
+      toast({ variant: "destructive", title: "Synthesis Error", description: "Failed to generate dynamic logic. Using backup protocols." });
+    } finally {
+      setIsGeneratingAptitude(false);
     }
   };
 
@@ -313,7 +342,7 @@ export default function InterviewJourney() {
         localStorage.setItem("resumeAnalysis", JSON.stringify(result));
       }
 
-      // Save to Firestore (Non-blocking following guidelines)
+      // Save to Firestore (Non-blocking)
       const resumesRef = collection(db, 'users', user.uid, 'resumes');
       const resumeData = {
         userId: user.uid,
@@ -355,10 +384,38 @@ export default function InterviewJourney() {
   };
 
   const handleAptitudeSubmit = () => {
+    const questions = aiAptitudeQuestions.length > 0 ? aiAptitudeQuestions : FALLBACK_APTITUDE_QUESTIONS;
+    let correct = 0;
+    Object.entries(aptitudeAnswers).forEach(([idx, ans]) => {
+      if (questions[Number(idx)].answer === ans) {
+        correct++;
+      }
+    });
+
+    const score = Math.round((correct / questions.length) * 100);
+    const timeTaken = aptitudeStartTime ? Math.round((Date.now() - aptitudeStartTime) / 1000) : 0;
+
+    // Archive Result
+    if (user && db) {
+      const assessmentData = {
+        userId: user.uid,
+        type: 'Aptitude',
+        score,
+        correctCount: correct,
+        totalQuestions: questions.length,
+        timeTakenSeconds: timeTaken,
+        answers: aptitudeAnswers,
+        questions: questions.map(q => ({ question: q.question, category: q.category })),
+        createdAt: serverTimestamp()
+      };
+      addDoc(collection(db, 'users', user.uid, 'assessments'), assessmentData).catch(() => {});
+    }
+
+    setAptitudeScore(score);
     setIsAptitudeComplete(true);
     setIsSubmitDialogOpen(false);
     setShowAptitudeResult(true);
-    toast({ title: "Aptitude Node Captured", description: "Logic assessment archived." });
+    toast({ title: "Logic Node Captured", description: `Assessment complete. Logic Index: ${score}%` });
   };
 
   const resetAptitude = () => {
@@ -367,6 +424,7 @@ export default function InterviewJourney() {
     setTimeLeft(20 * 60);
     setIsAptitudeComplete(false);
     setShowAptitudeResult(false);
+    handleStartAptitude();
   };
 
   const handleRunCode = () => {
@@ -548,7 +606,7 @@ export default function InterviewJourney() {
                           onClick={() => setSelectedExp(opt.label)}
                           className={`p-8 rounded-[2.5rem] border transition-all text-left flex items-center gap-6 group ${
                             selectedExp === opt.label 
-                            ? 'bg-accent/20 border-accent shadow-[0_0_30px_rgba(34,211,238,0.1)]' 
+                            ? 'bg-accent/20 border-accent shadow-[0_0_20px_rgba(34,211,238,0.1)]' 
                             : 'glass border-white/5 hover:border-white/20'
                           }`}
                         >
@@ -864,15 +922,16 @@ export default function InterviewJourney() {
                       </Card>
 
                       <Button 
-                        onClick={nextStep}
+                        onClick={handleStartAptitude}
+                        disabled={isGeneratingAptitude}
                         className="h-auto btn-premium flex-1 p-8 rounded-[2.5rem] flex items-center justify-between group"
                       >
                         <div className="flex items-center gap-6 text-left">
                           <div className="w-14 h-14 rounded-2xl bg-white/10 flex items-center justify-center">
-                            <Play className="w-7 h-7 fill-current" />
+                            {isGeneratingAptitude ? <Loader2 className="w-7 h-7 animate-spin" /> : <Play className="w-7 h-7 fill-current" />}
                           </div>
                           <div>
-                            <h4 className="font-bold text-lg text-white">Initialize Simulation</h4>
+                            <h4 className="font-bold text-lg text-white">{isGeneratingAptitude ? "Generating Rounds..." : "Initialize Simulation"}</h4>
                             <p className="text-xs text-white/60">Launch Round 01: Cognitive Logic.</p>
                           </div>
                         </div>
@@ -885,7 +944,24 @@ export default function InterviewJourney() {
                 {/* Step 6: Aptitude Round (Testing or Result) */}
                 {currentStep === 6 && (
                   <div className="space-y-8">
-                    {!showAptitudeResult ? (
+                    {isGeneratingAptitude ? (
+                      <Card className="premium-card bg-[#0b0e1a]/80 border-white/5 p-20 text-center space-y-8">
+                        <div className="relative w-32 h-32 mx-auto">
+                           <motion.div 
+                             animate={{ rotate: 360 }} 
+                             transition={{ duration: 4, repeat: Infinity, ease: "linear" }} 
+                             className="absolute inset-0 rounded-full border-t-2 border-accent" 
+                           />
+                           <div className="absolute inset-0 flex items-center justify-center">
+                             <Cpu className="w-12 h-12 text-accent animate-pulse" />
+                           </div>
+                        </div>
+                        <div className="space-y-4">
+                           <h2 className="text-3xl font-bold tracking-tighter text-premium">Synthesizing Logic Matrix...</h2>
+                           <p className="text-muted-foreground font-light uppercase tracking-[0.4em] text-[10px]">Assembling 15 unique nodes calibrated for {selectedCompany}</p>
+                        </div>
+                      </Card>
+                    ) : !showAptitudeResult ? (
                       <Card className="premium-card bg-[#0b0e1a]/80 border-white/5 p-0 overflow-hidden min-h-[600px] flex flex-col">
                         {/* Top Status Bar */}
                         <div className="p-6 border-b border-white/5 bg-white/[0.02] flex items-center justify-between">
@@ -897,7 +973,7 @@ export default function InterviewJourney() {
                             <div className="hidden md:block h-8 w-px bg-white/5" />
                             <div className="hidden md:flex items-center gap-4">
                               <Badge variant="outline" className="border-white/10 text-muted-foreground uppercase text-[10px] tracking-widest font-bold">Node 01: Logic Efficiency</Badge>
-                              <Progress value={(Object.keys(aptitudeAnswers).length / APTITUDE_QUESTIONS.length) * 100} className="w-32 h-1.5" />
+                              <Progress value={(Object.keys(aptitudeAnswers).length / aiAptitudeQuestions.length) * 100} className="w-32 h-1.5" />
                             </div>
                           </div>
                           <Button 
@@ -914,10 +990,10 @@ export default function InterviewJourney() {
                           <div className="lg:col-span-8 p-12 space-y-10 border-r border-white/5">
                             <header className="space-y-2">
                               <Badge className="bg-purple-500/20 text-purple-400 border-none uppercase text-[8px] tracking-[0.3em] font-bold px-3 py-1">
-                                {APTITUDE_QUESTIONS[aptitudeIdx].category} Track
+                                {aiAptitudeQuestions[aptitudeIdx]?.category} Track
                               </Badge>
                               <h3 className="text-3xl font-bold leading-tight">
-                                {aptitudeIdx + 1}. {APTITUDE_QUESTIONS[aptitudeIdx].question}
+                                {aptitudeIdx + 1}. {aiAptitudeQuestions[aptitudeIdx]?.question}
                               </h3>
                             </header>
 
@@ -926,7 +1002,7 @@ export default function InterviewJourney() {
                               onValueChange={(val) => setAptitudeAnswers({ ...aptitudeAnswers, [aptitudeIdx]: val })}
                               className="space-y-4"
                             >
-                              {APTITUDE_QUESTIONS[aptitudeIdx].options.map((opt, i) => (
+                              {aiAptitudeQuestions[aptitudeIdx]?.options.map((opt: string, i: number) => (
                                 <div 
                                   key={i}
                                   onClick={() => setAptitudeAnswers({ ...aptitudeAnswers, [aptitudeIdx]: opt })}
@@ -954,11 +1030,11 @@ export default function InterviewJourney() {
                                 <ChevronLeft className="w-4 h-4 mr-2" /> Previous
                               </Button>
                               <div className="text-[10px] font-bold uppercase tracking-widest text-white/20">
-                                Question {aptitudeIdx + 1} of {APTITUDE_QUESTIONS.length}
+                                Question {aptitudeIdx + 1} of {aiAptitudeQuestions.length}
                               </div>
                               <Button 
                                 onClick={() => {
-                                  if (aptitudeIdx < APTITUDE_QUESTIONS.length - 1) {
+                                  if (aptitudeIdx < aiAptitudeQuestions.length - 1) {
                                     setAptitudeIdx(aptitudeIdx + 1);
                                   } else {
                                     setIsSubmitDialogOpen(true);
@@ -966,7 +1042,7 @@ export default function InterviewJourney() {
                                 }}
                                 className="h-14 px-10 rounded-xl btn-premium text-[10px] font-bold uppercase tracking-widest"
                               >
-                                {aptitudeIdx === APTITUDE_QUESTIONS.length - 1 ? "Finish Round" : "Next Question"} <ChevronRight className="ml-2 w-4 h-4" />
+                                {aptitudeIdx === aiAptitudeQuestions.length - 1 ? "Finish Round" : "Next Question"} <ChevronRight className="ml-2 w-4 h-4" />
                               </Button>
                             </div>
                           </div>
@@ -978,9 +1054,9 @@ export default function InterviewJourney() {
                               <p className="text-xs text-white/40">Select a node to jump</p>
                             </div>
                             <div className="grid grid-cols-5 gap-3">
-                              {APTITUDE_QUESTIONS.map((q, i) => (
+                              {aiAptitudeQuestions.map((q, i) => (
                                 <button
-                                  key={q.id}
+                                  key={i}
                                   onClick={() => setAptitudeIdx(i)}
                                   className={`w-10 h-10 rounded-lg border text-[10px] font-bold transition-all ${
                                     aptitudeIdx === i ? 'bg-accent text-black border-accent' :
@@ -997,7 +1073,7 @@ export default function InterviewJourney() {
                                 <div className="w-2 h-2 rounded-full bg-green-500" /> Captured Nodes: {Object.keys(aptitudeAnswers).length}
                               </div>
                               <div className="flex items-center gap-3 text-[9px] font-bold uppercase tracking-widest text-muted-foreground">
-                                <div className="w-2 h-2 rounded-full bg-white/10" /> Pending Nodes: {APTITUDE_QUESTIONS.length - Object.keys(aptitudeAnswers).length}
+                                <div className="w-2 h-2 rounded-full bg-white/10" /> Pending Nodes: {aiAptitudeQuestions.length - Object.keys(aptitudeAnswers).length}
                               </div>
                             </div>
                           </div>
@@ -1017,7 +1093,7 @@ export default function InterviewJourney() {
                                 <circle className="text-white/5" strokeWidth="8" stroke="currentColor" fill="transparent" r="88" cx="96" cy="96" />
                                 <motion.circle 
                                   initial={{ strokeDashoffset: 553 }}
-                                  animate={{ strokeDashoffset: 553 - (553 * 84) / 100 }}
+                                  animate={{ strokeDashoffset: 553 - (553 * aptitudeScore) / 100 }}
                                   transition={{ duration: 2, ease: "easeOut" }}
                                   className="text-accent" 
                                   strokeWidth="8" 
@@ -1031,7 +1107,7 @@ export default function InterviewJourney() {
                                 />
                               </svg>
                               <div className="absolute inset-0 flex flex-col items-center justify-center">
-                                <span className="text-6xl font-bold tracking-tighter">84%</span>
+                                <span className="text-6xl font-bold tracking-tighter">{aptitudeScore}%</span>
                                 <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Efficiency Index</span>
                               </div>
                             </div>
@@ -1043,10 +1119,10 @@ export default function InterviewJourney() {
 
                             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                                {[
-                                 { label: "Total Nodes", val: APTITUDE_QUESTIONS.length, icon: Layers, color: "text-white/40" },
+                                 { label: "Total Nodes", val: aiAptitudeQuestions.length, icon: Layers, color: "text-white/40" },
                                  { label: "Captured", val: Object.keys(aptitudeAnswers).length, icon: Activity, color: "text-blue-400" },
-                                 { label: "Precision", val: "12", icon: CheckCircle2, color: "text-green-400" },
-                                 { label: "Deviations", val: "3", icon: XCircle, color: "text-red-400" }
+                                 { label: "Precision", val: Math.round((aptitudeScore/100) * aiAptitudeQuestions.length), icon: CheckCircle2, color: "text-green-400" },
+                                 { label: "Performance", val: aptitudeScore >= 70 ? "High" : "Mid", icon: TrendingUp, color: "text-accent" }
                                ].map((s, i) => (
                                  <div key={i} className="p-6 glass rounded-2xl border-white/5 text-center space-y-2">
                                    <s.icon className={`w-5 h-5 mx-auto ${s.color}`} />
@@ -1367,7 +1443,7 @@ export default function InterviewJourney() {
           <DialogHeader>
             <DialogTitle className="text-2xl font-bold tracking-tighter">Submit Logic Assessment?</DialogTitle>
             <DialogDescription className="text-muted-foreground pt-2">
-              You have answered {Object.keys(aptitudeAnswers).length} of {APTITUDE_QUESTIONS.length} questions. Once submitted, your intelligence nodes for this round cannot be modified.
+              You have answered {Object.keys(aptitudeAnswers).length} of {aiAptitudeQuestions.length} questions. Once submitted, your intelligence nodes for this round cannot be modified.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter className="gap-4 pt-6">
