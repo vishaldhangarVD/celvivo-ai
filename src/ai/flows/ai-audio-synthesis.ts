@@ -1,0 +1,91 @@
+'use server';
+/**
+ * @fileOverview Nexvoro AI Neural Voice Synthesis (TTS).
+ * Converts interviewer text into high-fidelity audio streams for the realistic avatar.
+ */
+
+import { ai } from '@/ai/genkit';
+import { googleAI } from '@genkit-ai/google-genai';
+import { z } from 'genkit';
+import wav from 'wav';
+
+const AudioSynthesisInputSchema = z.string().describe("The text to be converted to speech.");
+
+const AudioSynthesisOutputSchema = z.object({
+  audioUri: z.string().describe("The generated audio as a data URI."),
+});
+
+export async function synthesizeAudio(text: string): Promise<string> {
+  const result = await audioSynthesisFlow(text);
+  return result.audioUri;
+}
+
+const audioSynthesisFlow = ai.defineFlow(
+  {
+    name: 'audioSynthesisFlow',
+    inputSchema: AudioSynthesisInputSchema,
+    outputSchema: AudioSynthesisOutputSchema,
+  },
+  async (text) => {
+    try {
+      const { media } = await ai.generate({
+        model: googleAI.model('gemini-2.5-flash-preview-tts'),
+        config: {
+          responseModalities: ['AUDIO'],
+          speechConfig: {
+            voiceConfig: {
+              prebuiltVoiceConfig: { voiceName: 'Algenib' },
+            },
+          },
+        },
+        prompt: text,
+      });
+
+      if (!media) {
+        throw new Error('Neural voice synthesis failed: No media returned.');
+      }
+
+      // Convert PCM to WAV
+      const pcmBase64 = media.url.substring(media.url.indexOf(',') + 1);
+      const audioBuffer = Buffer.from(pcmBase64, 'base64');
+      const wavBase64 = await toWav(audioBuffer);
+
+      return {
+        audioUri: 'data:audio/wav;base64,' + wavBase64,
+      };
+    } catch (error) {
+      console.error("Audio Synthesis Error:", error);
+      throw error;
+    }
+  }
+);
+
+/**
+ * Helper to convert PCM audio to WAV format.
+ */
+async function toWav(
+  pcmData: Buffer,
+  channels = 1,
+  rate = 24000,
+  sampleWidth = 2
+): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const writer = new wav.Writer({
+      channels,
+      sampleRate: rate,
+      bitDepth: sampleWidth * 8,
+    });
+
+    let bufs = [] as any[];
+    writer.on('error', reject);
+    writer.on('data', function (d) {
+      bufs.push(d);
+    });
+    writer.on('end', function () {
+      resolve(Buffer.concat(bufs).toString('base64'));
+    });
+
+    writer.write(pcmData);
+    writer.end();
+  });
+}
