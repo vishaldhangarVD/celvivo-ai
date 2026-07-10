@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useMemo, useEffect } from 'react';
@@ -46,7 +45,8 @@ import {
   Cloud,
   MessageSquare,
   History,
-  LayoutDashboard
+  LayoutDashboard,
+  Target
 } from 'lucide-react';
 import { useUser, useFirestore } from '@/firebase';
 import { collection, addDoc, serverTimestamp, doc, updateDoc, setDoc, getDoc } from 'firebase/firestore';
@@ -60,17 +60,63 @@ import { useToast } from '@/hooks/use-toast';
 import { motion, AnimatePresence } from 'framer-motion';
 
 const ALL_ROLES = [
+  // Software Development
   { id: 'fullstack', name: "Full Stack Developer", category: "Full Stack", icon: Layers },
   { id: 'java', name: "Java Developer", category: "Software Development", icon: Code2 },
   { id: 'python', name: "Python Developer", category: "Software Development", icon: Code2 },
+  { id: 'c', name: "C Developer", category: "Software Development", icon: Code2 },
+  { id: 'cpp', name: "C++ Developer", category: "Software Development", icon: Code2 },
+  { id: 'csharp', name: "C# Developer", category: "Software Development", icon: Code2 },
+  { id: 'dotnet', name: ".NET Developer", category: "Software Development", icon: Code2 },
+  { id: 'golang', name: "Golang Developer", category: "Software Development", icon: Code2 },
+  { id: 'rust', name: "Rust Developer", category: "Software Development", icon: Code2 },
+  { id: 'php', name: "PHP Developer", category: "Software Development", icon: Code2 },
+
+  // Frontend
   { id: 'react', name: "React Developer", category: "Frontend", icon: Monitor },
+  { id: 'angular', name: "Angular Developer", category: "Frontend", icon: Monitor },
+  { id: 'vue', name: "Vue.js Developer", category: "Frontend", icon: Monitor },
+  { id: 'frontend', name: "Frontend Developer", category: "Frontend", icon: Monitor },
+
+  // Backend
   { id: 'nodejs', name: "Node.js Developer", category: "Backend", icon: Database },
+  { id: 'springboot', name: "Spring Boot Developer", category: "Backend", icon: Database },
+  { id: 'django', name: "Django Developer", category: "Backend", icon: Database },
+  { id: 'laravel', name: "Laravel Developer", category: "Backend", icon: Database },
+  { id: 'backend', name: "Backend Developer", category: "Backend", icon: Database },
+
+  // Data
   { id: 'data-analyst', name: "Data Analyst", category: "Data", icon: TrendingUp },
+  { id: 'data-scientist', name: "Data Scientist", category: "Data", icon: Database },
+  { id: 'data-engineer', name: "Data Engineer", category: "Data", icon: Layers },
+  { id: 'bi-dev', name: "BI Developer", category: "Data", icon: TrendingUp },
+  { id: 'db-dev', name: "Database Developer", category: "Data", icon: Database },
+
+  // Cloud & DevOps
   { id: 'devops', name: "DevOps Engineer", category: "Cloud & DevOps", icon: Cloud },
+  { id: 'aws', name: "AWS Cloud Engineer", category: "Cloud & DevOps", icon: Cloud },
+  { id: 'azure', name: "Azure Engineer", category: "Cloud & DevOps", icon: Cloud },
+  { id: 'gcp', name: "Google Cloud Engineer", category: "Cloud & DevOps", icon: Cloud },
+  { id: 'sre', name: "Site Reliability Engineer (SRE)", category: "Cloud & DevOps", icon: ShieldCheck },
+
+  // AI & ML
   { id: 'ai', name: "AI Engineer", category: "AI & ML", icon: Zap },
+  { id: 'ml', name: "Machine Learning Engineer", category: "AI & ML", icon: Cpu },
+  { id: 'dl', name: "Deep Learning Engineer", category: "AI & ML", icon: Cpu },
+  { id: 'nlp', name: "NLP Engineer", category: "AI & ML", icon: MessageSquare },
+  { id: 'cv', name: "Computer Vision Engineer", category: "AI & ML", icon: Zap },
   { id: 'gen-ai', name: "Generative AI Engineer", category: "AI & ML", icon: Sparkles },
   { id: 'prompt', name: "Prompt Engineer", category: "AI & ML", icon: MessageSquare },
+
+  // Infrastructure
   { id: 'sys-admin', name: "System Administrator", category: "Infrastructure", icon: MonitorCog },
+  { id: 'network', name: "Network Engineer", category: "Infrastructure", icon: Globe },
+  { id: 'linux', name: "Linux Administrator", category: "Infrastructure", icon: Terminal },
+
+  // Other
+  { id: 'uiux', name: "UI/UX Designer", category: "Design", icon: Monitor },
+  { id: 'support', name: "Technical Support Engineer", category: "Service", icon: Mic },
+  { id: 'blockchain', name: "Blockchain Developer", category: "Web3", icon: Layers },
 ];
 
 const EXPERIENCE_OPTIONS = [
@@ -297,6 +343,11 @@ export default function InterviewJourney() {
     return ALL_ROLES.filter(r => r.name.toLowerCase().includes(roleSearch.toLowerCase()));
   }, [roleSearch]);
 
+  const popularRoles = useMemo(() => {
+    const popular = ["Full Stack Developer", "Java Developer", "Python Developer", "React Developer", "Node.js Developer", "Data Analyst", "DevOps Engineer", "AI Engineer"];
+    return ALL_ROLES.filter(r => popular.includes(r.name));
+  }, []);
+
   return (
     <div className="min-h-screen bg-[#050816]">
       <div className="particles-bg" />
@@ -316,7 +367,6 @@ export default function InterviewJourney() {
               {INTERVIEW_STEPS.map((step) => {
                 const isCompleted = step.id < currentStep;
                 const isActive = step.id === currentStep;
-                const isLocked = step.id > currentStep;
                 return (
                   <div key={step.id} className={`flex items-center gap-4 p-4 rounded-2xl border transition-all ${isActive ? 'bg-accent/10 border-accent/30 shadow-[0_0_20px_rgba(34,211,238,0.1)]' : isCompleted ? 'bg-green-500/10 border-green-500/20' : 'opacity-20 grayscale'}`}>
                     <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${isCompleted ? 'bg-green-500/20 text-green-400' : isActive ? 'bg-accent/20 text-accent' : 'bg-white/5 text-white/40'}`}>
@@ -338,16 +388,39 @@ export default function InterviewJourney() {
                     <h2 className="text-4xl font-bold tracking-tighter text-center">Choose Job Role</h2>
                     <div className="relative group max-w-xl mx-auto w-full">
                       <Search className="absolute left-6 top-1/2 -translate-y-1/2 w-5 h-5 text-white/20" />
-                      <Input placeholder="Search IT protocols..." value={roleSearch} onChange={(e) => setRoleSearch(e.target.value)} className="h-16 pl-16 rounded-2xl glass border-white/10" />
+                      <Input placeholder="Search global IT protocols..." value={roleSearch} onChange={(e) => setRoleSearch(e.target.value)} className="h-16 pl-16 rounded-2xl glass border-white/10" />
                     </div>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      {filteredRoles.map(role => (
-                        <button key={role.id} onClick={() => { setSelectedRole(role.name); nextStep(); }} className={`p-6 rounded-2xl border transition-all text-left flex items-center gap-6 ${selectedRole === role.name ? 'bg-accent/20 border-accent' : 'glass border-white/5 hover:bg-white/5'}`}>
-                          <div className="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center text-accent"><role.icon className="w-5 h-5" /></div>
-                          <span className="font-bold text-sm">{role.name}</span>
-                        </button>
-                      ))}
-                    </div>
+
+                    {!roleSearch ? (
+                      <div className="space-y-6">
+                        <h3 className="text-[10px] font-bold uppercase tracking-[0.3em] text-white/20 ml-2">Popular Protocols</h3>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          {popularRoles.map(role => (
+                            <button key={role.id} onClick={() => { setSelectedRole(role.name); nextStep(); }} className="p-6 rounded-2xl border transition-all text-left flex items-center gap-6 glass border-white/5 hover:bg-white/5 group">
+                              <div className="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center text-accent transition-transform group-hover:scale-110"><role.icon className="w-5 h-5" /></div>
+                              <span className="font-bold text-sm">{role.name}</span>
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="space-y-6">
+                        <h3 className="text-[10px] font-bold uppercase tracking-[0.3em] text-accent ml-2">Filtered Intelligence</h3>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
+                          {filteredRoles.length > 0 ? filteredRoles.map(role => (
+                            <button key={role.id} onClick={() => { setSelectedRole(role.name); nextStep(); }} className="p-6 rounded-2xl border transition-all text-left flex items-center gap-6 glass border-white/5 hover:bg-white/5">
+                              <div className="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center text-accent"><role.icon className="w-5 h-5" /></div>
+                              <span className="font-bold text-sm">{role.name}</span>
+                            </button>
+                          )) : (
+                            <div className="col-span-2 py-12 text-center glass border-dashed rounded-3xl border-white/10">
+                              <Search className="w-12 h-12 text-white/10 mx-auto mb-4" />
+                              <p className="text-muted-foreground font-light">No matching job role found.</p>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
                   </Card>
                 )}
 
@@ -357,9 +430,9 @@ export default function InterviewJourney() {
                     <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
                       {EXPERIENCE_OPTIONS.map(opt => (
                         <button key={opt.id} onClick={() => { setSelectedExp(opt.label); nextStep(); }} className={`p-8 rounded-3xl border transition-all text-left group ${selectedExp === opt.label ? 'bg-accent/20 border-accent' : 'glass border-white/5 hover:bg-white/5'}`}>
-                          <opt.icon className="w-8 h-8 text-accent mb-4" />
+                          <opt.icon className="w-8 h-8 text-accent mb-4 transition-transform group-hover:scale-110" />
                           <p className="text-xl font-bold">{opt.label}</p>
-                          <p className="text-xs text-muted-foreground">{opt.desc}</p>
+                          <p className="text-xs text-muted-foreground mt-1">{opt.desc}</p>
                         </button>
                       ))}
                     </div>
@@ -371,9 +444,9 @@ export default function InterviewJourney() {
                     <h2 className="text-4xl font-bold tracking-tighter text-center">Target Company</h2>
                     <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
                       {COMPANIES.map(c => (
-                        <button key={c} onClick={() => { setSelectedCompany(c); nextStep(); }} className={`p-6 rounded-2xl border transition-all text-center ${selectedCompany === c ? 'bg-accent/20 border-accent' : 'glass border-white/5 hover:bg-white/5'}`}>
-                          <Building2 className="w-6 h-6 text-accent mx-auto mb-3" />
-                          <p className="text-xs font-bold">{c}</p>
+                        <button key={c} onClick={() => { setSelectedCompany(c); nextStep(); }} className={`p-6 rounded-2xl border transition-all text-center group ${selectedCompany === c ? 'bg-accent/20 border-accent' : 'glass border-white/5 hover:bg-white/5'}`}>
+                          <Building2 className="w-6 h-6 text-accent mx-auto mb-3 transition-transform group-hover:scale-110" />
+                          <p className="text-xs font-bold uppercase tracking-widest">{c}</p>
                         </button>
                       ))}
                     </div>
@@ -384,11 +457,11 @@ export default function InterviewJourney() {
                   <Card className="premium-card bg-white/[0.01] border-white/5 p-12 space-y-12 text-center">
                     <div className="w-20 h-20 rounded-3xl bg-accent/10 flex items-center justify-center mx-auto mb-8"><Upload className="w-10 h-10 text-accent" /></div>
                     <h2 className="text-4xl font-bold tracking-tighter">Career Blueprint</h2>
-                    <div onClick={() => document.getElementById('resume-flow-upload')?.click()} className="border-2 border-dashed border-white/10 rounded-3xl p-20 cursor-pointer hover:border-accent/30 transition-all">
-                      <input type="file" id="resume-flow-upload" className="hidden" accept=".pdf" onChange={(e) => e.target.files && setFile(e.target.files[0])} />
-                      {file ? <div className="text-xl font-bold">{file.name}</div> : <span className="text-muted-foreground">Choose PDF Blueprint</span>}
+                    <div onClick={() => document.getElementById('resume-journey-upload')?.click()} className="border-2 border-dashed border-white/10 rounded-3xl p-20 cursor-pointer hover:border-accent/30 transition-all bg-white/[0.01]">
+                      <input type="file" id="resume-journey-upload" className="hidden" accept=".pdf" onChange={(e) => e.target.files && setFile(e.target.files[0])} />
+                      {file ? <div className="text-xl font-bold text-accent">{file.name}</div> : <span className="text-muted-foreground uppercase tracking-widest text-[10px] font-bold">Choose PDF Blueprint (Max 5MB)</span>}
                     </div>
-                    <Button onClick={handleResumeSync} disabled={!file || isAnalyzing} className="w-full h-18 btn-premium uppercase tracking-widest text-xs">
+                    <Button onClick={handleResumeSync} disabled={!file || isAnalyzing} className="w-full h-18 btn-premium uppercase tracking-[0.3em] text-xs font-bold">
                       {isAnalyzing ? <Loader2 className="w-5 h-5 animate-spin mr-3" /> : null} Execute Handshake
                     </Button>
                   </Card>
@@ -398,12 +471,12 @@ export default function InterviewJourney() {
                   <Card className="premium-card bg-white/[0.01] border-white/5 p-12 space-y-12">
                     <div className="flex justify-between items-center">
                       <h2 className="text-3xl font-bold">Screening Report</h2>
-                      <div className="text-5xl font-bold text-accent">{resumeAnalysis?.atsScore}%</div>
+                      <div className="text-6xl font-bold text-accent tabular-nums">{resumeAnalysis?.atsScore}%</div>
                     </div>
-                    <div className="p-8 glass rounded-[2rem] bg-accent/5">
-                      <p className="text-sm font-light leading-relaxed">{resumeAnalysis?.summary}</p>
+                    <div className="p-8 glass rounded-[2rem] bg-accent/5 border-accent/10">
+                      <p className="text-sm font-light leading-relaxed text-white/80">{resumeAnalysis?.summary}</p>
                     </div>
-                    <Button onClick={handleStartAptitude} className="w-full h-18 btn-premium uppercase tracking-widest text-xs">Initialize Aptitude Round</Button>
+                    <Button onClick={handleStartAptitude} className="w-full h-18 btn-premium uppercase tracking-[0.3em] text-xs font-bold">Initialize Aptitude Round</Button>
                   </Card>
                 )}
 
@@ -412,21 +485,21 @@ export default function InterviewJourney() {
                     {isGeneratingAptitude ? (
                       <div className="py-20 space-y-6">
                         <Cpu className="w-12 h-12 text-accent animate-pulse mx-auto" />
-                        <p className="text-xl font-bold">Synthesizing Logic Matrix...</p>
+                        <p className="text-xl font-bold uppercase tracking-widest">Synthesizing Logic Matrix...</p>
                       </div>
                     ) : (
                       <div className="space-y-6 text-left">
                         <div className="flex justify-between items-center">
-                           <Badge className="bg-accent/20 text-accent">{aiAptitudeQuestions[aptitudeIdx]?.category}</Badge>
-                           <span className="text-sm font-bold">{aptitudeIdx + 1}/15</span>
+                           <Badge className="bg-accent/20 text-accent border-none px-4 py-1 text-[8px] uppercase font-bold tracking-widest">{aiAptitudeQuestions[aptitudeIdx]?.category}</Badge>
+                           <span className="text-xs font-bold text-white/40">{aptitudeIdx + 1}/15</span>
                         </div>
-                        <h3 className="text-2xl font-bold">{aiAptitudeQuestions[aptitudeIdx]?.question}</h3>
+                        <h3 className="text-2xl font-bold leading-tight">{aiAptitudeQuestions[aptitudeIdx]?.question}</h3>
                         <div className="grid gap-4">
                           {aiAptitudeQuestions[aptitudeIdx]?.options.map((opt: any, i: number) => (
                             <button key={i} onClick={() => setAptitudeAnswers({...aptitudeAnswers, [aptitudeIdx]: opt})} className={`p-6 rounded-2xl border text-left transition-all ${aptitudeAnswers[aptitudeIdx] === opt ? 'bg-accent/20 border-accent' : 'glass border-white/5 hover:bg-white/5'}`}>{opt}</button>
                           ))}
                         </div>
-                        <Button onClick={() => aptitudeIdx < 14 ? setAptitudeIdx(aptitudeIdx + 1) : handleAptitudeSubmit()} className="w-full h-16 btn-premium">{aptitudeIdx < 14 ? "Next Protocol" : "Submit Assessment"}</Button>
+                        <Button onClick={() => aptitudeIdx < 14 ? setAptitudeIdx(aptitudeIdx + 1) : handleAptitudeSubmit()} className="w-full h-18 btn-premium text-xs font-bold uppercase tracking-[0.3em]">{aptitudeIdx < 14 ? "Next Protocol" : "Submit Assessment"}</Button>
                       </div>
                     )}
                   </Card>
@@ -434,9 +507,14 @@ export default function InterviewJourney() {
 
                 {currentStep === 7 && (
                   <Card className="premium-card bg-white/[0.01] border-white/5 p-12 space-y-12">
-                    <h2 className="text-3xl font-bold">Aptitude Result: {aptitudeReport?.overallScore}%</h2>
-                    <p className="p-6 glass rounded-2xl italic text-white/70">"{aptitudeReport?.recommendation}"</p>
-                    <Button onClick={handleStartCoding} className="w-full h-18 btn-premium uppercase tracking-widest text-xs">Unlock Coding Round</Button>
+                    <div className="flex justify-between items-center">
+                       <h2 className="text-3xl font-bold">Aptitude Result</h2>
+                       <div className="text-6xl font-bold text-accent tabular-nums">{aptitudeReport?.overallScore}%</div>
+                    </div>
+                    <div className="p-8 glass rounded-2xl italic text-white/70 bg-white/[0.01]">
+                      "{aptitudeReport?.recommendation}"
+                    </div>
+                    <Button onClick={handleStartCoding} className="w-full h-18 btn-premium uppercase tracking-[0.3em] text-xs font-bold">Unlock Coding Round</Button>
                   </Card>
                 )}
 
@@ -445,16 +523,18 @@ export default function InterviewJourney() {
                       {isGeneratingCoding ? (
                         <div className="flex-1 flex flex-col items-center justify-center space-y-6">
                            <Terminal className="w-12 h-12 text-accent animate-pulse" />
-                           <p className="text-xl font-bold">Architecting Syntax Matrix...</p>
+                           <p className="text-xl font-bold uppercase tracking-widest">Architecting Syntax Matrix...</p>
                         </div>
                       ) : (
-                        <div className="p-12 space-y-8">
-                           <Badge className="bg-orange-500/20 text-orange-400">{codingProblem?.difficulty} NODE</Badge>
-                           <h3 className="text-3xl font-bold">{codingProblem?.title}</h3>
-                           <p className="text-sm text-muted-foreground">{codingProblem?.description}</p>
-                           <textarea value={code} onChange={(e) => setCode(e.target.value)} className="w-full h-64 glass border-white/10 bg-transparent p-6 font-mono text-sm resize-none rounded-2xl focus:outline-none focus:border-accent" />
-                           <Button onClick={handleCodingSubmit} disabled={isCodingEvaluating} className="w-full h-16 btn-premium">
-                             {isCodingEvaluating ? <Loader2 className="w-5 h-5 animate-spin mr-3" /> : null} Finalize Submission
+                        <div className="p-12 space-y-8 flex-1 flex flex-col">
+                           <Badge className="bg-orange-500/20 text-orange-400 border-none w-fit px-4 py-1 text-[8px] uppercase font-bold tracking-widest">{codingProblem?.difficulty} NODE</Badge>
+                           <div>
+                             <h3 className="text-3xl font-bold tracking-tighter mb-4">{codingProblem?.title}</h3>
+                             <p className="text-sm text-muted-foreground leading-relaxed font-light">{codingProblem?.description}</p>
+                           </div>
+                           <textarea value={code} onChange={(e) => setCode(e.target.value)} className="w-full flex-1 glass border-white/10 bg-black/40 p-8 font-mono text-sm resize-none rounded-3xl focus:outline-none focus:border-accent transition-all custom-scrollbar" />
+                           <Button onClick={handleCodingSubmit} disabled={isCodingEvaluating} className="w-full h-20 btn-premium uppercase tracking-[0.3em] text-xs font-bold shadow-[0_0_60px_rgba(147,51,234,0.2)]">
+                             {isCodingEvaluating ? <Loader2 className="w-5 h-5 animate-spin mr-3" /> : <Code2 className="w-5 h-5 mr-3" />} Finalize Submission
                            </Button>
                         </div>
                       )}
@@ -463,18 +543,21 @@ export default function InterviewJourney() {
 
                 {currentStep === 9 && (
                    <Card className="premium-card bg-white/[0.01] border-white/5 p-12 space-y-12">
-                      <h2 className="text-3xl font-bold">Coding Efficiency: {codingReport?.score}%</h2>
+                      <div className="flex justify-between items-center">
+                        <h2 className="text-3xl font-bold">Coding Efficiency</h2>
+                        <div className="text-6xl font-bold text-accent tabular-nums">{codingReport?.score}%</div>
+                      </div>
                       <div className="grid grid-cols-2 gap-6">
-                         <div className="p-6 glass rounded-2xl">
-                            <p className="text-[10px] font-bold text-muted-foreground uppercase">Time Complexity</p>
-                            <p className="text-xl font-bold text-accent">{codingReport?.timeComplexity}</p>
+                         <div className="p-8 glass rounded-3xl bg-white/[0.01]">
+                            <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mb-2">Time Complexity</p>
+                            <p className="text-2xl font-bold text-accent">{codingReport?.timeComplexity}</p>
                          </div>
-                         <div className="p-6 glass rounded-2xl">
-                            <p className="text-[10px] font-bold text-muted-foreground uppercase">Readability</p>
-                            <p className="text-xl font-bold text-purple-400">{codingReport?.readabilityScore}%</p>
+                         <div className="p-8 glass rounded-3xl bg-white/[0.01]">
+                            <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mb-2">Readability</p>
+                            <p className="text-2xl font-bold text-purple-400 tabular-nums">{codingReport?.readabilityScore}%</p>
                          </div>
                       </div>
-                      <Button onClick={startArena} className="w-full h-18 btn-premium uppercase tracking-widest text-xs">Enter Virtual Arena</Button>
+                      <Button onClick={startArena} className="w-full h-18 btn-premium uppercase tracking-[0.3em] text-xs font-bold">Enter Virtual Arena</Button>
                    </Card>
                 )}
 
@@ -486,4 +569,3 @@ export default function InterviewJourney() {
     </div>
   );
 }
-
