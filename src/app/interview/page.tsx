@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
+import { Progress } from '@/components/ui/progress';
 import { 
   Briefcase, 
   Building2, 
@@ -32,7 +33,7 @@ import {
   CircleAlert,
   TrendingUp,
   Sparkles,
-  Timer,
+  Timer as TimerIcon,
   ChevronRight,
   ChevronLeft,
   CircleX,
@@ -53,7 +54,8 @@ import {
   Lightbulb,
   User,
   FileStack,
-  Calendar
+  Calendar,
+  ClipboardCheck
 } from 'lucide-react';
 import { useUser, useFirestore } from '@/firebase';
 import { collection, addDoc, serverTimestamp, doc, updateDoc, setDoc, getDoc } from 'firebase/firestore';
@@ -175,6 +177,8 @@ export default function InterviewJourney() {
   const [isAptitudeEvaluating, setIsAptitudeEvaluating] = useState(false);
   const [aptitudeReport, setAptitudeReport] = useState<any>(null);
   const [aptitudeStartTime, setAptitudeStartTime] = useState<number | null>(null);
+  const [aptitudeRemainingTime, setAptitudeRemainingTime] = useState<number | null>(null);
+  const [hasWarnedTime, setHasWarnedTime] = useState(false);
 
   const [isGeneratingCoding, setIsGeneratingCoding] = useState(false);
   const [codingProblem, setCodingProblem] = useState<any>(null);
@@ -198,11 +202,51 @@ export default function InterviewJourney() {
           setResumeAnalysis(data.resumeAnalysis || null);
           setAptitudeReport(data.aptitudeReport || null);
           setCodingReport(data.codingReport || null);
+          setAptitudeRemainingTime(data.aptitudeRemainingTime ?? null);
+          setAptitudeAnswers(data.aptitudeAnswers || {});
+          setAptitudeIdx(data.aptitudeIdx || 0);
+          setAiAptitudeQuestions(data.aiAptitudeQuestions || []);
         }
       }
     }
     loadActiveSession();
   }, [user, db]);
+
+  // Aptitude Timer Logic
+  useEffect(() => {
+    let interval: NodeJS.Timeout;
+    if (currentStep === 6 && aptitudeRemainingTime !== null && aptitudeRemainingTime > 0) {
+      interval = setInterval(() => {
+        setAptitudeRemainingTime((prev) => {
+          if (prev === null) return null;
+          if (prev <= 1) {
+            clearInterval(interval);
+            handleAptitudeSubmit();
+            return 0;
+          }
+          const next = prev - 1;
+          
+          // Time warnings
+          if (next === 120 && !hasWarnedTime) {
+            toast({
+              variant: "destructive",
+              title: "2-Minute Warning",
+              description: "Finalize your responses immediately. Time is running out."
+            });
+            setHasWarnedTime(true);
+          }
+
+          // Periodic save every 10 seconds to Firestore
+          if (next % 10 === 0) {
+            saveProgress(6, { aptitudeRemainingTime: next });
+          }
+
+          return next;
+        });
+      }, 1000);
+    }
+    return () => clearInterval(interval);
+  }, [currentStep, aptitudeRemainingTime, hasWarnedTime]);
 
   const saveProgress = async (step: number, extra = {}) => {
     if (!user || !db) return;
@@ -260,9 +304,17 @@ export default function InterviewJourney() {
         experienceLevel: selectedExp,
         resumeSummary: resumeAnalysis?.summary || ""
       });
+      const initialTime = 900; // 15 minutes
       setAiAptitudeQuestions(result.questions);
       setAptitudeStartTime(Date.now());
-      nextStep(6);
+      setAptitudeRemainingTime(initialTime);
+      saveProgress(6, { 
+        aiAptitudeQuestions: result.questions,
+        aptitudeRemainingTime: initialTime,
+        aptitudeIdx: 0,
+        aptitudeAnswers: {}
+      });
+      setCurrentStep(6);
     } catch (e) {
       toast({ variant: "destructive", title: "Synthesis Error" });
     } finally {
@@ -270,10 +322,16 @@ export default function InterviewJourney() {
     }
   };
 
+  const handleAptitudeAnswerSelection = (idx: number, opt: string) => {
+    const newAnswers = { ...aptitudeAnswers, [idx]: opt };
+    setAptitudeAnswers(newAnswers);
+    saveProgress(6, { aptitudeAnswers: newAnswers });
+  };
+
   const handleAptitudeSubmit = async () => {
     setIsAptitudeEvaluating(true);
     try {
-      const timeTaken = aptitudeStartTime ? Math.round((Date.now() - aptitudeStartTime) / 1000) : 0;
+      const timeTaken = aptitudeStartTime ? Math.round((Date.now() - aptitudeStartTime) / 1000) : 900;
       const results = aiAptitudeQuestions.map((q, idx) => ({
         category: q.category,
         difficulty: q.difficulty,
@@ -354,6 +412,18 @@ export default function InterviewJourney() {
     const popular = ["Full Stack Developer", "Java Developer", "Python Developer", "React Developer", "Node.js Developer", "Data Analyst", "DevOps Engineer", "AI Engineer"];
     return ALL_ROLES.filter(r => popular.includes(r.name));
   }, []);
+
+  const formatTime = (seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+  };
+
+  const getTimerColor = (seconds: number) => {
+    if (seconds > 300) return "text-accent";
+    if (seconds > 120) return "text-yellow-400";
+    return "text-red-400";
+  };
 
   return (
     <div className="min-h-screen bg-[#050816]">
@@ -590,28 +660,108 @@ export default function InterviewJourney() {
                 )}
 
                 {currentStep === 6 && (
-                  <Card className="premium-card bg-white/[0.01] border-white/5 p-12 text-center space-y-8">
-                    {isGeneratingAptitude ? (
-                      <div className="py-20 space-y-6">
-                        <Cpu className="w-12 h-12 text-accent animate-pulse mx-auto" />
-                        <p className="text-xl font-bold uppercase tracking-widest">Synthesizing Logic Matrix...</p>
-                      </div>
-                    ) : (
-                      <div className="space-y-6 text-left">
-                        <div className="flex justify-between items-center">
-                           <Badge className="bg-accent/20 text-accent border-none px-4 py-1 text-[8px] uppercase font-bold tracking-widest">{aiAptitudeQuestions[aptitudeIdx]?.category}</Badge>
-                           <span className="text-xs font-bold text-white/40">{aptitudeIdx + 1}/15</span>
+                  <div className="space-y-8 relative">
+                    {/* Fixed Assessment Header */}
+                    <div className="sticky top-24 z-[40] space-y-4">
+                      <div className="flex flex-wrap gap-4 items-center justify-between">
+                        <Card className="flex items-center gap-6 px-8 py-4 glass border-white/10 rounded-2xl">
+                          <div className="flex items-center gap-3">
+                            <TimerIcon className={`w-5 h-5 ${getTimerColor(aptitudeRemainingTime || 0)}`} />
+                            <div className="flex flex-col">
+                              <span className="text-[8px] uppercase font-bold text-white/30 tracking-widest">Time Left</span>
+                              <span className={`text-xl font-bold tabular-nums ${getTimerColor(aptitudeRemainingTime || 0)}`}>
+                                {formatTime(aptitudeRemainingTime || 0)}
+                              </span>
+                            </div>
+                          </div>
+                          <div className="w-px h-10 bg-white/5" />
+                          <div className="flex items-center gap-3">
+                            <ClipboardCheck className="w-5 h-5 text-accent" />
+                            <div className="flex flex-col">
+                              <span className="text-[8px] uppercase font-bold text-white/30 tracking-widest">Question</span>
+                              <span className="text-xl font-bold text-white tabular-nums">{aptitudeIdx + 1} / 15</span>
+                            </div>
+                          </div>
+                        </Card>
+                        
+                        <div className="flex-1 max-w-md hidden md:block">
+                           <div className="flex justify-between items-end mb-2">
+                              <span className="text-[8px] uppercase font-bold text-white/40 tracking-widest">Assessment Progress</span>
+                              <span className="text-[10px] font-bold text-accent">{(Object.keys(aptitudeAnswers).length / 15 * 100).toFixed(0)}% Completed</span>
+                           </div>
+                           <Progress value={(Object.keys(aptitudeAnswers).length / 15 * 100)} className="h-1.5" />
                         </div>
-                        <h3 className="text-2xl font-bold leading-tight">{aiAptitudeQuestions[aptitudeIdx]?.question}</h3>
-                        <div className="grid gap-4">
-                          {aiAptitudeQuestions[aptitudeIdx]?.options.map((opt: any, i: number) => (
-                            <button key={i} onClick={() => setAptitudeAnswers({...aptitudeAnswers, [aptitudeIdx]: opt})} className={`p-6 rounded-2xl border text-left transition-all ${aptitudeAnswers[aptitudeIdx] === opt ? 'bg-accent/20 border-accent' : 'glass border-white/5 hover:bg-white/5'}`}>{opt}</button>
-                          ))}
-                        </div>
-                        <Button onClick={() => aptitudeIdx < 14 ? setAptitudeIdx(aptitudeIdx + 1) : handleAptitudeSubmit()} className="w-full h-18 btn-premium text-xs font-bold uppercase tracking-[0.3em]">{aptitudeIdx < 14 ? "Next Protocol" : "Submit Assessment"}</Button>
                       </div>
-                    )}
-                  </Card>
+                    </div>
+
+                    <Card className="premium-card bg-white/[0.01] border-white/5 p-12 text-center space-y-8 min-h-[500px] flex flex-col justify-center">
+                      {isGeneratingAptitude ? (
+                        <div className="py-20 space-y-6">
+                          <Cpu className="w-12 h-12 text-accent animate-pulse mx-auto" />
+                          <p className="text-xl font-bold uppercase tracking-widest">Synthesizing Logic Matrix...</p>
+                        </div>
+                      ) : aiAptitudeQuestions.length > 0 ? (
+                        <div className="space-y-10 text-left">
+                          <div className="flex justify-between items-center">
+                             <Badge className="bg-accent/20 text-accent border-none px-4 py-1 text-[8px] uppercase font-bold tracking-widest">{aiAptitudeQuestions[aptitudeIdx]?.category}</Badge>
+                             <div className="flex gap-2">
+                               {Array.from({length: 15}).map((_, i) => (
+                                 <div key={i} className={`h-1 w-4 rounded-full transition-all ${i === aptitudeIdx ? 'bg-accent' : aptitudeAnswers[i] ? 'bg-green-500/40' : 'bg-white/5'}`} />
+                               ))}
+                             </div>
+                          </div>
+                          <h3 className="text-3xl font-bold leading-tight tracking-tight text-white/90">{aiAptitudeQuestions[aptitudeIdx]?.question}</h3>
+                          <div className="grid md:grid-cols-2 gap-4">
+                            {aiAptitudeQuestions[aptitudeIdx]?.options.map((opt: any, i: number) => (
+                              <button 
+                                key={i} 
+                                onClick={() => handleAptitudeAnswerSelection(aptitudeIdx, opt)} 
+                                className={`p-8 rounded-[2rem] border text-left transition-all duration-300 relative group overflow-hidden ${aptitudeAnswers[aptitudeIdx] === opt ? 'bg-accent/10 border-accent shadow-[0_0_30px_rgba(34,211,238,0.1)]' : 'glass border-white/5 hover:bg-white/5'}`}
+                              >
+                                <div className="flex items-center gap-6 relative z-10">
+                                   <div className={`w-8 h-8 rounded-full border flex items-center justify-center font-bold text-xs transition-colors ${aptitudeAnswers[aptitudeIdx] === opt ? 'bg-accent border-accent text-black' : 'border-white/20 text-white/40'}`}>
+                                      {String.fromCharCode(65 + i)}
+                                   </div>
+                                   <span className="text-lg font-light">{opt}</span>
+                                </div>
+                                {aptitudeAnswers[aptitudeIdx] === opt && (
+                                   <motion.div layoutId="apt-opt" className="absolute inset-0 bg-accent/5 z-0" />
+                                )}
+                              </button>
+                            ))}
+                          </div>
+                          
+                          <div className="flex gap-4 pt-10">
+                            {aptitudeIdx > 0 && (
+                               <Button onClick={() => setAptitudeIdx(prev => prev - 1)} variant="outline" className="h-16 px-10 rounded-2xl glass border-white/10 flex gap-3 text-xs font-bold uppercase tracking-widest">
+                                  <ChevronLeft className="w-4 h-4" /> Previous
+                               </Button>
+                            )}
+                            <Button 
+                              onClick={() => {
+                                if (aptitudeIdx < 14) {
+                                  setAptitudeIdx(prev => prev + 1);
+                                  saveProgress(6, { aptitudeIdx: aptitudeIdx + 1 });
+                                } else {
+                                  handleAptitudeSubmit();
+                                }
+                              }} 
+                              className="flex-1 h-16 btn-premium text-xs font-bold uppercase tracking-[0.3em] shadow-2xl"
+                            >
+                              {aptitudeIdx < 14 ? (
+                                <>Next Protocol <ChevronRight className="ml-2 w-4 h-4" /></>
+                              ) : "Submit Assessment"}
+                            </Button>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="py-20">
+                           <CircleAlert className="w-12 h-12 text-red-400 mx-auto mb-4" />
+                           <p className="text-muted-foreground italic">Logic matrix initialization failed. Attempting recovery...</p>
+                        </div>
+                      )}
+                    </Card>
+                  </div>
                 )}
 
                 {currentStep === 7 && (
