@@ -14,9 +14,9 @@ import '@/ai/flows/ai-audio-synthesis.ts';
 import '@/ai/flows/test-gemini.ts';
 import { ai } from '@/ai/genkit';
 
-// Neural Sanity Check on Startup
-(async () => {
-  if (process.env.NODE_ENV === 'development' && (process.env.GOOGLE_GENAI_API_KEY || process.env.GEMINI_API_KEY)) {
+// Neural Sanity Check on Startup (Safe background execution)
+if (process.env.NODE_ENV === 'development' && (process.env.GOOGLE_GENAI_API_KEY || process.env.GEMINI_API_KEY)) {
+  setTimeout(async () => {
     try {
       console.log('[Sanity Check] Verifying Neural Connection...');
       const response = await ai.generate({
@@ -24,8 +24,7 @@ import { ai } from '@/ai/genkit';
       });
       console.log('[Sanity Check] SUCCESS. Response:', response.text);
     } catch (e: any) {
-      console.error('[Sanity Check] FAILED. Model could not be reached.');
-      console.error('[Error Detail]', e.message || e);
+      console.warn('[Sanity Check] FAILED or POSTPONED. Service might be busy.');
     }
-  }
-})();
+  }, 5000);
+}

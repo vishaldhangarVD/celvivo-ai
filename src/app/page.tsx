@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState } from 'react';
@@ -17,7 +16,7 @@ import {
   Sparkles, 
   Zap, 
   Cpu, 
-  CheckCircle2,
+  CircleCheck,
   BrainCircuit,
   Award,
   Upload,
@@ -25,7 +24,7 @@ import {
   Briefcase,
   Search,
   X,
-  FileSearch,
+  FileSearch2,
   Check,
   Loader2,
   Layers,
@@ -44,11 +43,11 @@ import {
   Trophy,
   Map,
   Microscope,
-  HandMetal,
   Users,
-  AlertTriangle,
+  CircleAlert,
   FlaskConical,
-  Building2
+  Building2,
+  Hand
 } from 'lucide-react';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
 import { useUser, useFirestore } from '@/firebase';
@@ -69,7 +68,7 @@ const COMPANIES = [
 const ROUNDS = [
   { id: 'HR Round', label: 'HR Round', icon: Users, desc: 'Screening, soft skills, and cultural fit.' },
   { id: 'Technical Round', label: 'Technical Round', icon: Code2, desc: 'Technical logic and stack-specific depth.' },
-  { id: 'Managerial Round', label: 'Managerial Round', icon: HandMetal, desc: 'Leadership, goals, and professional maturity.' }
+  { id: 'Managerial Round', label: 'Managerial Round', icon: Hand, desc: 'Leadership, goals, and professional maturity.' }
 ];
 
 export default function LandingPage() {
@@ -192,7 +191,7 @@ export default function LandingPage() {
                       <div className="grid grid-cols-1 gap-6 pt-2">
                         {[
                           { val: "Custom", label: "Company Protocols", icon: Building2, color: "text-blue-400" },
-                          { val: "Deep", label: "Resume Context", icon: FileSearch, color: "text-purple-400" }
+                          { val: "Deep", label: "Resume Context", icon: FileSearch2, color: "text-purple-400" }
                         ].map((stat, i) => (
                           <div key={i} className="flex items-center gap-4">
                             <div className={`w-10 h-10 rounded-xl glass flex items-center justify-center ${stat.color}`}><stat.icon className="w-5 h-5" /></div>
@@ -234,7 +233,7 @@ export default function LandingPage() {
                   {step === 1 && (
                     <motion.div key="step1" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="space-y-8">
                       <div className="text-center space-y-4">
-                        <div className="w-20 h-20 rounded-3xl bg-accent/10 flex items-center justify-center mx-auto"><FileSearch className="w-10 h-10 text-accent" /></div>
+                        <div className="w-20 h-20 rounded-3xl bg-accent/10 flex items-center justify-center mx-auto"><FileSearch2 className="w-10 h-10 text-accent" /></div>
                         <h4 className="text-2xl font-bold">Intelligence Audit</h4>
                         <p className="text-muted-foreground font-light">Upload your resume to calibrate company-specific questions.</p>
                       </div>
@@ -285,7 +284,7 @@ export default function LandingPage() {
 
                   {step === 4 && (
                     <motion.div key="step4" initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} className="text-center space-y-10 py-8">
-                      <div className="w-32 h-32 mx-auto rounded-full bg-accent flex items-center justify-center text-[#050816] shadow-[0_0_50px_rgba(34,211,238,0.5)]"><CheckCircle2 className="w-16 h-16" /></div>
+                      <div className="w-32 h-32 mx-auto rounded-full bg-accent flex items-center justify-center text-[#050816] shadow-[0_0_50px_rgba(34,211,238,0.5)]"><CircleCheck className="w-16 h-16" /></div>
                       <div className="space-y-4">
                         <h4 className="text-4xl font-bold">Simulation Prime</h4>
                         <div className="flex gap-2 justify-center">

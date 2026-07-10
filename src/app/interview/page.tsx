@@ -38,7 +38,7 @@ import {
   FileText, 
   ChevronRight, 
   Loader2, 
-  CheckCircle2, 
+  CircleCheck, 
   Lock, 
   Play, 
   ShieldCheck, 
@@ -52,7 +52,7 @@ import {
   Globe,
   Trash2,
   FileUp,
-  AlertCircle,
+  CircleAlert,
   TrendingUp,
   ChevronUp,
   ChevronDown,
@@ -60,18 +60,19 @@ import {
   FileEdit,
   Timer,
   ChevronLeft,
-  XCircle,
+  CircleX,
   RefreshCcw,
   Activity,
   Terminal,
-  PlayCircle,
+  CirclePlay,
   Save,
   MonitorCog,
   AlertTriangle,
   Info,
   Lightbulb,
   Cpu,
-  Check
+  Check,
+  Hand
 } from 'lucide-react';
 import { useUser, useFirestore, useCollection } from '@/firebase';
 import { collection, addDoc, serverTimestamp, doc, updateDoc, query, orderBy, limit } from 'firebase/firestore';
@@ -470,7 +471,7 @@ export default function InterviewJourney() {
                       isActive ? 'bg-accent/20 text-accent' :
                       'bg-white/5 text-white/40'
                     }`}>
-                      {isCompleted ? <CheckCircle2 className="w-5 h-5" /> : <step.icon className="w-5 h-5" />}
+                      {isCompleted ? <CircleCheck className="w-5 h-5" /> : <step.icon className="w-5 h-5" />}
                     </div>
                     <div className="min-w-0">
                       <p className={`text-xs font-bold uppercase tracking-widest truncate ${isActive ? 'text-white' : 'text-white/40'}`}>{step.title}</p>
@@ -646,7 +647,7 @@ export default function InterviewJourney() {
 
                     {(resumeAnalysis?.atsScore || 0) < 60 && (
                       <div className="p-8 glass rounded-[2.5rem] border-red-500/20 bg-red-500/5 flex items-start gap-6">
-                        <AlertTriangle className="w-8 h-8 text-red-400 shrink-0 mt-1" />
+                        <CircleAlert className="w-8 h-8 text-red-400 shrink-0 mt-1" />
                         <div>
                           <h4 className="text-lg font-bold text-red-400 mb-2">Protocol Warning: Low Blueprint Match</h4>
                           <p className="text-sm font-light text-white/60">Your career blueprint returned an ATS score below the elite threshold (60%). We highly recommend optimizing your resume using our Deep Audit engine before entering the live simulation.</p>
@@ -665,7 +666,7 @@ export default function InterviewJourney() {
                          </div>
                       </Card>
                       <Card className="p-8 glass border-white/5 space-y-6">
-                         <h3 className="text-[10px] font-bold uppercase tracking-[0.4em] text-red-400 flex items-center gap-3"><AlertCircle className="w-4 h-4" /> Intelligence Gaps</h3>
+                         <h3 className="text-[10px] font-bold uppercase tracking-[0.4em] text-red-400 flex items-center gap-3"><CircleAlert className="w-4 h-4" /> Intelligence Gaps</h3>
                          <div className="flex flex-wrap gap-2">
                            {(resumeAnalysis?.missingSkills || []).map((s: string, i: number) => (
                              <Badge key={i} variant="outline" className="border-red-500/20 text-red-400 bg-red-500/5 text-[9px] uppercase font-bold px-3 py-1">{s}</Badge>
@@ -837,7 +838,7 @@ export default function InterviewJourney() {
                           </div>
                           <div className="flex gap-3">
                             <Button onClick={handleRunCode} disabled={isRunning} variant="ghost" className="h-10 px-4 rounded-xl text-[10px] font-bold uppercase tracking-widest text-accent hover:bg-accent/10">
-                              {isRunning ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <PlayCircle className="w-4 h-4 mr-2" />} Run logic
+                              {isRunning ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <CirclePlay className="w-4 h-4 mr-2" />} Run logic
                             </Button>
                             <Button onClick={handleCodingSubmit} className="btn-premium h-10 px-6 rounded-xl text-[10px] font-bold uppercase tracking-widest shadow-[0_0_20px_rgba(147,51,234,0.3)]">Archive Submission</Button>
                           </div>
