@@ -33,7 +33,9 @@ import {
   Search,
   Layers,
   Database,
-  ShieldAlert
+  ShieldAlert,
+  GraduationCap,
+  Clock
 } from 'lucide-react';
 import { useUser, useFirestore, useCollection } from '@/firebase';
 import { collection, query, orderBy, limit, addDoc, serverTimestamp, doc, updateDoc } from 'firebase/firestore';
@@ -54,20 +56,30 @@ const ROLES_DATA = [
   { id: 'cyber', name: "Cyber Security Analyst", category: "Operations & Trust", icon: ShieldAlert },
 ];
 
+const EXPERIENCE_OPTIONS = [
+  { id: 'fresher', label: 'Fresher', desc: 'Entry-level talent', icon: Star },
+  { id: '1-2', label: '1–2 Years', desc: 'Junior / Mid-level', icon: Clock },
+  { id: '3-5', label: '3–5 Years', desc: 'Mid / Senior grade', icon: Award },
+  { id: '5+', label: '5+ Years', desc: 'Expert / Lead grade', icon: ShieldCheck },
+];
+
+function Star(props: any) { return <Zap {...props} /> } // Helper since star is generic
+
 const COMPANIES = [
   "Google", "Amazon", "Microsoft", "TCS Digital", "Infosys", "Accenture", "Standard / Startup"
 ];
 
 const INTERVIEW_STEPS = [
   { id: 1, title: 'Job Role', icon: Briefcase, desc: 'Target deployment' },
-  { id: 2, title: 'Company', icon: Building2, desc: 'Culture sync' },
-  { id: 3, title: 'Resume', icon: Upload, desc: 'Intelligence sync' },
-  { id: 4, title: 'Screening', icon: SearchCheck, desc: 'ATS audit' },
-  { id: 5, title: 'Aptitude', icon: Zap, desc: 'Logic nodes' },
-  { id: 6, title: 'Coding', icon: Code2, desc: 'Syntax mastery' },
-  { id: 7, title: 'Technical', icon: Mic, desc: 'Deep dive' },
-  { id: 8, title: 'HR Round', icon: Users, desc: 'Culture fit' },
-  { id: 9, title: 'Report', icon: FileText, desc: 'Final audit' },
+  { id: 2, title: 'Experience', icon: GraduationCap, desc: 'Seniority grade' },
+  { id: 3, title: 'Company', icon: Building2, desc: 'Culture sync' },
+  { id: 4, title: 'Resume', icon: Upload, desc: 'Intelligence sync' },
+  { id: 5, title: 'Screening', icon: SearchCheck, desc: 'ATS audit' },
+  { id: 6, title: 'Aptitude', icon: Zap, desc: 'Logic nodes' },
+  { id: 7, title: 'Coding', icon: Code2, desc: 'Syntax mastery' },
+  { id: 8, title: 'Technical', icon: Mic, desc: 'Deep dive' },
+  { id: 9, title: 'HR Round', icon: Users, desc: 'Culture fit' },
+  { id: 10, title: 'Report', icon: FileText, desc: 'Final audit' },
 ];
 
 export default function InterviewJourney() {
@@ -78,6 +90,7 @@ export default function InterviewJourney() {
 
   const [currentStep, setCurrentStep] = useState(1);
   const [selectedRole, setSelectedRole] = useState("");
+  const [selectedExp, setSelectedExp] = useState("");
   const [selectedCompany, setSelectedCompany] = useState(COMPANIES[0]);
   const [roleSearch, setRoleSearch] = useState("");
   const [file, setFile] = useState<File | null>(null);
@@ -158,7 +171,7 @@ export default function InterviewJourney() {
 
   const startActualInterview = () => {
     const sessionId = Math.random().toString(36).substring(7);
-    router.push(`/interview/${sessionId}?role=${encodeURIComponent(selectedRole)}&company=${encodeURIComponent(selectedCompany)}&exp=Senior&round=Technical`);
+    router.push(`/interview/${sessionId}?role=${encodeURIComponent(selectedRole)}&company=${encodeURIComponent(selectedCompany)}&exp=${encodeURIComponent(selectedExp)}&round=Technical`);
   };
 
   if (resumeCheckLoading) return <div className="min-h-screen bg-[#050816] flex items-center justify-center"><Loader2 className="w-12 h-12 text-accent animate-spin" /></div>;
@@ -291,8 +304,56 @@ export default function InterviewJourney() {
                   </Card>
                 )}
 
-                {/* Step 2: Company Sync */}
+                {/* Step 2: Experience Level */}
                 {currentStep === 2 && (
+                  <Card className="premium-card bg-white/[0.01] border-white/5 p-12 space-y-12">
+                    <header className="text-center space-y-4">
+                      <div className="w-20 h-20 rounded-[2rem] bg-accent/10 flex items-center justify-center mx-auto border border-accent/20">
+                        <GraduationCap className="w-10 h-10 text-accent" />
+                      </div>
+                      <h2 className="text-4xl font-bold tracking-tighter">Seniority Level Calibration</h2>
+                      <p className="text-muted-foreground font-light max-w-lg mx-auto">Calibrate the simulation intensity based on your professional experience grade.</p>
+                    </header>
+
+                    <div className="grid md:grid-cols-2 gap-4">
+                      {EXPERIENCE_OPTIONS.map((opt) => (
+                        <button 
+                          key={opt.id} 
+                          onClick={() => setSelectedExp(opt.label)}
+                          className={`p-8 rounded-[2.5rem] border transition-all text-left flex items-center gap-6 group ${
+                            selectedExp === opt.label 
+                            ? 'bg-accent/20 border-accent shadow-[0_0_30px_rgba(34,211,238,0.1)]' 
+                            : 'glass border-white/5 hover:border-white/20'
+                          }`}
+                        >
+                          <div className={`w-14 h-14 rounded-2xl flex items-center justify-center transition-colors ${
+                            selectedExp === opt.label ? 'bg-accent text-black' : 'bg-white/5 text-white/40 group-hover:bg-white/10'
+                          }`}>
+                            <opt.icon className="w-7 h-7" />
+                          </div>
+                          <div>
+                            <p className={`text-xl font-bold transition-colors ${selectedExp === opt.label ? 'text-white' : 'text-white/60'}`}>{opt.label}</p>
+                            <p className="text-[10px] uppercase tracking-widest font-bold text-muted-foreground">{opt.desc}</p>
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+
+                    <div className="flex gap-4">
+                      <Button variant="ghost" onClick={prevStep} className="h-20 px-10 rounded-[2rem] border border-white/5 uppercase tracking-widest text-[10px] font-bold">Back</Button>
+                      <Button 
+                        onClick={nextStep} 
+                        disabled={!selectedExp}
+                        className="flex-1 h-20 btn-premium text-lg font-bold uppercase tracking-[0.3em]"
+                      >
+                        Confirm Seniority <ChevronRight className="ml-3 w-6 h-6" />
+                      </Button>
+                    </div>
+                  </Card>
+                )}
+
+                {/* Step 3: Company Sync */}
+                {currentStep === 3 && (
                   <Card className="premium-card bg-white/[0.01] border-white/5 p-12 text-center space-y-12">
                     <header className="space-y-4">
                       <div className="w-20 h-20 rounded-[2rem] bg-purple-500/10 flex items-center justify-center mx-auto border border-purple-500/20">
@@ -322,8 +383,8 @@ export default function InterviewJourney() {
                   </Card>
                 )}
 
-                {/* Step 3: Resume Upload */}
-                {currentStep === 3 && (
+                {/* Step 4: Resume Upload */}
+                {currentStep === 4 && (
                   <Card className="premium-card bg-white/[0.01] border-white/5 p-12 text-center space-y-12">
                     <header className="space-y-4">
                       <div className="w-20 h-20 rounded-[2rem] bg-accent/10 flex items-center justify-center mx-auto border border-accent/20">
@@ -362,8 +423,8 @@ export default function InterviewJourney() {
                   </Card>
                 )}
 
-                {/* Step 4: Resume Screening Placeholder */}
-                {currentStep === 4 && (
+                {/* Remaining Steps Logic Offset (Step 5-10) */}
+                {currentStep === 5 && (
                   <Card className="premium-card bg-[#0b0e1a]/80 border-white/5 p-16 text-center space-y-12 overflow-hidden relative">
                     <div className="absolute top-0 right-0 p-8"><Badge className="bg-accent/20 text-accent">LIVE ANALYSIS</Badge></div>
                     <div className="relative w-48 h-48 mx-auto">
@@ -382,12 +443,14 @@ export default function InterviewJourney() {
                       <h3 className="text-3xl font-bold">Protocol Match Optimal</h3>
                       <p className="text-muted-foreground font-light max-w-sm mx-auto">Your blueprint matches 84% of industry standards for {selectedRole} at {selectedCompany}.</p>
                     </div>
-                    <Button onClick={nextStep} className="w-full h-18 btn-premium text-xs font-bold uppercase tracking-[0.3em]">Initialize Round 01: Aptitude <ChevronRight className="ml-2 w-4 h-4" /></Button>
+                    <div className="flex gap-4">
+                      <Button variant="ghost" onClick={prevStep} className="h-18 px-8 rounded-2xl border border-white/5">Back</Button>
+                      <Button onClick={nextStep} className="flex-1 h-18 btn-premium text-xs font-bold uppercase tracking-[0.3em]">Initialize Round 01: Aptitude <ChevronRight className="ml-2 w-4 h-4" /></Button>
+                    </div>
                   </Card>
                 )}
 
-                {/* Step 5-8: Round Placeholders */}
-                {currentStep >= 5 && currentStep <= 8 && (
+                {currentStep >= 6 && currentStep <= 9 && (
                   <Card className="premium-card bg-[#0b0e1a]/80 border-white/5 p-20 text-center space-y-12">
                     <header className="space-y-6">
                       <div className="w-24 h-24 rounded-full bg-accent/10 flex items-center justify-center mx-auto border border-accent/20 relative">
@@ -402,7 +465,7 @@ export default function InterviewJourney() {
                     </header>
                     <div className="grid md:grid-cols-3 gap-6">
                       {[
-                        { label: "Difficulty", val: "Elite Grade" },
+                        { label: "Difficulty", val: selectedExp + " Grade" },
                         { label: "Time Limit", val: "45 Minutes" },
                         { label: "Focus", val: "Practical Logic" }
                       ].map((s, i) => (
@@ -412,23 +475,25 @@ export default function InterviewJourney() {
                         </div>
                       ))}
                     </div>
-                    {currentStep === 7 ? (
-                      <Button onClick={startActualInterview} className="w-full h-20 btn-orange-premium text-lg font-bold uppercase tracking-[0.3em]">Launch Live Simulation <Play className="ml-3 w-6 h-6 fill-current" /></Button>
-                    ) : (
-                      <Button onClick={nextStep} className="w-full h-20 btn-premium text-lg font-bold uppercase tracking-[0.3em]">Start Simulation Round <Zap className="ml-3 w-6 h-6" /></Button>
-                    )}
+                    <div className="flex gap-4">
+                      <Button variant="ghost" onClick={prevStep} className="h-20 px-8 rounded-3xl border border-white/5 uppercase tracking-widest text-[10px] font-bold">Back</Button>
+                      {currentStep === 8 ? (
+                        <Button onClick={startActualInterview} className="flex-1 h-20 btn-orange-premium text-lg font-bold uppercase tracking-[0.3em]">Launch Live Simulation <Play className="ml-3 w-6 h-6 fill-current" /></Button>
+                      ) : (
+                        <Button onClick={nextStep} className="flex-1 h-20 btn-premium text-lg font-bold uppercase tracking-[0.3em]">Start Simulation Round <Zap className="ml-3 w-6 h-6" /></Button>
+                      )}
+                    </div>
                   </Card>
                 )}
 
-                {/* Step 9: Final Report Placeholder */}
-                {currentStep === 9 && (
+                {currentStep === 10 && (
                   <Card className="premium-card bg-white/[0.01] border-white/5 p-16 text-center space-y-12">
                     <div className="w-24 h-24 rounded-[2.5rem] bg-gradient-to-br from-green-500 to-blue-500 flex items-center justify-center mx-auto shadow-2xl">
                       <ShieldCheck className="w-12 h-12 text-white" />
                     </div>
                     <div className="space-y-4">
                       <h2 className="text-5xl font-bold tracking-tighter">Full Performance Audit</h2>
-                      <p className="text-muted-foreground font-light max-w-md mx-auto">Your journey across all 8 simulation nodes has been archived. Final intelligence report is ready.</p>
+                      <p className="text-muted-foreground font-light max-w-md mx-auto">Your journey across all 10 simulation nodes has been archived. Final intelligence report is ready.</p>
                     </div>
                     <div className="p-8 glass rounded-[3rem] border-white/10 bg-white/[0.02]">
                        <div className="flex justify-between items-center mb-8">
