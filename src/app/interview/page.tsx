@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useMemo, useEffect } from 'react';
@@ -215,31 +214,36 @@ export default function InterviewJourney() {
     if (!user || !db) return;
     setIsCleaningUp(true);
     
-    // Clear Local State
-    localStorage.removeItem("resumeAnalysis");
-    sessionStorage.clear();
-    
-    // Clear Firestore Active Session
-    const docRef = doc(db, 'users', user.uid, 'journey', 'active');
-    await deleteDoc(docRef);
-    
-    // Reset Navigation & UI
-    setCurrentStep(1);
-    setSelectedRole("");
-    setSelectedExp("");
-    setSelectedCompany("");
-    setResumeAnalysis(null);
-    setAptitudeReport(null);
-    setCodingReport(null);
-    setAptitudeAnswers({});
-    setAiAptitudeQuestions([]);
-    setCodingProblem(null);
-    setCode("");
-    setFile(null);
-    
-    setShowRecovery(false);
-    setIsCleaningUp(false);
-    toast({ title: "Neural Link Reset", description: "All active journey nodes have been purged." });
+    try {
+      // Clear Firestore Active Session
+      const docRef = doc(db, 'users', user.uid, 'journey', 'active');
+      await deleteDoc(docRef);
+      
+      // Clear only interview-related local storage
+      localStorage.removeItem("resumeAnalysis");
+      sessionStorage.removeItem("activeInterviewId");
+      
+      // Reset UI state
+      setCurrentStep(1);
+      setSelectedRole("");
+      setSelectedExp("");
+      setSelectedCompany("");
+      setResumeAnalysis(null);
+      setAptitudeReport(null);
+      setCodingReport(null);
+      setAptitudeAnswers({});
+      setAiAptitudeQuestions([]);
+      setCodingProblem(null);
+      setCode("");
+      setFile(null);
+      
+      setShowRecovery(false);
+      toast({ title: "Neural Link Reset", description: "All active journey nodes have been purged. Account remains active." });
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setIsCleaningUp(false);
+    }
   };
 
   const handleGoHome = async () => {
@@ -248,32 +252,43 @@ export default function InterviewJourney() {
   };
 
   const handleBackNavigation = async () => {
-    if (currentStep <= 1) return;
+    if (currentStep <= 1) {
+      handleGoHome();
+      return;
+    }
     
     const prevStep = currentStep - 1;
-    setCurrentStep(prevStep);
     
-    // Destructive Back: Purge all data relevant to the step we are leaving
-    // and any potential subsequent data to prevent inconsistent state
+    // Cloud Pruning Logic: Delete all temporary data associated with steps AFTER the target step
     const updates: any = {
       step: prevStep,
       updatedAt: serverTimestamp()
     };
 
-    if (prevStep < 10) updates.sessionId = null;
-    if (prevStep < 8) {
-      updates.codingProblem = null;
-      updates.codingReport = null;
-      updates.code = null;
+    // If going back to Role/Exp/Company selection (Steps 1-3)
+    if (prevStep < 4) {
+      updates.resumeAnalysis = null;
     }
+    
+    // If going back before Aptitude (Steps 1-5)
     if (prevStep < 6) {
       updates.aiAptitudeQuestions = null;
       updates.aptitudeReport = null;
       updates.aptitudeAnswers = null;
       updates.aptitudeRemainingTime = null;
+      updates.aptitudeIdx = null;
     }
-    if (prevStep < 4) {
-      updates.resumeAnalysis = null;
+
+    // If going back before Coding (Steps 1-7)
+    if (prevStep < 8) {
+      updates.codingProblem = null;
+      updates.codingReport = null;
+      updates.code = null;
+    }
+
+    // If going back before HR Interview (Steps 1-9)
+    if (prevStep < 10) {
+      updates.sessionId = null;
     }
 
     if (user && db) {
@@ -281,10 +296,16 @@ export default function InterviewJourney() {
       await updateDoc(docRef, updates);
     }
 
-    // Update Local States to match destination
+    // Local State Sync
     if (prevStep < 8) { setCodingProblem(null); setCodingReport(null); setCode(""); }
-    if (prevStep < 6) { setAiAptitudeQuestions([]); setAptitudeReport(null); setAptitudeAnswers({}); }
+    if (prevStep < 6) { setAiAptitudeQuestions([]); setAptitudeReport(null); setAptitudeAnswers({}); setAptitudeRemainingTime(null); setAptitudeIdx(0); }
     if (prevStep < 4) { setResumeAnalysis(null); setFile(null); }
+    
+    setCurrentStep(prevStep);
+    toast({ 
+      title: "Neural Vector Reversed", 
+      description: `Reverting to ${INTERVIEW_STEPS[prevStep-1].title}. Future nodes cleared.` 
+    });
   };
 
   // Aptitude Timer Logic
@@ -477,6 +498,7 @@ export default function InterviewJourney() {
     <div className="min-h-screen bg-[#050816] pb-32">
       <div className="particles-bg" />
       <Navbar />
+      <NavigationControls onHome={handleGoHome} onBack={handleBackNavigation} />
       
       <div className="container mx-auto px-6 py-32">
         <div className="max-w-7xl mx-auto grid lg:grid-cols-12 gap-12">
@@ -519,7 +541,7 @@ export default function InterviewJourney() {
                    <AlertDialogHeader>
                      <AlertDialogTitle>Restart Simulation Journey?</AlertDialogTitle>
                      <AlertDialogDescription className="text-muted-foreground">
-                       This will terminate your active progress and purge all current draft data. Historical interview archives will remain intact. Confirm protocol reset?
+                       This will terminate your active progress and purge current draft data. Historical interview archives will remain intact. Account stays logged in. Confirm?
                      </AlertDialogDescription>
                    </AlertDialogHeader>
                    <AlertDialogFooter>
@@ -546,7 +568,7 @@ export default function InterviewJourney() {
                     <div className="space-y-4">
                        <h2 className="text-3xl font-bold tracking-tighter">Neural Handshake Recovery</h2>
                        <p className="text-muted-foreground font-light leading-relaxed">
-                         We detected an abandoned simulation protocol in your neural link. Would you like to resume the active mission or initialize a fresh protocol?
+                         We detected an abandoned simulation protocol. Would you like to resume your active mission or initialize a fresh protocol?
                        </p>
                     </div>
                     <div className="flex flex-col sm:flex-row gap-4">
@@ -613,7 +635,7 @@ export default function InterviewJourney() {
                       <div className="space-y-4">
                         <Badge className="bg-accent/20 text-accent border-none px-6 py-1.5 font-bold tracking-[0.4em] text-[10px] uppercase">Neural Identity Protocol</Badge>
                         <h2 className="text-4xl font-bold tracking-tighter">AI Resume Audit</h2>
-                        <p className="text-muted-foreground font-light max-w-xl mx-auto">Provide your latest career blueprint for high-fidelity ATS screening and skill node extraction.</p>
+                        <p className="text-muted-foreground font-light max-w-xl mx-auto">Provide your career blueprint for ATS screening and skill node extraction.</p>
                       </div>
                       <div onClick={() => !isAnalyzing && document.getElementById('resume-journey-upload')?.click()} className={`border-2 border-dashed rounded-[2.5rem] p-16 transition-all cursor-pointer group relative overflow-hidden ${file ? 'border-accent bg-accent/5' : 'border-white/10 hover:border-accent/30 hover:bg-white/[0.02]'}`}>
                         <input type="file" id="resume-journey-upload" className="hidden" accept=".pdf" onChange={(e) => e.target.files && setFile(e.target.files[0])} />

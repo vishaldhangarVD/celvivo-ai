@@ -1,8 +1,7 @@
-
 'use client';
 
 import { useRouter, usePathname } from 'next/navigation';
-import { ArrowLeft, Home, RotateCcw } from 'lucide-react';
+import { ArrowLeft, Home } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
@@ -21,7 +20,17 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 
-export default function NavigationControls({ className }: { className?: string }) {
+interface NavigationControlsProps {
+  className?: string;
+  onHome?: () => void;
+  onBack?: () => void;
+}
+
+export default function NavigationControls({ 
+  className,
+  onHome,
+  onBack 
+}: NavigationControlsProps) {
   const router = useRouter();
   const pathname = usePathname();
   const { user } = useUser();
@@ -31,17 +40,32 @@ export default function NavigationControls({ className }: { className?: string }
   const isInterviewPage = pathname?.startsWith('/interview');
 
   const handleTotalReset = async () => {
+    // If a custom onHome handler is provided (e.g. from Journey page), use it.
+    if (onHome) {
+      onHome();
+      return;
+    }
+
+    // Default Reset Logic
     if (user && db) {
       const docRef = doc(db, 'users', user.uid, 'journey', 'active');
       await deleteDoc(docRef);
     }
     
-    // Clear all simulation state
+    // Clear simulation-specific state only
     localStorage.removeItem("resumeAnalysis");
-    sessionStorage.clear();
+    sessionStorage.removeItem("activeInterviewId");
     
     toast({ title: "Neural Cleanup", description: "Simulation session state has been purged." });
     router.push('/dashboard');
+  };
+
+  const handleBackClick = () => {
+    if (onBack) {
+      onBack();
+    } else {
+      router.back();
+    }
   };
 
   return (
@@ -54,7 +78,7 @@ export default function NavigationControls({ className }: { className?: string }
         <Button
           variant="ghost"
           size="icon"
-          onClick={() => router.back()}
+          onClick={handleBackClick}
           className="w-12 h-12 rounded-2xl glass border-white/10 shadow-2xl hover:bg-white/10 hover:text-accent transition-all group"
           title="Go Back"
         >
@@ -83,12 +107,12 @@ export default function NavigationControls({ className }: { className?: string }
               <AlertDialogHeader>
                 <AlertDialogTitle>Abandon Simulation?</AlertDialogTitle>
                 <AlertDialogDescription className="text-muted-foreground">
-                  Returning to the Home Hub will terminate your active session and purge all current draft data. Historical records will be preserved. Continue?
+                  Returning to the Home Hub will terminate your active session and purge current draft data. Historical records will be preserved. Your account will remain signed in.
                 </AlertDialogDescription>
               </AlertDialogHeader>
               <AlertDialogFooter>
-                <AlertDialogCancel className="bg-transparent text-white border-white/10">Cancel</AlertDialogCancel>
-                <AlertDialogAction onClick={handleTotalReset} className="bg-red-500 text-white">Confirm Reset</AlertDialogAction>
+                <AlertDialogCancel className="bg-transparent text-white border-white/10 hover:bg-white/5">Cancel</AlertDialogCancel>
+                <AlertDialogAction onClick={handleTotalReset} className="bg-red-500 text-white hover:bg-red-600 transition-colors">Confirm Reset</AlertDialogAction>
               </AlertDialogFooter>
             </AlertDialogContent>
           </AlertDialog>

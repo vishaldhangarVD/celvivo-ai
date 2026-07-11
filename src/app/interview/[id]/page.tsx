@@ -1,4 +1,3 @@
-
 "use client";
 
 import { Suspense, useEffect, useState, useRef } from "react";
@@ -304,10 +303,27 @@ function VirtualArenaContent() {
     }
   };
 
-  const handleRestart = async () => {
+  const handleResetSession = async () => {
     if (!user || !db) return;
+    if (agent) agent.disconnect();
+    
+    // Purge temp session
     await deleteDoc(doc(db, 'users', user.uid, 'journey', 'active'));
+    localStorage.removeItem("resumeAnalysis");
+    
     router.push('/interview');
+    toast({ title: "Session Reset", description: "Neural state purged. Returning to initialization." });
+  };
+
+  const handleGoHome = async () => {
+    if (!user || !db) return;
+    if (agent) agent.disconnect();
+    
+    await deleteDoc(doc(db, 'users', user.uid, 'journey', 'active'));
+    localStorage.removeItem("resumeAnalysis");
+    
+    router.push('/dashboard');
+    toast({ title: "Session Aborted", description: "Progress cleared. Returning to Dashboard." });
   };
 
   if (isInitializing) return <div className="h-screen flex items-center justify-center bg-[#050816]"><Loader2 className="w-12 h-12 text-accent animate-spin" /></div>;
@@ -335,11 +351,11 @@ function VirtualArenaContent() {
             <AlertDialogContent className="glass border-white/10 bg-[#0b0e1a] text-white">
               <AlertDialogHeader>
                 <AlertDialogTitle>Restart Interview?</AlertDialogTitle>
-                <AlertDialogDescription className="text-muted-foreground">Terminate this session and return to start. Current progress will be lost. Confirm?</AlertDialogDescription>
+                <AlertDialogDescription className="text-muted-foreground">Terminate this session and return to initialization. Current progress will be lost. Account stays logged in. Confirm?</AlertDialogDescription>
               </AlertDialogHeader>
               <AlertDialogFooter>
                 <AlertDialogCancel className="bg-transparent text-white border-white/10">Cancel</AlertDialogCancel>
-                <AlertDialogAction onClick={handleRestart} className="bg-red-500 text-white">Confirm Reset</AlertDialogAction>
+                <AlertDialogAction onClick={handleResetSession} className="bg-red-500 text-white">Confirm Reset</AlertDialogAction>
               </AlertDialogFooter>
             </AlertDialogContent>
           </AlertDialog>
@@ -371,7 +387,7 @@ function VirtualArenaContent() {
             </div>
           </Card>
           <div className="flex gap-4">
-             <Button onClick={() => router.push('/dashboard')} variant="outline" className="flex-1 h-14 glass border-white/5 rounded-2xl text-[10px] font-bold uppercase tracking-widest gap-2">
+             <Button onClick={handleGoHome} variant="outline" className="flex-1 h-14 glass border-white/5 rounded-2xl text-[10px] font-bold uppercase tracking-widest gap-2">
                <Home className="w-4 h-4" /> Dashboard
              </Button>
           </div>
