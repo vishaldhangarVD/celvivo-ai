@@ -45,7 +45,8 @@ import { useUser, useFirestore } from "@/firebase";
 import { doc, serverTimestamp, collection, addDoc, updateDoc, getDoc, setDoc, deleteDoc } from "firebase/firestore";
 import { useToast } from "@/hooks/use-toast";
 
-let createAgent: any;
+// Global reference for D-ID SDK
+let didSdk: any;
 
 function VirtualArenaContent() {
   const router = useRouter();
@@ -88,8 +89,9 @@ function VirtualArenaContent() {
   useEffect(() => {
     const initClient = async () => {
       try {
-        const sdk = await import("@d-id/client-sdk");
-        createAgent = sdk.createAgent;
+        if (!didSdk) {
+          didSdk = await import("@d-id/client-sdk");
+        }
         
         const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
         if (SpeechRecognition) {
@@ -117,15 +119,15 @@ function VirtualArenaContent() {
 
   // Establishing D-ID Realtime Link
   const connectToAgent = async () => {
-    if (isAgentConnected || !createAgent) return;
+    if (isAgentConnected || !didSdk) return;
     try {
       const auth = await getStreamingToken();
-      if (!auth.success) {
+      if (!auth.success || !auth.token || !auth.agentId) {
         setConfigError(auth.error || "Configuration Error");
         return;
       }
       
-      const agentInstance = await createAgent(auth.agentId, {
+      const agentInstance = await didSdk.createAgentManager(auth.agentId, {
         auth: { type: 'token', token: auth.token },
         callbacks: {
           onSrcObjectReady: (stream: MediaStream) => {
@@ -162,6 +164,7 @@ function VirtualArenaContent() {
         setIsAvatarSynthesizing(true);
         await targetAgent.speak({ type: 'text', input: text });
       } catch (e) {
+        console.error("Agent Speech Error:", e);
         toast({ title: "Synthesis Error", description: "Avatar speech failed." });
       } finally {
         setIsAvatarSynthesizing(false);
@@ -182,6 +185,11 @@ function VirtualArenaContent() {
         setAssessmentContext(data);
         
         try {
+          // Wait for SDK to be ready if it's currently loading
+          if (!didSdk) {
+             didSdk = await import("@d-id/client-sdk");
+          }
+
           const agentInstance = await connectToAgent();
           
           if (transcript.length === 0) {
