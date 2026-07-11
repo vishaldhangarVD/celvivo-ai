@@ -21,7 +21,9 @@ import {
   Terminal,
   Activity,
   Volume2,
-  Cpu
+  Cpu,
+  RefreshCcw,
+  CircleAlert
 } from "lucide-react";
 import Navbar from "@/components/layout/Navbar";
 import NavigationControls from "@/components/NavigationControls";
@@ -49,7 +51,7 @@ function VirtualArenaContent() {
   const round = searchParams.get("round") || "Virtual Interview";
 
   const [currentIdx, setCurrentIdx] = useState(1);
-  const [transcript, setTranscript] = useState<{role: 'interviewer' | 'candidate', text: string}[]>([]);
+  const [transcript, setTranscript] = useState<{role: 'interviewer' | 'candidate', text: string, feedback?: string}[]>([]);
   const [userAnswer, setUserAnswer] = useState("");
   const [isMicActive, setIsMicActive] = useState(false);
   const [timeLeft, setTimeLeft] = useState(45 * 60);
@@ -211,6 +213,75 @@ function VirtualArenaContent() {
     init();
   }, [user, db, role, company, exp, round]);
 
+  const finalizeSession = async (currentTranscript: any[]) => {
+    if (!user || !db || isGeneratingReport) return;
+    setIsGeneratingReport(true);
+    setIsSimulationComplete(true);
+    
+    // Stop recording and avatar
+    if (isMicActive && recognitionRef.current) recognitionRef.current.stop();
+    setIsAvatarSpeaking(false);
+    setAvatarVideoUrl(null);
+
+    try {
+      const transcriptStr = currentTranscript.map(t => `${t.role.toUpperCase()}: ${t.text}${t.feedback ? `\n(Evaluation: ${t.feedback})` : ''}`).join('\n\n');
+      
+      const finalAudit = await generateInterviewFeedback({
+        role,
+        company,
+        experienceLevel: exp,
+        interviewTranscript: transcriptStr,
+        resumeContext: {
+          atsScore: assessmentContext.resumeAnalysis?.atsScore || 0,
+          strengths: assessmentContext.resumeAnalysis?.analysis?.strengths || [],
+          weaknesses: assessmentContext.resumeAnalysis?.analysis?.weaknesses || [],
+          missingSkills: assessmentContext.resumeAnalysis?.analysis?.missingSkills || [],
+        },
+        aptitudeContext: {
+          overallScore: assessmentContext.aptitudeReport?.overallScore || 0,
+          quantitative: assessmentContext.aptitudeReport?.categoryScores?.quantitative || 0,
+          logical: assessmentContext.aptitudeReport?.categoryScores?.logical || 0,
+          english: assessmentContext.aptitudeReport?.categoryScores?.english || 0,
+          status: assessmentContext.aptitudeReport?.status || 'N/A',
+        },
+        codingContext: {
+          score: assessmentContext.codingReport?.score || 0,
+          readability: assessmentContext.codingReport?.audit?.readabilityScore || 0,
+          timeComplexity: assessmentContext.codingReport?.audit?.timeComplexity || 'N/A',
+          spaceComplexity: assessmentContext.codingReport?.audit?.spaceComplexity || 'N/A',
+          status: assessmentContext.codingReport?.status || 'N/A',
+        }
+      });
+
+      const interviewData = {
+        userId: user.uid,
+        role,
+        company,
+        experienceLevel: exp,
+        round,
+        history: currentTranscript,
+        overallScore: finalAudit.overallScore,
+        feedback: finalAudit,
+        createdAt: serverTimestamp(),
+      };
+
+      const docRef = await addDoc(collection(db, 'users', user.uid, 'interviews'), interviewData);
+      
+      await setDoc(doc(db, 'users', user.uid, 'journey', 'active'), {
+        step: 11,
+        finalReportId: docRef.id
+      }, { merge: true });
+
+      // Immediate redirect to Step 11
+      router.push(`/feedback/${docRef.id}`);
+    } catch (e) {
+      toast({ variant: "destructive", title: "Master Audit Synthesis Failed", description: "System encountered an error during report generation." });
+      setIsSimulationComplete(false);
+    } finally {
+      setIsGeneratingReport(false);
+    }
+  };
+
   const handleSend = async () => {
     if (!userAnswer.trim() || isProcessing || isSimulationComplete || isAvatarSpeaking || isAvatarSynthesizing) return;
     
@@ -253,7 +324,15 @@ function VirtualArenaContent() {
         askedQuestions: askedQuestions
       });
 
-      // Adaptive Difficulty Calculation
+      // Attach feedback to the candidate entry we just added
+      const transcriptWithFeedback = updatedTranscript.map((entry, idx) => {
+        if (idx === updatedTranscript.length - 1 && entry.role === 'candidate') {
+          return { ...entry, feedback: response.feedbackOnLastAnswer };
+        }
+        return entry;
+      });
+
+      // Update Difficulty
       if (response.difficultyAdjustment === "Harder") {
         if (difficulty === "EASY") setDifficulty("MEDIUM");
         else if (difficulty === "MEDIUM") setDifficulty("HARD");
@@ -262,78 +341,20 @@ function VirtualArenaContent() {
         else if (difficulty === "MEDIUM") setDifficulty("EASY");
       }
 
-      setTranscript(prev => [...prev, { role: 'interviewer', text: response.nextQuestion }]);
+      const finalFullTranscript = [...transcriptWithFeedback, { role: 'interviewer' as const, text: response.nextQuestion }];
+      setTranscript(finalFullTranscript);
       setAskedQuestions(prev => [...prev, response.nextQuestion]);
       setCurrentIdx(prev => prev + 1);
-      await handleInterviewerResponse(response.nextQuestion);
 
       if (response.isInterviewComplete || currentIdx >= 15) {
-        setIsSimulationComplete(true);
+        finalizeSession(finalFullTranscript);
+      } else {
+        await handleInterviewerResponse(response.nextQuestion);
       }
     } catch (error) {
       toast({ variant: "destructive", title: "Transmission Error" });
     } finally {
       setIsProcessing(false);
-    }
-  };
-
-  const finalizeSession = async () => {
-    if (!user || !db || isGeneratingReport) return;
-    setIsGeneratingReport(true);
-    
-    try {
-      const transcriptStr = transcript.map(t => `${t.role.toUpperCase()}: ${t.text}`).join('\n\n');
-      const finalAudit = await generateInterviewFeedback({
-        role,
-        company,
-        experienceLevel: exp,
-        interviewTranscript: transcriptStr,
-        resumeContext: {
-          atsScore: assessmentContext.resumeAnalysis?.atsScore || 0,
-          strengths: assessmentContext.resumeAnalysis?.analysis?.strengths || [],
-          weaknesses: assessmentContext.resumeAnalysis?.analysis?.weaknesses || [],
-          missingSkills: assessmentContext.resumeAnalysis?.analysis?.missingSkills || [],
-        },
-        aptitudeContext: {
-          overallScore: assessmentContext.aptitudeReport?.overallScore || 0,
-          quantitative: assessmentContext.aptitudeReport?.categoryScores?.quantitative || 0,
-          logical: assessmentContext.aptitudeReport?.categoryScores?.logical || 0,
-          english: assessmentContext.aptitudeReport?.categoryScores?.english || 0,
-          status: assessmentContext.aptitudeReport?.status || 'N/A',
-        },
-        codingContext: {
-          score: assessmentContext.codingReport?.score || 0,
-          readability: assessmentContext.codingReport?.audit?.readabilityScore || 0,
-          timeComplexity: assessmentContext.codingReport?.audit?.timeComplexity || 'N/A',
-          spaceComplexity: assessmentContext.codingReport?.audit?.spaceComplexity || 'N/A',
-          status: assessmentContext.codingReport?.status || 'N/A',
-        }
-      });
-
-      const interviewData = {
-        userId: user.uid,
-        role,
-        company,
-        experienceLevel: exp,
-        round,
-        history: transcript,
-        overallScore: finalAudit.overallScore,
-        feedback: finalAudit,
-        createdAt: serverTimestamp(),
-      };
-
-      const docRef = await addDoc(collection(db, 'users', user.uid, 'interviews'), interviewData);
-      
-      await setDoc(doc(db, 'users', user.uid, 'journey', 'active'), {
-        step: 11,
-        finalReportId: docRef.id
-      }, { merge: true });
-
-      router.push(`/feedback/${docRef.id}`);
-    } catch (e) {
-      toast({ variant: "destructive", title: "Audit Failed" });
-    } finally {
-      setIsGeneratingReport(false);
     }
   };
 
@@ -403,7 +424,7 @@ function VirtualArenaContent() {
         <div className="lg:col-span-8 flex flex-col gap-6 overflow-hidden">
           <Card className="premium-card bg-[#0b0e1a]/80 p-8 border-glow-premium">
              <h2 className="text-xl md:text-2xl font-bold leading-tight">
-               {isProcessing ? "Synthesizing next node..." : isAvatarSynthesizing ? "Analyzing response..." : isAvatarSpeaking ? "Listening..." : transcript.filter(t => t.role === 'interviewer').slice(-1)[0]?.text || "Initializing session..."}
+               {isSimulationComplete ? "Gauntlet Complete. Finalizing Audit." : isProcessing ? "Synthesizing next node..." : isAvatarSynthesizing ? "Analyzing response..." : isAvatarSpeaking ? "Listening..." : transcript.filter(t => t.role === 'interviewer').slice(-1)[0]?.text || "Initializing session..."}
              </h2>
           </Card>
           <Card className="flex-1 premium-card bg-black/40 p-6 overflow-y-auto custom-scrollbar flex flex-col gap-6">
@@ -417,9 +438,9 @@ function VirtualArenaContent() {
             <div ref={transcriptEndRef} />
           </Card>
           <div className="h-24 glass rounded-[2rem] p-4 flex items-center gap-4">
-             <Button onClick={toggleMic} disabled={isAvatarSpeaking || isAvatarSynthesizing || isProcessing} className={`w-12 h-12 rounded-xl transition-all ${isMicActive ? 'bg-red-500 text-white animate-pulse' : 'bg-red-500/10 text-red-400'}`}><Mic className="w-5 h-5" /></Button>
-             <input disabled={isProcessing || isAvatarSpeaking || isAvatarSynthesizing} value={userAnswer} onChange={(e) => setUserAnswer(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && handleSend()} className="flex-1 bg-transparent outline-none px-4 text-sm font-light placeholder:text-white/20" placeholder={isMicActive ? "Listening..." : isAvatarSpeaking ? "Avatar speaking..." : "Type your professional reasoning..."} />
-             <Button onClick={handleSend} disabled={!userAnswer.trim() || isProcessing || isAvatarSpeaking || isAvatarSynthesizing} className="h-14 px-8 btn-premium rounded-xl">Transmit</Button>
+             <Button onClick={toggleMic} disabled={isAvatarSpeaking || isAvatarSynthesizing || isProcessing || isSimulationComplete} className={`w-12 h-12 rounded-xl transition-all ${isMicActive ? 'bg-red-500 text-white animate-pulse' : 'bg-red-500/10 text-red-400'}`}><Mic className="w-5 h-5" /></Button>
+             <input disabled={isProcessing || isAvatarSpeaking || isAvatarSynthesizing || isSimulationComplete} value={userAnswer} onChange={(e) => setUserAnswer(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && handleSend()} className="flex-1 bg-transparent outline-none px-4 text-sm font-light placeholder:text-white/20" placeholder={isMicActive ? "Listening..." : isAvatarSpeaking ? "Avatar speaking..." : "Type your professional reasoning..."} />
+             <Button onClick={handleSend} disabled={!userAnswer.trim() || isProcessing || isAvatarSpeaking || isAvatarSynthesizing || isSimulationComplete} className="h-14 px-8 btn-premium rounded-xl">Transmit</Button>
           </div>
         </div>
       </main>
@@ -428,12 +449,18 @@ function VirtualArenaContent() {
         {isSimulationComplete && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-[#050816]/95 backdrop-blur-2xl">
             <div className="max-w-md w-full text-center space-y-8">
-              <ShieldCheck className="w-16 h-16 text-accent mx-auto animate-pulse" />
-              <h2 className="text-4xl font-bold uppercase tracking-tighter">Gauntlet Complete</h2>
-              <p className="text-muted-foreground">Your multi-dimensional technical and behavioral vectors are being audited.</p>
-              <Button onClick={finalizeSession} disabled={isGeneratingReport} className="w-full h-18 btn-premium uppercase font-bold text-xs">
-                {isGeneratingReport ? <Loader2 className="w-5 h-5 animate-spin" /> : "Synthesize Final AI Report"}
-              </Button>
+              <div className="relative">
+                <motion.div animate={{ rotate: 360 }} transition={{ duration: 4, repeat: Infinity, ease: "linear" }} className="w-32 h-32 rounded-full border-b-2 border-accent mx-auto shadow-[0_0_50px_rgba(34,211,238,0.2)]" />
+                <ShieldCheck className="w-12 h-12 text-accent absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 animate-pulse" />
+              </div>
+              <h2 className="text-4xl font-bold uppercase tracking-tighter">Synthesizing Audit</h2>
+              <p className="text-muted-foreground text-sm font-light uppercase tracking-widest leading-relaxed">
+                Your multi-dimensional technical and behavioral vectors are being audited against {company} benchmarks.
+              </p>
+              <div className="flex items-center justify-center gap-2 text-accent">
+                <Loader2 className="w-4 h-4 animate-spin" />
+                <span className="text-[10px] font-bold uppercase tracking-[0.4em]">Compiling Master Dossier...</span>
+              </div>
             </div>
           </motion.div>
         )}
