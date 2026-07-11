@@ -1,12 +1,12 @@
 'use server';
 /**
- * @fileOverview Nexvoro AI D-ID Realtime Avatar Service.
- * Provides modular access to D-ID Realtime Agents API for WebRTC streaming.
- * Handles secure token generation to prevent leaking the API key to the client.
+ * @fileOverview Nexvoro AI D-ID Realtime Agent Auth Service.
+ * Provides secure token generation for the D-ID Realtime Client SDK.
+ * Uses the user-provided DID_CLIENT_KEY and DID_AGENT_ID.
  */
 
-const DID_API_KEY = process.env.DID_API_KEY;
-const DID_AGENT_ID = process.env.DID_AGENT_ID || "v2_agt_6iZaj8jj"; // Defaulting to the user provided ID
+const DID_CLIENT_KEY = process.env.DID_CLIENT_KEY;
+const DID_AGENT_ID = process.env.DID_AGENT_ID || "v2_agt_6iZaj8jj";
 
 export type DidTokenResponse = {
   success: boolean;
@@ -16,21 +16,21 @@ export type DidTokenResponse = {
 };
 
 /**
- * Fetches a secure authentication token for the D-ID Realtime SDK.
- * This server action keeps the DID_API_KEY hidden from the browser.
+ * Fetches a secure WebRTC session token for the D-ID Realtime SDK.
+ * This ensures the DID_CLIENT_KEY is never exposed to the client.
  */
 export async function getStreamingToken(): Promise<DidTokenResponse> {
-  if (!DID_API_KEY) {
-    console.error("[D-ID] Environment variable DID_API_KEY is missing.");
-    return { success: false, error: "D-ID service configuration missing on server." };
+  if (!DID_CLIENT_KEY) {
+    console.error("[D-ID] Environment variable DID_CLIENT_KEY is missing.");
+    return { success: false, error: "D-ID client configuration missing on server." };
   }
 
   try {
-    // Request a token for the specific Agent ID
+    // Request a session token for the specific Agent ID
     const response = await fetch(`https://api.d-id.com/agents/${DID_AGENT_ID}/token`, {
       method: 'POST',
       headers: {
-        'Authorization': `Basic ${Buffer.from(DID_API_KEY + ':').toString('base64')}`,
+        'Authorization': `Basic ${Buffer.from(DID_CLIENT_KEY + ':').toString('base64')}`,
         'Content-Type': 'application/json',
       }
     });
