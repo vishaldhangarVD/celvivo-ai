@@ -2,11 +2,11 @@
 /**
  * @fileOverview Nexvoro AI D-ID Realtime Agent Auth Service.
  * Provides secure token generation for the D-ID Realtime Client SDK.
- * Uses the user-provided DID_CLIENT_KEY and DID_AGENT_ID.
+ * Uses the user-provided D_ID_CLIENT_KEY and D_ID_AGENT_ID.
  */
 
-const DID_CLIENT_KEY = process.env.DID_CLIENT_KEY;
-const DID_AGENT_ID = process.env.DID_AGENT_ID || "v2_agt_6iZaj8jj";
+const DID_CLIENT_KEY = process.env.D_ID_CLIENT_KEY || process.env.DID_CLIENT_KEY;
+const DID_AGENT_ID = process.env.D_ID_AGENT_ID || process.env.DID_AGENT_ID;
 
 export type DidTokenResponse = {
   success: boolean;
@@ -17,12 +17,14 @@ export type DidTokenResponse = {
 
 /**
  * Fetches a secure WebRTC session token for the D-ID Realtime SDK.
- * This ensures the DID_CLIENT_KEY is never exposed to the client.
+ * This ensures the client key is never exposed to the frontend.
  */
 export async function getStreamingToken(): Promise<DidTokenResponse> {
   if (!DID_CLIENT_KEY) {
-    console.error("[D-ID] Environment variable DID_CLIENT_KEY is missing.");
-    return { success: false, error: "D-ID client configuration missing on server." };
+    return { success: false, error: "Environment variable D_ID_CLIENT_KEY is missing." };
+  }
+  if (!DID_AGENT_ID) {
+    return { success: false, error: "Environment variable D_ID_AGENT_ID is missing." };
   }
 
   try {
