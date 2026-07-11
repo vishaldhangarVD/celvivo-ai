@@ -1,3 +1,4 @@
+
 "use client";
 
 import { Suspense, useEffect, useState, useRef, useMemo } from "react";
@@ -65,14 +66,61 @@ function VirtualArenaContent() {
   const transcriptEndRef = useRef<HTMLDivElement>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const videoRef = useRef<HTMLVideoElement | null>(null);
+  const recognitionRef = useRef<any>(null);
 
   const interviewerImg = useMemo(() => {
     return PlaceHolderImages.find(img => img.id === 'ai-hr-interviewer')?.imageUrl || "https://picsum.photos/seed/nexvoro_hr/800/1000";
   }, []);
 
+  // Initialize Web Speech API for Speech-to-Text
+  useEffect(() => {
+    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    if (SpeechRecognition) {
+      const recognition = new SpeechRecognition();
+      recognition.continuous = true;
+      recognition.interimResults = true;
+      recognition.lang = 'en-US';
+
+      recognition.onresult = (event: any) => {
+        let interimTranscript = '';
+        for (let i = event.resultIndex; i < event.results.length; ++i) {
+          if (event.results[i].isFinal) {
+            setUserAnswer(prev => prev + event.results[i][0].transcript);
+          } else {
+            interimTranscript += event.results[i][0].transcript;
+          }
+        }
+      };
+
+      recognition.onstart = () => setIsMicActive(true);
+      recognition.onend = () => setIsMicActive(false);
+      recognition.onerror = (event: any) => {
+        console.error('Speech Recognition Error:', event.error);
+        setIsMicActive(false);
+      };
+
+      recognitionRef.current = recognition;
+    }
+  }, []);
+
+  const toggleMic = () => {
+    if (!recognitionRef.current) {
+      toast({ variant: "destructive", title: "STT Unsupported", description: "Browser does not support speech recognition." });
+      return;
+    }
+
+    if (isMicActive) {
+      recognitionRef.current.stop();
+    } else {
+      setUserAnswer("");
+      recognitionRef.current.start();
+    }
+  };
+
   const handleInterviewerResponse = async (text: string) => {
     try {
       setIsAvatarSynthesizing(true);
+      setIsAvatarSpeaking(false);
       
       // 1. Attempt D-ID Synthesis
       const talkReq = await createTalk(text, interviewerImg);
@@ -88,17 +136,16 @@ function VirtualArenaContent() {
           } else if (status.status === 'error') {
             throw new Error("D-ID processing failed.");
           } else {
-            // Check again in 2s
             setTimeout(pollStatus, 2000);
           }
         };
         pollStatus();
       } else {
-        // 2. Fallback to high-fidelity TTS (Audio Only)
-        console.warn("[D-ID] Service unavailable or bypassed. Falling back to Neural TTS.");
         throw new Error("D-ID Bypass");
       }
     } catch (error) {
+      // 2. Fallback to Neural TTS (Audio Only)
+      console.warn("[Arena] Falling back to Neural TTS.");
       setIsAvatarSynthesizing(false);
       setIsAvatarSpeaking(true);
       const audioUri = await synthesizeAudio(text);
@@ -108,6 +155,11 @@ function VirtualArenaContent() {
       }
     }
   };
+
+  // Turn-based logic: Auto-scroll transcript
+  useEffect(() => {
+    transcriptEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [transcript]);
 
   useEffect(() => {
     async function init() {
@@ -149,6 +201,11 @@ function VirtualArenaContent() {
   const handleSend = async () => {
     if (!userAnswer.trim() || isProcessing || isSimulationComplete || isAvatarSpeaking || isAvatarSynthesizing) return;
     
+    // Stop mic if active
+    if (isMicActive && recognitionRef.current) {
+      recognitionRef.current.stop();
+    }
+
     setIsProcessing(true);
     const newEntry = { role: 'candidate' as const, text: userAnswer };
     const updatedTranscript = [...transcript, newEntry];
@@ -156,7 +213,7 @@ function VirtualArenaContent() {
     
     const currentAnswer = userAnswer;
     setUserAnswer("");
-    setAvatarVideoUrl(null); // Clear previous video
+    setAvatarVideoUrl(null); 
 
     try {
       const response = await aiMockInterview({
@@ -238,7 +295,6 @@ function VirtualArenaContent() {
 
       const docRef = await addDoc(collection(db, 'users', user.uid, 'interviews'), interviewData);
       
-      // Update journey to report step (11)
       await setDoc(doc(db, 'users', user.uid, 'journey', 'active'), {
         step: 11,
         finalReportId: docRef.id
@@ -328,8 +384,8 @@ function VirtualArenaContent() {
             <div ref={transcriptEndRef} />
           </Card>
           <div className="h-24 glass rounded-[2rem] p-4 flex items-center gap-4">
-             <Button onClick={() => setIsMicActive(!isMicActive)} className={`w-12 h-12 rounded-xl transition-all ${isMicActive ? 'bg-accent text-black' : 'bg-red-500/10 text-red-400'}`}><Mic className="w-5 h-5" /></Button>
-             <input disabled={isProcessing || isAvatarSpeaking || isAvatarSynthesizing} value={userAnswer} onChange={(e) => setUserAnswer(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && handleSend()} className="flex-1 bg-transparent outline-none px-4 text-sm font-light placeholder:text-white/20" placeholder="Type your professional reasoning..." />
+             <Button onClick={toggleMic} disabled={isAvatarSpeaking || isAvatarSynthesizing || isProcessing} className={`w-12 h-12 rounded-xl transition-all ${isMicActive ? 'bg-red-500 text-white animate-pulse' : 'bg-red-500/10 text-red-400'}`}><Mic className="w-5 h-5" /></Button>
+             <input disabled={isProcessing || isAvatarSpeaking || isAvatarSynthesizing} value={userAnswer} onChange={(e) => setUserAnswer(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && handleSend()} className="flex-1 bg-transparent outline-none px-4 text-sm font-light placeholder:text-white/20" placeholder={isMicActive ? "Listening..." : "Type your professional reasoning..."} />
              <Button onClick={handleSend} disabled={!userAnswer.trim() || isProcessing || isAvatarSpeaking || isAvatarSynthesizing} className="h-14 px-8 btn-premium rounded-xl">Transmit</Button>
           </div>
         </div>
