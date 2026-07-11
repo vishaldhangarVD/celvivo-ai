@@ -1,4 +1,3 @@
-
 "use client";
 
 import { Suspense, useEffect, useState, useRef, useMemo } from "react";
@@ -121,6 +120,7 @@ function VirtualArenaContent() {
     try {
       setIsAvatarSynthesizing(true);
       setIsAvatarSpeaking(false);
+      setAvatarVideoUrl(null);
       
       // 1. Attempt D-ID Synthesis
       const talkReq = await createTalk(text, interviewerImg);
@@ -161,36 +161,43 @@ function VirtualArenaContent() {
     transcriptEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [transcript]);
 
+  // Initial Handshake and Greeting
   useEffect(() => {
     async function init() {
-      if (!user || !db) return;
+      if (!user || !db || !role || !company || !exp) return;
+      
       const docRef = doc(db, 'users', user.uid, 'journey', 'active');
       const snap = await getDoc(docRef);
       if (snap.exists()) {
         const data = snap.data();
         setAssessmentContext(data);
         
-        try {
-          const response = await aiMockInterview({
-            role,
-            experienceLevel: exp,
-            roundType: round,
-            currentMainQuestionIndex: 1,
-            history: [],
-            targetCompany: company,
-            resumeSkills: data.resumeAnalysis?.skillAnalysis?.map((s: any) => s.skill) || [],
-            resumeProjects: data.resumeAnalysis?.sections?.projects || [],
-            resumeSummary: data.resumeAnalysis?.summary || "",
-            aptitudePerformance: data.aptitudeReport?.recommendation || "N/A",
-            codingPerformance: data.codingReport?.finalRecommendation || "N/A",
-            difficultyLevel: "MEDIUM"
-          });
+        // Only start if we haven't already
+        if (transcript.length === 0) {
+          try {
+            const response = await aiMockInterview({
+              role,
+              experienceLevel: exp,
+              roundType: round,
+              currentMainQuestionIndex: 1,
+              history: [],
+              targetCompany: company,
+              resumeSkills: data.resumeAnalysis?.skillAnalysis?.map((s: any) => s.skill) || [],
+              resumeProjects: data.resumeAnalysis?.sections?.projects || [],
+              resumeSummary: data.resumeAnalysis?.summary || "",
+              aptitudePerformance: data.aptitudeReport?.recommendation || "N/A",
+              codingPerformance: data.codingReport?.finalRecommendation || "N/A",
+              difficultyLevel: "MEDIUM"
+            });
 
-          setTranscript([{ role: 'interviewer', text: response.nextQuestion }]);
-          await handleInterviewerResponse(response.nextQuestion);
-        } catch (e) {
-          toast({ variant: "destructive", title: "Arena Handshake Failed" });
-        } finally {
+            setTranscript([{ role: 'interviewer', text: response.nextQuestion }]);
+            await handleInterviewerResponse(response.nextQuestion);
+          } catch (e) {
+            toast({ variant: "destructive", title: "Arena Handshake Failed" });
+          } finally {
+            setIsInitializing(false);
+          }
+        } else {
           setIsInitializing(false);
         }
       }
@@ -221,10 +228,15 @@ function VirtualArenaContent() {
         experienceLevel: exp,
         roundType: round,
         currentMainQuestionIndex: currentIdx + 1,
-        history: updatedTranscript.map(t => ({
-          question: t.role === 'interviewer' ? t.text : '',
-          answer: t.role === 'candidate' ? t.text : ''
-        })).filter(h => h.question || h.answer) as any,
+        history: updatedTranscript.map((t, i) => {
+          if (t.role === 'candidate') {
+            return {
+              question: updatedTranscript[i-1]?.text || "",
+              answer: t.text
+            };
+          }
+          return null;
+        }).filter(Boolean) as any,
         userAnswer: currentAnswer,
         targetCompany: company,
         resumeSkills: assessmentContext.resumeAnalysis?.skillAnalysis?.map((s: any) => s.skill) || [],
@@ -351,7 +363,7 @@ function VirtualArenaContent() {
                <p className="text-xl font-bold">Senior Partner</p>
                <div className="flex items-center gap-2">
                  <p className="text-[10px] text-white/40 uppercase font-bold">
-                   {isAvatarSynthesizing ? "Synthesizing Neural Node..." : "Simulation Matrix Active"}
+                   {isAvatarSynthesizing ? "Synthesizing Neural Node..." : isAvatarSpeaking ? "Listening..." : "Waiting for response"}
                  </p>
                  {(isAvatarSpeaking || isAvatarSynthesizing) && <Activity className={`w-3 h-3 ${isAvatarSynthesizing ? 'text-purple-400' : 'text-accent'} animate-pulse`} />}
                </div>
@@ -360,7 +372,7 @@ function VirtualArenaContent() {
             {isAvatarSynthesizing && (
               <div className="absolute inset-0 bg-black/40 backdrop-blur-sm flex flex-col items-center justify-center z-30 space-y-4">
                 <Cpu className="w-10 h-10 text-purple-400 animate-spin" />
-                <span className="text-[8px] font-bold uppercase tracking-[0.4em] text-purple-400">Architecting Avatar Node...</span>
+                <span className="text-[8px] font-bold uppercase tracking-[0.4em] text-purple-400">Architecting Next Node...</span>
               </div>
             )}
           </Card>
@@ -370,7 +382,7 @@ function VirtualArenaContent() {
         <div className="lg:col-span-8 flex flex-col gap-6 overflow-hidden">
           <Card className="premium-card bg-[#0b0e1a]/80 p-8 border-glow-premium">
              <h2 className="text-xl md:text-2xl font-bold leading-tight">
-               {isProcessing ? "Synthesizing next node..." : isAvatarSynthesizing ? "Analyzing response..." : isAvatarSpeaking ? "Listening..." : transcript.filter(t => t.role === 'interviewer').slice(-1)[0]?.text}
+               {isProcessing ? "Synthesizing next node..." : isAvatarSynthesizing ? "Analyzing response..." : isAvatarSpeaking ? "Listening..." : transcript.filter(t => t.role === 'interviewer').slice(-1)[0]?.text || "Initializing session..."}
              </h2>
           </Card>
           <Card className="flex-1 premium-card bg-black/40 p-6 overflow-y-auto custom-scrollbar flex flex-col gap-6">
@@ -385,7 +397,7 @@ function VirtualArenaContent() {
           </Card>
           <div className="h-24 glass rounded-[2rem] p-4 flex items-center gap-4">
              <Button onClick={toggleMic} disabled={isAvatarSpeaking || isAvatarSynthesizing || isProcessing} className={`w-12 h-12 rounded-xl transition-all ${isMicActive ? 'bg-red-500 text-white animate-pulse' : 'bg-red-500/10 text-red-400'}`}><Mic className="w-5 h-5" /></Button>
-             <input disabled={isProcessing || isAvatarSpeaking || isAvatarSynthesizing} value={userAnswer} onChange={(e) => setUserAnswer(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && handleSend()} className="flex-1 bg-transparent outline-none px-4 text-sm font-light placeholder:text-white/20" placeholder={isMicActive ? "Listening..." : "Type your professional reasoning..."} />
+             <input disabled={isProcessing || isAvatarSpeaking || isAvatarSynthesizing} value={userAnswer} onChange={(e) => setUserAnswer(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && handleSend()} className="flex-1 bg-transparent outline-none px-4 text-sm font-light placeholder:text-white/20" placeholder={isMicActive ? "Listening..." : isAvatarSpeaking ? "Avatar speaking..." : "Type your professional reasoning..."} />
              <Button onClick={handleSend} disabled={!userAnswer.trim() || isProcessing || isAvatarSpeaking || isAvatarSynthesizing} className="h-14 px-8 btn-premium rounded-xl">Transmit</Button>
           </div>
         </div>
