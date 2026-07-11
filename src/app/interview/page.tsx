@@ -169,7 +169,6 @@ export default function InterviewJourney() {
 
   const [showRecovery, setShowRecovery] = useState(false);
   const [isInitializing, setIsInitializing] = useState(true);
-  const [isCleaningUp, setIsCleaningUp] = useState(false);
 
   useEffect(() => {
     async function loadActiveSession() {
@@ -212,100 +211,34 @@ export default function InterviewJourney() {
 
   const handleGlobalReset = async () => {
     if (!user || !db) return;
-    setIsCleaningUp(true);
-    
-    try {
-      // Clear Firestore Active Session
-      const docRef = doc(db, 'users', user.uid, 'journey', 'active');
-      await deleteDoc(docRef);
-      
-      // Clear only interview-related local storage
-      localStorage.removeItem("resumeAnalysis");
-      sessionStorage.removeItem("activeInterviewId");
-      
-      // Reset UI state
-      setCurrentStep(1);
-      setSelectedRole("");
-      setSelectedExp("");
-      setSelectedCompany("");
-      setResumeAnalysis(null);
-      setAptitudeReport(null);
-      setCodingReport(null);
-      setAptitudeAnswers({});
-      setAiAptitudeQuestions([]);
-      setCodingProblem(null);
-      setCode("");
-      setFile(null);
-      
-      setShowRecovery(false);
-      toast({ title: "Neural Link Reset", description: "All active journey nodes have been purged. Account remains active." });
-    } catch (e) {
-      console.error(e);
-    } finally {
-      setIsCleaningUp(false);
+    const docRef = doc(db, 'users', user.uid, 'journey', 'active');
+    await deleteDoc(docRef);
+    setCurrentStep(1);
+    setSelectedRole("");
+    setSelectedExp("");
+    setSelectedCompany("");
+    setResumeAnalysis(null);
+    setAptitudeReport(null);
+    setCodingReport(null);
+    setAptitudeAnswers({});
+    setAiAptitudeQuestions([]);
+    setCodingProblem(null);
+    setCode("");
+    setFile(null);
+    setShowRecovery(false);
+    toast({ title: "Session Reset", description: "Simulation state has been cleared." });
+  };
+
+  const handleBackNavigation = () => {
+    if (currentStep > 1) {
+      setCurrentStep(prev => prev - 1);
+    } else {
+      router.push('/');
     }
   };
 
-  const handleGoHome = async () => {
-    await handleGlobalReset();
-    router.push('/dashboard');
-  };
-
-  const handleBackNavigation = async () => {
-    if (currentStep <= 1) {
-      handleGoHome();
-      return;
-    }
-    
-    const prevStep = currentStep - 1;
-    
-    // Cloud Pruning Logic: Delete all temporary data associated with steps AFTER the target step
-    const updates: any = {
-      step: prevStep,
-      updatedAt: serverTimestamp()
-    };
-
-    // If going back to Role/Exp/Company selection (Steps 1-3)
-    if (prevStep < 4) {
-      updates.resumeAnalysis = null;
-    }
-    
-    // If going back before Aptitude (Steps 1-5)
-    if (prevStep < 6) {
-      updates.aiAptitudeQuestions = null;
-      updates.aptitudeReport = null;
-      updates.aptitudeAnswers = null;
-      updates.aptitudeRemainingTime = null;
-      updates.aptitudeIdx = null;
-    }
-
-    // If going back before Coding (Steps 1-7)
-    if (prevStep < 8) {
-      updates.codingProblem = null;
-      updates.codingReport = null;
-      updates.code = null;
-    }
-
-    // If going back before HR Interview (Steps 1-9)
-    if (prevStep < 10) {
-      updates.sessionId = null;
-    }
-
-    if (user && db) {
-      const docRef = doc(db, 'users', user.uid, 'journey', 'active');
-      await updateDoc(docRef, updates);
-    }
-
-    // Local State Sync
-    if (prevStep < 8) { setCodingProblem(null); setCodingReport(null); setCode(""); }
-    if (prevStep < 6) { setAiAptitudeQuestions([]); setAptitudeReport(null); setAptitudeAnswers({}); setAptitudeRemainingTime(null); setAptitudeIdx(0); }
-    if (prevStep < 4) { setResumeAnalysis(null); setFile(null); }
-    
-    setCurrentStep(prevStep);
-    toast({ 
-      title: "Neural Vector Reversed", 
-      description: `Reverting to ${INTERVIEW_STEPS[prevStep-1].title}. Future nodes cleared.` 
-    });
+  const handleGoHome = () => {
+    router.push('/');
   };
 
   // Aptitude Timer Logic
@@ -492,7 +425,7 @@ export default function InterviewJourney() {
     router.push(`/interview/${sessId}?role=${encodeURIComponent(selectedRole)}&company=${encodeURIComponent(selectedCompany)}&exp=${encodeURIComponent(selectedExp)}&round=Virtual%20Interview`);
   };
 
-  if (isInitializing || isCleaningUp) return <div className="h-screen flex items-center justify-center bg-[#050816]"><Loader2 className="w-12 h-12 text-accent animate-spin" /></div>;
+  if (isInitializing) return <div className="h-screen flex items-center justify-center bg-[#050816]"><Loader2 className="w-12 h-12 text-accent animate-spin" /></div>;
 
   return (
     <div className="min-h-screen bg-[#050816] pb-32">
@@ -525,12 +458,6 @@ export default function InterviewJourney() {
             </nav>
 
             <div className="pt-8 border-t border-white/5 space-y-4">
-               {currentStep > 1 && (
-                 <Button onClick={handleBackNavigation} variant="ghost" className="w-full h-14 rounded-2xl glass border-white/5 text-white/60 hover:text-white gap-3 text-[10px] font-bold uppercase tracking-widest">
-                   <ArrowLeft className="w-4 h-4" /> Go Back
-                 </Button>
-               )}
-
                <AlertDialog>
                  <AlertDialogTrigger asChild>
                    <Button variant="ghost" className="w-full h-14 rounded-2xl glass border-white/5 text-red-400 hover:bg-red-500/10 hover:text-red-300 gap-3 text-[10px] font-bold uppercase tracking-widest">
@@ -552,7 +479,7 @@ export default function InterviewJourney() {
                </AlertDialog>
 
                <Button onClick={handleGoHome} variant="ghost" className="w-full h-14 rounded-2xl glass border-white/5 text-accent hover:bg-accent/10 gap-3 text-[10px] font-bold uppercase tracking-widest">
-                  <Home className="w-4 h-4" /> Command Hub
+                  <Home className="w-4 h-4" /> Go to Website
                </Button>
             </div>
           </aside>
