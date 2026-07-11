@@ -1,13 +1,24 @@
 import { genkit } from 'genkit';
 import { googleAI } from '@genkit-ai/google-genai';
+import { config } from 'dotenv';
+
+// Ensure environment variables are loaded for server-side AI initialization
+if (typeof window === 'undefined') {
+  config();
+}
 
 /**
  * Genkit instance initialized with the Google AI plugin.
- * Optimized for Google AI Studio 'AQ' and 'AIza' keys.
+ * Optimized for Google AI Studio 'AQ.' prefix keys and legacy 'AIza' keys.
  * Includes server-side diagnostics and resilient execution wrappers.
  */
 
-const apiKey = process.env.GOOGLE_GENAI_API_KEY || process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY;
+const apiKey = (
+  process.env.GOOGLE_GENAI_API_KEY || 
+  process.env.GEMINI_API_KEY || 
+  process.env.GOOGLE_API_KEY || 
+  ''
+).trim();
 
 // Global Model Protocol
 export const PRIMARY_MODEL = 'googleai/gemini-2.5-flash';
@@ -24,9 +35,11 @@ if (typeof window === 'undefined') {
   if (!apiKey) {
     console.error('[CRITICAL FAILURE] No authorization token found in .env. All AI simulations will fail with 401.');
   } else {
+    const isAQKey = apiKey.startsWith('AQ');
     const activeVar = process.env.GOOGLE_GENAI_API_KEY ? 'GOOGLE_GENAI_API_KEY' : process.env.GEMINI_API_KEY ? 'GEMINI_API_KEY' : 'GOOGLE_API_KEY';
     console.log(`[Active Load] Loaded identity from: ${activeVar}`);
-    console.log(`[STATUS] Resilient Neural Protocol v2.5 Live. Target Model: ${PRIMARY_MODEL}`);
+    console.log(`[Key Type] ${isAQKey ? 'New-Gen (AQ. prefix)' : 'Legacy (AIza prefix)'} detected.`);
+    console.log(`[STATUS] Resilient Neural Protocol v2.6 Live. Target Model: ${PRIMARY_MODEL}`);
   }
   console.log('-----------------------------------------------\n');
 }
@@ -45,7 +58,7 @@ export const ai = genkit({
  * Implements exponential backoff and model fallback.
  */
 export async function runWithResilience(promptFn: any, input: any) {
-  const delays = [3000, 7000, 15000]; // Increased for hard quota hits
+  const delays = [3000, 7000, 15000];
   const retryableStatuses = [429, 500, 502, 503, 504];
 
   async function attemptExecution(model: string) {
@@ -55,7 +68,11 @@ export async function runWithResilience(promptFn: any, input: any) {
       } catch (e: any) {
         const status = e.status || e.code;
         
-        // Log the specific error for debugging
+        if (status === 401) {
+          console.error(`[Neural Auth] Authentication failed for key type. Check .env for invalid characters or expired tokens.`);
+          throw e;
+        }
+
         if (status === 429) {
           console.warn(`[Neural Quota] Gemini ${model} is exhausted. Attempt ${i + 1}/3...`);
         } else {
@@ -74,7 +91,6 @@ export async function runWithResilience(promptFn: any, input: any) {
   try {
     return await attemptExecution(PRIMARY_MODEL);
   } catch (primaryError: any) {
-    // If it's a 429, maybe try the fallback model immediately or after a short wait
     console.warn(`[Neural Fallback] Primary model failure (${primaryError.status || primaryError.code}). Trying ${FALLBACK_MODEL}...`);
     try {
       return await attemptExecution(FALLBACK_MODEL);
