@@ -62,6 +62,10 @@ function VirtualArenaContent() {
   const [avatarVideoUrl, setAvatarVideoUrl] = useState<string | null>(null);
   const [assessmentContext, setAssessmentContext] = useState<any>(null);
 
+  // Memory & Difficulty State
+  const [difficulty, setDifficulty] = useState<"EASY" | "MEDIUM" | "HARD">("MEDIUM");
+  const [askedQuestions, setAskedQuestions] = useState<string[]>([]);
+
   const transcriptEndRef = useRef<HTMLDivElement>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const videoRef = useRef<HTMLVideoElement | null>(null);
@@ -187,10 +191,12 @@ function VirtualArenaContent() {
               resumeSummary: data.resumeAnalysis?.summary || "",
               aptitudePerformance: data.aptitudeReport?.recommendation || "N/A",
               codingPerformance: data.codingReport?.finalRecommendation || "N/A",
-              difficultyLevel: "MEDIUM"
+              difficultyLevel: "MEDIUM",
+              askedQuestions: []
             });
 
             setTranscript([{ role: 'interviewer', text: response.nextQuestion }]);
+            setAskedQuestions([response.nextQuestion]);
             await handleInterviewerResponse(response.nextQuestion);
           } catch (e) {
             toast({ variant: "destructive", title: "Arena Handshake Failed" });
@@ -243,10 +249,21 @@ function VirtualArenaContent() {
         resumeProjects: assessmentContext.resumeAnalysis?.sections?.projects || [],
         aptitudePerformance: assessmentContext.aptitudeReport?.recommendation || "N/A",
         codingPerformance: assessmentContext.codingReport?.finalRecommendation || "N/A",
-        difficultyLevel: "MEDIUM"
+        difficultyLevel: difficulty,
+        askedQuestions: askedQuestions
       });
 
+      // Adaptive Difficulty Calculation
+      if (response.difficultyAdjustment === "Harder") {
+        if (difficulty === "EASY") setDifficulty("MEDIUM");
+        else if (difficulty === "MEDIUM") setDifficulty("HARD");
+      } else if (response.difficultyAdjustment === "Easier") {
+        if (difficulty === "HARD") setDifficulty("MEDIUM");
+        else if (difficulty === "MEDIUM") setDifficulty("EASY");
+      }
+
       setTranscript(prev => [...prev, { role: 'interviewer', text: response.nextQuestion }]);
+      setAskedQuestions(prev => [...prev, response.nextQuestion]);
       setCurrentIdx(prev => prev + 1);
       await handleInterviewerResponse(response.nextQuestion);
 
@@ -331,7 +348,11 @@ function VirtualArenaContent() {
            <Command className="w-5 h-5 text-accent" />
            <div>
              <h1 className="text-sm font-bold uppercase tracking-widest">{company}</h1>
-             <p className="text-[10px] text-muted-foreground uppercase font-bold">Node {currentIdx}/15</p>
+             <div className="flex items-center gap-3">
+               <p className="text-[10px] text-muted-foreground uppercase font-bold">Node {currentIdx}/15</p>
+               <div className="w-1 h-1 rounded-full bg-white/10" />
+               <p className="text-[10px] text-accent uppercase font-bold tracking-widest">{difficulty} Protocol</p>
+             </div>
            </div>
         </div>
         <div className="px-5 py-2 glass rounded-full border-accent/20 font-mono text-accent">{Math.floor(timeLeft/60)}:{(timeLeft%60).toString().padStart(2,'0')}</div>
