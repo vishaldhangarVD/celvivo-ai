@@ -4,6 +4,7 @@
  * Calibrated for natural, human-like conversations in high-stakes IT environments.
  * Implements a 3-phase protocol: Introduction, Adaptive Core, and Strategic Closing.
  * Optimized with memory, adaptive difficulty, and company-specific interview patterns.
+ * Includes Developer Test Mode (debugMode) to bypass LLM logic for integration testing.
  */
 
 import { ai, runWithResilience } from '@/ai/genkit';
@@ -36,6 +37,7 @@ const AiMockInterviewInputSchema = z.object({
   codingPerformance: z.string().optional(),
   difficultyLevel: z.enum(["EASY", "MEDIUM", "HARD"]).optional(),
   askedQuestions: z.array(z.string()).optional(),
+  debugMode: z.boolean().optional(),
 });
 export type AiMockInterviewInput = z.infer<typeof AiMockInterviewInputSchema>;
 
@@ -45,6 +47,7 @@ const AiMockInterviewOutputSchema = z.object({
   difficultyAdjustment: z.enum(["Easier", "Harder", "Maintain"]).optional(),
   isInterviewComplete: z.boolean(),
   interviewStage: z.enum(["INTRODUCTION", "TECHNICAL", "HR", "HYBRID", "CLOSING"]).optional(),
+  debugPrompt: z.string().optional(),
 });
 export type AiMockInterviewOutput = z.infer<typeof AiMockInterviewOutputSchema>;
 
@@ -132,6 +135,16 @@ const aiMockInterviewFlow = ai.defineFlow(
     outputSchema: AiMockInterviewOutputSchema,
   },
   async (input) => {
+    // DEVELOPER TEST MODE: Bypass LLM logic for D-ID integration verification
+    if (input.debugMode) {
+      return {
+        nextQuestion: "Hello, welcome to Nexvoro AI. This is a developer test of the D-ID avatar integration.",
+        isInterviewComplete: input.currentMainQuestionIndex >= 5,
+        interviewStage: "INTRODUCTION",
+        debugPrompt: "DEV_MODE: Logic bypassed."
+      };
+    }
+
     try {
       const { output } = await runWithResilience(prompt, {
         ...input,

@@ -61,7 +61,8 @@ import {
   LogOut,
   AlertCircle,
   Home,
-  ArrowLeft
+  ArrowLeft,
+  Terminal as DevIcon
 } from 'lucide-react';
 import { 
   AlertDialog,
@@ -134,6 +135,8 @@ const INTERVIEW_STEPS = [
   { id: 9, title: 'Coding Result', icon: Award },
   { id: 10, title: 'HR Interview', icon: Mic },
 ];
+
+const DEV_MODE = true; // Temporary flag for test mode
 
 export default function InterviewJourney() {
   const router = useRouter();
@@ -227,6 +230,23 @@ export default function InterviewJourney() {
     setFile(null);
     setShowRecovery(false);
     toast({ title: "Session Reset", description: "Simulation state has been cleared." });
+  };
+
+  const skipToInterviewDev = async () => {
+    if (!user || !db) return;
+    const sessId = "dev-" + Math.random().toString(36).substring(7);
+    const docRef = doc(db, 'users', user.uid, 'journey', 'active');
+    await setDoc(docRef, {
+      step: 10,
+      role: "Developer Advocate",
+      experience: "Senior",
+      company: "Nexvoro AI",
+      debugMode: true,
+      updatedAt: serverTimestamp(),
+    }, { merge: true });
+    
+    router.push(`/interview/${sessId}?role=Developer%20Advocate&company=Nexvoro%20AI&exp=Senior&round=Virtual%20Interview`);
+    toast({ title: "DEV MODE ACTIVE", description: "Bypassing journey phases for D-ID verification." });
   };
 
   const handleBackNavigation = () => {
@@ -458,6 +478,12 @@ export default function InterviewJourney() {
             </nav>
 
             <div className="pt-8 border-t border-white/5 space-y-4">
+               {DEV_MODE && (
+                 <Button onClick={skipToInterviewDev} variant="outline" className="w-full h-14 rounded-2xl border-accent/30 text-accent hover:bg-accent/10 gap-3 text-[10px] font-bold uppercase tracking-widest">
+                   <DevIcon className="w-4 h-4" /> Skip to Interview (Dev)
+                 </Button>
+               )}
+
                <AlertDialog>
                  <AlertDialogTrigger asChild>
                    <Button variant="ghost" className="w-full h-14 rounded-2xl glass border-white/5 text-red-400 hover:bg-red-500/10 hover:text-red-300 gap-3 text-[10px] font-bold uppercase tracking-widest">

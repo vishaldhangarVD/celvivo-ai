@@ -197,7 +197,8 @@ function VirtualArenaContent() {
               aptitudePerformance: data.aptitudeReport?.recommendation || "N/A",
               codingPerformance: data.codingReport?.finalRecommendation || "N/A",
               difficultyLevel: "MEDIUM",
-              askedQuestions: []
+              askedQuestions: [],
+              debugMode: data.debugMode || false
             });
             setTranscript([{ role: 'interviewer', text: response.nextQuestion }]);
             setAskedQuestions([response.nextQuestion]);
@@ -244,13 +245,14 @@ function VirtualArenaContent() {
         aptitudePerformance: assessmentContext.aptitudeReport?.recommendation || "N/A",
         codingPerformance: assessmentContext.codingReport?.finalRecommendation || "N/A",
         difficultyLevel: difficulty,
-        askedQuestions: askedQuestions
+        askedQuestions: askedQuestions,
+        debugMode: assessmentContext.debugMode || false
       });
       const finalFullTranscript = [...updatedTranscript, { role: 'interviewer' as const, text: response.nextQuestion }];
       setTranscript(finalFullTranscript);
       setAskedQuestions(prev => [...prev, response.nextQuestion]);
       setCurrentIdx(prev => prev + 1);
-      if (response.isInterviewComplete || currentIdx >= 15) finalizeSession(finalFullTranscript);
+      if (response.isInterviewComplete || (assessmentContext.debugMode && currentIdx >= 5) || currentIdx >= 15) finalizeSession(finalFullTranscript);
       else await handleInterviewerResponse(response.nextQuestion);
     } catch (error) {
       toast({ variant: "destructive", title: "Transmission Error" });
@@ -338,7 +340,7 @@ function VirtualArenaContent() {
            <Command className="w-5 h-5 text-accent" />
            <div>
              <h1 className="text-sm font-bold uppercase tracking-widest">{company}</h1>
-             <p className="text-[10px] text-muted-foreground uppercase font-bold">Node {currentIdx}/15</p>
+             <p className="text-[10px] text-muted-foreground uppercase font-bold">Node {currentIdx}/{assessmentContext?.debugMode ? '5' : '15'}</p>
            </div>
         </div>
         <div className="flex items-center gap-6">
