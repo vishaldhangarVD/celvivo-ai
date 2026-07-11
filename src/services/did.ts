@@ -26,7 +26,7 @@ export async function getStreamingToken(): Promise<DidTokenResponse> {
   }
 
   try {
-    // Request a session token for the specific Agent ID
+    // Request a session token for the specific Agent ID using Basic Auth with the Client Key
     const response = await fetch(`https://api.d-id.com/agents/${DID_AGENT_ID}/token`, {
       method: 'POST',
       headers: {

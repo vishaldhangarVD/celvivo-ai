@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useEffect, useState, useRef, useMemo } from "react";
+import { Suspense, useEffect, useState, useRef } from "react";
 import { useRouter, useParams, useSearchParams } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
@@ -138,7 +138,12 @@ function VirtualArenaContent() {
             if (state === 'disconnected') setIsAgentConnected(false);
           },
           onVideoStatusChange: (status: string) => {
-            setIsAvatarSpeaking(status === 'play');
+            // Unlocks mic when video stops playing (finished speaking)
+            if (status === 'stop' || status === 'pause') {
+              setIsAvatarSpeaking(false);
+            } else if (status === 'play') {
+              setIsAvatarSpeaking(true);
+            }
           }
         }
       });
@@ -403,7 +408,7 @@ function VirtualArenaContent() {
                <p className="text-xl font-bold">Senior Partner</p>
                <div className="flex items-center gap-2">
                  <p className="text-[10px] text-white/40 uppercase font-bold">
-                   {isAvatarSynthesizing ? "Synthesizing Thought..." : isAvatarSpeaking ? "Listening..." : "Awaiting Input"}
+                   {isAvatarSynthesizing ? "Synthesizing Thought..." : isAvatarSpeaking ? "Speaking..." : "Listening"}
                  </p>
                  {(isAvatarSpeaking || isAvatarSynthesizing) && <Activity className={`w-3 h-3 ${isAvatarSynthesizing ? 'text-purple-400' : 'text-accent'} animate-pulse`} />}
                </div>
@@ -444,7 +449,7 @@ function VirtualArenaContent() {
                onChange={(e) => setUserAnswer(e.target.value)} 
                onKeyDown={(e) => e.key === 'Enter' && handleSend()} 
                className="flex-1 bg-transparent outline-none px-6 text-sm font-light placeholder:text-white/10" 
-               placeholder={isMicActive ? "Dictating response..." : isAvatarSpeaking ? "Avatar speaking..." : "Type or speak your reasoning..."} 
+               placeholder={isMicActive ? "Dictating response..." : isAvatarSpeaking ? "Interviewer is speaking..." : "Type or speak your reasoning..."} 
              />
              <Button 
                onClick={handleSend} 
