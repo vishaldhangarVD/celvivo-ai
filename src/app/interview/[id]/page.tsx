@@ -1,4 +1,3 @@
-
 "use client";
 
 import { Suspense, useEffect, useState, useRef, useMemo } from "react";
@@ -21,13 +20,15 @@ import {
   BrainCircuit,
   Terminal,
   Activity,
-  Volume2
+  Volume2,
+  Cpu
 } from "lucide-react";
 import Navbar from "@/components/layout/Navbar";
 import NavigationControls from "@/components/NavigationControls";
 import { aiMockInterview } from "@/ai/flows/ai-mock-interview-v2";
 import { generateInterviewFeedback } from "@/ai/flows/ai-interview-feedback";
 import { synthesizeAudio } from "@/ai/flows/ai-audio-synthesis";
+import { createTalk, getTalkStatus } from "@/services/did";
 import { useUser, useFirestore } from "@/firebase";
 import { doc, serverTimestamp, collection, addDoc, updateDoc, getDoc, setDoc } from "firebase/firestore";
 import { useToast } from "@/hooks/use-toast";
@@ -57,26 +58,54 @@ function VirtualArenaContent() {
   const [isInitializing, setIsInitializing] = useState(true);
   const [isGeneratingReport, setIsGeneratingReport] = useState(false);
   const [isAvatarSpeaking, setIsAvatarSpeaking] = useState(false);
+  const [isAvatarSynthesizing, setIsAvatarSynthesizing] = useState(false);
+  const [avatarVideoUrl, setAvatarVideoUrl] = useState<string | null>(null);
   const [assessmentContext, setAssessmentContext] = useState<any>(null);
 
   const transcriptEndRef = useRef<HTMLDivElement>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const videoRef = useRef<HTMLVideoElement | null>(null);
 
   const interviewerImg = useMemo(() => {
     return PlaceHolderImages.find(img => img.id === 'ai-hr-interviewer')?.imageUrl || "https://picsum.photos/seed/nexvoro_hr/800/1000";
   }, []);
 
-  const playInterviewerAudio = async (text: string) => {
+  const handleInterviewerResponse = async (text: string) => {
     try {
+      setIsAvatarSynthesizing(true);
+      
+      // 1. Attempt D-ID Synthesis
+      const talkReq = await createTalk(text, interviewerImg);
+      
+      if (talkReq.success && talkReq.talkId) {
+        // Poll for D-ID result
+        const pollStatus = async () => {
+          const status = await getTalkStatus(talkReq.talkId!);
+          if (status.status === 'done' && status.videoUrl) {
+            setAvatarVideoUrl(status.videoUrl);
+            setIsAvatarSynthesizing(false);
+            setIsAvatarSpeaking(true);
+          } else if (status.status === 'error') {
+            throw new Error("D-ID processing failed.");
+          } else {
+            // Check again in 2s
+            setTimeout(pollStatus, 2000);
+          }
+        };
+        pollStatus();
+      } else {
+        // 2. Fallback to high-fidelity TTS (Audio Only)
+        console.warn("[D-ID] Service unavailable or bypassed. Falling back to Neural TTS.");
+        throw new Error("D-ID Bypass");
+      }
+    } catch (error) {
+      setIsAvatarSynthesizing(false);
       setIsAvatarSpeaking(true);
       const audioUri = await synthesizeAudio(text);
       if (audioRef.current) {
         audioRef.current.src = audioUri;
         audioRef.current.play();
       }
-    } catch (error) {
-      console.error("Vocal Synthesis Failed:", error);
-      setIsAvatarSpeaking(false);
     }
   };
 
@@ -106,7 +135,7 @@ function VirtualArenaContent() {
           });
 
           setTranscript([{ role: 'interviewer', text: response.nextQuestion }]);
-          await playInterviewerAudio(response.nextQuestion);
+          await handleInterviewerResponse(response.nextQuestion);
         } catch (e) {
           toast({ variant: "destructive", title: "Arena Handshake Failed" });
         } finally {
@@ -118,7 +147,7 @@ function VirtualArenaContent() {
   }, [user, db, role, company, exp, round]);
 
   const handleSend = async () => {
-    if (!userAnswer.trim() || isProcessing || isSimulationComplete || isAvatarSpeaking) return;
+    if (!userAnswer.trim() || isProcessing || isSimulationComplete || isAvatarSpeaking || isAvatarSynthesizing) return;
     
     setIsProcessing(true);
     const newEntry = { role: 'candidate' as const, text: userAnswer };
@@ -127,6 +156,7 @@ function VirtualArenaContent() {
     
     const currentAnswer = userAnswer;
     setUserAnswer("");
+    setAvatarVideoUrl(null); // Clear previous video
 
     try {
       const response = await aiMockInterview({
@@ -149,7 +179,7 @@ function VirtualArenaContent() {
 
       setTranscript(prev => [...prev, { role: 'interviewer', text: response.nextQuestion }]);
       setCurrentIdx(prev => prev + 1);
-      await playInterviewerAudio(response.nextQuestion);
+      await handleInterviewerResponse(response.nextQuestion);
 
       if (response.isInterviewComplete || currentIdx >= 15) {
         setIsSimulationComplete(true);
@@ -242,14 +272,41 @@ function VirtualArenaContent() {
       <main className="flex-1 container mx-auto px-6 py-8 grid lg:grid-cols-12 gap-8 overflow-hidden">
         <div className="lg:col-span-4 flex flex-col gap-6">
           <Card className="flex-1 premium-card bg-black/40 p-0 overflow-hidden relative group">
-            <Image src={interviewerImg} alt="Interviewer" fill className={`object-cover transition-all duration-700 ${isAvatarSpeaking ? 'opacity-100 scale-105 saturate-100' : 'opacity-40 saturate-0'}`} />
+            <AnimatePresence mode="wait">
+              {avatarVideoUrl ? (
+                <motion.video
+                  key="avatar-video"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  ref={videoRef}
+                  onEnded={() => setIsAvatarSpeaking(false)}
+                  className="absolute inset-0 w-full h-full object-cover z-10"
+                  autoPlay
+                />
+              ) : (
+                <motion.div key="avatar-image" className="absolute inset-0 w-full h-full">
+                   <Image src={interviewerImg} alt="Interviewer" fill className={`object-cover transition-all duration-700 ${isAvatarSpeaking ? 'opacity-100 scale-105 saturate-100' : 'opacity-40 saturate-0'}`} />
+                </motion.div>
+              )}
+            </AnimatePresence>
+            
             <div className="absolute bottom-6 left-6 z-20">
                <p className="text-xl font-bold">Senior Partner</p>
                <div className="flex items-center gap-2">
-                 <p className="text-[10px] text-white/40 uppercase font-bold">Simulation Matrix Active</p>
-                 {isAvatarSpeaking && <Activity className="w-3 h-3 text-accent animate-pulse" />}
+                 <p className="text-[10px] text-white/40 uppercase font-bold">
+                   {isAvatarSynthesizing ? "Synthesizing Neural Node..." : "Simulation Matrix Active"}
+                 </p>
+                 {(isAvatarSpeaking || isAvatarSynthesizing) && <Activity className={`w-3 h-3 ${isAvatarSynthesizing ? 'text-purple-400' : 'text-accent'} animate-pulse`} />}
                </div>
             </div>
+
+            {isAvatarSynthesizing && (
+              <div className="absolute inset-0 bg-black/40 backdrop-blur-sm flex flex-col items-center justify-center z-30 space-y-4">
+                <Cpu className="w-10 h-10 text-purple-400 animate-spin" />
+                <span className="text-[8px] font-bold uppercase tracking-[0.4em] text-purple-400">Architecting Avatar Node...</span>
+              </div>
+            )}
           </Card>
           <Card className="h-40 glass flex items-center justify-center text-center p-6"><p className="text-[10px] text-white/20 uppercase font-bold tracking-[0.4em]">Candidate Feed Shielded</p></Card>
         </div>
@@ -257,7 +314,7 @@ function VirtualArenaContent() {
         <div className="lg:col-span-8 flex flex-col gap-6 overflow-hidden">
           <Card className="premium-card bg-[#0b0e1a]/80 p-8 border-glow-premium">
              <h2 className="text-xl md:text-2xl font-bold leading-tight">
-               {isProcessing ? "Synthesizing next node..." : isAvatarSpeaking ? "Listening..." : transcript.filter(t => t.role === 'interviewer').slice(-1)[0]?.text}
+               {isProcessing ? "Synthesizing next node..." : isAvatarSynthesizing ? "Analyzing response..." : isAvatarSpeaking ? "Listening..." : transcript.filter(t => t.role === 'interviewer').slice(-1)[0]?.text}
              </h2>
           </Card>
           <Card className="flex-1 premium-card bg-black/40 p-6 overflow-y-auto custom-scrollbar flex flex-col gap-6">
@@ -272,8 +329,8 @@ function VirtualArenaContent() {
           </Card>
           <div className="h-24 glass rounded-[2rem] p-4 flex items-center gap-4">
              <Button onClick={() => setIsMicActive(!isMicActive)} className={`w-12 h-12 rounded-xl transition-all ${isMicActive ? 'bg-accent text-black' : 'bg-red-500/10 text-red-400'}`}><Mic className="w-5 h-5" /></Button>
-             <input disabled={isProcessing || isAvatarSpeaking} value={userAnswer} onChange={(e) => setUserAnswer(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && handleSend()} className="flex-1 bg-transparent outline-none px-4 text-sm font-light placeholder:text-white/20" placeholder="Type your professional reasoning..." />
-             <Button onClick={handleSend} disabled={!userAnswer.trim() || isProcessing || isAvatarSpeaking} className="h-14 px-8 btn-premium rounded-xl">Transmit</Button>
+             <input disabled={isProcessing || isAvatarSpeaking || isAvatarSynthesizing} value={userAnswer} onChange={(e) => setUserAnswer(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && handleSend()} className="flex-1 bg-transparent outline-none px-4 text-sm font-light placeholder:text-white/20" placeholder="Type your professional reasoning..." />
+             <Button onClick={handleSend} disabled={!userAnswer.trim() || isProcessing || isAvatarSpeaking || isAvatarSynthesizing} className="h-14 px-8 btn-premium rounded-xl">Transmit</Button>
           </div>
         </div>
       </main>
@@ -303,4 +360,3 @@ export default function VirtualArena() {
     </Suspense>
   );
 }
-
