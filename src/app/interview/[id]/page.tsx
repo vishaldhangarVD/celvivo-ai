@@ -40,7 +40,6 @@ import Navbar from "@/components/layout/Navbar";
 import NavigationControls from "@/components/NavigationControls";
 import { aiMockInterview } from "@/ai/flows/ai-mock-interview-v2";
 import { generateInterviewFeedback } from "@/ai/flows/ai-interview-feedback";
-import { getStreamingToken } from "@/services/did";
 import { useUser, useFirestore } from "@/firebase";
 import { doc, serverTimestamp, collection, addDoc, updateDoc, getDoc, setDoc, deleteDoc } from "firebase/firestore";
 import { useToast } from "@/hooks/use-toast";
@@ -117,18 +116,25 @@ function VirtualArenaContent() {
     initClient();
   }, []);
 
-  // Establishing D-ID Realtime Link
+  // Establishing D-ID Realtime Link using Client Key
   const connectToAgent = async () => {
     if (isAgentConnected || !didSdk) return;
+    
+    const clientKey = process.env.NEXT_PUBLIC_D_ID_CLIENT_KEY;
+    const agentId = process.env.NEXT_PUBLIC_D_ID_AGENT_ID;
+
+    if (!clientKey || !agentId) {
+      const missingVar = !clientKey ? "NEXT_PUBLIC_D_ID_CLIENT_KEY" : "NEXT_PUBLIC_D_ID_AGENT_ID";
+      setConfigError(`Configuration Missing: ${missingVar}`);
+      return;
+    }
+
     try {
-      const auth = await getStreamingToken();
-      if (!auth.success || !auth.token || !auth.agentId) {
-        setConfigError(auth.error || "Configuration Error");
-        return;
-      }
-      
-      const agentInstance = await didSdk.createAgentManager(auth.agentId, {
-        auth: { type: 'token', token: auth.token },
+      const agentInstance = await didSdk.createAgentManager(agentId, {
+        auth: { 
+          type: 'key', 
+          clientKey: clientKey 
+        },
         callbacks: {
           onSrcObjectReady: (stream: MediaStream) => {
             if (videoRef.current) {
@@ -153,7 +159,7 @@ function VirtualArenaContent() {
       return agentInstance;
     } catch (error: any) {
       console.error("D-ID Connection Error:", error);
-      toast({ variant: "destructive", title: "Visual Node Offline", description: "Could not establish WebRTC link." });
+      toast({ variant: "destructive", title: "Visual Node Offline", description: "Could not establish direct WebRTC link." });
       throw error;
     }
   };
@@ -222,7 +228,7 @@ function VirtualArenaContent() {
             
             // Wait for WebRTC to stabilize before speaking
             setTimeout(() => {
-              handleInterviewerSpeech(agentInstance, firstMsg);
+              if (agentInstance) handleInterviewerSpeech(agentInstance, firstMsg);
             }, 3000);
           }
         } catch (e) {
@@ -406,7 +412,7 @@ function VirtualArenaContent() {
               <h2 className="text-2xl font-bold text-red-400 uppercase tracking-tighter">Configuration Fault</h2>
               <p className="text-white/60 mt-2 max-w-md">{configError}</p>
               <div className="mt-8 p-4 glass rounded-xl border-red-500/20 text-xs font-mono text-red-300">
-                Action: Verify D_ID_AGENT_ID and D_ID_CLIENT_KEY in .env
+                Action: Verify NEXT_PUBLIC_D_ID_CLIENT_KEY and NEXT_PUBLIC_D_ID_AGENT_ID in .env
               </div>
             </div>
           ) : (
@@ -423,7 +429,7 @@ function VirtualArenaContent() {
                     <div className="w-24 h-24 rounded-full border-2 border-accent/10 border-t-accent animate-spin" />
                     <User className="w-10 h-10 text-white/20 absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" />
                   </div>
-                  <p className="text-[10px] font-bold uppercase tracking-[0.4em] text-accent animate-pulse">Establishing WebRTC Link...</p>
+                  <p className="text-[10px] font-bold uppercase tracking-[0.4em] text-accent animate-pulse">Establishing Direct Neural Link...</p>
                 </div>
               )}
               <div className="absolute bottom-8 left-8 z-30 flex items-center gap-6">
