@@ -60,7 +60,9 @@ import {
   ChevronUp,
   RefreshCcw,
   LogOut,
-  AlertCircle
+  AlertCircle,
+  Home,
+  ArrowLeft
 } from 'lucide-react';
 import { 
   AlertDialog,
@@ -74,7 +76,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { useUser, useFirestore } from '@/firebase';
-import { doc, serverTimestamp, doc as fireDoc, updateDoc, setDoc, getDoc, deleteDoc } from 'firebase/firestore';
+import { doc, serverTimestamp, updateDoc, setDoc, getDoc, deleteDoc } from 'firebase/firestore';
 import { analyzeResume } from '@/ai/flows/ai-resume-analysis';
 import { generateAptitudeTest } from '@/ai/flows/ai-aptitude-generator';
 import { evaluateAptitude } from '@/ai/flows/ai-aptitude-evaluator';
@@ -158,7 +160,6 @@ export default function InterviewJourney() {
   const [aptitudeStartTime, setAptitudeStartTime] = useState<number | null>(null);
   const [aptitudeRemainingTime, setAptitudeRemainingTime] = useState<number | null>(null);
   const [hasWarnedTime, setHasWarnedTime] = useState(false);
-  const [showReview, setShowReview] = useState(false);
 
   const [isGeneratingCoding, setIsGeneratingCoding] = useState(false);
   const [codingProblem, setCodingProblem] = useState<any>(null);
@@ -169,6 +170,7 @@ export default function InterviewJourney() {
 
   const [showRecovery, setShowRecovery] = useState(false);
   const [isInitializing, setIsInitializing] = useState(true);
+  const [isCleaningUp, setIsCleaningUp] = useState(false);
 
   useEffect(() => {
     async function loadActiveSession() {
@@ -209,12 +211,19 @@ export default function InterviewJourney() {
     setShowRecovery(false);
   };
 
-  const startFreshInterview = async () => {
+  const handleGlobalReset = async () => {
     if (!user || !db) return;
+    setIsCleaningUp(true);
+    
+    // Clear Local State
+    localStorage.removeItem("resumeAnalysis");
+    sessionStorage.clear();
+    
+    // Clear Firestore Active Session
     const docRef = doc(db, 'users', user.uid, 'journey', 'active');
     await deleteDoc(docRef);
     
-    // Clear all local states
+    // Reset Navigation & UI
     setCurrentStep(1);
     setSelectedRole("");
     setSelectedExp("");
@@ -224,13 +233,58 @@ export default function InterviewJourney() {
     setCodingReport(null);
     setAptitudeAnswers({});
     setAiAptitudeQuestions([]);
-    setAptitudeIdx(0);
     setCodingProblem(null);
     setCode("");
     setFile(null);
     
     setShowRecovery(false);
-    toast({ title: "Protocol Reset", description: "All active progress nodes have been cleared." });
+    setIsCleaningUp(false);
+    toast({ title: "Neural Link Reset", description: "All active journey nodes have been purged." });
+  };
+
+  const handleGoHome = async () => {
+    await handleGlobalReset();
+    router.push('/dashboard');
+  };
+
+  const handleBackNavigation = async () => {
+    if (currentStep <= 1) return;
+    
+    const prevStep = currentStep - 1;
+    setCurrentStep(prevStep);
+    
+    // Destructive Back: Purge all data relevant to the step we are leaving
+    // and any potential subsequent data to prevent inconsistent state
+    const updates: any = {
+      step: prevStep,
+      updatedAt: serverTimestamp()
+    };
+
+    if (prevStep < 10) updates.sessionId = null;
+    if (prevStep < 8) {
+      updates.codingProblem = null;
+      updates.codingReport = null;
+      updates.code = null;
+    }
+    if (prevStep < 6) {
+      updates.aiAptitudeQuestions = null;
+      updates.aptitudeReport = null;
+      updates.aptitudeAnswers = null;
+      updates.aptitudeRemainingTime = null;
+    }
+    if (prevStep < 4) {
+      updates.resumeAnalysis = null;
+    }
+
+    if (user && db) {
+      const docRef = doc(db, 'users', user.uid, 'journey', 'active');
+      await updateDoc(docRef, updates);
+    }
+
+    // Update Local States to match destination
+    if (prevStep < 8) { setCodingProblem(null); setCodingReport(null); setCode(""); }
+    if (prevStep < 6) { setAiAptitudeQuestions([]); setAptitudeReport(null); setAptitudeAnswers({}); }
+    if (prevStep < 4) { setResumeAnalysis(null); setFile(null); }
   };
 
   // Aptitude Timer Logic
@@ -247,10 +301,9 @@ export default function InterviewJourney() {
           }
           const next = prev - 1;
           if (next === 120 && !hasWarnedTime) {
-            toast({ variant: "destructive", title: "2-Minute Warning", description: "Time is running out." });
+            toast({ variant: "destructive", title: "2-Minute Warning", description: "Aptitude time is nearly exhausted." });
             setHasWarnedTime(true);
           }
-          if (next % 10 === 0) saveProgress(6, { aptitudeRemainingTime: next });
           return next;
         });
       }, 1000);
@@ -418,13 +471,12 @@ export default function InterviewJourney() {
     router.push(`/interview/${sessId}?role=${encodeURIComponent(selectedRole)}&company=${encodeURIComponent(selectedCompany)}&exp=${encodeURIComponent(selectedExp)}&round=Virtual%20Interview`);
   };
 
-  if (isInitializing) return <div className="h-screen flex items-center justify-center bg-[#050816]"><Loader2 className="w-12 h-12 text-accent animate-spin" /></div>;
+  if (isInitializing || isCleaningUp) return <div className="h-screen flex items-center justify-center bg-[#050816]"><Loader2 className="w-12 h-12 text-accent animate-spin" /></div>;
 
   return (
     <div className="min-h-screen bg-[#050816] pb-32">
       <div className="particles-bg" />
       <Navbar />
-      <NavigationControls />
       
       <div className="container mx-auto px-6 py-32">
         <div className="max-w-7xl mx-auto grid lg:grid-cols-12 gap-12">
@@ -450,26 +502,36 @@ export default function InterviewJourney() {
               })}
             </nav>
 
-            <div className="pt-8 border-t border-white/5">
+            <div className="pt-8 border-t border-white/5 space-y-4">
+               {currentStep > 1 && (
+                 <Button onClick={handleBackNavigation} variant="ghost" className="w-full h-14 rounded-2xl glass border-white/5 text-white/60 hover:text-white gap-3 text-[10px] font-bold uppercase tracking-widest">
+                   <ArrowLeft className="w-4 h-4" /> Go Back
+                 </Button>
+               )}
+
                <AlertDialog>
                  <AlertDialogTrigger asChild>
                    <Button variant="ghost" className="w-full h-14 rounded-2xl glass border-white/5 text-red-400 hover:bg-red-500/10 hover:text-red-300 gap-3 text-[10px] font-bold uppercase tracking-widest">
-                     <RefreshCcw className="w-4 h-4" /> Restart Interview
+                     <RotateCcw className="w-4 h-4" /> Restart Session
                    </Button>
                  </AlertDialogTrigger>
                  <AlertDialogContent className="glass border-white/10 bg-[#0b0e1a] text-white">
                    <AlertDialogHeader>
-                     <AlertDialogTitle>Restart Interview Protocol?</AlertDialogTitle>
+                     <AlertDialogTitle>Restart Simulation Journey?</AlertDialogTitle>
                      <AlertDialogDescription className="text-muted-foreground">
-                       This will terminate your current active simulation and purge all progress nodes. Historical records will be preserved in the archive. Continue?
+                       This will terminate your active progress and purge all current draft data. Historical interview archives will remain intact. Confirm protocol reset?
                      </AlertDialogDescription>
                    </AlertDialogHeader>
                    <AlertDialogFooter>
                      <AlertDialogCancel className="bg-transparent text-white border-white/10 hover:bg-white/5">Cancel</AlertDialogCancel>
-                     <AlertDialogAction onClick={startFreshInterview} className="bg-red-500 text-white hover:bg-red-600">Restart Session</AlertDialogAction>
+                     <AlertDialogAction onClick={handleGlobalReset} className="bg-red-500 text-white hover:bg-red-600">Execute Reset</AlertDialogAction>
                    </AlertDialogFooter>
                  </AlertDialogContent>
                </AlertDialog>
+
+               <Button onClick={handleGoHome} variant="ghost" className="w-full h-14 rounded-2xl glass border-white/5 text-accent hover:bg-accent/10 gap-3 text-[10px] font-bold uppercase tracking-widest">
+                  <Home className="w-4 h-4" /> Command Hub
+               </Button>
             </div>
           </aside>
 
@@ -482,17 +544,17 @@ export default function InterviewJourney() {
                        <History className="w-10 h-10 text-accent animate-pulse" />
                     </div>
                     <div className="space-y-4">
-                       <h2 className="text-3xl font-bold tracking-tighter">Neural Recovery Detected</h2>
+                       <h2 className="text-3xl font-bold tracking-tighter">Neural Handshake Recovery</h2>
                        <p className="text-muted-foreground font-light leading-relaxed">
-                         We found an incomplete simulation protocol in the cloud archives. Would you like to resume your session or initialize a fresh protocol?
+                         We detected an abandoned simulation protocol in your neural link. Would you like to resume the active mission or initialize a fresh protocol?
                        </p>
                     </div>
                     <div className="flex flex-col sm:flex-row gap-4">
                        <Button onClick={resumeSession} className="flex-1 h-16 btn-premium text-[10px] font-bold uppercase tracking-[0.2em]">
                          Resume Session <ChevronRight className="ml-2 w-4 h-4" />
                        </Button>
-                       <Button onClick={startFreshInterview} variant="outline" className="flex-1 h-16 rounded-2xl glass border-white/10 hover:bg-white/5 text-[10px] font-bold uppercase tracking-[0.2em]">
-                         Start New Interview
+                       <Button onClick={handleGlobalReset} variant="outline" className="flex-1 h-16 rounded-2xl glass border-white/10 hover:bg-white/5 text-[10px] font-bold uppercase tracking-[0.2em]">
+                         Initialize New
                        </Button>
                     </div>
                   </Card>
@@ -501,10 +563,10 @@ export default function InterviewJourney() {
                 <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="space-y-8">
                   {currentStep === 1 && (
                     <Card className="premium-card bg-white/[0.01] border-white/5 p-12 space-y-10">
-                      <h2 className="text-4xl font-bold tracking-tighter text-center">Choose Job Role</h2>
+                      <h2 className="text-4xl font-bold tracking-tighter text-center">Deployment Target</h2>
                       <div className="relative group max-w-xl mx-auto w-full">
                         <Search className="absolute left-6 top-1/2 -translate-y-1/2 w-5 h-5 text-white/20" />
-                        <Input placeholder="Search global IT protocols..." value={roleSearch} onChange={(e) => setRoleSearch(e.target.value)} className="h-16 pl-16 rounded-2xl glass border-white/10" />
+                        <Input placeholder="Search global IT roles..." value={roleSearch} onChange={(e) => setRoleSearch(e.target.value)} className="h-16 pl-16 rounded-2xl glass border-white/10" />
                       </div>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         {ALL_ROLES.filter(r => r.name.toLowerCase().includes(roleSearch.toLowerCase())).slice(0, 10).map(role => (
@@ -519,7 +581,7 @@ export default function InterviewJourney() {
 
                   {currentStep === 2 && (
                     <Card className="premium-card bg-white/[0.01] border-white/5 p-12 space-y-12">
-                      <h2 className="text-4xl font-bold tracking-tighter text-center">Seniority Grade</h2>
+                      <h2 className="text-4xl font-bold tracking-tighter text-center">Seniority Calibration</h2>
                       <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
                         {EXPERIENCE_OPTIONS.map(opt => (
                           <button key={opt.id} onClick={() => { setSelectedExp(opt.label); nextStep(); }} className={`p-8 rounded-3xl border transition-all text-left group ${selectedExp === opt.label ? 'bg-accent/20 border-accent' : 'glass border-white/5 hover:bg-white/5'}`}>
@@ -534,7 +596,7 @@ export default function InterviewJourney() {
 
                   {currentStep === 3 && (
                     <Card className="premium-card bg-white/[0.01] border-white/5 p-12 space-y-12 text-center">
-                      <h2 className="text-4xl font-bold tracking-tighter">Target Company</h2>
+                      <h2 className="text-4xl font-bold tracking-tighter">Target Agency</h2>
                       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
                         {COMPANIES.map(c => (
                           <button key={c} onClick={() => { setSelectedCompany(c); nextStep(); }} className={`p-6 rounded-2xl border transition-all text-center group ${selectedCompany === c ? 'bg-accent/20 border-accent' : 'glass border-white/5 hover:bg-white/5'}`}>
@@ -550,8 +612,8 @@ export default function InterviewJourney() {
                     <Card className="premium-card bg-white/[0.01] border-white/5 p-12 space-y-12 text-center">
                       <div className="space-y-4">
                         <Badge className="bg-accent/20 text-accent border-none px-6 py-1.5 font-bold tracking-[0.4em] text-[10px] uppercase">Neural Identity Protocol</Badge>
-                        <h2 className="text-4xl font-bold tracking-tighter">AI Resume Screening</h2>
-                        <p className="text-muted-foreground font-light max-w-xl mx-auto">Upload your latest resume to receive ATS analysis, skill gap detection, resume score, and personalized AI feedback before starting your interview.</p>
+                        <h2 className="text-4xl font-bold tracking-tighter">AI Resume Audit</h2>
+                        <p className="text-muted-foreground font-light max-w-xl mx-auto">Provide your latest career blueprint for high-fidelity ATS screening and skill node extraction.</p>
                       </div>
                       <div onClick={() => !isAnalyzing && document.getElementById('resume-journey-upload')?.click()} className={`border-2 border-dashed rounded-[2.5rem] p-16 transition-all cursor-pointer group relative overflow-hidden ${file ? 'border-accent bg-accent/5' : 'border-white/10 hover:border-accent/30 hover:bg-white/[0.02]'}`}>
                         <input type="file" id="resume-journey-upload" className="hidden" accept=".pdf" onChange={(e) => e.target.files && setFile(e.target.files[0])} />
@@ -564,14 +626,14 @@ export default function InterviewJourney() {
                           <div className="space-y-6">
                              <div className="w-16 h-16 rounded-2xl bg-white/5 flex items-center justify-center mx-auto text-accent group-hover:scale-110 transition-transform"><Upload className="w-8 h-8" /></div>
                              <div className="space-y-1">
-                               <p className="font-bold text-lg">{file ? file.name : "📄 Drag & Drop your Resume Here"}</p>
-                               <p className="text-[10px] text-muted-foreground uppercase tracking-widest font-bold">Click to Upload PDF (Maximum 5 MB)</p>
+                               <p className="font-bold text-lg">{file ? file.name : "📄 Drop Blueprint Here"}</p>
+                               <p className="text-[10px] text-muted-foreground uppercase tracking-widest font-bold">PDF Only • 5MB Operational Limit</p>
                              </div>
                           </div>
                         )}
                       </div>
-                      <Button onClick={handleResumeSync} disabled={!file || isAnalyzing} className="w-full h-18 btn-premium uppercase tracking-[0.3em] text-xs font-bold shadow-[0_0_50px_rgba(147,51,234,0.2)]">
-                        {isAnalyzing ? <><Loader2 className="w-5 h-5 animate-spin mr-3" /> Processing...</> : "Start AI Resume Analysis"}
+                      <Button onClick={handleResumeSync} disabled={!file || isAnalyzing} className="w-full h-18 btn-premium uppercase tracking-[0.3em] text-xs font-bold">
+                        {isAnalyzing ? <><Loader2 className="w-5 h-5 animate-spin mr-3" /> Analyzing...</> : "Initialize Audit Sequence"}
                       </Button>
                     </Card>
                   )}
@@ -580,78 +642,36 @@ export default function InterviewJourney() {
                     <Card className="premium-card bg-white/[0.01] border-white/5 p-12 space-y-12">
                       <div className="flex justify-between items-end border-b border-white/5 pb-10">
                         <div className="space-y-2">
-                          <Badge className="bg-accent/20 text-accent border-none px-4 py-1 text-[8px] uppercase font-bold tracking-widest">Neural Audit Result</Badge>
-                          <h2 className="text-4xl font-bold tracking-tighter text-premium">Blueprint Intelligence</h2>
+                          <Badge className="bg-accent/20 text-accent border-none px-4 py-1 text-[8px] uppercase font-bold tracking-widest">Audit Result v4.0</Badge>
+                          <h2 className="text-4xl font-bold tracking-tighter text-premium">Performance Matrix</h2>
                         </div>
                         <div className="flex gap-12 text-right">
                            <div className="space-y-1">
                              <div className="text-4xl font-bold text-accent tabular-nums">{resumeAnalysis?.atsScore}%</div>
-                             <p className="text-[8px] uppercase font-bold tracking-widest text-muted-foreground">ATS Index</p>
-                           </div>
-                           <div className="space-y-1">
-                             <div className="text-4xl font-bold text-purple-400 tabular-nums">{resumeAnalysis?.resumeQualityScore || 0}%</div>
-                             <p className="text-[8px] uppercase font-bold tracking-widest text-muted-foreground">Resume Score</p>
+                             <p className="text-[8px] uppercase font-bold tracking-widest text-muted-foreground">ATS Rating</p>
                            </div>
                         </div>
                       </div>
-                      <div className="grid lg:grid-cols-3 gap-8">
-                         <Card className="p-8 glass border-white/5 bg-white/[0.01] space-y-6">
-                            <h3 className="text-[10px] font-bold uppercase tracking-[0.3em] text-accent flex items-center gap-3"><FileSearch2 className="w-4 h-4" /> Resume Preview</h3>
-                            <div className="space-y-4">
-                              <div className="flex items-center gap-4 text-sm font-light text-white/60">
-                                <User className="w-4 h-4 text-accent/50" />
-                                <div className="flex flex-col">
-                                  <span className="text-[8px] uppercase font-bold text-white/30 tracking-widest">Candidate Name</span>
-                                  <span className="text-white/80 font-medium">{resumeAnalysis?.personalInfo?.fullName || "Detected Identity"}</span>
-                                </div>
-                              </div>
-                              <div className="flex items-center gap-4 text-sm font-light text-white/60">
-                                <FileText className="w-4 h-4 text-accent/50" />
-                                <div className="flex flex-col">
-                                  <span className="text-[8px] uppercase font-bold text-white/30 tracking-widest">File Name</span>
-                                  <span className="text-white/80 font-medium truncate max-w-[150px]">{file?.name || "verified_blueprint.pdf"}</span>
-                                </div>
-                              </div>
-                              <div className="flex items-center gap-4 text-sm font-light text-white/60">
-                                <FileStack className="w-4 h-4 text-accent/50" />
-                                <div className="flex flex-col">
-                                  <span className="text-[8px] uppercase font-bold text-white/30 tracking-widest">Total Pages</span>
-                                  <span className="text-white/80 font-medium">1 Page (Verified)</span>
-                                </div>
-                              </div>
-                            </div>
-                         </Card>
-                         <div className="lg:col-span-2 grid md:grid-cols-2 gap-8">
-                            <div className="space-y-6">
-                              <h3 className="text-xs font-bold uppercase tracking-widest text-white/40 flex items-center gap-3"><CheckCircle2 className="w-4 h-4 text-accent" /> Intelligence Nodes Found</h3>
-                              <div className="flex flex-wrap gap-2">
-                                {resumeAnalysis?.skillAnalysis?.map((s: any, i: number) => (
-                                  <Badge key={i} variant="outline" className="bg-white/5 border-white/10 px-3 py-1.5 text-[10px] font-bold text-white/70">{s.skill}</Badge>
-                                ))}
-                              </div>
-                            </div>
-                            <div className="space-y-6">
-                              <h3 className="text-xs font-bold uppercase tracking-widest text-white/40 flex items-center gap-3"><CircleAlert className="w-4 h-4 text-red-400" /> Delta Gaps Identified</h3>
-                              <div className="flex flex-wrap gap-2">
-                                {resumeAnalysis?.missingSkills?.map((s: string, i: number) => (
-                                  <Badge key={i} variant="outline" className="bg-red-500/5 border-red-500/20 text-red-400 px-3 py-1.5 text-[10px] font-bold">{s}</Badge>
-                                ))}
-                              </div>
-                            </div>
-                         </div>
-                      </div>
-                      <div className="p-8 glass rounded-[2rem] bg-accent/[0.02] border-accent/10 space-y-4">
-                         <div className="flex items-center justify-between">
-                           <h3 className="text-xs font-bold uppercase tracking-widest text-accent flex items-center gap-2"><Lightbulb className="w-4 h-4" /> AI Strategic Feedback</h3>
-                           <div className="flex items-center gap-3">
-                              <span className="text-[10px] font-bold uppercase tracking-widest text-white/40">Interview Readiness:</span>
-                              <span className="text-sm font-bold text-accent">{resumeAnalysis?.interviewReadinessScore || 0}%</span>
+                      <div className="grid lg:grid-cols-2 gap-8">
+                         <div className="space-y-6">
+                           <h3 className="text-xs font-bold uppercase tracking-widest text-white/40 flex items-center gap-3"><CheckCircle2 className="w-4 h-4 text-accent" /> Verified Skills</h3>
+                           <div className="flex flex-wrap gap-2">
+                             {resumeAnalysis?.skillAnalysis?.map((s: any, i: number) => (
+                               <Badge key={i} variant="outline" className="bg-white/5 border-white/10 px-3 py-1.5 text-[10px] font-bold text-white/70">{s.skill}</Badge>
+                             ))}
                            </div>
                          </div>
-                         <p className="text-sm font-light leading-relaxed text-white/80 italic">"{resumeAnalysis?.summary}"</p>
+                         <div className="space-y-6">
+                           <h3 className="text-xs font-bold uppercase tracking-widest text-white/40 flex items-center gap-3"><CircleAlert className="w-4 h-4 text-red-400" /> Critical Gaps</h3>
+                           <div className="flex flex-wrap gap-2">
+                             {resumeAnalysis?.missingSkills?.map((s: string, i: number) => (
+                               <Badge key={i} variant="outline" className="bg-red-500/5 border-red-500/20 text-red-400 px-3 py-1.5 text-[10px] font-bold">{s}</Badge>
+                             ))}
+                           </div>
+                         </div>
                       </div>
                       <Button onClick={handleStartAptitude} className="w-full h-18 btn-premium uppercase tracking-[0.3em] text-xs font-bold">
-                        Continue to Aptitude Round →
+                        Continue to Aptitude Phase →
                       </Button>
                     </Card>
                   )}
@@ -659,39 +679,36 @@ export default function InterviewJourney() {
                   {currentStep === 6 && (
                     <div className="space-y-8 relative">
                       <div className="sticky top-24 z-[40] space-y-4">
-                        <div className="flex flex-wrap gap-4 items-center justify-between">
-                          <Card className="flex items-center gap-6 px-8 py-4 glass border-white/10 rounded-2xl">
-                            <div className="flex items-center gap-3">
-                              <TimerIcon className={`w-5 h-5 ${aptitudeRemainingTime && aptitudeRemainingTime > 300 ? 'text-accent' : aptitudeRemainingTime && aptitudeRemainingTime > 120 ? 'text-yellow-400' : 'text-red-400'}`} />
-                              <div className="flex flex-col">
-                                <span className="text-[8px] uppercase font-bold text-white/30 tracking-widest">Time Left</span>
-                                <span className="text-xl font-bold tabular-nums">
-                                  {Math.floor((aptitudeRemainingTime || 0)/60)}:{(aptitudeRemainingTime || 0)%60 < 10 ? '0' : ''}{(aptitudeRemainingTime || 0)%60}
-                                </span>
-                              </div>
+                        <Card className="flex items-center gap-6 px-8 py-4 glass border-white/10 rounded-2xl">
+                          <div className="flex items-center gap-3">
+                            <TimerIcon className={`w-5 h-5 ${aptitudeRemainingTime && aptitudeRemainingTime > 120 ? 'text-accent' : 'text-red-400 animate-pulse'}`} />
+                            <div className="flex flex-col">
+                              <span className="text-[8px] uppercase font-bold text-white/30 tracking-widest">Time Remaining</span>
+                              <span className="text-xl font-bold tabular-nums">
+                                {Math.floor((aptitudeRemainingTime || 0)/60)}:{(aptitudeRemainingTime || 0)%60 < 10 ? '0' : ''}{(aptitudeRemainingTime || 0)%60}
+                              </span>
                             </div>
-                            <div className="w-px h-10 bg-white/5" />
-                            <div className="flex items-center gap-3">
-                              <ClipboardCheck className="w-5 h-5 text-accent" />
-                              <div className="flex flex-col">
-                                <span className="text-[8px] uppercase font-bold text-white/30 tracking-widest">Question</span>
-                                <span className="text-xl font-bold text-white tabular-nums">{aptitudeIdx + 1} / 15</span>
-                              </div>
+                          </div>
+                          <div className="w-px h-10 bg-white/5" />
+                          <div className="flex items-center gap-3">
+                            <ClipboardCheck className="w-5 h-5 text-accent" />
+                            <div className="flex flex-col">
+                              <span className="text-[8px] uppercase font-bold text-white/30 tracking-widest">Logic Node</span>
+                              <span className="text-xl font-bold text-white tabular-nums">{aptitudeIdx + 1} / 15</span>
                             </div>
-                          </Card>
-                        </div>
+                          </div>
+                        </Card>
                       </div>
-                      <Card className="premium-card bg-white/[0.01] border-white/5 p-0 overflow-hidden min-h-[500px] flex flex-col">
-                        <div className="p-12 space-y-10 flex-1">
-                          <div className="flex justify-between items-center">
+                      <Card className="premium-card bg-white/[0.01] border-white/5 p-12 min-h-[500px] flex flex-col">
+                          <div className="flex justify-between items-center mb-10">
                              <Badge className="bg-accent/20 text-accent border-none px-4 py-1 text-[8px] uppercase font-bold tracking-widest">{aiAptitudeQuestions[aptitudeIdx]?.category}</Badge>
                              <Badge variant="outline" className="border-white/10 text-white/40 text-[8px] uppercase font-bold px-3 py-1">Level: {aiAptitudeQuestions[aptitudeIdx]?.difficulty}</Badge>
                           </div>
-                          <h3 className="text-3xl font-bold leading-tight tracking-tight text-white/90">{aiAptitudeQuestions[aptitudeIdx]?.question}</h3>
-                          <div className="grid md:grid-cols-2 gap-4">
+                          <h3 className="text-3xl font-bold leading-tight tracking-tight text-white/90 mb-12">{aiAptitudeQuestions[aptitudeIdx]?.question}</h3>
+                          <div className="grid md:grid-cols-2 gap-4 mb-12">
                             {aiAptitudeQuestions[aptitudeIdx]?.options.map((opt: any, i: number) => (
-                              <button key={i} onClick={() => handleAptitudeAnswerSelection(aptitudeIdx, opt)} className={`p-8 rounded-[2rem] border text-left transition-all duration-300 relative group overflow-hidden ${aptitudeAnswers[aptitudeIdx] === opt ? 'bg-accent/10 border-accent shadow-[0_0_30px_rgba(34,211,238,0.1)]' : 'glass border-white/5 hover:bg-white/5'}`}>
-                                <div className="flex items-center gap-6 relative z-10">
+                              <button key={i} onClick={() => handleAptitudeAnswerSelection(aptitudeIdx, opt)} className={`p-8 rounded-[2rem] border text-left transition-all duration-300 ${aptitudeAnswers[aptitudeIdx] === opt ? 'bg-accent/10 border-accent' : 'glass border-white/5 hover:bg-white/5'}`}>
+                                <div className="flex items-center gap-6">
                                    <div className={`w-8 h-8 rounded-full border flex items-center justify-center font-bold text-xs ${aptitudeAnswers[aptitudeIdx] === opt ? 'bg-accent border-accent text-black' : 'border-white/20 text-white/40'}`}>
                                       {String.fromCharCode(65 + i)}
                                    </div>
@@ -700,24 +717,14 @@ export default function InterviewJourney() {
                               </button>
                             ))}
                           </div>
-                        </div>
-                        <div className="p-8 bg-black/20 border-t border-white/5 space-y-8">
-                           <div className="flex justify-between items-center px-4">
-                              <Button onClick={() => setAptitudeIdx(Math.max(0, aptitudeIdx - 1))} disabled={aptitudeIdx === 0} variant="ghost" className="h-14 px-8 rounded-xl glass border-white/5 flex gap-3 text-xs font-bold uppercase tracking-widest">
-                                <ChevronLeft className="w-4 h-4" /> Previous
-                              </Button>
-                              <Button onClick={() => aptitudeIdx < 14 ? setAptitudeIdx(aptitudeIdx + 1) : handleAptitudeSubmit()} className="h-14 px-10 btn-premium text-xs font-bold uppercase tracking-[0.2em]">
-                                {aptitudeIdx < 14 ? "Next Protocol" : isAptitudeEvaluating ? <Loader2 className="animate-spin" /> : "Submit Assessment"}
-                              </Button>
-                           </div>
-                           <div className="flex flex-wrap justify-center gap-3">
-                             {Array.from({length: 15}).map((_, i) => (
-                               <button key={i} onClick={() => setAptitudeIdx(i)} className={`w-10 h-10 rounded-xl border flex items-center justify-center font-bold text-xs transition-all ${aptitudeIdx === i ? 'bg-accent border-accent text-black scale-110 shadow-lg' : aptitudeAnswers[i] ? 'bg-green-500/20 border-green-500/40 text-green-400' : 'glass border-white/5 text-white/20'}`}>
-                                 {i + 1}
-                               </button>
-                             ))}
-                           </div>
-                        </div>
+                          <div className="mt-auto pt-10 border-t border-white/5 flex justify-between">
+                            <Button onClick={() => setAptitudeIdx(Math.max(0, aptitudeIdx - 1))} disabled={aptitudeIdx === 0} variant="ghost" className="h-14 px-8 rounded-xl glass border-white/5 flex gap-3 text-xs font-bold uppercase tracking-widest">
+                              <ChevronLeft className="w-4 h-4" /> Previous
+                            </Button>
+                            <Button onClick={() => aptitudeIdx < 14 ? setAptitudeIdx(aptitudeIdx + 1) : handleAptitudeSubmit()} className="h-14 px-10 btn-premium text-xs font-bold uppercase tracking-[0.2em]">
+                              {aptitudeIdx < 14 ? "Next Node" : isAptitudeEvaluating ? <Loader2 className="animate-spin" /> : "Finalize Protocol"}
+                            </Button>
+                          </div>
                       </Card>
                     </div>
                   )}
@@ -725,22 +732,19 @@ export default function InterviewJourney() {
                   {currentStep === 7 && aptitudeReport && (
                     <div className="space-y-12">
                       <header className="text-center space-y-4">
-                        <Badge className="bg-accent/20 text-accent px-4 py-1 text-[10px] font-bold uppercase tracking-widest border-none">Assessment Intelligence Node</Badge>
-                        <h2 className="text-5xl font-bold tracking-tighter text-premium">Aptitude Assessment Result</h2>
+                        <Badge className="bg-accent/20 text-accent px-4 py-1 text-[10px] font-bold uppercase tracking-widest border-none">Intelligence Audit Complete</Badge>
+                        <h2 className="text-5xl font-bold tracking-tighter text-premium">Aptitude Results</h2>
                       </header>
                       <div className="grid lg:grid-cols-12 gap-8">
                         <Card className="lg:col-span-4 premium-card bg-white/[0.01] border-white/5 flex flex-col items-center justify-center p-12 text-center">
-                          <div className="relative w-48 h-48 mb-8 flex items-center justify-center">
-                             <span className="text-6xl font-bold">{aptitudeReport.overallScore}%</span>
-                          </div>
+                          <div className="text-7xl font-bold mb-6 tabular-nums">{aptitudeReport.overallScore}%</div>
                           <Badge className={`${aptitudeReport.status === 'Pass' ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'} border-none px-10 py-2 text-xs font-black tracking-[0.4em]`}>
                             {aptitudeReport.status.toUpperCase()}
                           </Badge>
                         </Card>
                         <div className="lg:col-span-8 grid grid-cols-2 md:grid-cols-3 gap-4">
                           {[
-                            { label: "Correct Answers", val: aptitudeReport.correctCount, icon: CheckCircle2, color: "text-green-400" },
-                            { label: "Wrong Answers", val: aptitudeReport.wrongCount, icon: Terminal, color: "text-red-400" },
+                            { label: "Correct Nodes", val: aptitudeReport.correctCount, icon: CheckCircle2, color: "text-green-400" },
                             { label: "Accuracy", val: `${aptitudeReport.accuracy}%`, icon: Target, color: "text-accent" },
                             { label: "Percentile", val: aptitudeReport.percentile, icon: Award, color: "text-yellow-400" }
                           ].map((stat, i) => (
@@ -759,11 +763,11 @@ export default function InterviewJourney() {
                              <CheckCircle2 className="w-10 h-10 text-green-400" />
                           </div>
                           <div>
-                            <h3 className="text-3xl font-bold">🎉 Congratulations!</h3>
-                            <p className="text-muted-foreground font-light mt-2">You have cleared the Aptitude Round. Your cognitive vectors are aligned.</p>
+                            <h3 className="text-3xl font-bold">Protocol Passed.</h3>
+                            <p className="text-muted-foreground font-light mt-2">You have cleared the cognitive screening phase. Proceed to Syntax Matrix.</p>
                           </div>
                           <Button onClick={handleStartCoding} className="h-18 px-12 btn-premium text-xs font-bold uppercase tracking-[0.3em]">
-                            Continue to Coding Round →
+                            Enter Coding Round →
                           </Button>
                         </div>
                       ) : (
@@ -772,28 +776,13 @@ export default function InterviewJourney() {
                              <XCircle className="w-10 h-10 text-red-400" />
                           </div>
                           <div className="space-y-2">
-                            <h3 className="text-3xl font-bold">You did not meet the qualifying score.</h3>
-                            <p className="text-muted-foreground font-light">Before attempting the Coding Round, you must clear the Aptitude Round (70% minimum).</p>
+                            <h3 className="text-3xl font-bold">Protocol Insufficient.</h3>
+                            <p className="text-muted-foreground font-light">Minimum qualification score (70%) not met for this track.</p>
                           </div>
                           <div className="flex justify-center gap-4">
-                            <Button onClick={() => router.push('/question-bank')} variant="outline" className="h-14 px-8 rounded-xl glass border-white/10 text-[10px] font-bold uppercase tracking-widest">Practice Aptitude</Button>
-                            <AlertDialog>
-                              <AlertDialogTrigger asChild>
-                                <Button className="h-14 px-10 btn-premium text-[10px] font-bold uppercase tracking-widest gap-2">
-                                  <RefreshCcw className="w-4 h-4" /> Restart Interview
-                                </Button>
-                              </AlertDialogTrigger>
-                              <AlertDialogContent className="glass border-white/10 bg-[#0b0e1a] text-white">
-                                <AlertDialogHeader>
-                                  <AlertDialogTitle>Restart Simulation?</AlertDialogTitle>
-                                  <AlertDialogDescription className="text-muted-foreground">This will reset your current progress and return you to the beginning. Confirm protocol?</AlertDialogDescription>
-                                </AlertDialogHeader>
-                                <AlertDialogFooter>
-                                  <AlertDialogCancel className="bg-transparent text-white border-white/10">Cancel</AlertDialogCancel>
-                                  <AlertDialogAction onClick={startFreshInterview} className="bg-red-500 text-white">Confirm Reset</AlertDialogAction>
-                                </AlertDialogFooter>
-                              </AlertDialogContent>
-                            </AlertDialog>
+                            <Button onClick={handleGlobalReset} className="h-14 px-10 btn-premium text-[10px] font-bold uppercase tracking-widest gap-2">
+                              <RefreshCcw className="w-4 h-4" /> Restart Simulation
+                            </Button>
                           </div>
                         </div>
                       )}
@@ -809,7 +798,7 @@ export default function InterviewJourney() {
                        </div>
                        <textarea value={code} onChange={(e) => { setCode(e.target.value); saveProgress(8, { code: e.target.value }); }} className="w-full flex-1 glass border-white/10 bg-black/40 p-8 font-mono text-sm resize-none rounded-3xl focus:outline-none focus:border-accent transition-all" />
                        <Button onClick={handleCodingSubmit} disabled={isCodingEvaluating} className="w-full h-20 btn-premium uppercase tracking-[0.3em] text-xs font-bold">
-                         {isCodingEvaluating ? <Loader2 className="w-5 h-5 animate-spin mr-3" /> : "Finalize Submission"}
+                         {isCodingEvaluating ? <Loader2 className="w-5 h-5 animate-spin mr-3" /> : "Finalize Syntax Protocol"}
                        </Button>
                     </Card>
                   )}
@@ -818,7 +807,7 @@ export default function InterviewJourney() {
                     <div className="space-y-12">
                        <Card className="premium-card bg-white/[0.01] border-white/5 p-12 space-y-12">
                           <div className="flex justify-between items-center">
-                            <h2 className="text-3xl font-bold">Coding Efficiency Audit</h2>
+                            <h2 className="text-3xl font-bold">Syntax Audit Results</h2>
                             <div className="text-6xl font-bold text-accent tabular-nums">{codingReport?.score}%</div>
                           </div>
                           <div className="grid grid-cols-2 gap-6">
@@ -827,7 +816,7 @@ export default function InterviewJourney() {
                                 <p className="text-2xl font-bold text-accent">{codingReport?.timeComplexity}</p>
                              </div>
                              <div className="p-8 glass rounded-3xl bg-white/[0.01]">
-                                <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mb-2">Syntax Quality</p>
+                                <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mb-2">Readability Index</p>
                                 <p className="text-2xl font-bold text-purple-400 tabular-nums">{codingReport?.readabilityScore}%</p>
                              </div>
                           </div>
@@ -836,8 +825,8 @@ export default function InterviewJourney() {
                             <Button onClick={startArena} className="w-full h-18 btn-premium uppercase tracking-[0.3em] text-xs font-bold">Enter Virtual Arena</Button>
                           ) : (
                             <div className="p-8 glass border-red-500/20 bg-red-500/[0.02] rounded-3xl text-center space-y-6">
-                               <p className="text-red-400 font-bold">Protocol Deficiency: Minimum syntax efficiency not met.</p>
-                               <Button onClick={startFreshInterview} variant="outline" className="h-14 px-10 rounded-2xl glass border-white/10 text-red-400">Restart Simulation</Button>
+                               <p className="text-red-400 font-bold">Syntax Matrix deficiency detected.</p>
+                               <Button onClick={handleGlobalReset} variant="outline" className="h-14 px-10 rounded-2xl glass border-white/10 text-red-400">Restart Session</Button>
                             </div>
                           )}
                        </Card>
@@ -853,4 +842,3 @@ export default function InterviewJourney() {
     </div>
   );
 }
-
