@@ -21,7 +21,7 @@ const apiKey = (
 ).trim();
 
 // Global Model Protocol
-export const PRIMARY_MODEL = 'googleai/gemini-2.5-flash';
+export const PRIMARY_MODEL = 'googleai/gemini-1.5-flash';
 export const FALLBACK_MODEL = 'googleai/gemini-2.0-flash';
 
 // Runtime Diagnostic Sequence (Server-side only)
@@ -37,9 +37,12 @@ if (typeof window === 'undefined') {
   } else {
     const isAQKey = apiKey.startsWith('AQ');
     const activeVar = process.env.GOOGLE_GENAI_API_KEY ? 'GOOGLE_GENAI_API_KEY' : process.env.GEMINI_API_KEY ? 'GEMINI_API_KEY' : 'GOOGLE_API_KEY';
+    const keyPreview = apiKey.length > 8 ? `${apiKey.substring(0, 4)}...${apiKey.substring(apiKey.length - 4)}` : 'INVALID_LENGTH';
+    
     console.log(`[Active Load] Loaded identity from: ${activeVar}`);
+    console.log(`[Key Preview] ${keyPreview}`);
     console.log(`[Key Type] ${isAQKey ? 'New-Gen (AQ. prefix)' : 'Legacy (AIza prefix)'} detected.`);
-    console.log(`[STATUS] Resilient Neural Protocol v2.6 Live. Target Model: ${PRIMARY_MODEL}`);
+    console.log(`[STATUS] Resilient Neural Protocol Live. Target Model: ${PRIMARY_MODEL}`);
   }
   console.log('-----------------------------------------------\n');
 }
@@ -67,9 +70,14 @@ export async function runWithResilience(promptFn: any, input: any) {
         return await promptFn(input, { model });
       } catch (e: any) {
         const status = e.status || e.code;
+        const message = e.message || String(e);
         
-        if (status === 401) {
-          console.error(`[Neural Auth] Authentication failed for key type. Check .env for invalid characters or expired tokens.`);
+        // Detailed error logging for auth failures
+        if (status === 400 || status === 401) {
+          console.error(`[Neural Auth Failure] Model: ${model}, Status: ${status}, Message: ${message}`);
+          if (message.includes('API key not valid')) {
+             console.error('[Neural Tip] Your API key was rejected by Google. Verify it in AI Studio and ensure it is pasted correctly in your .env file.');
+          }
           throw e;
         }
 
@@ -91,7 +99,7 @@ export async function runWithResilience(promptFn: any, input: any) {
   try {
     return await attemptExecution(PRIMARY_MODEL);
   } catch (primaryError: any) {
-    console.warn(`[Neural Fallback] Primary model failure (${primaryError.status || primaryError.code}). Trying ${FALLBACK_MODEL}...`);
+    console.warn(`[Neural Fallback] Primary model failure. Trying ${FALLBACK_MODEL}...`);
     try {
       return await attemptExecution(FALLBACK_MODEL);
     } catch (finalError: any) {
