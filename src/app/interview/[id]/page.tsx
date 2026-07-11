@@ -37,9 +37,8 @@ import { useUser, useFirestore } from "@/firebase";
 import { doc, serverTimestamp, collection, addDoc, updateDoc, getDoc, setDoc } from "firebase/firestore";
 import { useToast } from "@/hooks/use-toast";
 import Image from "next/image";
-import { PlaceHolderImages } from "@/lib/placeholder-images";
 
-// D-ID SDK - Client Side Only
+// D-ID SDK is client-side only
 let createAgent: any;
 
 function VirtualArenaContent() {
@@ -55,7 +54,7 @@ function VirtualArenaContent() {
   const exp = searchParams.get("exp") || "Senior";
   const round = searchParams.get("round") || "Virtual Interview";
 
-  // State Management
+  // Simulation State
   const [currentIdx, setCurrentIdx] = useState(1);
   const [transcript, setTranscript] = useState<{role: 'interviewer' | 'candidate', text: string, feedback?: string}[]>([]);
   const [userAnswer, setUserAnswer] = useState("");
@@ -69,12 +68,12 @@ function VirtualArenaContent() {
   const [isAvatarSynthesizing, setIsAvatarSynthesizing] = useState(false);
   const [assessmentContext, setAssessmentContext] = useState<any>(null);
 
-  // Realtime D-ID State
+  // Real-time Agent State
   const [agent, setAgent] = useState<any>(null);
   const [isAgentConnected, setIsAgentConnected] = useState(false);
   const [isConnectingAgent, setIsConnectingAgent] = useState(false);
 
-  // Memory & Difficulty State
+  // Difficulty & History State
   const [difficulty, setDifficulty] = useState<"EASY" | "MEDIUM" | "HARD">("MEDIUM");
   const [askedQuestions, setAskedQuestions] = useState<string[]>([]);
 
@@ -83,14 +82,10 @@ function VirtualArenaContent() {
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const recognitionRef = useRef<any>(null);
 
-  const interviewerImg = useMemo(() => {
-    return PlaceHolderImages.find(img => img.id === 'ai-hr-interviewer')?.imageUrl || "https://picsum.photos/seed/nexvoro_hr/800/1000";
-  }, []);
-
-  // 1. Initialize SDK and STT
+  // 1. Initialize SDK and Speech Recognition
   useEffect(() => {
     const initClient = async () => {
-      // Import SDK dynamically
+      // Import SDK dynamically for browser
       const sdk = await import("@d-id/client-sdk");
       createAgent = sdk.createAgent;
 
@@ -117,14 +112,16 @@ function VirtualArenaContent() {
     initClient();
   }, []);
 
-  // 2. D-ID Agent Connection Lifecycle
+  // 2. Real-time D-ID Agent Connection
   const connectToAgent = async () => {
     if (isAgentConnected || !createAgent) return;
     setIsConnectingAgent(true);
 
     try {
       const auth = await getStreamingToken();
-      if (!auth.success || !auth.token || !auth.agentId) throw new Error(auth.error);
+      if (!auth.success || !auth.token || !auth.agentId) {
+        throw new Error(auth.error || "Authentication handshake failed.");
+      }
 
       const agentInstance = await createAgent(auth.agentId, {
         auth: { type: 'token', token: auth.token },
@@ -132,10 +129,11 @@ function VirtualArenaContent() {
           onSrcObjectReady: (stream: any) => {
             if (videoRef.current) {
               videoRef.current.srcObject = stream;
-              videoRef.current.onloadedmetadata = () => videoRef.current?.play();
+              videoRef.current.onloadedmetadata = () => videoRef.current?.play().catch(e => console.warn("Auto-play failed", e));
             }
           },
           onConnectionStateChange: (state: string) => {
+            console.log("[D-ID] Connection State:", state);
             if (state === 'connected') setIsAgentConnected(true);
             if (state === 'disconnected') setIsAgentConnected(false);
           },
@@ -149,13 +147,17 @@ function VirtualArenaContent() {
       setAgent(agentInstance);
     } catch (error: any) {
       console.error("[D-ID SDK] Connection Failed:", error);
-      toast({ variant: "destructive", title: "Visual Node Offline", description: "Avatar link could not be established." });
+      toast({ 
+        variant: "destructive", 
+        title: "Visual Node Offline", 
+        description: "Avatar link could not be established. Falling back to high-fidelity audio." 
+      });
     } finally {
       setIsConnectingAgent(false);
     }
   };
 
-  // 3. Turn-Based Orchestration
+  // 3. Orchestrate Speaking Protocol
   const handleInterviewerResponse = async (text: string) => {
     if (agent && isAgentConnected) {
       try {
@@ -185,7 +187,7 @@ function VirtualArenaContent() {
     }
   };
 
-  // Initial Handshake
+  // 4. Initial Mission Handshake
   useEffect(() => {
     async function init() {
       if (!user || !db || !role || !company || !exp) return;
@@ -196,7 +198,7 @@ function VirtualArenaContent() {
         const data = snap.data();
         setAssessmentContext(data);
         
-        // Connect Agent immediately
+        // Establish Agent Link
         await connectToAgent();
 
         if (transcript.length === 0) {
@@ -215,8 +217,9 @@ function VirtualArenaContent() {
 
             setTranscript([{ role: 'interviewer', text: response.nextQuestion }]);
             setAskedQuestions([response.nextQuestion]);
-            // Wait a moment for agent connection to settle before first speak
-            setTimeout(() => handleInterviewerResponse(response.nextQuestion), 2000);
+            
+            // Wait for agent stability before initial speech
+            setTimeout(() => handleInterviewerResponse(response.nextQuestion), 3000);
           } catch (e) {
             toast({ variant: "destructive", title: "Arena Handshake Failed" });
           } finally {
@@ -234,6 +237,7 @@ function VirtualArenaContent() {
     };
   }, [user, db, role, company, exp, round]);
 
+  // 5. Interaction Handlers
   const toggleMic = () => {
     if (!recognitionRef.current) {
       toast({ variant: "destructive", title: "STT Unsupported", description: "Browser does not support speech recognition." });
@@ -373,7 +377,7 @@ function VirtualArenaContent() {
       <main className="flex-1 container mx-auto px-6 py-8 grid lg:grid-cols-12 gap-8 overflow-hidden">
         <div className="lg:col-span-4 flex flex-col gap-6">
           <Card className="flex-1 premium-card bg-black/40 p-0 overflow-hidden relative group">
-            {/* Realtime Video Stream */}
+            {/* Realtime Video Stream Node */}
             <video
               ref={videoRef}
               className={`absolute inset-0 w-full h-full object-cover z-10 transition-opacity duration-1000 ${isAgentConnected ? 'opacity-100' : 'opacity-0'}`}
@@ -381,16 +385,16 @@ function VirtualArenaContent() {
               playsInline
             />
             
-            {/* Fallback/Connecting UI */}
+            {/* Connection / Static Visual Node */}
             {!isAgentConnected && (
               <div className="absolute inset-0 w-full h-full flex flex-col items-center justify-center bg-black/60 backdrop-blur-sm z-20 space-y-6">
                 <div className="relative">
                   <div className="w-24 h-24 rounded-full border-2 border-accent/10 border-t-accent animate-spin" />
                   <User className="w-10 h-10 text-white/20 absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" />
                 </div>
-                <div className="text-center">
+                <div className="text-center px-8">
                   <p className="text-[10px] font-bold uppercase tracking-[0.4em] text-accent animate-pulse">Initializing Neural Link...</p>
-                  <p className="text-[8px] text-white/40 uppercase mt-2">Connecting to Real-time Visual Node</p>
+                  <p className="text-[8px] text-white/40 uppercase mt-2">Connecting to Real-time Agent Node v2.0</p>
                 </div>
               </div>
             )}

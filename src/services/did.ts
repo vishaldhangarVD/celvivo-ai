@@ -1,12 +1,12 @@
 'use server';
 /**
- * @fileOverview Nexvoro AI D-ID Avatar Service.
- * Provides modular access to D-ID Realtime Agents API.
- * Handles secure token generation for WebRTC streaming.
+ * @fileOverview Nexvoro AI D-ID Realtime Avatar Service.
+ * Provides modular access to D-ID Realtime Agents API for WebRTC streaming.
+ * Handles secure token generation to prevent leaking the API key to the client.
  */
 
 const DID_API_KEY = process.env.DID_API_KEY;
-const DID_AGENT_ID = process.env.DID_AGENT_ID;
+const DID_AGENT_ID = process.env.DID_AGENT_ID || "v2_agt_6iZaj8jj"; // Defaulting to the user provided ID
 
 export type DidTokenResponse = {
   success: boolean;
@@ -17,15 +17,16 @@ export type DidTokenResponse = {
 
 /**
  * Fetches a secure authentication token for the D-ID Realtime SDK.
- * This prevents leaking the API key to the frontend.
+ * This server action keeps the DID_API_KEY hidden from the browser.
  */
 export async function getStreamingToken(): Promise<DidTokenResponse> {
-  if (!DID_API_KEY || !DID_AGENT_ID) {
-    console.error("[D-ID] Environment variables missing (DID_API_KEY or DID_AGENT_ID).");
-    return { success: false, error: "D-ID service configuration missing." };
+  if (!DID_API_KEY) {
+    console.error("[D-ID] Environment variable DID_API_KEY is missing.");
+    return { success: false, error: "D-ID service configuration missing on server." };
   }
 
   try {
+    // Request a token for the specific Agent ID
     const response = await fetch(`https://api.d-id.com/agents/${DID_AGENT_ID}/token`, {
       method: 'POST',
       headers: {
@@ -35,8 +36,9 @@ export async function getStreamingToken(): Promise<DidTokenResponse> {
     });
 
     const data = await response.json();
-    if (!data.token) {
-      throw new Error(data.message || "Failed to retrieve streaming token.");
+    
+    if (!response.ok || !data.token) {
+      throw new Error(data.message || `D-ID API error: ${response.status}`);
     }
 
     return { 
@@ -46,31 +48,6 @@ export async function getStreamingToken(): Promise<DidTokenResponse> {
     };
   } catch (error: any) {
     console.error("[D-ID] Token Fetch Failed:", error);
-    return { success: false, error: error.message };
-  }
-}
-
-/**
- * Legacy Talk support (optional, kept for resilience fallback)
- */
-export async function createTalk(text: string, sourceUrl: string) {
-  if (!DID_API_KEY) return { success: false, error: "D-ID API key not configured." };
-  try {
-    const response = await fetch('https://api.d-id.com/talks', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Basic ${Buffer.from(DID_API_KEY + ':').toString('base64')}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        source_url: sourceUrl,
-        script: { type: 'text', input: text, provider: { type: 'microsoft', voice_id: 'en-US-GuyNeural' } },
-        config: { fluent: true, pad_audio: 0.0, driver_expressions: { expressions: [{ expression: 'serious', start_frame: 0 }] } },
-      }),
-    });
-    const data = await response.json();
-    return { success: true, talkId: data.id };
-  } catch (error: any) {
-    return { success: false, error: error.message };
+    return { success: false, error: error.message || "Failed to establish neural link." };
   }
 }
