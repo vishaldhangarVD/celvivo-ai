@@ -137,16 +137,29 @@ function VirtualArenaContent() {
         },
         callbacks: {
           onSrcObjectReady: (stream: MediaStream) => {
+            console.log("✅ Stream received", stream);
             if (videoRef.current) {
               videoRef.current.srcObject = stream;
-              videoRef.current.onloadedmetadata = () => {
-                videoRef.current?.play().catch(e => console.warn("Video Play Error:", e));
+              videoRef.current.muted = false; // Ensure unmuted for speech
+              videoRef.current.autoplay = true;
+              videoRef.current.playsInline = true;
+              videoRef.current.onloadedmetadata = async () => {
+                try {
+                  await videoRef.current?.play();
+                } catch (e) {
+                  console.error("Auto-play failed:", e);
+                }
               };
             }
           },
           onConnectionStateChange: (state: string) => {
-            if (state === 'connected') setIsAgentConnected(true);
-            if (state === 'disconnected') setIsAgentConnected(false);
+            console.log("D-ID STATE =", state);
+            if (state === "connected") {
+              setIsAgentConnected(true);
+            }
+            if (state === "disconnected") {
+              setIsAgentConnected(false);
+            }
           },
           onVideoStatusChange: (status: string) => {
             setIsAvatarSpeaking(status === 'play');
@@ -168,10 +181,9 @@ function VirtualArenaContent() {
     if (targetAgent && isAgentConnected) {
       try {
         setIsAvatarSynthesizing(true);
-        await targetAgent.speak({ type: 'text', input: text });
+        await targetAgent.chat(text);
       } catch (e) {
-        console.error("Agent Speech Error:", e);
-        toast({ title: "Synthesis Error", description: "Avatar speech failed." });
+        console.error("Speech Synthesis Error:", e);
       } finally {
         setIsAvatarSynthesizing(false);
       }
@@ -191,7 +203,6 @@ function VirtualArenaContent() {
         setAssessmentContext(data);
         
         try {
-          // Wait for SDK to be ready if it's currently loading
           if (!didSdk) {
              didSdk = await import("@d-id/client-sdk");
           }
@@ -265,7 +276,6 @@ function VirtualArenaContent() {
     try {
       let response;
       if (assessmentContext?.debugMode) {
-        // Dev Mode Mock Response
         response = {
           nextQuestion: `Developer Mode: Answer received for Node ${currentIdx}. Test sequence continues.`,
           isInterviewComplete: currentIdx >= 5,
@@ -404,10 +414,10 @@ function VirtualArenaContent() {
 
       <main className="flex-1 flex flex-col overflow-hidden max-w-7xl mx-auto w-full px-6 py-6 gap-6">
         
-        {/* Avatar Top Section */}
-        <section className="h-[45vh] relative rounded-[3rem] overflow-hidden border border-white/10 bg-black/40 group">
+        {/* Avatar Top Section - Full Bleed Video Call Style */}
+        <section className="h-[45vh] relative rounded-[3rem] overflow-hidden border border-white/10 bg-black group">
           {configError ? (
-            <div className="absolute inset-0 flex flex-col items-center justify-center p-12 text-center bg-red-950/20 backdrop-blur-xl">
+            <div className="absolute inset-0 flex flex-col items-center justify-center p-12 text-center bg-red-950/20 backdrop-blur-xl z-50">
               <AlertTriangle className="w-16 h-16 text-red-500 mb-6 animate-pulse" />
               <h2 className="text-2xl font-bold text-red-400 uppercase tracking-tighter">Configuration Fault</h2>
               <p className="text-white/60 mt-2 max-w-md">{configError}</p>
@@ -417,14 +427,19 @@ function VirtualArenaContent() {
             </div>
           ) : (
             <>
-              <video 
-                ref={videoRef} 
-                className={`absolute inset-0 w-full h-full object-cover z-10 transition-opacity duration-1000 ${isAgentConnected ? 'opacity-100' : 'opacity-0'}`} 
-                autoPlay 
-                playsInline 
+              {/* Full-bleed Video Background */}
+              <video
+                ref={videoRef}
+                autoPlay
+                playsInline
+                className="absolute inset-0 w-full h-full object-cover z-10"
+                onLoadedData={() => console.log("VIDEO STREAM ACTIVE")}
+                onError={(e) => console.error("VIDEO ERROR", e)}
               />
+              
+              {/* Connection Overlay - Only visible before stream is ready */}
               {!isAgentConnected && (
-                <div className="absolute inset-0 w-full h-full flex flex-col items-center justify-center bg-black/60 backdrop-blur-sm z-20 space-y-6">
+                <div className="absolute inset-0 w-full h-full flex flex-col items-center justify-center bg-[#050816] z-20 space-y-6">
                   <div className="relative">
                     <div className="w-24 h-24 rounded-full border-2 border-accent/10 border-t-accent animate-spin" />
                     <User className="w-10 h-10 text-white/20 absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" />
@@ -432,19 +447,31 @@ function VirtualArenaContent() {
                   <p className="text-[10px] font-bold uppercase tracking-[0.4em] text-accent animate-pulse">Establishing Direct Neural Link...</p>
                 </div>
               )}
-              <div className="absolute bottom-8 left-8 z-30 flex items-center gap-6">
-                <div className="w-16 h-16 rounded-2xl glass border-accent/20 flex items-center justify-center">
+
+              {/* UI Overlays (Highest Index) */}
+              <div className="absolute bottom-8 left-8 z-30 flex items-center gap-6 pointer-events-none">
+                <div className="w-16 h-16 rounded-2xl glass border-accent/20 flex items-center justify-center bg-black/40 backdrop-blur-md">
                   <Settings className="w-8 h-8 text-accent" />
                 </div>
                 <div>
-                  <p className="text-2xl font-bold tracking-tight">Senior Partner</p>
+                  <p className="text-2xl font-bold tracking-tight text-white drop-shadow-lg">Senior Partner</p>
                   <div className="flex items-center gap-2">
-                    <p className="text-[10px] text-white/40 uppercase font-bold">
+                    <p className="text-[10px] text-white/70 uppercase font-bold drop-shadow-md">
                       {isAvatarSynthesizing ? "Synthesizing Thought..." : isAvatarSpeaking ? "Delivering Node..." : "Monitoring Stream"}
                     </p>
-                    {(isAvatarSpeaking || isAvatarSynthesizing) && <Activity className={`w-3 h-3 ${isAvatarSynthesizing ? 'text-purple-400' : 'text-accent'} animate-pulse`} />}
+                    {(isAvatarSpeaking || isAvatarSynthesizing) && (
+                      <Activity className={`w-3 h-3 ${isAvatarSynthesizing ? 'text-purple-400' : 'text-accent'} animate-pulse`} />
+                    )}
                   </div>
                 </div>
+              </div>
+
+              {/* Status Indicator Top-Right */}
+              <div className="absolute top-8 right-8 z-30">
+                <Badge className="bg-black/40 backdrop-blur-md text-green-400 border-green-500/30 px-4 py-1.5 flex items-center gap-2">
+                  <div className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />
+                  <span className="text-[10px] font-black tracking-widest uppercase">Live Encryption Active</span>
+                </Badge>
               </div>
             </>
           )}
