@@ -1,3 +1,4 @@
+
 "use client";
 
 import { Suspense, useEffect, useState, useRef } from "react";
@@ -76,6 +77,7 @@ function VirtualArenaContent() {
 
   const [agent, setAgent] = useState<any>(null);
   const [isAgentConnected, setIsAgentConnected] = useState(false);
+  const [mediaStream, setMediaStream] = useState<MediaStream | null>(null);
 
   const [difficulty, setDifficulty] = useState<"EASY" | "MEDIUM" | "HARD">("MEDIUM");
   const [askedQuestions, setAskedQuestions] = useState<string[]>([]);
@@ -83,6 +85,28 @@ function VirtualArenaContent() {
   const transcriptEndRef = useRef<HTMLDivElement>(null);
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const recognitionRef = useRef<any>(null);
+
+  // ENSURE MEDIA STREAM IS ATTACHED ON EVERY RENDER (Fixes invisibility root cause)
+  useEffect(() => {
+    if (videoRef.current && mediaStream) {
+      if (videoRef.current.srcObject !== mediaStream) {
+        console.log("[D-ID] Attaching stream to video element...");
+        videoRef.current.srcObject = mediaStream;
+        
+        videoRef.current.onloadedmetadata = () => {
+          console.log("[D-ID] TELEMETRY:", {
+            videoWidth: videoRef.current?.videoWidth,
+            videoHeight: videoRef.current?.videoHeight,
+            readyState: videoRef.current?.readyState,
+            networkState: videoRef.current?.networkState,
+            paused: videoRef.current?.paused,
+            currentTime: videoRef.current?.currentTime
+          });
+          videoRef.current?.play().catch(e => console.error("[D-ID] Play failed:", e));
+        };
+      }
+    }
+  }, [mediaStream, isAgentConnected]);
 
   // Initialize SDK and Speech Recognition
   useEffect(() => {
@@ -137,28 +161,17 @@ function VirtualArenaContent() {
         },
         callbacks: {
           onSrcObjectReady: (stream: MediaStream) => {
-            console.log("✅ Stream received", stream);
-            if (videoRef.current) {
-              videoRef.current.srcObject = stream;
-              videoRef.current.muted = false; // Ensure unmuted for speech
-              videoRef.current.autoplay = true;
-              videoRef.current.playsInline = true;
-              videoRef.current.onloadedmetadata = async () => {
-                try {
-                  await videoRef.current?.play();
-                } catch (e) {
-                  console.error("Auto-play failed:", e);
-                }
-              };
-            }
+            console.log("[D-ID] MediaStream received from SDK callback.");
+            setMediaStream(stream);
           },
           onConnectionStateChange: (state: string) => {
-            console.log("D-ID STATE =", state);
+            console.log("[D-ID] STATE =", state);
             if (state === "connected") {
               setIsAgentConnected(true);
             }
             if (state === "disconnected") {
               setIsAgentConnected(false);
+              setMediaStream(null);
             }
           },
           onVideoStatusChange: (status: string) => {
@@ -181,7 +194,7 @@ function VirtualArenaContent() {
     if (targetAgent && isAgentConnected) {
       try {
         setIsAvatarSynthesizing(true);
-        await targetAgent.chat(text);
+        await targetAgent.speak({ type: 'text', input: text });
       } catch (e) {
         console.error("Speech Synthesis Error:", e);
       } finally {
@@ -432,9 +445,8 @@ function VirtualArenaContent() {
                 ref={videoRef}
                 autoPlay
                 playsInline
-                className="absolute inset-0 w-full h-full object-cover z-10"
-                onLoadedData={() => console.log("VIDEO STREAM ACTIVE")}
-                onError={(e) => console.error("VIDEO ERROR", e)}
+                className="absolute inset-0 w-full h-full object-cover z-10 bg-black"
+                onLoadedMetadata={() => console.log("[D-ID] Video metadata loaded.")}
               />
               
               {/* Connection Overlay - Only visible before stream is ready */}
