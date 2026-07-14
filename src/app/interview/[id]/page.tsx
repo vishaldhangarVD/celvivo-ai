@@ -1,4 +1,3 @@
-
 "use client";
 import { Suspense, useEffect, useState, useRef, useMemo } from "react";
 import { useRouter, useParams, useSearchParams } from "next/navigation";
@@ -10,38 +9,20 @@ import {
   Loader2, 
   Send, 
   Mic, 
-  LogOut, 
-  Timer, 
-  ShieldCheck, 
   Command, 
-  ChevronRight,
-  User,
-  Activity,
-  Cpu,
-  RefreshCcw,
-  CircleAlert,
-  Home,
+  User, 
+  Settings,
   AlertTriangle,
-  Terminal,
-  Settings
+  ShieldCheck,
+  ChevronLeft,
+  Home
 } from "lucide-react";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from "@/components/ui/alert-dialog";
 import Navbar from "@/components/layout/Navbar";
 import NavigationControls from "@/components/NavigationControls";
 import { aiMockInterview } from "@/ai/flows/ai-mock-interview-v2";
 import { generateInterviewFeedback } from "@/ai/flows/ai-interview-feedback";
 import { useUser, useFirestore } from "@/firebase";
-import { doc, serverTimestamp, collection, addDoc, updateDoc, getDoc, setDoc, deleteDoc } from "firebase/firestore";
+import { doc, serverTimestamp, collection, addDoc, getDoc, deleteDoc } from "firebase/firestore";
 import { useToast } from "@/hooks/use-toast";
 
 // Global reference for D-ID SDK
@@ -78,24 +59,23 @@ function VirtualArenaContent() {
   const [isAgentConnected, setIsAgentConnected] = useState(false);
   const [mediaStream, setMediaStream] = useState<MediaStream | null>(null);
 
-  const [difficulty, setDifficulty] = useState<"EASY" | "MEDIUM" | "HARD">("MEDIUM");
   const [askedQuestions, setAskedQuestions] = useState<string[]>([]);
 
   const transcriptEndRef = useRef<HTMLDivElement>(null);
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const recognitionRef = useRef<any>(null);
 
-  // ENSURE MEDIA STREAM IS ATTACHED ON EVERY RENDER
+  // Re-attach media stream on state change or re-render
   useEffect(() => {
     if (videoRef.current && mediaStream) {
       if (videoRef.current.srcObject !== mediaStream) {
-        console.log("[D-ID] Re-attaching stream to video element...");
+        console.log("[D-ID] Attaching MediaStream to video element");
         videoRef.current.srcObject = mediaStream;
         
         videoRef.current.onloadedmetadata = () => {
           console.log("[D-ID] Video telemetry:", {
-            videoWidth: videoRef.current?.videoWidth,
-            videoHeight: videoRef.current?.videoHeight,
+            width: videoRef.current?.videoWidth,
+            height: videoRef.current?.videoHeight,
             readyState: videoRef.current?.readyState,
           });
           videoRef.current?.play().catch(e => console.error("[D-ID] Play failed:", e));
@@ -104,7 +84,7 @@ function VirtualArenaContent() {
     }
   }, [mediaStream]);
 
-  // Initialize SDK and Speech Recognition
+  // Initialize Speech Recognition and SDK
   useEffect(() => {
     const initClient = async () => {
       try {
@@ -143,7 +123,8 @@ function VirtualArenaContent() {
     const agentId = process.env.NEXT_PUBLIC_D_ID_AGENT_ID;
 
     if (!clientKey || !agentId) {
-      setConfigError(`Credentials Missing: ${!clientKey ? 'CLIENT_KEY' : 'AGENT_ID'}`);
+      const err = `Credentials Missing: ${!clientKey ? 'CLIENT_KEY' : 'AGENT_ID'}`;
+      setConfigError(err);
       return;
     }
 
@@ -152,11 +133,11 @@ function VirtualArenaContent() {
         auth: { type: 'key', clientKey: clientKey },
         callbacks: {
           onSrcObjectReady: (stream: MediaStream) => {
-            console.log("[D-ID] MediaStream ready.");
+            console.log("[D-ID] MediaStream received");
             setMediaStream(stream);
           },
           onConnectionStateChange: (state: string) => {
-            console.log("[D-ID] STATE =", state);
+            console.log("[D-ID] Connection state:", state);
             setIsAgentConnected(state === "connected");
             if (state === "disconnected") setMediaStream(null);
           },
@@ -254,7 +235,13 @@ function VirtualArenaContent() {
       } else {
         response = await aiMockInterview({
           role, experienceLevel: exp, roundType: round, currentMainQuestionIndex: currentIdx + 1,
-          history: newTranscript.map((t, i) => t.role === 'candidate' ? { question: newTranscript[i-1]?.text || "", answer: t.text } : null).filter(Boolean) as any,
+          history: newTranscript.filter(t => t.role === 'candidate').map((t, i) => {
+            const interviewerIdx = transcript.findIndex(prev => prev.text === t.text) - 1;
+            return {
+              question: transcript[interviewerIdx]?.text || "Introduction",
+              answer: t.text
+            };
+          }),
           userAnswer: currentAns, targetCompany: company,
           resumeSkills: assessmentContext.resumeAnalysis?.skillAnalysis?.map((s: any) => s.skill) || [],
           resumeProjects: assessmentContext.resumeAnalysis?.sections?.projects || [],
@@ -275,6 +262,7 @@ function VirtualArenaContent() {
         await handleInterviewerSpeech(agent, response.nextQuestion);
       }
     } catch (error) {
+      console.error(error);
       toast({ variant: "destructive", title: "Logic Sync Error" });
     } finally {
       setIsProcessing(false);
@@ -308,6 +296,7 @@ function VirtualArenaContent() {
       await deleteDoc(doc(db, 'users', user.uid, 'journey', 'active'));
       router.push(`/feedback/${docRef.id}`);
     } catch (e) {
+      console.error(e);
       toast({ variant: "destructive", title: "Master Audit Synthesis Failed" });
     } finally {
       setIsGeneratingReport(false);
@@ -320,7 +309,12 @@ function VirtualArenaContent() {
     else { setUserAnswer(""); recognitionRef.current.start(); }
   };
 
-  useEffect(() => { transcriptEndRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [transcript]);
+  useEffect(() => { 
+    transcriptEndRef.current?.scrollIntoView({ behavior: 'smooth' }); 
+  }, [transcript]);
+
+  const handleGoHome = () => router.push('/');
+  const handleBack = () => router.push('/interview');
 
   if (isInitializing) return <div className="h-screen flex items-center justify-center bg-[#050816]"><Loader2 className="w-12 h-12 text-accent animate-spin" /></div>;
 
@@ -335,7 +329,7 @@ function VirtualArenaContent() {
              <p className="text-[10px] text-muted-foreground uppercase font-bold">Node {currentIdx}/{assessmentContext?.debugMode ? '5' : '15'}</p>
            </div>
         </div>
-        <div className="flex items-center gap-6">
+        <div className="flex items-center gap-4">
           <div className="px-5 py-2 glass rounded-full border-accent/20 font-mono text-accent">
             {Math.floor(timeLeft/60)}:{(timeLeft%60).toString().padStart(2,'0')}
           </div>
@@ -343,7 +337,7 @@ function VirtualArenaContent() {
       </header>
 
       <main className="flex-1 flex flex-col overflow-hidden max-w-7xl mx-auto w-full px-6 py-6 gap-6">
-        <section className="h-[45vh] relative rounded-[3rem] overflow-hidden border border-white/10 bg-black group">
+        <section className="h-[45vh] relative rounded-[3rem] overflow-hidden border border-white/10 bg-black">
           {configError ? (
             <div className="absolute inset-0 flex flex-col items-center justify-center p-12 text-center bg-red-950/20 backdrop-blur-xl z-50">
               <AlertTriangle className="w-16 h-16 text-red-500 mb-6 animate-pulse" />
@@ -352,7 +346,12 @@ function VirtualArenaContent() {
             </div>
           ) : (
             <>
-              <video ref={videoRef} autoPlay playsInline className="absolute inset-0 w-full h-full object-cover z-10 bg-black" />
+              <video 
+                ref={videoRef} 
+                autoPlay 
+                playsInline 
+                className="absolute inset-0 w-full h-full object-cover z-10 bg-black" 
+              />
               {!isAgentConnected && (
                 <div className="absolute inset-0 w-full h-full flex flex-col items-center justify-center bg-[#050816] z-20 space-y-6">
                   <div className="relative">
@@ -393,13 +392,22 @@ function VirtualArenaContent() {
              <Button onClick={toggleMic} disabled={isAvatarSpeaking || isProcessing || !isAgentConnected} className={`w-16 h-16 rounded-[1.5rem] transition-all ${isMicActive ? 'bg-red-500 text-white shadow-xl animate-pulse' : 'bg-white/5 text-white/40'}`}>
                <Mic className="w-6 h-6" />
              </Button>
-             <input disabled={isProcessing || isAvatarSpeaking || !isAgentConnected} value={userAnswer} onChange={(e) => setUserAnswer(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && handleSend()} className="flex-1 bg-transparent outline-none px-6 text-base font-light placeholder:text-white/20" placeholder={isAvatarSpeaking ? "Interviewer is speaking..." : "Type your reasoning..."} />
+             <input 
+               disabled={isProcessing || isAvatarSpeaking || !isAgentConnected} 
+               value={userAnswer} 
+               onChange={(e) => setUserAnswer(e.target.value)} 
+               onKeyDown={(e) => e.key === 'Enter' && handleSend()} 
+               className="flex-1 bg-transparent outline-none px-6 text-base font-light placeholder:text-white/20" 
+               placeholder={isAvatarSpeaking ? "Interviewer is speaking..." : "Type your reasoning..."} 
+             />
              <Button onClick={handleSend} disabled={!userAnswer.trim() || isProcessing || isAvatarSpeaking || !isAgentConnected} className="h-16 px-12 btn-premium rounded-[1.5rem] uppercase tracking-widest text-xs font-bold">
                 Transmit <Send className="ml-3 w-4 h-4" />
              </Button>
           </div>
         </section>
       </main>
+
+      <NavigationControls onHome={handleGoHome} onBack={handleBack} />
 
       <AnimatePresence>
         {isSimulationComplete && (
