@@ -1,7 +1,6 @@
 
 "use client";
-
-import { Suspense, useEffect, useState, useRef } from "react";
+import { Suspense, useEffect, useState, useRef, useMemo } from "react";
 import { useRouter, useParams, useSearchParams } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
@@ -86,27 +85,24 @@ function VirtualArenaContent() {
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const recognitionRef = useRef<any>(null);
 
-  // ENSURE MEDIA STREAM IS ATTACHED ON EVERY RENDER (Fixes invisibility root cause)
+  // ENSURE MEDIA STREAM IS ATTACHED ON EVERY RENDER
   useEffect(() => {
     if (videoRef.current && mediaStream) {
       if (videoRef.current.srcObject !== mediaStream) {
-        console.log("[D-ID] Attaching stream to video element...");
+        console.log("[D-ID] Re-attaching stream to video element...");
         videoRef.current.srcObject = mediaStream;
         
         videoRef.current.onloadedmetadata = () => {
-          console.log("[D-ID] TELEMETRY:", {
+          console.log("[D-ID] Video telemetry:", {
             videoWidth: videoRef.current?.videoWidth,
             videoHeight: videoRef.current?.videoHeight,
             readyState: videoRef.current?.readyState,
-            networkState: videoRef.current?.networkState,
-            paused: videoRef.current?.paused,
-            currentTime: videoRef.current?.currentTime
           });
           videoRef.current?.play().catch(e => console.error("[D-ID] Play failed:", e));
         };
       }
     }
-  }, [mediaStream, isAgentConnected]);
+  }, [mediaStream]);
 
   // Initialize SDK and Speech Recognition
   useEffect(() => {
@@ -140,7 +136,6 @@ function VirtualArenaContent() {
     initClient();
   }, []);
 
-  // Establishing D-ID Realtime Link using Client Key
   const connectToAgent = async () => {
     if (isAgentConnected || !didSdk) return;
     
@@ -148,31 +143,22 @@ function VirtualArenaContent() {
     const agentId = process.env.NEXT_PUBLIC_D_ID_AGENT_ID;
 
     if (!clientKey || !agentId) {
-      const missingVar = !clientKey ? "NEXT_PUBLIC_D_ID_CLIENT_KEY" : "NEXT_PUBLIC_D_ID_AGENT_ID";
-      setConfigError(`Configuration Missing: ${missingVar}`);
+      setConfigError(`Credentials Missing: ${!clientKey ? 'CLIENT_KEY' : 'AGENT_ID'}`);
       return;
     }
 
     try {
       const agentInstance = await didSdk.createAgentManager(agentId, {
-        auth: { 
-          type: 'key', 
-          clientKey: clientKey 
-        },
+        auth: { type: 'key', clientKey: clientKey },
         callbacks: {
           onSrcObjectReady: (stream: MediaStream) => {
-            console.log("[D-ID] MediaStream received from SDK callback.");
+            console.log("[D-ID] MediaStream ready.");
             setMediaStream(stream);
           },
           onConnectionStateChange: (state: string) => {
             console.log("[D-ID] STATE =", state);
-            if (state === "connected") {
-              setIsAgentConnected(true);
-            }
-            if (state === "disconnected") {
-              setIsAgentConnected(false);
-              setMediaStream(null);
-            }
+            setIsAgentConnected(state === "connected");
+            if (state === "disconnected") setMediaStream(null);
           },
           onVideoStatusChange: (status: string) => {
             setIsAvatarSpeaking(status === 'play');
@@ -185,28 +171,27 @@ function VirtualArenaContent() {
       return agentInstance;
     } catch (error: any) {
       console.error("D-ID Connection Error:", error);
-      toast({ variant: "destructive", title: "Visual Node Offline", description: "Could not establish direct WebRTC link." });
+      toast({ variant: "destructive", title: "Visual Node Offline", description: "Failed to establish WebRTC link." });
       throw error;
     }
   };
 
   const handleInterviewerSpeech = async (targetAgent: any, text: string) => {
-    if (targetAgent && isAgentConnected) {
-      try {
-        setIsAvatarSynthesizing(true);
-        await targetAgent.speak({ type: 'text', input: text });
-      } catch (e) {
-        console.error("Speech Synthesis Error:", e);
-      } finally {
-        setIsAvatarSynthesizing(false);
-      }
+    if (!targetAgent || !isAgentConnected) return;
+    try {
+      setIsAvatarSynthesizing(true);
+      await targetAgent.speak({ type: 'text', input: text });
+    } catch (e) {
+      console.error("Avatar Speech Error:", e);
+    } finally {
+      setIsAvatarSynthesizing(false);
     }
   };
 
-  // Simulation Bootstrap
+  // Bootstrap Simulation
   useEffect(() => {
     async function init() {
-      if (!user || !db || !role || !company || !exp) return;
+      if (!user || !db || !role || !company) return;
       
       const docRef = doc(db, 'users', user.uid, 'journey', 'active');
       const snap = await getDoc(docRef);
@@ -216,47 +201,32 @@ function VirtualArenaContent() {
         setAssessmentContext(data);
         
         try {
-          if (!didSdk) {
-             didSdk = await import("@d-id/client-sdk");
-          }
-
+          if (!didSdk) didSdk = await import("@d-id/client-sdk");
           const agentInstance = await connectToAgent();
           
           if (transcript.length === 0) {
             let firstMsg = "";
-            
             if (data.debugMode) {
               firstMsg = "Hello, welcome to Nexvoro AI. This is a developer test of the D-ID avatar integration.";
             } else {
               const response = await aiMockInterview({
-                role, 
-                experienceLevel: exp, 
-                roundType: round, 
-                currentMainQuestionIndex: 1, 
-                history: [],
-                targetCompany: company,
+                role, experienceLevel: exp, roundType: round, currentMainQuestionIndex: 1, 
+                history: [], targetCompany: company,
                 resumeSkills: data.resumeAnalysis?.skillAnalysis?.map((s: any) => s.skill) || [],
                 resumeProjects: data.resumeAnalysis?.sections?.projects || [],
                 resumeSummary: data.resumeAnalysis?.summary || "",
                 aptitudePerformance: data.aptitudeReport?.recommendation || "N/A",
-                codingPerformance: data.codingReport?.finalRecommendation || "N/A",
-                difficultyLevel: "MEDIUM",
-                askedQuestions: [],
-                debugMode: false
+                codingPerformance: data.codingReport?.finalRecommendation || "N/A"
               });
               firstMsg = response.nextQuestion;
             }
 
             setTranscript([{ role: 'interviewer', text: firstMsg }]);
             setAskedQuestions([firstMsg]);
-            
-            // Wait for WebRTC to stabilize before speaking
-            setTimeout(() => {
-              if (agentInstance) handleInterviewerSpeech(agentInstance, firstMsg);
-            }, 3000);
+            if (agentInstance) await handleInterviewerSpeech(agentInstance, firstMsg);
           }
         } catch (e) {
-          console.error("Initialization Failed:", e);
+          console.error("Init Error:", e);
         } finally {
           setIsInitializing(false);
         }
@@ -266,64 +236,46 @@ function VirtualArenaContent() {
     }
     init();
     return () => { if (agent) agent.disconnect(); };
-  }, [user, db, role, company, exp, round]);
-
-  const toggleMic = () => {
-    if (!recognitionRef.current) return;
-    if (isMicActive) recognitionRef.current.stop();
-    else { setUserAnswer(""); recognitionRef.current.start(); }
-  };
+  }, [user, db, role, company, exp]);
 
   const handleSend = async () => {
-    if (!userAnswer.trim() || isProcessing || isSimulationComplete || isAvatarSpeaking || isAvatarSynthesizing) return;
-    if (isMicActive && recognitionRef.current) recognitionRef.current.stop();
+    if (!userAnswer.trim() || isProcessing || isSimulationComplete || isAvatarSpeaking) return;
     
     setIsProcessing(true);
-    const newEntry = { role: 'candidate' as const, text: userAnswer };
-    const updatedTranscript = [...transcript, newEntry];
-    setTranscript(updatedTranscript);
-    
+    const newTranscript = [...transcript, { role: 'candidate' as const, text: userAnswer }];
+    setTranscript(newTranscript);
     const currentAns = userAnswer;
     setUserAnswer("");
 
     try {
       let response;
       if (assessmentContext?.debugMode) {
-        response = {
-          nextQuestion: `Developer Mode: Answer received for Node ${currentIdx}. Test sequence continues.`,
-          isInterviewComplete: currentIdx >= 5,
-        };
+        response = { nextQuestion: `Answer received for Node ${currentIdx}. Test sequence continues.`, isInterviewComplete: currentIdx >= 5 };
       } else {
         response = await aiMockInterview({
-          role, 
-          experienceLevel: exp, 
-          roundType: round, 
-          currentMainQuestionIndex: currentIdx + 1,
-          history: updatedTranscript.map((t, i) => t.role === 'candidate' ? { question: updatedTranscript[i-1]?.text || "", answer: t.text } : null).filter(Boolean) as any,
-          userAnswer: currentAns,
-          targetCompany: company,
+          role, experienceLevel: exp, roundType: round, currentMainQuestionIndex: currentIdx + 1,
+          history: newTranscript.map((t, i) => t.role === 'candidate' ? { question: newTranscript[i-1]?.text || "", answer: t.text } : null).filter(Boolean) as any,
+          userAnswer: currentAns, targetCompany: company,
           resumeSkills: assessmentContext.resumeAnalysis?.skillAnalysis?.map((s: any) => s.skill) || [],
           resumeProjects: assessmentContext.resumeAnalysis?.sections?.projects || [],
           aptitudePerformance: assessmentContext.aptitudeReport?.recommendation || "N/A",
           codingPerformance: assessmentContext.codingReport?.finalRecommendation || "N/A",
-          difficultyLevel: difficulty,
-          askedQuestions: askedQuestions,
-          debugMode: false
+          askedQuestions: askedQuestions
         });
       }
 
-      const finalFullTranscript = [...updatedTranscript, { role: 'interviewer' as const, text: response.nextQuestion }];
-      setTranscript(finalFullTranscript);
+      const finalTranscript = [...newTranscript, { role: 'interviewer' as const, text: response.nextQuestion }];
+      setTranscript(finalTranscript);
       setAskedQuestions(prev => [...prev, response.nextQuestion]);
       setCurrentIdx(prev => prev + 1);
 
       if (response.isInterviewComplete) {
-        finalizeSession(finalFullTranscript);
+        finalizeSession(finalTranscript);
       } else {
         await handleInterviewerSpeech(agent, response.nextQuestion);
       }
     } catch (error) {
-      toast({ variant: "destructive", title: "Transmission Error" });
+      toast({ variant: "destructive", title: "Logic Sync Error" });
     } finally {
       setIsProcessing(false);
     }
@@ -344,14 +296,6 @@ function VirtualArenaContent() {
           strengths: assessmentContext.resumeAnalysis?.analysis?.strengths || [],
           weaknesses: assessmentContext.resumeAnalysis?.analysis?.weaknesses || [],
           missingSkills: assessmentContext.resumeAnalysis?.analysis?.missingSkills || [],
-        },
-        aptitudeContext: {
-          overallScore: assessmentContext.aptitudeReport?.overallScore || 0,
-          status: assessmentContext.aptitudeReport?.status || 'N/A',
-        },
-        codingContext: {
-          score: assessmentContext.codingReport?.score || 0,
-          status: assessmentContext.codingReport?.status || 'N/A',
         }
       });
 
@@ -361,7 +305,7 @@ function VirtualArenaContent() {
         feedback: finalAudit, createdAt: serverTimestamp(),
       });
       
-      await setDoc(doc(db, 'users', user.uid, 'journey', 'active'), { step: 11, finalReportId: docRef.id }, { merge: true });
+      await deleteDoc(doc(db, 'users', user.uid, 'journey', 'active'));
       router.push(`/feedback/${docRef.id}`);
     } catch (e) {
       toast({ variant: "destructive", title: "Master Audit Synthesis Failed" });
@@ -370,55 +314,28 @@ function VirtualArenaContent() {
     }
   };
 
-  const handleResetSession = async () => {
-    if (!user || !db) return;
-    if (agent) agent.disconnect();
-    await deleteDoc(doc(db, 'users', user.uid, 'journey', 'active'));
-    router.push('/interview');
+  const toggleMic = () => {
+    if (!recognitionRef.current) return;
+    if (isMicActive) recognitionRef.current.stop();
+    else { setUserAnswer(""); recognitionRef.current.start(); }
   };
 
-  // Scroll to bottom of transcript
-  useEffect(() => {
-    transcriptEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [transcript]);
+  useEffect(() => { transcriptEndRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [transcript]);
 
   if (isInitializing) return <div className="h-screen flex items-center justify-center bg-[#050816]"><Loader2 className="w-12 h-12 text-accent animate-spin" /></div>;
 
   return (
     <div className="min-h-screen bg-[#050816] flex flex-col relative overflow-hidden">
       <div className="particles-bg" />
-      
       <header className="h-20 border-b border-white/5 bg-[#0b0e1a]/80 backdrop-blur-xl flex items-center justify-between px-8 z-50">
         <div className="flex items-center gap-4">
            <Command className="w-5 h-5 text-accent" />
            <div>
              <h1 className="text-sm font-bold uppercase tracking-widest">{company} Arena</h1>
-             <p className="text-[10px] text-muted-foreground uppercase font-bold">Protocol {currentIdx}/{assessmentContext?.debugMode ? '5' : '15'}</p>
+             <p className="text-[10px] text-muted-foreground uppercase font-bold">Node {currentIdx}/{assessmentContext?.debugMode ? '5' : '15'}</p>
            </div>
         </div>
         <div className="flex items-center gap-6">
-          {assessmentContext?.debugMode && (
-            <Badge className="bg-orange-500/20 text-orange-400 border-none px-3 py-1 flex items-center gap-2">
-              <Terminal className="w-3 h-3" /> [DEV MODE]
-            </Badge>
-          )}
-          <AlertDialog>
-            <AlertDialogTrigger asChild>
-              <Button variant="ghost" className="h-10 px-4 glass border-white/5 text-red-400 hover:bg-red-500/10 text-[10px] font-bold uppercase tracking-widest gap-2">
-                <RefreshCcw className="w-3.5 h-3.5" /> Restart
-              </Button>
-            </AlertDialogTrigger>
-            <AlertDialogContent className="glass border-white/10 bg-[#0b0e1a] text-white">
-              <AlertDialogHeader>
-                <AlertDialogTitle>Restart Interview?</AlertDialogTitle>
-                <AlertDialogDescription className="text-muted-foreground">Terminate this session and return to initialization. Confirm?</AlertDialogDescription>
-              </AlertDialogHeader>
-              <AlertDialogFooter>
-                <AlertDialogCancel className="bg-transparent text-white border-white/10">Cancel</AlertDialogCancel>
-                <AlertDialogAction onClick={handleResetSession} className="bg-red-500 text-white">Confirm Reset</AlertDialogAction>
-              </AlertDialogFooter>
-            </AlertDialogContent>
-          </AlertDialog>
           <div className="px-5 py-2 glass rounded-full border-accent/20 font-mono text-accent">
             {Math.floor(timeLeft/60)}:{(timeLeft%60).toString().padStart(2,'0')}
           </div>
@@ -426,30 +343,16 @@ function VirtualArenaContent() {
       </header>
 
       <main className="flex-1 flex flex-col overflow-hidden max-w-7xl mx-auto w-full px-6 py-6 gap-6">
-        
-        {/* Avatar Top Section - Full Bleed Video Call Style */}
         <section className="h-[45vh] relative rounded-[3rem] overflow-hidden border border-white/10 bg-black group">
           {configError ? (
             <div className="absolute inset-0 flex flex-col items-center justify-center p-12 text-center bg-red-950/20 backdrop-blur-xl z-50">
               <AlertTriangle className="w-16 h-16 text-red-500 mb-6 animate-pulse" />
-              <h2 className="text-2xl font-bold text-red-400 uppercase tracking-tighter">Configuration Fault</h2>
+              <h2 className="text-2xl font-bold text-red-400 uppercase tracking-tighter">Identity Fault</h2>
               <p className="text-white/60 mt-2 max-w-md">{configError}</p>
-              <div className="mt-8 p-4 glass rounded-xl border-red-500/20 text-xs font-mono text-red-300">
-                Action: Verify NEXT_PUBLIC_D_ID_CLIENT_KEY and NEXT_PUBLIC_D_ID_AGENT_ID in .env
-              </div>
             </div>
           ) : (
             <>
-              {/* Full-bleed Video Background */}
-              <video
-                ref={videoRef}
-                autoPlay
-                playsInline
-                className="absolute inset-0 w-full h-full object-cover z-10 bg-black"
-                onLoadedMetadata={() => console.log("[D-ID] Video metadata loaded.")}
-              />
-              
-              {/* Connection Overlay - Only visible before stream is ready */}
+              <video ref={videoRef} autoPlay playsInline className="absolute inset-0 w-full h-full object-cover z-10 bg-black" />
               {!isAgentConnected && (
                 <div className="absolute inset-0 w-full h-full flex flex-col items-center justify-center bg-[#050816] z-20 space-y-6">
                   <div className="relative">
@@ -459,49 +362,26 @@ function VirtualArenaContent() {
                   <p className="text-[10px] font-bold uppercase tracking-[0.4em] text-accent animate-pulse">Establishing Direct Neural Link...</p>
                 </div>
               )}
-
-              {/* UI Overlays (Highest Index) */}
-              <div className="absolute bottom-8 left-8 z-30 flex items-center gap-6 pointer-events-none">
+              <div className="absolute bottom-8 left-8 z-30 flex items-center gap-6">
                 <div className="w-16 h-16 rounded-2xl glass border-accent/20 flex items-center justify-center bg-black/40 backdrop-blur-md">
                   <Settings className="w-8 h-8 text-accent" />
                 </div>
                 <div>
                   <p className="text-2xl font-bold tracking-tight text-white drop-shadow-lg">Senior Partner</p>
-                  <div className="flex items-center gap-2">
-                    <p className="text-[10px] text-white/70 uppercase font-bold drop-shadow-md">
-                      {isAvatarSynthesizing ? "Synthesizing Thought..." : isAvatarSpeaking ? "Delivering Node..." : "Monitoring Stream"}
-                    </p>
-                    {(isAvatarSpeaking || isAvatarSynthesizing) && (
-                      <Activity className={`w-3 h-3 ${isAvatarSynthesizing ? 'text-purple-400' : 'text-accent'} animate-pulse`} />
-                    )}
-                  </div>
+                  <p className="text-[10px] text-white/70 uppercase font-bold">{isAvatarSpeaking ? "Delivering Probes..." : "Monitoring Stream"}</p>
                 </div>
-              </div>
-
-              {/* Status Indicator Top-Right */}
-              <div className="absolute top-8 right-8 z-30">
-                <Badge className="bg-black/40 backdrop-blur-md text-green-400 border-green-500/30 px-4 py-1.5 flex items-center gap-2">
-                  <div className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />
-                  <span className="text-[10px] font-black tracking-widest uppercase">Live Encryption Active</span>
-                </Badge>
               </div>
             </>
           )}
         </section>
 
-        {/* Transcript and Input Section */}
         <section className="flex-1 flex flex-col gap-6 overflow-hidden min-h-0">
           <div className="flex-1 glass bg-white/[0.01] border-white/5 rounded-[3rem] p-8 overflow-y-auto custom-scrollbar flex flex-col gap-6">
             <AnimatePresence mode="popLayout">
               {transcript.map((msg, i) => (
-                <motion.div 
-                  key={i} 
-                  initial={{ opacity: 0, y: 10 }} 
-                  animate={{ opacity: 1, y: 0 }} 
-                  className={`flex ${msg.role === 'candidate' ? 'justify-end' : 'justify-start'}`}
-                >
+                <motion.div key={i} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className={`flex ${msg.role === 'candidate' ? 'justify-end' : 'justify-start'}`}>
                   <div className={`max-w-[80%] p-6 rounded-[2rem] border ${msg.role === 'candidate' ? 'bg-accent/10 border-accent/20 text-accent' : 'glass border-white/10 bg-white/5'}`}>
-                    <p className="text-sm md:text-base font-light leading-relaxed">{msg.text}</p>
+                    <p className="text-sm font-light leading-relaxed">{msg.text}</p>
                   </div>
                 </motion.div>
               ))}
@@ -510,26 +390,11 @@ function VirtualArenaContent() {
           </div>
 
           <div className="h-24 glass bg-[#0b0e1a]/80 border-white/10 rounded-[2.5rem] p-4 flex items-center gap-4">
-             <Button 
-                onClick={toggleMic} 
-                disabled={isAvatarSpeaking || isAvatarSynthesizing || isProcessing || isSimulationComplete || !isAgentConnected} 
-                className={`w-16 h-16 rounded-[1.5rem] transition-all ${isMicActive ? 'bg-red-500 text-white shadow-[0_0_30px_rgba(239,68,68,0.4)] animate-pulse' : 'bg-white/5 text-white/40 hover:bg-white/10'}`}
-             >
+             <Button onClick={toggleMic} disabled={isAvatarSpeaking || isProcessing || !isAgentConnected} className={`w-16 h-16 rounded-[1.5rem] transition-all ${isMicActive ? 'bg-red-500 text-white shadow-xl animate-pulse' : 'bg-white/5 text-white/40'}`}>
                <Mic className="w-6 h-6" />
              </Button>
-             <input 
-                disabled={isProcessing || isAvatarSpeaking || isAvatarSynthesizing || isSimulationComplete || !isAgentConnected} 
-                value={userAnswer} 
-                onChange={(e) => setUserAnswer(e.target.value)} 
-                onKeyDown={(e) => e.key === 'Enter' && handleSend()} 
-                className="flex-1 bg-transparent outline-none px-6 text-base font-light placeholder:text-white/20" 
-                placeholder={isAvatarSpeaking ? "Interviewer is speaking..." : isProcessing ? "Transmitting logic..." : "Speak or type your professional reasoning..."} 
-             />
-             <Button 
-                onClick={handleSend} 
-                disabled={!userAnswer.trim() || isProcessing || isAvatarSpeaking || isAvatarSynthesizing || isSimulationComplete || !isAgentConnected} 
-                className="h-16 px-12 btn-premium rounded-[1.5rem] uppercase tracking-widest text-xs font-bold"
-             >
+             <input disabled={isProcessing || isAvatarSpeaking || !isAgentConnected} value={userAnswer} onChange={(e) => setUserAnswer(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && handleSend()} className="flex-1 bg-transparent outline-none px-6 text-base font-light placeholder:text-white/20" placeholder={isAvatarSpeaking ? "Interviewer is speaking..." : "Type your reasoning..."} />
+             <Button onClick={handleSend} disabled={!userAnswer.trim() || isProcessing || isAvatarSpeaking || !isAgentConnected} className="h-16 px-12 btn-premium rounded-[1.5rem] uppercase tracking-widest text-xs font-bold">
                 Transmit <Send className="ml-3 w-4 h-4" />
              </Button>
           </div>
@@ -541,8 +406,8 @@ function VirtualArenaContent() {
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-[#050816]/95 backdrop-blur-2xl">
             <div className="max-w-md w-full text-center space-y-8">
               <div className="relative">
-                <motion.div animate={{ rotate: 360 }} transition={{ duration: 4, repeat: Infinity, ease: "linear" }} className="w-32 h-32 rounded-full border-b-2 border-accent mx-auto shadow-[0_0_50px_rgba(34,211,238,0.2)]" />
-                <ShieldCheck className="w-12 h-12 text-accent absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 animate-pulse" />
+                <motion.div animate={{ rotate: 360 }} transition={{ duration: 4, repeat: Infinity, ease: "linear" }} className="w-32 h-32 rounded-full border-b-2 border-accent mx-auto" />
+                <ShieldCheck className="w-12 h-12 text-accent absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" />
               </div>
               <h2 className="text-4xl font-bold uppercase tracking-tighter">Finalizing Audit</h2>
               <div className="flex items-center justify-center gap-2 text-accent">

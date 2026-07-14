@@ -8,6 +8,13 @@ const nextConfig: NextConfig = {
   eslint: {
     ignoreDuringBuilds: true,
   },
+  experimental: {
+    // Allows Hot Module Replacement and dev resources to work correctly within Firebase Studio's proxied environment
+    allowedDevOrigins: [
+      '*.cloudworkstations.dev',
+      '*.firebase-studio.com',
+    ],
+  },
   images: {
     remotePatterns: [
       {
