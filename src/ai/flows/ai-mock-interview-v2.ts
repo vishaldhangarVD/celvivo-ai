@@ -1,8 +1,8 @@
 'use server';
 /**
- * @fileOverview Nexvoro AI Virtual Interview Agent (Elite Senior Interviewer v47.0).
+ * @fileOverview Nexvoro AI Virtual Interview Agent (Elite Senior Interviewer v48.0).
  * Calibrated for zero-chatbot behavior. Mimics a Lead Engineer at a Tier-1 tech firm.
- * Implements strict resume-anchored questioning and firm-specific protocols.
+ * Implements strict resume-anchored questioning and coding-performance adaptive logic.
  */
 
 import { ai, runWithResilience } from '@/ai/genkit';
@@ -33,6 +33,7 @@ const AiMockInterviewInputSchema = z.object({
   resumeSummary: z.string().optional(),
   aptitudePerformance: z.string().optional(),
   codingPerformance: z.string().optional(),
+  codingScore: z.number().optional(),
   difficultyLevel: z.enum(["EASY", "MEDIUM", "HARD"]).optional(),
   askedQuestions: z.array(z.string()).optional(),
   debugMode: z.boolean().optional(),
@@ -77,6 +78,13 @@ STRICT RESUME ANCHORING (MANDATORY):
 5. If Resume contains "Power BI" -> Ask about Dashboard optimization, DAX logic, and Data warehousing.
 6. NEVER ask a question unrelated to the resume until Node 11.
 
+CODING PERFORMANCE PROTOCOL (MANDATORY):
+- Current Coding Matrix Score: {{{codingScore}}}%
+- If score > 90: Treat as an Elite Architect. Skip implementation details; focus on high-level Architecture and scalability.
+- If score < 60: Treat as having logic friction. Focus on Debugging scenarios and fixing complex logic.
+- If score < 40: Treat as having syntax gaps. Focus on Basic Syntax and foundational technical concepts.
+- NEVER ignore the coding performance; reference their specific gaps or strengths naturally.
+
 FIRM-SPECIFIC QUESTIONING STYLE ({{{targetCompany}}}):
 - If Google: Focus on System Design, Scalability, and deep DSA. Constantly ask "Why" and demand rigorous Trade-off analysis.
 - If Amazon: Incorporate Leadership Principles. Focus on Ownership and Customer Obsession.
@@ -109,11 +117,10 @@ STRATEGIC DIRECTIVES:
 1. MEMORY: Your next question MUST be a natural follow-up to the latest response. If they mentioned a technology, challenge its implementation.
 2. PROBING: If their answer was weak, probe deeper into the "why" and architectural trade-offs.
 3. ADAPTIVITY: Adjust difficulty based on technical depth.
-4. AUDIT SYNC: Reference their coding round performance if they struggled with complexity.
 
 INTERVIEW PROTOCOL:
 - Node 1: Professional introduction + probe into a specific project from the resume.
-- Nodes 2-10: Resume-based technical deep-dives (React, Firebase, etc. as detected).
+- Nodes 2-10: Resume-based technical deep-dives + Performance-aligned probes (Architecture/Debug/Syntax).
 - Nodes 11-14: Scenario-based system design and behavioral probes aligned with {{{targetCompany}}}.
 - Node 15: Professional closing. Set isInterviewComplete to true.
 

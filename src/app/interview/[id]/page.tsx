@@ -1,5 +1,5 @@
 "use client";
-import { Suspense, useEffect, useState, useRef, useMemo } from "react";
+import { Suspense, useEffect, useState, useRef } from "react";
 import { useRouter, useParams, useSearchParams } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
@@ -14,8 +14,6 @@ import {
   Settings,
   AlertTriangle,
   ShieldCheck,
-  ChevronLeft,
-  Home
 } from "lucide-react";
 import Navbar from "@/components/layout/Navbar";
 import NavigationControls from "@/components/NavigationControls";
@@ -65,26 +63,26 @@ function VirtualArenaContent() {
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const recognitionRef = useRef<any>(null);
 
-  // Re-attach media stream on state change or re-render
+  // Sync MediaStream to Video Element
   useEffect(() => {
     if (videoRef.current && mediaStream) {
       if (videoRef.current.srcObject !== mediaStream) {
-        console.log("[D-ID] Attaching MediaStream to video element");
+        console.log("[WebRTC] Synchronizing stream to video node...");
         videoRef.current.srcObject = mediaStream;
         
         videoRef.current.onloadedmetadata = () => {
-          console.log("[D-ID] Video telemetry:", {
-            width: videoRef.current?.videoWidth,
-            height: videoRef.current?.videoHeight,
-            readyState: videoRef.current?.readyState,
+          console.log("[Telemetry] Frame Sync Established:", {
+            w: videoRef.current?.videoWidth,
+            h: videoRef.current?.videoHeight,
+            ready: videoRef.current?.readyState
           });
-          videoRef.current?.play().catch(e => console.error("[D-ID] Play failed:", e));
+          videoRef.current?.play().catch(e => console.error("[Playback] Execution Fault:", e));
         };
       }
     }
   }, [mediaStream]);
 
-  // Initialize Speech Recognition and SDK
+  // Initialize Recognition
   useEffect(() => {
     const initClient = async () => {
       try {
@@ -92,7 +90,7 @@ function VirtualArenaContent() {
           didSdk = await import("@d-id/client-sdk");
         }
         
-        const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+        const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitRecognition;
         if (SpeechRecognition) {
           const recognition = new SpeechRecognition();
           recognition.continuous = true;
@@ -110,7 +108,7 @@ function VirtualArenaContent() {
           recognitionRef.current = recognition;
         }
       } catch (e) {
-        console.error("SDK Load Error:", e);
+        console.error("Initialization Fault:", e);
       }
     };
     initClient();
@@ -123,7 +121,7 @@ function VirtualArenaContent() {
     const agentId = process.env.NEXT_PUBLIC_D_ID_AGENT_ID;
 
     if (!clientKey || !agentId) {
-      const err = `Credentials Missing: ${!clientKey ? 'CLIENT_KEY' : 'AGENT_ID'}`;
+      const err = `Identity Fault: ${!clientKey ? 'CLIENT_KEY' : 'AGENT_ID'} MISSING`;
       setConfigError(err);
       return;
     }
@@ -133,11 +131,9 @@ function VirtualArenaContent() {
         auth: { type: 'key', clientKey: clientKey },
         callbacks: {
           onSrcObjectReady: (stream: MediaStream) => {
-            console.log("[D-ID] MediaStream received");
             setMediaStream(stream);
           },
           onConnectionStateChange: (state: string) => {
-            console.log("[D-ID] Connection state:", state);
             setIsAgentConnected(state === "connected");
             if (state === "disconnected") setMediaStream(null);
           },
@@ -151,8 +147,8 @@ function VirtualArenaContent() {
       setAgent(agentInstance);
       return agentInstance;
     } catch (error: any) {
-      console.error("D-ID Connection Error:", error);
-      toast({ variant: "destructive", title: "Visual Node Offline", description: "Failed to establish WebRTC link." });
+      console.error("Neural Connection Error:", error);
+      toast({ variant: "destructive", title: "Visual Node Offline" });
       throw error;
     }
   };
@@ -163,7 +159,7 @@ function VirtualArenaContent() {
       setIsAvatarSynthesizing(true);
       await targetAgent.speak({ type: 'text', input: text });
     } catch (e) {
-      console.error("Avatar Speech Error:", e);
+      console.error("Vocal Synthesis Error:", e);
     } finally {
       setIsAvatarSynthesizing(false);
     }
@@ -197,7 +193,8 @@ function VirtualArenaContent() {
                 resumeProjects: data.resumeAnalysis?.sections?.projects || [],
                 resumeSummary: data.resumeAnalysis?.summary || "",
                 aptitudePerformance: data.aptitudeReport?.recommendation || "N/A",
-                codingPerformance: data.codingReport?.finalRecommendation || "N/A"
+                codingPerformance: data.codingReport?.finalRecommendation || "N/A",
+                codingScore: data.codingReport?.score || 0
               });
               firstMsg = response.nextQuestion;
             }
@@ -207,7 +204,7 @@ function VirtualArenaContent() {
             if (agentInstance) await handleInterviewerSpeech(agentInstance, firstMsg);
           }
         } catch (e) {
-          console.error("Init Error:", e);
+          console.error("Bootstrap Fault:", e);
         } finally {
           setIsInitializing(false);
         }
@@ -231,7 +228,7 @@ function VirtualArenaContent() {
     try {
       let response;
       if (assessmentContext?.debugMode) {
-        response = { nextQuestion: `Answer received for Node ${currentIdx}. Test sequence continues.`, isInterviewComplete: currentIdx >= 5 };
+        response = { nextQuestion: `Node ${currentIdx} verification received. Continue.`, isInterviewComplete: currentIdx >= 5 };
       } else {
         response = await aiMockInterview({
           role, experienceLevel: exp, roundType: round, currentMainQuestionIndex: currentIdx + 1,
@@ -247,6 +244,7 @@ function VirtualArenaContent() {
           resumeProjects: assessmentContext.resumeAnalysis?.sections?.projects || [],
           aptitudePerformance: assessmentContext.aptitudeReport?.recommendation || "N/A",
           codingPerformance: assessmentContext.codingReport?.finalRecommendation || "N/A",
+          codingScore: assessmentContext.codingReport?.score || 0,
           askedQuestions: askedQuestions
         });
       }
@@ -297,7 +295,7 @@ function VirtualArenaContent() {
       router.push(`/feedback/${docRef.id}`);
     } catch (e) {
       console.error(e);
-      toast({ variant: "destructive", title: "Master Audit Synthesis Failed" });
+      toast({ variant: "destructive", title: "Final Audit Synthesis Failed" });
     } finally {
       setIsGeneratingReport(false);
     }
@@ -308,10 +306,6 @@ function VirtualArenaContent() {
     if (isMicActive) recognitionRef.current.stop();
     else { setUserAnswer(""); recognitionRef.current.start(); }
   };
-
-  useEffect(() => { 
-    transcriptEndRef.current?.scrollIntoView({ behavior: 'smooth' }); 
-  }, [transcript]);
 
   const handleGoHome = () => router.push('/');
   const handleBack = () => router.push('/interview');
@@ -337,41 +331,41 @@ function VirtualArenaContent() {
       </header>
 
       <main className="flex-1 flex flex-col overflow-hidden max-w-7xl mx-auto w-full px-6 py-6 gap-6">
-        <section className="h-[45vh] relative rounded-[3rem] overflow-hidden border border-white/10 bg-black">
-          {configError ? (
+        <section className="relative h-[45vh] overflow-hidden rounded-[3rem] bg-black">
+          <video 
+            ref={videoRef} 
+            autoPlay 
+            playsInline 
+            className="absolute inset-0 w-full h-full object-cover z-10" 
+          />
+          
+          {!isAgentConnected && !configError && (
+            <div className="absolute inset-0 w-full h-full flex flex-col items-center justify-center bg-[#050816] z-20 space-y-6">
+              <div className="relative">
+                <div className="w-24 h-24 rounded-full border-2 border-accent/10 border-t-accent animate-spin" />
+                <User className="w-10 h-10 text-white/20 absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" />
+              </div>
+              <p className="text-[10px] font-bold uppercase tracking-[0.4em] text-accent animate-pulse">Establishing Direct Neural Link...</p>
+            </div>
+          )}
+
+          {configError && (
             <div className="absolute inset-0 flex flex-col items-center justify-center p-12 text-center bg-red-950/20 backdrop-blur-xl z-50">
-              <AlertTriangle className="w-16 h-16 text-red-500 mb-6 animate-pulse" />
-              <h2 className="text-2xl font-bold text-red-400 uppercase tracking-tighter">Identity Fault</h2>
+              <AlertTriangle className="w-16 h-16 text-red-500 mb-6" />
+              <h2 className="text-2xl font-bold text-red-400 uppercase tracking-tighter">Configuration Fault</h2>
               <p className="text-white/60 mt-2 max-w-md">{configError}</p>
             </div>
-          ) : (
-            <>
-              <video 
-                ref={videoRef} 
-                autoPlay 
-                playsInline 
-                className="absolute inset-0 w-full h-full object-cover z-10 bg-black" 
-              />
-              {!isAgentConnected && (
-                <div className="absolute inset-0 w-full h-full flex flex-col items-center justify-center bg-[#050816] z-20 space-y-6">
-                  <div className="relative">
-                    <div className="w-24 h-24 rounded-full border-2 border-accent/10 border-t-accent animate-spin" />
-                    <User className="w-10 h-10 text-white/20 absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" />
-                  </div>
-                  <p className="text-[10px] font-bold uppercase tracking-[0.4em] text-accent animate-pulse">Establishing Direct Neural Link...</p>
-                </div>
-              )}
-              <div className="absolute bottom-8 left-8 z-30 flex items-center gap-6">
-                <div className="w-16 h-16 rounded-2xl glass border-accent/20 flex items-center justify-center bg-black/40 backdrop-blur-md">
-                  <Settings className="w-8 h-8 text-accent" />
-                </div>
-                <div>
-                  <p className="text-2xl font-bold tracking-tight text-white drop-shadow-lg">Senior Partner</p>
-                  <p className="text-[10px] text-white/70 uppercase font-bold">{isAvatarSpeaking ? "Delivering Probes..." : "Monitoring Stream"}</p>
-                </div>
-              </div>
-            </>
           )}
+
+          <div className="absolute bottom-8 left-8 z-30 flex items-center gap-6">
+            <div className="w-16 h-16 rounded-2xl glass border-accent/20 flex items-center justify-center bg-black/40 backdrop-blur-md">
+              <Settings className="w-8 h-8 text-accent" />
+            </div>
+            <div>
+              <p className="text-2xl font-bold tracking-tight text-white drop-shadow-lg">Senior Partner</p>
+              <p className="text-[10px] text-white/70 uppercase font-bold">{isAvatarSpeaking ? "Delivering Probes..." : "Monitoring Stream"}</p>
+            </div>
+          </div>
         </section>
 
         <section className="flex-1 flex flex-col gap-6 overflow-hidden min-h-0">
@@ -385,7 +379,6 @@ function VirtualArenaContent() {
                 </motion.div>
               ))}
             </AnimatePresence>
-            <div ref={transcriptEndRef} />
           </div>
 
           <div className="h-24 glass bg-[#0b0e1a]/80 border-white/10 rounded-[2.5rem] p-4 flex items-center gap-4">
