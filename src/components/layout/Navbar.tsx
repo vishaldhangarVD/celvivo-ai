@@ -2,18 +2,39 @@
 
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
-import { Command, LogIn, Menu, X, LogOut, LayoutDashboard, History, Settings, ShieldCheck, Info, MessageSquare, BrainCircuit, Flame, LayoutGrid, FileText, BookOpen, Award, Map } from 'lucide-react';
+import { 
+  Command, 
+  LayoutDashboard, 
+  Award, 
+  Bell, 
+  ShieldCheck, 
+  LogOut, 
+  Menu, 
+  X 
+} from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useState, useMemo } from 'react';
 import { useUser, useAuth } from '@/firebase';
 import { signOut } from 'firebase/auth';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 export default function Navbar() {
   const [isOpen, setIsOpen] = useState(false);
   const { user, loading } = useUser();
   const auth = useAuth();
   const router = useRouter();
+  const pathname = usePathname();
+
+  const isHomePage = pathname === '/';
 
   const formattedName = useMemo(() => {
     if (!user) return 'Operator';
@@ -27,141 +48,158 @@ export default function Navbar() {
     router.push('/');
   };
 
-  return (
-    <nav className="fixed top-0 z-[100] w-full border-b border-white/5 bg-[#050816]/50 backdrop-blur-2xl">
-      <div className="container mx-auto px-6 h-20 flex items-center justify-between">
-        <Link href="/" className="flex items-center gap-4 group">
-          <motion.div 
-            whileHover={{ rotate: 90 }}
-            className="w-12 h-12 rounded-2xl bg-gradient-to-br from-purple-600 to-blue-600 flex items-center justify-center shadow-lg shadow-purple-500/20"
-          >
-            <Command className="text-white w-6 h-6" />
-          </motion.div>
-          <span className="font-headline font-bold text-2xl tracking-tighter uppercase text-premium">
-            NEXVORO<span className="text-accent">AI</span>
-          </span>
-        </Link>
+  const navLinkClasses = "relative group flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.2em] text-white/50 hover:text-accent transition-all duration-300 py-2";
+  const underlineClasses = "absolute bottom-0 left-0 w-0 h-[1px] bg-accent group-hover:w-full transition-all duration-300 shadow-[0_0_8px_#22d3ee]";
 
-        {/* Desktop Nav */}
-        <div className="hidden md:flex items-center gap-10 text-[10px] font-bold uppercase tracking-[0.3em] text-white/50">
-          <Link href="/features" className="hover:text-white transition-colors">AI Career Tools
+  return (
+    <nav className="fixed top-0 z-[100] w-full h-[72px] border-b border-cyan-500/20 bg-[#080c19]/75 backdrop-blur-xl">
+      <div className="container mx-auto px-6 h-full flex items-center justify-between">
+        
+        {/* Left Section: Branding */}
+        <div className="flex items-center gap-6">
+          <Link href="/" className="flex items-center gap-4 group">
+            <motion.div 
+              whileHover={{ rotate: 90 }}
+              className="w-10 h-10 rounded-xl bg-gradient-to-br from-purple-600 to-blue-600 flex items-center justify-center shadow-lg shadow-purple-500/20 border border-white/10"
+            >
+              <Command className="text-white w-5 h-5" />
+            </motion.div>
+            <div className="flex flex-col">
+              <span className="font-headline font-bold text-xl tracking-tighter uppercase text-premium leading-none">
+                NEXVORO<span className="text-accent">AI</span>
+              </span>
+              <span className="text-[7px] font-black tracking-[0.3em] uppercase text-white/30 mt-1">AI Career Tools</span>
+            </div>
           </Link>
-          <Link href="/question-bank" className="hover:text-white transition-colors flex items-center gap-2">
-            <BookOpen className="w-3 h-3 text-accent" />
-            Library
-          </Link>
+        </div>
+
+        {/* Center Section: Navigation Nodes */}
+        <div className="hidden md:flex items-center gap-12">
           {user && (
             <>
-              <div className="w-px h-4 bg-white/10"></div>
-              <Link href="/dashboard" className="hover:text-white transition-colors flex items-center gap-2">
+              <Link href="/dashboard" className={navLinkClasses}>
                 <LayoutDashboard className="w-3 h-3" />
                 Dashboard
+                <span className={underlineClasses} />
               </Link>
-              <Link href="/roadmap" className="hover:text-white transition-colors flex items-center gap-2">
-                <Map className="w-3 h-3 text-blue-400" />
-                Roadmap
-              </Link>
-              <Link href="/certificates" className="hover:text-white transition-colors flex items-center gap-2">
-                <Award className="w-3 h-3 text-yellow-400" />
+              <Link href="/certificates" className={navLinkClasses}>
+                <Award className="w-3 h-3" />
                 Certificates
+                <span className={underlineClasses} />
               </Link>
-              <Link href="/job-tracker" className="hover:text-white transition-colors flex items-center gap-2 text-blue-400">
-                <LayoutGrid className="w-3 h-3" />
-                Tracker
-              </Link>
-              <Link href="/cover-letter" className="hover:text-white transition-colors flex items-center gap-2 text-purple-400">
-                <FileText className="w-3 h-3" />
-                Letter
-              </Link>
-              <Link href="/daily-challenge" className="hover:text-white transition-colors flex items-center gap-2 text-orange-400">
-                <Flame className="w-3 h-3" />
-                Challenge
+              <Link href="/user-dashboard" className={navLinkClasses}>
+                <ShieldCheck className="w-3 h-3" />
+                Verified Track
+                <span className={underlineClasses} />
               </Link>
             </>
           )}
         </div>
 
-        <div className="hidden md:flex items-center gap-6">
+        {/* Right Section: System Status & Identity */}
+        <div className="flex items-center gap-6">
+          {/* AI Status Badge */}
+          <div className="hidden sm:flex items-center gap-3 px-4 py-1.5 rounded-full glass border-white/5 bg-white/[0.02]">
+            <div className="relative flex h-2 w-2">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500 shadow-[0_0_10px_rgba(34,197,94,0.8)]"></span>
+            </div>
+            <span className="text-[8px] font-black tracking-[0.2em] uppercase text-green-400/80">AI Online</span>
+          </div>
+
           {!loading && (
             <>
               {user ? (
-                <div className="flex items-center gap-6">
-                  <div className="flex flex-col items-end">
-                    <span className="text-[10px] font-bold uppercase tracking-widest text-white/80">{formattedName}</span>
-                    <span className="text-[8px] font-bold uppercase tracking-widest text-accent">Verified Track</span>
-                  </div>
-                  <div className="w-px h-8 bg-white/10"></div>
-                  <Button 
-                    variant="ghost" 
-                    onClick={handleSignOut}
-                    className="flex items-center gap-3 text-[10px] font-bold tracking-[0.2em] uppercase text-white/40 hover:text-red-400 px-0"
-                  >
-                    <LogOut className="w-4 h-4" />
-                  </Button>
+                <div className="flex items-center gap-5">
+                  {/* Notification Bell */}
+                  <button className="relative p-2 text-white/40 hover:text-accent transition-colors group">
+                    <Bell className="w-5 h-5" />
+                    <span className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full border-2 border-[#080c19]"></span>
+                    <div className="absolute inset-0 bg-accent/5 rounded-full scale-0 group-hover:scale-100 transition-transform"></div>
+                  </button>
+
+                  <div className="w-px h-6 bg-white/10"></div>
+
+                  {/* Profile Dropdown */}
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <button className="outline-none">
+                        <Avatar className="w-9 h-9 border border-white/10 hover:border-accent/50 transition-all cursor-pointer shadow-lg hover:shadow-accent/10">
+                          <AvatarImage src={user.photoURL || undefined} />
+                          <AvatarFallback className="bg-gradient-to-br from-purple-600 to-blue-600 text-[10px] font-bold text-white">
+                            {formattedName.substring(0, 2).toUpperCase()}
+                          </AvatarFallback>
+                        </Avatar>
+                      </button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="w-56 glass border-white/10 bg-[#0b0e1a] text-white mt-2 p-2 rounded-2xl">
+                      <DropdownMenuLabel className="px-3 py-2">
+                        <p className="text-xs font-bold uppercase tracking-widest">{formattedName}</p>
+                        <p className="text-[10px] text-white/40 font-light truncate">{user.email}</p>
+                      </DropdownMenuLabel>
+                      <DropdownMenuSeparator className="bg-white/5" />
+                      <DropdownMenuItem onClick={() => router.push('/dashboard')} className="rounded-xl focus:bg-white/5 focus:text-accent cursor-pointer gap-3 text-[10px] uppercase font-bold tracking-widest py-3">
+                        <LayoutDashboard className="w-4 h-4" /> System Dashboard
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => router.push('/settings')} className="rounded-xl focus:bg-white/5 focus:text-accent cursor-pointer gap-3 text-[10px] uppercase font-bold tracking-widest py-3">
+                        <Award className="w-4 h-4" /> Credentials
+                      </DropdownMenuItem>
+                      <DropdownMenuSeparator className="bg-white/5" />
+                      <DropdownMenuItem onClick={handleSignOut} className="rounded-xl focus:bg-red-500/10 focus:text-red-400 text-red-400 cursor-pointer gap-3 text-[10px] uppercase font-bold tracking-widest py-3">
+                        <LogOut className="w-4 h-4" /> Terminate Session
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                 </div>
               ) : (
-                <>
+                <div className="flex items-center gap-4">
                   <Link href="/login">
-                    <Button variant="ghost" className="items-center gap-3 text-[10px] font-bold tracking-[0.2em] uppercase text-white/70">
+                    <Button variant="ghost" className="text-[10px] font-bold tracking-[0.2em] uppercase text-white/50 hover:text-white">
                       Access
                     </Button>
                   </Link>
                   <Link href="/signup">
-                    <Button className="btn-premium h-12 px-8 text-[10px] tracking-[0.2em] uppercase">
+                    <Button className="h-10 px-6 btn-premium text-[9px] tracking-[0.2em] uppercase rounded-xl border border-white/10">
                       Begin Session
                     </Button>
                   </Link>
-                </>
+                </div>
               )}
             </>
           )}
-        </div>
 
-        {/* Mobile Toggle */}
-        <button className="md:hidden text-white" onClick={() => setIsOpen(!isOpen)}>
-          {isOpen ? <X className="w-8 h-8" /> : <Menu className="w-8 h-8" />}
-        </button>
+          {/* Mobile Toggle */}
+          <button className="md:hidden text-white p-2" onClick={() => setIsOpen(!isOpen)}>
+            {isOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+          </button>
+        </div>
       </div>
 
       {/* Mobile Nav */}
       <AnimatePresence>
         {isOpen && (
           <motion.div
-            initial={{ opacity: 0, y: -20 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -20 }}
-            className="absolute top-20 left-0 w-full bg-[#050816] border-b border-white/5 p-12 flex flex-col gap-8 md:hidden z-50 min-h-screen"
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: 20 }}
+            className="fixed inset-0 top-[72px] w-full bg-[#050816]/95 backdrop-blur-2xl p-12 flex flex-col gap-8 md:hidden z-[100]"
           >
-<Link href="/features" onClick={() => setIsOpen(false)} className="text-xl font-bold tracking-widest uppercase text-white/70">AI Career Tools</Link>
-            <Link href="/question-bank" onClick={() => setIsOpen(false)} className="text-xl font-bold tracking-widest uppercase text-accent flex items-center gap-4">
-              <BookOpen className="w-6 h-6" /> Library
-            </Link>
-            
             {user && (
               <>
-                <div className="h-px bg-white/5 my-4"></div>
-                <Link href="/dashboard" onClick={() => setIsOpen(false)} className="text-xl font-bold tracking-widest uppercase text-white/70 flex items-center gap-4">
+                <Link href="/dashboard" onClick={() => setIsOpen(false)} className="text-2xl font-bold tracking-tighter uppercase text-white hover:text-accent flex items-center gap-4">
                   <LayoutDashboard className="w-6 h-6" /> Dashboard
                 </Link>
-                <Link href="/roadmap" onClick={() => setIsOpen(false)} className="text-xl font-bold tracking-widest uppercase text-blue-400 flex items-center gap-4">
-                  <Map className="w-6 h-6" /> Roadmap
-                </Link>
-                <Link href="/certificates" onClick={() => setIsOpen(false)} className="text-xl font-bold tracking-widest uppercase text-yellow-400 flex items-center gap-4">
+                <Link href="/certificates" onClick={() => setIsOpen(false)} className="text-2xl font-bold tracking-tighter uppercase text-white hover:text-accent flex items-center gap-4">
                   <Award className="w-6 h-6" /> Certificates
                 </Link>
-                <Link href="/job-tracker" onClick={() => setIsOpen(false)} className="text-xl font-bold tracking-widest uppercase text-blue-400 flex items-center gap-4">
-                  <LayoutGrid className="w-6 h-6" /> Job Tracker
+                <Link href="/user-dashboard" onClick={() => setIsOpen(false)} className="text-2xl font-bold tracking-tighter uppercase text-white hover:text-accent flex items-center gap-4">
+                  <ShieldCheck className="w-6 h-6" /> Verified Track
                 </Link>
-                <Link href="/cover-letter" onClick={() => setIsOpen(false)} className="text-xl font-bold tracking-widest uppercase text-purple-400 flex items-center gap-4">
-                  <FileText className="w-6 h-6" /> Cover Letter
-                </Link>
-                <Link href="/daily-challenge" onClick={() => setIsOpen(false)} className="text-xl font-bold tracking-widest uppercase text-orange-400 flex items-center gap-4">
-                  <Flame className="w-6 h-6" /> Daily Challenge
-                </Link>
+                <div className="h-px bg-white/5 my-4"></div>
               </>
             )}
             
-            <div className="pt-12 border-t border-white/5 flex flex-col gap-6">
+            <div className="mt-auto flex flex-col gap-6">
               {user ? (
                 <Button 
                   variant="outline" 
