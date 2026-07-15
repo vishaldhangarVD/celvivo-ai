@@ -35,8 +35,6 @@ export default function Navbar() {
   const router = useRouter();
   const pathname = usePathname();
 
-  const isHomePage = pathname === '/';
-
   const formattedName = useMemo(() => {
     if (!user) return 'Operator';
     const name = user.displayName || user.email?.split('@')[0] || 'User';
@@ -49,10 +47,7 @@ export default function Navbar() {
     router.push('/');
   };
 
-  const navLinkClasses = "relative group flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.2em] text-white/50 hover:text-accent transition-all duration-300 py-2";
-  const underlineClasses = "absolute bottom-0 left-0 w-0 h-[1px] bg-accent group-hover:w-full transition-all duration-300 shadow-[0_0_8px_#22d3ee]";
-
-  // New Pill Styles
+  // Pill Styles for Dashboard and Certificates
   const pillClasses = "relative flex items-center gap-2.5 px-4 py-1.5 rounded-full glass border-white/10 text-[9px] font-black uppercase tracking-widest text-white transition-all duration-250 group/pill";
   const pillActiveClasses = "bg-cyan-500/20 border-cyan-500/50 shadow-[0_0_20px_rgba(34,211,238,0.3)]";
   const pillHoverClasses = "hover:border-cyan-500/50 hover:bg-white/[0.05] hover:-translate-y-[3px] hover:scale-[1.05] hover:shadow-[0_0_15px_rgba(34,211,238,0.2)]";
@@ -85,35 +80,28 @@ export default function Navbar() {
         {/* Center Section: Navigation Nodes */}
         <div className="hidden md:flex items-center gap-10">
           {user && (
-            <>
-              <div className="flex items-center gap-4">
-                <Link 
-                  href="/dashboard" 
-                  className={cn(pillClasses, pillHoverClasses, pathname === '/dashboard' && pillActiveClasses)}
-                >
-                  <div className={cn(pillIconWrapperClasses, pathname === '/dashboard' && pillActiveIconWrapperClasses)}>
-                    <LayoutDashboard className="w-2.5 h-2.5" />
-                  </div>
-                  Dashboard
-                  <span className={pillUnderlineClasses} />
-                </Link>
-                <Link 
-                  href="/certificates" 
-                  className={cn(pillClasses, pillHoverClasses, pathname === '/certificates' && pillActiveClasses)}
-                >
-                  <div className={cn(pillIconWrapperClasses, pathname === '/certificates' && pillActiveIconWrapperClasses)}>
-                    <Award className="w-2.5 h-2.5" />
-                  </div>
-                  Certificates
-                  <span className={pillUnderlineClasses} />
-                </Link>
-              </div>
-              <Link href="/user-dashboard" className={navLinkClasses}>
-                <ShieldCheck className="w-3 h-3" />
-                Verified Track
-                <span className={underlineClasses} />
+            <div className="flex items-center gap-4">
+              <Link 
+                href="/dashboard" 
+                className={cn(pillClasses, pillHoverClasses, pathname === '/dashboard' && pillActiveClasses)}
+              >
+                <div className={cn(pillIconWrapperClasses, pathname === '/dashboard' && pillActiveIconWrapperClasses)}>
+                  <LayoutDashboard className="w-2.5 h-2.5" />
+                </div>
+                Dashboard
+                <span className={pillUnderlineClasses} />
               </Link>
-            </>
+              <Link 
+                href="/certificates" 
+                className={cn(pillClasses, pillHoverClasses, pathname === '/certificates' && pillActiveClasses)}
+              >
+                <div className={cn(pillIconWrapperClasses, pathname === '/certificates' && pillActiveIconWrapperClasses)}>
+                  <Award className="w-2.5 h-2.5" />
+                </div>
+                Certificates
+                <span className={pillUnderlineClasses} />
+              </Link>
+            </div>
           )}
         </div>
 
@@ -131,7 +119,19 @@ export default function Navbar() {
           {!loading && (
             <>
               {user ? (
-                <div className="flex items-center gap-5">
+                <div className="flex items-center gap-6">
+                  {/* Verified Track Component (Restored Original Design) */}
+                  <Link href="/user-dashboard" className="hidden lg:flex flex-col items-end group transition-all duration-300">
+                    <span className="text-white font-bold tracking-[0.2em] text-[10px] md:text-xs leading-none group-hover:text-accent transition-colors">
+                      {formattedName.toUpperCase()}
+                    </span>
+                    <span className="text-[#22D3EE] font-bold tracking-[0.3em] text-[7px] md:text-[8px] leading-tight uppercase mt-1 group-hover:drop-shadow-[0_0_8px_rgba(34,211,238,0.5)] transition-all">
+                      VERIFIED TRACK
+                    </span>
+                  </Link>
+
+                  <div className="w-px h-6 bg-white/10 hidden lg:block"></div>
+
                   {/* Notification Bell */}
                   <button className="relative p-2 text-white/40 hover:text-accent transition-colors group">
                     <Bell className="w-5 h-5" />
