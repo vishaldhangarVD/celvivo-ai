@@ -1,4 +1,3 @@
-
 'use client';
 
 import { motion, useScroll, useTransform, AnimatePresence } from 'framer-motion';
@@ -25,7 +24,8 @@ import {
   Flame,
   LayoutGrid,
   CheckCircle2,
-  Building2
+  Building2,
+  Check
 } from 'lucide-react';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
 import { useUser } from '@/firebase';
@@ -41,6 +41,11 @@ const COMPANIES = [
   { name: "Cisco", logo: "CSCO", color: "text-blue-400" },
   { name: "TCS", logo: "TCS", color: "text-purple-400" },
   { name: "Infosys", logo: "INFY", color: "text-blue-500" },
+  { name: "Accenture", logo: "ACN", color: "text-purple-500" },
+  { name: "Deloitte", logo: "DTT", color: "text-green-500" },
+  { name: "Capgemini", logo: "CAP", color: "text-blue-400" },
+  { name: "Wipro", logo: "WIT", color: "text-blue-300" },
+  { name: "Cognizant", logo: "CTSH", color: "text-blue-600" },
 ];
 
 export default function LandingPage() {
@@ -224,49 +229,43 @@ export default function LandingPage() {
             </motion.div>
           </div>
 
-          {/* New Premium Enterprise Showcase Section */}
+          {/* Premium Interactive Trust Section */}
           <motion.div 
             initial={{ opacity: 0, y: 40 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
-            transition={{ duration: 1, ease: "easeOut" }}
-            className="mt-24 mb-16 relative"
+            className="mt-[40px] mb-[60px] relative"
           >
-            {/* Background Neural Mesh Orbs */}
-            <div className="absolute -top-24 -left-24 w-96 h-96 bg-accent/5 rounded-full blur-[100px] pointer-events-none" />
-            <div className="absolute -bottom-24 -right-24 w-96 h-96 bg-purple-600/5 rounded-full blur-[100px] pointer-events-none" />
-
-            <div className="max-w-7xl mx-auto">
-              <div className="text-center space-y-4 mb-16">
-                <motion.div
-                  initial={{ opacity: 0, y: 10 }}
-                  whileInView={{ opacity: 1, y: 0 }}
-                  viewport={{ once: true }}
-                  className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-accent/10 border border-accent/20 text-accent"
-                >
-                  <Star className="w-3.5 h-3.5 fill-current" />
-                  <span className="text-[10px] font-black tracking-widest uppercase">Verified Hiring Ecosystem</span>
-                </motion.div>
-                
-                <h2 className="text-4xl md:text-5xl font-bold tracking-tighter text-premium">
-                  TRUSTED BY GLOBAL TECH <span className="text-gradient-purple">LEADERS.</span>
-                </h2>
-                <p className="text-muted-foreground font-light max-w-xl mx-auto text-lg">
-                  Preparing candidates for companies shaping the future of global technology.
-                </p>
+            {/* Background Particles & Glow Orbs */}
+            <div className="absolute -inset-24 bg-accent/5 rounded-full blur-[100px] pointer-events-none opacity-20" />
+            
+            <Card className="relative overflow-hidden glass border-cyan-500/20 rounded-[24px] p-[30px] bg-white/[0.01] shadow-[0_0_40px_rgba(34,211,238,0.05)] group">
+              {/* Light Streak Animation */}
+              <div className="absolute inset-0 pointer-events-none">
+                <div className="absolute top-0 -left-[100%] w-full h-full bg-gradient-to-r from-transparent via-white/[0.03] to-transparent animate-light-streak" />
               </div>
 
-              {/* Infinite Scroller Showcase */}
+              {/* Floating Particles Mockup (CSS dots) */}
+              <div className="absolute inset-0 pointer-events-none opacity-10">
+                <div className="absolute top-10 left-10 w-1 h-1 bg-white rounded-full animate-pulse" />
+                <div className="absolute top-20 right-20 w-1 h-1 bg-accent rounded-full animate-pulse" />
+                <div className="absolute bottom-10 left-1/3 w-1 h-1 bg-purple-500 rounded-full animate-pulse" />
+              </div>
+
+              <div className="text-center mb-10">
+                <h2 className="text-[11px] font-black tracking-[0.4em] uppercase text-gradient-purple">
+                  TRUSTED BY TOP COMPANIES WORLDWIDE
+                </h2>
+              </div>
+
+              {/* Infinite Logo Marquee */}
               <div 
-                className="relative glass rounded-[2.5rem] border-white/5 bg-white/[0.01] overflow-hidden py-16 px-4 group"
+                className="relative overflow-hidden py-4"
                 onMouseEnter={() => setIsScrollingPaused(true)}
                 onMouseLeave={() => setIsScrollingPaused(false)}
               >
-                {/* Gradient Border Animation */}
-                <div className="absolute inset-0 border-glow-premium opacity-10" />
-
                 <motion.div 
-                  className="flex gap-8 w-max"
+                  className="flex gap-12 w-max items-center"
                   animate={{ x: isScrollingPaused ? 0 : [0, -100 * COMPANIES.length] }}
                   transition={{ 
                     duration: 40, 
@@ -276,43 +275,63 @@ export default function LandingPage() {
                   }}
                 >
                   {[...COMPANIES, ...COMPANIES].map((company, idx) => (
-                    <motion.div
+                    <div 
                       key={idx}
-                      whileHover={{ y: -10, scale: 1.05 }}
-                      className="w-64 h-40 glass rounded-3xl border-white/10 flex flex-col items-center justify-center gap-4 group/card relative transition-all duration-500 hover:bg-white/[0.05] hover:border-accent/30 hover:shadow-[0_20px_50px_rgba(34,211,238,0.15)]"
+                      className="flex items-center gap-3 transition-all duration-300 grayscale opacity-60 hover:grayscale-0 hover:opacity-100 hover:scale-[1.08] cursor-default"
                     >
-                      {/* Parallax Card Content */}
-                      <div className="absolute inset-0 bg-gradient-to-br from-accent/5 via-transparent to-transparent opacity-0 group-hover/card:opacity-100 transition-opacity rounded-3xl" />
-                      
-                      <div className={`text-4xl font-black ${company.color} opacity-40 group-hover/card:opacity-100 transition-all duration-500 group-hover/card:scale-110 tracking-tighter`}>
+                      <div className={`text-2xl font-black ${company.color} tracking-tighter`}>
                         {company.logo}
                       </div>
-                      
-                      <div className="text-[10px] font-bold uppercase tracking-[0.4em] text-white/40 group-hover/card:text-white transition-colors">
-                        {company.name}
-                      </div>
-
-                      {/* Animated Corner Orbs */}
-                      <div className="absolute -top-1 -left-1 w-2 h-2 rounded-full bg-accent opacity-0 group-hover/card:opacity-100 blur-[2px] transition-opacity" />
-                      <div className="absolute -bottom-1 -right-1 w-2 h-2 rounded-full bg-purple-500 opacity-0 group-hover/card:opacity-100 blur-[2px] transition-opacity" />
-                    </motion.div>
+                      <span className="text-[10px] font-bold uppercase tracking-widest text-white/40">{company.name}</span>
+                    </div>
                   ))}
                 </motion.div>
-
-                {/* Scroller Overlays */}
-                <div className="absolute inset-y-0 left-0 w-32 bg-gradient-to-r from-[#050816] to-transparent z-10" />
-                <div className="absolute inset-y-0 right-0 w-32 bg-gradient-to-l from-[#050816] to-transparent z-10" />
+                
+                {/* Marquee Gradient Overlays */}
+                <div className="absolute inset-y-0 left-0 w-24 bg-gradient-to-r from-[#050816]/50 to-transparent z-10" />
+                <div className="absolute inset-y-0 right-0 w-24 bg-gradient-to-l from-[#050816]/50 to-transparent z-10" />
               </div>
 
-              <div className="mt-12 text-center">
-                <p className="text-[11px] font-bold tracking-[0.3em] uppercase text-white/30">
-                  Trusted by students preparing for the world's leading technology companies.
-                </p>
+              {/* Performance Badges */}
+              <div className="mt-12 flex flex-wrap justify-center gap-6">
+                {[
+                  { label: "AI Interview Ready", icon: BrainCircuit },
+                  { label: "ATS Optimized", icon: ShieldCheck },
+                  { label: "Industry Standard Questions", icon: Award }
+                ].map((badge, i) => (
+                  <motion.div 
+                    key={i}
+                    whileHover={{ y: -5 }}
+                    className="flex items-center gap-3 px-5 py-2.5 glass border-white/5 rounded-2xl shadow-[0_0_20px_rgba(34,211,238,0.1)] hover:shadow-[0_0_30px_rgba(34,211,238,0.2)] transition-all cursor-default"
+                  >
+                    <div className="w-6 h-6 rounded-lg bg-accent/10 flex items-center justify-center">
+                      <badge.icon className="w-3.5 h-3.5 text-accent" />
+                    </div>
+                    <span className="text-[9px] font-bold uppercase tracking-widest text-white/70">{badge.label}</span>
+                    <Check className="w-3 h-3 text-accent" />
+                  </motion.div>
+                ))}
               </div>
+            </Card>
+
+            <div className="mt-6 text-center">
+              <p className="text-[10px] font-bold tracking-[0.3em] uppercase text-white/20">
+                Trusted by students preparing for the world's leading technology companies.
+              </p>
             </div>
           </motion.div>
         </div>
       </section>
+
+      <style jsx global>{`
+        @keyframes light-streak {
+          0% { left: -100%; }
+          100% { left: 100%; }
+        }
+        .animate-light-streak {
+          animation: light-streak 8s linear infinite;
+        }
+      `}</style>
     </div>
   );
 }
