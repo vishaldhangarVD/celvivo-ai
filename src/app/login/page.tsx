@@ -51,7 +51,11 @@ function LoginContent() {
     setIsLoading(true);
     try {
       await signInWithEmailAndPassword(auth, email, password);
-      router.push(redirectTo);
+      toast({
+        title: "Access Granted",
+        description: "Authentication successful. Entering command center.",
+      });
+      // Redirection handled by useEffect
     } catch (error: any) {
       toast({
         variant: "destructive",
@@ -69,13 +73,24 @@ function LoginContent() {
     try {
       setIsLoading(true);
       await signInWithPopup(auth, provider);
-      router.push(redirectTo);
-    } catch (error: any) {
       toast({
-        variant: "destructive",
-        title: "Google Login Failed",
-        description: error.message,
+        title: "Identity Verified",
+        description: "Successfully authenticated via Google protocol.",
       });
+      // Redirection handled by useEffect
+    } catch (error: any) {
+      if (error.code === 'auth/popup-closed-by-user') {
+        toast({
+          title: "Session Aborted",
+          description: "Authentication popup was closed by user.",
+        });
+      } else {
+        toast({
+          variant: "destructive",
+          title: "Protocol Failure",
+          description: error.message || "An unexpected error occurred during Google authentication.",
+        });
+      }
     } finally {
       setIsLoading(false);
     }
@@ -85,8 +100,8 @@ function LoginContent() {
     if (!auth || !email) {
       toast({
         variant: "destructive",
-        title: "Missing Information",
-        description: "Please enter your email address first.",
+        title: "Identification Required",
+        description: "Please enter your email address to receive reset instructions.",
       });
       return;
     }
@@ -95,13 +110,13 @@ function LoginContent() {
     try {
       await sendPasswordResetEmail(auth, email);
       toast({
-        title: "Reset Link Sent",
-        description: "Please check your inbox for password reset instructions.",
+        title: "Recovery Sent",
+        description: "Check your inbox for the password reset protocol.",
       });
     } catch (error: any) {
       toast({
         variant: "destructive",
-        title: "Error",
+        title: "Recovery Failed",
         description: error.message,
       });
     } finally {
@@ -155,7 +170,7 @@ function LoginContent() {
                 disabled={!auth || isLoading}
                 className="h-14 rounded-2xl glass border-white/10 hover:bg-white/5 flex gap-3"
               >
-                <Chrome className="w-5 h-5 text-accent" />
+                {isLoading ? <Loader2 className="w-5 h-5 animate-spin text-accent" /> : <Chrome className="w-5 h-5 text-accent" />}
                 <span className="text-[10px] font-bold uppercase tracking-widest">Sign in with Google</span>
               </Button>
             </div>
