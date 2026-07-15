@@ -1,8 +1,9 @@
 'use server';
 /**
- * @fileOverview Nexvoro AI Virtual Interview Agent (Elite Senior Interviewer v48.0).
+ * @fileOverview Nexvoro AI Virtual Interview Agent (Elite Senior Interviewer v49.0).
  * Calibrated for zero-chatbot behavior. Mimics a Lead Engineer at a Tier-1 tech firm.
- * Implements strict resume-anchored questioning and coding-performance adaptive logic.
+ * Implements strict resume-anchored questioning, coding-performance adaptive logic,
+ * and cognitive calibration based on aptitude scores.
  */
 
 import { ai, runWithResilience } from '@/ai/genkit';
@@ -32,6 +33,7 @@ const AiMockInterviewInputSchema = z.object({
   resumeProjects: z.array(z.string()).optional(),
   resumeSummary: z.string().optional(),
   aptitudePerformance: z.string().optional(),
+  aptitudeScore: z.number().optional(),
   codingPerformance: z.string().optional(),
   codingScore: z.number().optional(),
   difficultyLevel: z.enum(["EASY", "MEDIUM", "HARD"]).optional(),
@@ -83,7 +85,11 @@ CODING PERFORMANCE PROTOCOL (MANDATORY):
 - If score > 90: Treat as an Elite Architect. Skip implementation details; focus on high-level Architecture and scalability.
 - If score < 60: Treat as having logic friction. Focus on Debugging scenarios and fixing complex logic.
 - If score < 40: Treat as having syntax gaps. Focus on Basic Syntax and foundational technical concepts.
-- NEVER ignore the coding performance; reference their specific gaps or strengths naturally.
+
+APTITUDE PERFORMANCE PROTOCOL (MANDATORY):
+- Current Aptitude (Logic) Score: {{{aptitudeScore}}}%
+- If score > 85: Candidate has high logical throughput. Increase complexity of logical reasoning probes and abstract technical logic.
+- If score < 60: Candidate exhibits logic friction. Avoid extremely difficult or abstract technical questions; focus on practical application and project implementation nodes.
 
 FIRM-SPECIFIC QUESTIONING STYLE ({{{targetCompany}}}):
 - If Google: Focus on System Design, Scalability, and deep DSA. Constantly ask "Why" and demand rigorous Trade-off analysis.

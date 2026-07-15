@@ -74,7 +74,10 @@ function VirtualArenaContent() {
           console.log("[Telemetry] Frame Sync Established:", {
             w: videoRef.current?.videoWidth,
             h: videoRef.current?.videoHeight,
-            ready: videoRef.current?.readyState
+            ready: videoRef.current?.readyState,
+            network: videoRef.current?.networkState,
+            paused: videoRef.current?.paused,
+            time: videoRef.current?.currentTime
           });
           videoRef.current?.play().catch(e => console.error("[Playback] Execution Fault:", e));
         };
@@ -193,6 +196,7 @@ function VirtualArenaContent() {
                 resumeProjects: data.resumeAnalysis?.sections?.projects || [],
                 resumeSummary: data.resumeAnalysis?.summary || "",
                 aptitudePerformance: data.aptitudeReport?.recommendation || "N/A",
+                aptitudeScore: data.aptitudeReport?.overallScore || 0,
                 codingPerformance: data.codingReport?.finalRecommendation || "N/A",
                 codingScore: data.codingReport?.score || 0
               });
@@ -243,6 +247,7 @@ function VirtualArenaContent() {
           resumeSkills: assessmentContext.resumeAnalysis?.skillAnalysis?.map((s: any) => s.skill) || [],
           resumeProjects: assessmentContext.resumeAnalysis?.sections?.projects || [],
           aptitudePerformance: assessmentContext.aptitudeReport?.recommendation || "N/A",
+          aptitudeScore: assessmentContext.aptitudeReport?.overallScore || 0,
           codingPerformance: assessmentContext.codingReport?.finalRecommendation || "N/A",
           codingScore: assessmentContext.codingReport?.score || 0,
           askedQuestions: askedQuestions
