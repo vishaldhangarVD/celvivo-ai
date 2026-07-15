@@ -66,18 +66,19 @@ function VirtualArenaContent() {
     transcriptEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [transcript]);
 
-  // Handle WebRTC Stream Attachment
+  // Handle WebRTC Stream Attachment with state sync
   useEffect(() => {
     if (videoRef.current && activeMediaStream) {
       if (videoRef.current.srcObject !== activeMediaStream) {
-        console.log("[WebRTC Sync] Attaching MediaStream to video element...");
+        console.log("[WebRTC Sync] Re-attaching MediaStream to video element...");
         videoRef.current.srcObject = activeMediaStream;
         
         videoRef.current.onloadedmetadata = () => {
           console.log("[WebRTC Telemetry]", {
             dimensions: `${videoRef.current?.videoWidth}x${videoRef.current?.videoHeight}`,
             readyState: videoRef.current?.readyState,
-            paused: videoRef.current?.paused
+            paused: videoRef.current?.paused,
+            streamActive: activeMediaStream.active
           });
           videoRef.current?.play().catch(e => console.error("[WebRTC Play Failure]", e));
         };
@@ -130,12 +131,18 @@ function VirtualArenaContent() {
       const agentInstance = await didSdk.createAgentManager(agentId, {
         auth: { type: 'key', clientKey: clientKey },
         callbacks: {
-          onSrcObjectReady: (stream: MediaStream) => setActiveMediaStream(stream),
+          onSrcObjectReady: (stream: MediaStream) => {
+             console.log("[D-ID] MediaStream Ready");
+             setActiveMediaStream(stream);
+          },
           onConnectionStateChange: (state: string) => {
+            console.log("[D-ID] Connection State:", state);
             setIsAgentConnected(state === "connected");
             if (state === "disconnected") setActiveMediaStream(null);
           },
-          onVideoStatusChange: (status: string) => setIsAvatarSpeaking(status === 'play')
+          onVideoStatusChange: (status: string) => {
+             setIsAvatarSpeaking(status === 'play');
+          }
         }
       });
       
@@ -303,7 +310,7 @@ function VirtualArenaContent() {
            <Command className="w-5 h-5 text-accent" />
            <div>
              <h1 className="text-sm font-bold uppercase tracking-widest">{company} Arena</h1>
-             <p className="text-[10px] text-muted-foreground uppercase font-bold">Node {currentIdx}/{assessmentContext?.debugMode ? '5' : '15'}</p>
+             <p className="text-[10px] text-muted-foreground uppercase font-bold">Node {currentIdx}</p>
            </div>
         </div>
         <div className="flex items-center gap-4">
@@ -315,7 +322,13 @@ function VirtualArenaContent() {
 
       <main className="flex-1 flex flex-col overflow-hidden max-w-7xl mx-auto w-full px-6 py-6 gap-6">
         <section className="relative h-[45vh] overflow-hidden rounded-[3rem] bg-black">
-          <video ref={videoRef} autoPlay playsInline muted className="absolute inset-0 w-full h-full object-cover z-10" />
+          <video 
+            ref={videoRef} 
+            autoPlay 
+            playsInline 
+            muted 
+            className="absolute inset-0 w-full h-full object-cover z-10" 
+          />
           
           {!isAgentConnected && !configError && (
             <div className="absolute inset-0 w-full h-full flex flex-col items-center justify-center bg-[#050816] z-20 space-y-6">
@@ -392,7 +405,7 @@ function VirtualArenaContent() {
               <h2 className="text-4xl font-bold uppercase tracking-tighter">Finalizing Audit</h2>
               <div className="flex items-center justify-center gap-2 text-accent">
                 <Loader2 className="w-4 h-4 animate-spin" />
-                <span className="text-[10px] font-bold uppercase tracking-[0.4em]">Compiling Master Dossier...</span>
+                <span className="text-[10px] font-bold uppercase tracking-[0.4em] text-accent">Compiling Master Dossier...</span>
               </div>
             </div>
           </motion.div>

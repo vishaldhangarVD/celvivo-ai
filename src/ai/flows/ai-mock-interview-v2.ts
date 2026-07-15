@@ -76,10 +76,6 @@ ADAPTIVE BEHAVIOR (PERFORMANCE-AWARE):
 
 STRICT RESUME & PROJECT ANCHORING:
 - You MUST anchor questions to the candidate's Resume Dossier and Projects.
-- If Resume contains "React" -> Ask performance/rendering cycles/state architecture.
-- If Resume contains "Firebase" -> Ask Firestore security/real-time scaling/indexes.
-- If Resume contains "Python" -> Ask memory/GIL/asyncio.
-- If Resume contains "Power BI" -> Ask modeling/DAX optimization/KPI architecture.
 - If history is empty, you MUST start exactly with: "Hello. Welcome to today's session. I hope you're doing well. I'll be conducting your interview today. Let's begin with a brief introduction—could you please introduce yourself and walk me through your background?"
 
 PERFORMANCE INTEGRATION (SYNTAX & LOGIC):
@@ -98,8 +94,16 @@ FIRM-SPECIFIC RUBRIC ({{{targetCompany}}}):
 - TCS: Core Concepts (OOP, SQL, DBMS) and specific Project walkthroughs.
 - Startup: Practical delivery, Impact, Fast development cycles.
 
+SESSION TERMINATION PROTOCOL (NATURAL CONCLUSION):
+- You decide when to conclude the assessment.
+- MINIMUM questions: 7.
+- MAXIMUM questions: 12.
+- If current index >= 7 and you have sufficient data to generate a complete performance audit, you may transition to CLOSING by setting "isInterviewComplete": true.
+- If current index >= 12, you MUST conclude the session immediately.
+- When closing, provide a professional human sign-off as the 'nextQuestion' (e.g., "I appreciate your time today. This concludes our session. It was good speaking with you.").
+
 SESSION INTEGRITY (MEMORY):
-- Node: {{{currentMainQuestionIndex}}} of 15
+- Current Node: {{{currentMainQuestionIndex}}}
 - NEVER repeat a question in "Previously Asked Questions".
 - "Tell me about yourself" is Node 1 ONLY.
 - "Strengths" or "Weaknesses" are allowed ONCE total.
@@ -112,7 +116,7 @@ Candidate: {{{this.answer}}}
 LATEST CANDIDATE RESPONSE:
 {{{userAnswer}}}
 
-Based on EVERY node above, output the ONE next question in valid JSON.`,
+Based on EVERY node above, output the ONE next question or sign-off in valid JSON.`,
 });
 
 const aiMockInterviewFlow = ai.defineFlow(
@@ -138,16 +142,17 @@ const aiMockInterviewFlow = ai.defineFlow(
 
       if (!output) throw new Error("Neural synthesis failed.");
 
+      // Safety enforcement of the 12-question ceiling
       return {
         ...output,
-        isInterviewComplete: output.isInterviewComplete || input.currentMainQuestionIndex >= 15,
+        isInterviewComplete: output.isInterviewComplete || input.currentMainQuestionIndex >= 12,
       };
     } catch (error) {
       console.error("AI Mock Interview Flow Error:", error);
       const bankIndex = Math.max(0, input.currentMainQuestionIndex - 1) % FALLBACK_QUESTIONS.length;
       return {
         nextQuestion: FALLBACK_QUESTIONS[bankIndex],
-        isInterviewComplete: input.currentMainQuestionIndex >= 15,
+        isInterviewComplete: input.currentMainQuestionIndex >= 12,
       };
     }
   }
