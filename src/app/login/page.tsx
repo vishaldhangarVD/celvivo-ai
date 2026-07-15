@@ -25,7 +25,8 @@ function LoginContent() {
   const [isLoading, setIsLoading] = useState(false);
   const [isResetting, setIsResetting] = useState(false);
 
-  const redirectTo = searchParams.get('redirectTo') || '/dashboard';
+  // Calibrated redirect trajectory: default to Home Page (/)
+  const redirectTo = searchParams.get('redirectTo') || '/';
 
   useEffect(() => {
     if (user && !authLoading) {
@@ -47,7 +48,7 @@ function LoginContent() {
     setIsLoading(true);
     try {
       await signInWithEmailAndPassword(auth, email, password);
-      toast({ title: "Access Granted", description: "Identity verified. Entering Command Hub." });
+      toast({ title: "Access Granted", description: "Identity verified. Redirecting to Nexus." });
     } catch (error: any) {
       toast({
         variant: "destructive",
@@ -99,10 +100,14 @@ function LoginContent() {
     }
   };
 
-  if (authLoading) {
+  // Prevent UI flash by showing a loader while checking auth state
+  if (authLoading || (user && !authLoading)) {
     return (
       <div className="min-h-screen bg-[#050816] flex items-center justify-center">
-        <Loader2 className="w-12 h-12 text-accent animate-spin" />
+        <div className="flex flex-col items-center gap-4">
+          <Loader2 className="w-12 h-12 text-accent animate-spin" />
+          <p className="text-[10px] font-bold uppercase tracking-[0.4em] text-accent animate-pulse">Syncing Identity...</p>
+        </div>
       </div>
     );
   }
