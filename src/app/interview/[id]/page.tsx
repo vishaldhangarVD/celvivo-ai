@@ -49,50 +49,46 @@ function VirtualArenaContent() {
   const [isInitializing, setIsInitializing] = useState(true);
   const [isGeneratingReport, setIsGeneratingReport] = useState(false);
   const [isAvatarSpeaking, setIsAvatarSpeaking] = useState(false);
-  const [isAvatarSynthesizing, setIsAvatarSynthesizing] = useState(false);
   const [assessmentContext, setAssessmentContext] = useState<any>(null);
   const [configError, setConfigError] = useState<string | null>(null);
 
   const [agent, setAgent] = useState<any>(null);
   const [isAgentConnected, setIsAgentConnected] = useState(false);
   const [activeMediaStream, setActiveMediaStream] = useState<MediaStream | null>(null);
-
   const [askedQuestions, setAskedQuestions] = useState<string[]>([]);
 
   const transcriptEndRef = useRef<HTMLDivElement>(null);
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const recognitionRef = useRef<any>(null);
 
-  // Re-attach stream to video element on every render to ensure visibility
+  // Auto-scroll transcript
+  useEffect(() => {
+    transcriptEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [transcript]);
+
+  // Handle WebRTC Stream Attachment
   useEffect(() => {
     if (videoRef.current && activeMediaStream) {
       if (videoRef.current.srcObject !== activeMediaStream) {
-        console.log("[WebRTC Sync] Re-attaching MediaStream to video element...");
+        console.log("[WebRTC Sync] Attaching MediaStream to video element...");
         videoRef.current.srcObject = activeMediaStream;
         
         videoRef.current.onloadedmetadata = () => {
-          console.log("[WebRTC Sync] Stream Telemetry:", {
-            w: videoRef.current?.videoWidth,
-            h: videoRef.current?.videoHeight,
+          console.log("[WebRTC Telemetry]", {
+            dimensions: `${videoRef.current?.videoWidth}x${videoRef.current?.videoHeight}`,
             readyState: videoRef.current?.readyState,
-            networkState: videoRef.current?.networkState,
-            paused: videoRef.current?.paused,
-            time: videoRef.current?.currentTime
+            paused: videoRef.current?.paused
           });
-          videoRef.current?.play().catch(e => console.error("[WebRTC Sync] Play Failure:", e));
+          videoRef.current?.play().catch(e => console.error("[WebRTC Play Failure]", e));
         };
       }
     }
   }, [activeMediaStream, isAgentConnected]);
 
-  // Initialize Recognition
+  // Speech Recognition Setup
   useEffect(() => {
     const initClient = async () => {
       try {
-        if (!didSdk) {
-          didSdk = await import("@d-id/client-sdk");
-        }
-        
         const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitRecognition;
         if (SpeechRecognition) {
           const recognition = new SpeechRecognition();
@@ -111,40 +107,35 @@ function VirtualArenaContent() {
           recognitionRef.current = recognition;
         }
       } catch (e) {
-        console.error("Initialization Fault:", e);
+        console.error("Recognition Init Fault:", e);
       }
     };
     initClient();
   }, []);
 
   const connectToAgent = async () => {
-    if (isAgentConnected || !didSdk) return;
+    if (isAgentConnected) return;
     
     const clientKey = process.env.NEXT_PUBLIC_D_ID_CLIENT_KEY;
     const agentId = process.env.NEXT_PUBLIC_D_ID_AGENT_ID;
 
     if (!clientKey || !agentId) {
-      const err = `Identity Fault: ${!clientKey ? 'CLIENT_KEY' : 'AGENT_ID'} MISSING`;
-      setConfigError(err);
+      setConfigError(`Identity Fault: ${!clientKey ? 'CLIENT_KEY' : 'AGENT_ID'} MISSING`);
       return;
     }
 
     try {
+      if (!didSdk) didSdk = await import("@d-id/client-sdk");
+
       const agentInstance = await didSdk.createAgentManager(agentId, {
         auth: { type: 'key', clientKey: clientKey },
         callbacks: {
-          onSrcObjectReady: (stream: MediaStream) => {
-            console.log("[WebRTC] Stream Received.");
-            setActiveMediaStream(stream);
-          },
+          onSrcObjectReady: (stream: MediaStream) => setActiveMediaStream(stream),
           onConnectionStateChange: (state: string) => {
-            console.log("[WebRTC] State:", state);
             setIsAgentConnected(state === "connected");
             if (state === "disconnected") setActiveMediaStream(null);
           },
-          onVideoStatusChange: (status: string) => {
-            setIsAvatarSpeaking(status === 'play');
-          }
+          onVideoStatusChange: (status: string) => setIsAvatarSpeaking(status === 'play')
         }
       });
       
@@ -152,7 +143,7 @@ function VirtualArenaContent() {
       setAgent(agentInstance);
       return agentInstance;
     } catch (error: any) {
-      console.error("Neural Connection Error:", error);
+      console.error("D-ID Connection Error:", error);
       toast({ variant: "destructive", title: "Visual Node Offline" });
       throw error;
     }
@@ -161,16 +152,13 @@ function VirtualArenaContent() {
   const handleInterviewerSpeech = async (targetAgent: any, text: string) => {
     if (!targetAgent || !isAgentConnected) return;
     try {
-      setIsAvatarSynthesizing(true);
       await targetAgent.speak({ type: 'text', input: text });
     } catch (e) {
       console.error("Vocal Synthesis Error:", e);
-    } finally {
-      setIsAvatarSynthesizing(false);
     }
   };
 
-  // Bootstrap Simulation
+  // Bootstrap Simulation Journey
   useEffect(() => {
     async function init() {
       if (!user || !db || !role || !company) return;
@@ -183,32 +171,24 @@ function VirtualArenaContent() {
         setAssessmentContext(data);
         
         try {
-          if (!didSdk) didSdk = await import("@d-id/client-sdk");
           const agentInstance = await connectToAgent();
           
           if (transcript.length === 0) {
-            let firstMsg = "";
-            if (data.debugMode) {
-              firstMsg = "Hello. Welcome to today's session. I'm looking forward to our technical assessment. Let's start with a brief introduction—could you please introduce yourself and walk me through your background?";
-            } else {
-              const response = await aiMockInterview({
-                role, experienceLevel: exp, roundType: round, currentMainQuestionIndex: 1, 
-                history: [], targetCompany: company,
-                resumeSkills: data.resumeAnalysis?.skillAnalysis?.map((s: any) => s.skill) || [],
-                resumeProjects: data.resumeAnalysis?.sections?.projects || [],
-                resumeSummary: data.resumeAnalysis?.summary || "",
-                aptitudePerformance: data.aptitudeReport?.recommendation || "N/A",
-                aptitudeScore: data.aptitudeReport?.overallScore || 0,
-                codingPerformance: data.codingReport?.finalRecommendation || "N/A",
-                codingScore: data.codingReport?.score || 0,
-                askedQuestions: []
-              });
-              firstMsg = response.nextQuestion;
-            }
+            const response = await aiMockInterview({
+              role, experienceLevel: exp, roundType: round, currentMainQuestionIndex: 1, 
+              history: [], targetCompany: company,
+              resumeSkills: data.resumeAnalysis?.skillAnalysis?.map((s: any) => s.skill) || [],
+              resumeProjects: data.resumeAnalysis?.sections?.projects || [],
+              resumeSummary: data.resumeAnalysis?.summary || "",
+              aptitudeScore: data.aptitudeReport?.overallScore || 0,
+              codingScore: data.codingReport?.score || 0,
+              askedQuestions: [],
+              debugMode: data.debugMode
+            });
 
-            setTranscript([{ role: 'interviewer', text: firstMsg }]);
-            setAskedQuestions([firstMsg]);
-            if (agentInstance) await handleInterviewerSpeech(agentInstance, firstMsg);
+            setTranscript([{ role: 'interviewer', text: response.nextQuestion }]);
+            setAskedQuestions([response.nextQuestion]);
+            if (agentInstance) await handleInterviewerSpeech(agentInstance, response.nextQuestion);
           }
         } catch (e) {
           console.error("Bootstrap Fault:", e);
@@ -221,7 +201,7 @@ function VirtualArenaContent() {
     }
     init();
     return () => { if (agent) agent.disconnect(); };
-  }, [user, db, role, company, exp]);
+  }, [user, db]);
 
   const handleSend = async () => {
     if (!userAnswer.trim() || isProcessing || isSimulationComplete || isAvatarSpeaking) return;
@@ -233,41 +213,35 @@ function VirtualArenaContent() {
     setUserAnswer("");
 
     try {
-      let response;
-      if (assessmentContext?.debugMode) {
-        response = { nextQuestion: `That's clear. Moving to Node ${currentIdx + 1} for verification. Tell me more about your experience with real-time architectures.`, isInterviewComplete: currentIdx >= 5 };
-      } else {
-        const chatHistory = newTranscript.filter(t => t.role === 'candidate').map((t) => {
-          const candidateIdx = newTranscript.indexOf(t);
-          const interviewerMsg = newTranscript[candidateIdx - 1];
-          return {
-            question: interviewerMsg?.text || "Introduction",
-            answer: t.text
-          };
-        });
+      const chatHistory = newTranscript.filter(t => t.role === 'candidate').map((t) => {
+        const candidateIdx = newTranscript.indexOf(t);
+        const interviewerMsg = newTranscript[candidateIdx - 1];
+        return {
+          question: interviewerMsg?.text || "Introduction",
+          answer: t.text
+        };
+      });
 
-        response = await aiMockInterview({
-          role, experienceLevel: exp, roundType: round, currentMainQuestionIndex: currentIdx + 1,
-          history: chatHistory,
-          userAnswer: currentAns, targetCompany: company,
-          resumeSkills: assessmentContext.resumeAnalysis?.skillAnalysis?.map((s: any) => s.skill) || [],
-          resumeProjects: assessmentContext.resumeAnalysis?.sections?.projects || [],
-          resumeSummary: assessmentContext.resumeAnalysis?.summary || "",
-          aptitudePerformance: assessmentContext.aptitudeReport?.recommendation || "N/A",
-          aptitudeScore: assessmentContext.aptitudeReport?.overallScore || 0,
-          codingPerformance: assessmentContext.codingReport?.finalRecommendation || "N/A",
-          codingScore: assessmentContext.codingReport?.score || 0,
-          askedQuestions: askedQuestions
-        });
-      }
+      const response = await aiMockInterview({
+        role, experienceLevel: exp, roundType: round, currentMainQuestionIndex: currentIdx + 1,
+        history: chatHistory,
+        userAnswer: currentAns, targetCompany: company,
+        resumeSkills: assessmentContext.resumeAnalysis?.skillAnalysis?.map((s: any) => s.skill) || [],
+        resumeProjects: assessmentContext.resumeAnalysis?.sections?.projects || [],
+        resumeSummary: assessmentContext.resumeAnalysis?.summary || "",
+        aptitudeScore: assessmentContext.aptitudeReport?.overallScore || 0,
+        codingScore: assessmentContext.codingReport?.score || 0,
+        askedQuestions: askedQuestions,
+        debugMode: assessmentContext?.debugMode
+      });
 
-      const finalTranscript = [...newTranscript, { role: 'interviewer' as const, text: response.nextQuestion }];
-      setTranscript(finalTranscript);
+      const updatedTranscript = [...newTranscript, { role: 'interviewer' as const, text: response.nextQuestion }];
+      setTranscript(updatedTranscript);
       setAskedQuestions(prev => [...prev, response.nextQuestion]);
       setCurrentIdx(prev => prev + 1);
 
       if (response.isInterviewComplete) {
-        finalizeSession(finalTranscript);
+        finalizeSession(updatedTranscript);
       } else {
         await handleInterviewerSpeech(agent, response.nextQuestion);
       }
@@ -307,7 +281,7 @@ function VirtualArenaContent() {
       router.push(`/feedback/${docRef.id}`);
     } catch (e) {
       console.error(e);
-      toast({ variant: "destructive", title: "Final Audit Synthesis Failed" });
+      toast({ variant: "destructive", title: "Final Audit Failed" });
     } finally {
       setIsGeneratingReport(false);
     }
@@ -318,9 +292,6 @@ function VirtualArenaContent() {
     if (isMicActive) recognitionRef.current.stop();
     else { setUserAnswer(""); recognitionRef.current.start(); }
   };
-
-  const handleGoHome = () => router.push('/');
-  const handleBack = () => router.push('/interview');
 
   if (isInitializing) return <div className="h-screen flex items-center justify-center bg-[#050816]"><Loader2 className="w-12 h-12 text-accent animate-spin" /></div>;
 
@@ -344,13 +315,7 @@ function VirtualArenaContent() {
 
       <main className="flex-1 flex flex-col overflow-hidden max-w-7xl mx-auto w-full px-6 py-6 gap-6">
         <section className="relative h-[45vh] overflow-hidden rounded-[3rem] bg-black">
-          <video 
-            ref={videoRef} 
-            autoPlay 
-            playsInline 
-            muted
-            className="absolute inset-0 w-full h-full object-cover z-10" 
-          />
+          <video ref={videoRef} autoPlay playsInline muted className="absolute inset-0 w-full h-full object-cover z-10" />
           
           {!isAgentConnected && !configError && (
             <div className="absolute inset-0 w-full h-full flex flex-col items-center justify-center bg-[#050816] z-20 space-y-6">
@@ -414,7 +379,7 @@ function VirtualArenaContent() {
         </section>
       </main>
 
-      <NavigationControls onHome={handleGoHome} onBack={handleBack} />
+      <NavigationControls onHome={() => router.push('/')} onBack={() => router.push('/interview')} />
 
       <AnimatePresence>
         {isSimulationComplete && (
