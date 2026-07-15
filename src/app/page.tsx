@@ -149,7 +149,7 @@ export default function LandingPage() {
                   onClick={handleStartVirtualInterview} 
                   className="h-14 px-8 text-xs btn-premium rounded-2xl shadow-[0_20px_50px_rgba(147,51,234,0.3)] transition-all hover:scale-105 active:scale-95"
                 >
-                  Initialize Virtual Arena <Zap className="ml-3 w-4 h-4 fill-current" />
+                  🎤 Start Mock Interview <Zap className="ml-3 w-4 h-4 fill-current" />
                 </Button>
                 <Link href="/question-bank">
                   <Button 
@@ -157,7 +157,7 @@ export default function LandingPage() {
                     className="h-14 px-8 text-xs glass border-white/10 hover:bg-white/5 flex gap-3 group rounded-2xl transition-all"
                   >
                     <Star className="w-4 h-4 text-accent transition-transform group-hover:rotate-12" />
-                    Knowledge Library
+                    🤖 AI Resume Analysis
                   </Button>
                 </Link>
               </div>
@@ -234,7 +234,7 @@ export default function LandingPage() {
                     className="w-full h-12 btn-orange-premium text-[9px] font-black tracking-[0.4em] uppercase mt-10 rounded-2xl group/btn overflow-hidden"
                   >
                     <span className="relative z-10 flex items-center justify-center">
-                      Launch Journey <ChevronRight className="ml-2 w-3.5 h-3.5 transition-transform group-hover/btn:translate-x-1" />
+                      🚀 Enter Interview Room <ChevronRight className="ml-2 w-3.5 h-3.5 transition-transform group-hover/btn:translate-x-1" />
                     </span>
                   </Button>
                 </div>
