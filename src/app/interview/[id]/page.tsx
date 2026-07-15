@@ -1,5 +1,5 @@
 "use client";
-import { Suspense, useEffect, useState, useRef } from "react";
+import { Suspense, useEffect, useState, useRef, useMemo } from "react";
 import { useRouter, useParams, useSearchParams } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
@@ -55,7 +55,7 @@ function VirtualArenaContent() {
 
   const [agent, setAgent] = useState<any>(null);
   const [isAgentConnected, setIsAgentConnected] = useState(false);
-  const [mediaStream, setMediaStream] = useState<MediaStream | null>(null);
+  const [activeMediaStream, setActiveMediaStream] = useState<MediaStream | null>(null);
 
   const [askedQuestions, setAskedQuestions] = useState<string[]>([]);
 
@@ -63,12 +63,12 @@ function VirtualArenaContent() {
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const recognitionRef = useRef<any>(null);
 
-  // Sync MediaStream to Video Element
+  // Sync MediaStream to Video Element with detailed telemetry
   useEffect(() => {
-    if (videoRef.current && mediaStream) {
-      if (videoRef.current.srcObject !== mediaStream) {
+    if (videoRef.current && activeMediaStream) {
+      if (videoRef.current.srcObject !== activeMediaStream) {
         console.log("[WebRTC] Synchronizing stream to video node...");
-        videoRef.current.srcObject = mediaStream;
+        videoRef.current.srcObject = activeMediaStream;
         
         videoRef.current.onloadedmetadata = () => {
           console.log("[Telemetry] Frame Sync Established:", {
@@ -83,7 +83,7 @@ function VirtualArenaContent() {
         };
       }
     }
-  }, [mediaStream]);
+  }, [activeMediaStream, isAgentConnected]);
 
   // Initialize Recognition
   useEffect(() => {
@@ -134,11 +134,13 @@ function VirtualArenaContent() {
         auth: { type: 'key', clientKey: clientKey },
         callbacks: {
           onSrcObjectReady: (stream: MediaStream) => {
-            setMediaStream(stream);
+            console.log("[WebRTC] MediaStream Callback Triggered");
+            setActiveMediaStream(stream);
           },
           onConnectionStateChange: (state: string) => {
+            console.log("[WebRTC] Connection State:", state);
             setIsAgentConnected(state === "connected");
-            if (state === "disconnected") setMediaStream(null);
+            if (state === "disconnected") setActiveMediaStream(null);
           },
           onVideoStatusChange: (status: string) => {
             setIsAvatarSpeaking(status === 'play');
@@ -198,7 +200,8 @@ function VirtualArenaContent() {
                 aptitudePerformance: data.aptitudeReport?.recommendation || "N/A",
                 aptitudeScore: data.aptitudeReport?.overallScore || 0,
                 codingPerformance: data.codingReport?.finalRecommendation || "N/A",
-                codingScore: data.codingReport?.score || 0
+                codingScore: data.codingReport?.score || 0,
+                askedQuestions: []
               });
               firstMsg = response.nextQuestion;
             }
@@ -234,15 +237,19 @@ function VirtualArenaContent() {
       if (assessmentContext?.debugMode) {
         response = { nextQuestion: `Node ${currentIdx} verification received. Continue.`, isInterviewComplete: currentIdx >= 5 };
       } else {
+        const chatHistory = newTranscript.filter(t => t.role === 'candidate').map((t, i) => {
+          // Correctly map interviewer question to candidate answer
+          const candidateIdx = newTranscript.indexOf(t);
+          const interviewerMsg = newTranscript[candidateIdx - 1];
+          return {
+            question: interviewerMsg?.text || "Introduction",
+            answer: t.text
+          };
+        });
+
         response = await aiMockInterview({
           role, experienceLevel: exp, roundType: round, currentMainQuestionIndex: currentIdx + 1,
-          history: newTranscript.filter(t => t.role === 'candidate').map((t, i) => {
-            const interviewerIdx = transcript.findIndex(prev => prev.text === t.text) - 1;
-            return {
-              question: transcript[interviewerIdx]?.text || "Introduction",
-              answer: t.text
-            };
-          }),
+          history: chatHistory,
           userAnswer: currentAns, targetCompany: company,
           resumeSkills: assessmentContext.resumeAnalysis?.skillAnalysis?.map((s: any) => s.skill) || [],
           resumeProjects: assessmentContext.resumeAnalysis?.sections?.projects || [],
@@ -341,6 +348,7 @@ function VirtualArenaContent() {
             ref={videoRef} 
             autoPlay 
             playsInline 
+            muted
             className="absolute inset-0 w-full h-full object-cover z-10" 
           />
           
@@ -384,6 +392,7 @@ function VirtualArenaContent() {
                 </motion.div>
               ))}
             </AnimatePresence>
+            <div ref={transcriptEndRef} />
           </div>
 
           <div className="h-24 glass bg-[#0b0e1a]/80 border-white/10 rounded-[2.5rem] p-4 flex items-center gap-4">
