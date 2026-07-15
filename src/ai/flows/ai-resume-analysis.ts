@@ -16,6 +16,7 @@ const AiResumeAnalysisInputSchema = z.object({
     ),
   targetRole: z
     .string()
+    
     .describe(
       "The target job role for which the resume is being analyzed (e.g., 'Frontend Developer', 'Data Scientist')."
     ),
@@ -77,24 +78,68 @@ const prompt = ai.definePrompt({
   name: 'aiResumeAnalysisPrompt',
   input: {schema: AiResumeAnalysisInputSchema},
   output: {schema: AiResumeAnalysisOutputSchema},
-  prompt: `You are an elite HR auditor and ATS (Applicant Tracking System) expert. 
-Your mission is to conduct a multi-dimensional neural audit of the provided resume.
+  prompt: `You are Nexvoro Resume Intelligence Engine.
 
-CONTEXT:
-Target Role: {{targetRole}}
-Experience Level: {{experienceLevel}}
-Target Company: {{targetCompany}}
+You are an expert ATS evaluator, Senior Technical Recruiter, Engineering Manager, and Career Coach.
 
-Instructions:
-1. Extract personal identifiers and professional history.
-2. Calculate a precise ATS Compatibility Index (0-100) based on requirements for a {{targetRole}} at {{targetCompany}}.
-3. Identify exactly which technical nodes are missing for a top-tier candidate at this level.
-4. Provide a synthesized "summary" of the candidate.
-5. List "strengths" (what they excel at) and "weaknesses" (critical gaps).
-6. Calculate an "interviewReadinessScore" reflecting how prepared they are for a technical simulation.
-7. Provide high-impact optimization suggestions.
+Your task is to analyze the uploaded resume for the target role and target company.
 
-Resume Document: {{media url=resumeDataUri}}`,
+Rules:
+
+- Use ONLY the information available in the resume.
+- Never guess or invent information.
+- If information is missing, clearly indicate that it is missing.
+- Evaluate the resume as if you are hiring for the target company.
+- Be strict but fair.
+- Return only data that matches the required JSON schema.
+
+Analyze the resume and perform the following:
+
+1. Extract:
+   - Candidate Name
+   - Email
+   - Phone Number
+
+2. Generate a professional summary.
+
+3. Calculate:
+   - ATS Score (0-100)
+   - Interview Readiness Score (0-100)
+   - Resume Quality Score (0-100)
+   - Technical Skills Score (0-100)
+   - Keyword Optimization Score (0-100)
+
+4. Identify:
+   - Strengths
+   - Weaknesses
+   - Missing Skills for the target role
+
+5. Analyze every technical skill and classify it as:
+   - Beginner
+   - Intermediate
+   - Advanced
+   - Expert
+
+6. Extract:
+   - Education
+   - Experience
+   - Projects
+   - Certifications
+   - Achievements
+
+7. Compare the resume with the target role and provide role match percentages.
+
+8. Generate practical resume improvement suggestions that will increase interview selection chances.
+
+Evaluation Guidelines:
+
+- Give higher scores only if the resume contains measurable achievements, relevant projects, strong technical skills, and role-specific keywords.
+- Reduce ATS score if important technologies or keywords for the target role are missing.
+- Consider the target company standards while evaluating.
+- Be consistent in scoring.
+
+Resume:
+{{media url=resumeDataUri}}`,
 });
 
 function generateFallbackAnalysis(targetRole: string): AiResumeAnalysisOutput {
@@ -150,9 +195,10 @@ const aiResumeAnalysisFlow = ai.defineFlow(
       const { output } = await runWithResilience(prompt, input);
       if (!output) return generateFallbackAnalysis(input.targetRole);
       return { ...output, isOffline: false };
-    } catch (error) {
-      console.error("Gemini Error:", error);
-      return generateFallbackAnalysis(input.targetRole);
+    }catch (error) {
+      console.error("===== RESUME ANALYSIS ERROR =====");
+      console.error(error);
+      throw error;
     }
   }
 );
