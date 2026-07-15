@@ -25,14 +25,12 @@ function LoginContent() {
   const [isLoading, setIsLoading] = useState(false);
   const [isResetting, setIsResetting] = useState(false);
 
-  // Calibrated redirect trajectory: default to Home Page (/)
-  const redirectTo = searchParams.get('redirectTo') || '/';
-
+  // Redirection Protocol: Force Home Page (/)
   useEffect(() => {
     if (user && !authLoading) {
-      router.push(redirectTo);
+      router.replace('/');
     }
-  }, [user, authLoading, router, redirectTo]);
+  }, [user, authLoading, router]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -49,6 +47,7 @@ function LoginContent() {
     try {
       await signInWithEmailAndPassword(auth, email, password);
       toast({ title: "Access Granted", description: "Identity verified. Redirecting to Nexus." });
+      // Redirect handled by useEffect state synchronization
     } catch (error: any) {
       toast({
         variant: "destructive",
@@ -67,6 +66,7 @@ function LoginContent() {
       setIsLoading(true);
       await signInWithPopup(auth, provider);
       toast({ title: "Neural Link Established", description: "Successfully authenticated via Google." });
+      // Redirect handled by useEffect state synchronization
     } catch (error: any) {
       if (error.code !== 'auth/popup-closed-by-user') {
         toast({
@@ -100,7 +100,7 @@ function LoginContent() {
     }
   };
 
-  // Prevent UI flash by showing a loader while checking auth state
+  // Prevent UI flash: Show high-fidelity loader while syncing identity
   if (authLoading || (user && !authLoading)) {
     return (
       <div className="min-h-screen bg-[#050816] flex items-center justify-center">
@@ -116,7 +116,6 @@ function LoginContent() {
     <div className="min-h-screen bg-[#050816] flex items-center justify-center p-6 relative overflow-hidden">
       <div className="particles-bg" />
       
-      {/* Cinematic Background Glows */}
       <div className="absolute top-[-10%] right-[-10%] w-[500px] h-[500px] bg-purple-600/10 rounded-full blur-[120px] pointer-events-none" />
       <div className="absolute bottom-[-10%] left-[-10%] w-[500px] h-[500px] bg-accent/10 rounded-full blur-[120px] pointer-events-none" />
 
@@ -154,7 +153,6 @@ function LoginContent() {
           transition={{ delay: 0.3 }}
         >
           <Card className="premium-card rounded-[2.5rem] border-glow-premium bg-white/[0.01] border-white/5 p-10 overflow-hidden relative group">
-            {/* Inner Light Sweep */}
             <div className="absolute inset-0 pointer-events-none">
               <div className="absolute top-0 -left-[100%] w-full h-full bg-gradient-to-r from-transparent via-white/[0.02] to-transparent animate-light-streak" />
             </div>
@@ -249,7 +247,7 @@ function LoginContent() {
 
               <div className="pt-4 text-center">
                 <p className="text-[10px] font-bold tracking-widest uppercase text-white/30">
-                  New operator? <Link href={`/signup?redirectTo=${encodeURIComponent(redirectTo)}`} className="text-accent hover:text-white transition-colors underline decoration-accent/20 underline-offset-4">Register Session</Link>
+                  New operator? <Link href="/signup" className="text-accent hover:text-white transition-colors underline decoration-accent/20 underline-offset-4">Register Session</Link>
                 </p>
               </div>
             </CardContent>
