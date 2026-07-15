@@ -63,23 +63,23 @@ function VirtualArenaContent() {
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const recognitionRef = useRef<any>(null);
 
-  // Sync MediaStream to Video Element with detailed telemetry
+  // Re-attach stream to video element on every render to ensure visibility
   useEffect(() => {
     if (videoRef.current && activeMediaStream) {
       if (videoRef.current.srcObject !== activeMediaStream) {
-        console.log("[WebRTC] Synchronizing stream to video node...");
+        console.log("[WebRTC Sync] Re-attaching MediaStream to video element...");
         videoRef.current.srcObject = activeMediaStream;
         
         videoRef.current.onloadedmetadata = () => {
-          console.log("[Telemetry] Frame Sync Established:", {
+          console.log("[WebRTC Sync] Stream Telemetry:", {
             w: videoRef.current?.videoWidth,
             h: videoRef.current?.videoHeight,
-            ready: videoRef.current?.readyState,
-            network: videoRef.current?.networkState,
+            readyState: videoRef.current?.readyState,
+            networkState: videoRef.current?.networkState,
             paused: videoRef.current?.paused,
             time: videoRef.current?.currentTime
           });
-          videoRef.current?.play().catch(e => console.error("[Playback] Execution Fault:", e));
+          videoRef.current?.play().catch(e => console.error("[WebRTC Sync] Play Failure:", e));
         };
       }
     }
@@ -134,11 +134,11 @@ function VirtualArenaContent() {
         auth: { type: 'key', clientKey: clientKey },
         callbacks: {
           onSrcObjectReady: (stream: MediaStream) => {
-            console.log("[WebRTC] MediaStream Callback Triggered");
+            console.log("[WebRTC] Stream Received.");
             setActiveMediaStream(stream);
           },
           onConnectionStateChange: (state: string) => {
-            console.log("[WebRTC] Connection State:", state);
+            console.log("[WebRTC] State:", state);
             setIsAgentConnected(state === "connected");
             if (state === "disconnected") setActiveMediaStream(null);
           },
@@ -189,7 +189,7 @@ function VirtualArenaContent() {
           if (transcript.length === 0) {
             let firstMsg = "";
             if (data.debugMode) {
-              firstMsg = "Hello, welcome to Nexvoro AI. This is a developer test of the D-ID avatar integration.";
+              firstMsg = "Hello. Welcome to today's session. I'm looking forward to our technical assessment. Let's start with a brief introduction—could you please introduce yourself and walk me through your background?";
             } else {
               const response = await aiMockInterview({
                 role, experienceLevel: exp, roundType: round, currentMainQuestionIndex: 1, 
@@ -235,10 +235,9 @@ function VirtualArenaContent() {
     try {
       let response;
       if (assessmentContext?.debugMode) {
-        response = { nextQuestion: `Node ${currentIdx} verification received. Continue.`, isInterviewComplete: currentIdx >= 5 };
+        response = { nextQuestion: `That's clear. Moving to Node ${currentIdx + 1} for verification. Tell me more about your experience with real-time architectures.`, isInterviewComplete: currentIdx >= 5 };
       } else {
-        const chatHistory = newTranscript.filter(t => t.role === 'candidate').map((t, i) => {
-          // Correctly map interviewer question to candidate answer
+        const chatHistory = newTranscript.filter(t => t.role === 'candidate').map((t) => {
           const candidateIdx = newTranscript.indexOf(t);
           const interviewerMsg = newTranscript[candidateIdx - 1];
           return {
@@ -253,6 +252,7 @@ function VirtualArenaContent() {
           userAnswer: currentAns, targetCompany: company,
           resumeSkills: assessmentContext.resumeAnalysis?.skillAnalysis?.map((s: any) => s.skill) || [],
           resumeProjects: assessmentContext.resumeAnalysis?.sections?.projects || [],
+          resumeSummary: assessmentContext.resumeAnalysis?.summary || "",
           aptitudePerformance: assessmentContext.aptitudeReport?.recommendation || "N/A",
           aptitudeScore: assessmentContext.aptitudeReport?.overallScore || 0,
           codingPerformance: assessmentContext.codingReport?.finalRecommendation || "N/A",
