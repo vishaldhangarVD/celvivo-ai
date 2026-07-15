@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
@@ -36,14 +35,20 @@ import {
   ArrowRight,
   ClipboardCheck,
   Globe,
-  AlertTriangle
+  AlertTriangle,
+  User,
+  ShieldAlert,
+  Map,
+  Code2,
+  MessageSquare,
+  LayoutGrid,
+  Info
 } from 'lucide-react';
 import { useUser, useFirestore } from '@/firebase';
 import { collection, addDoc, serverTimestamp, doc, updateDoc } from 'firebase/firestore';
 import { deepAuditResume, type ResumeDeepAuditOutput } from '@/ai/flows/ai-resume-deep-audit';
 import { useToast } from '@/hooks/use-toast';
 import { useRouter } from 'next/navigation';
-import { jsPDF } from 'jspdf';
 
 export default function ResumeAnalysisPage() {
   const router = useRouter();
@@ -57,7 +62,6 @@ export default function ResumeAnalysisPage() {
   const [auditResult, setAuditResult] = useState<ResumeDeepAuditOutput | null>(null);
   const [activeTab, setActiveTab] = useState("overview");
 
-  // Auth Guard
   useEffect(() => {
     if (!authLoading && !user) {
       router.push(`/login?redirectTo=/resume-analysis`);
@@ -67,7 +71,6 @@ export default function ResumeAnalysisPage() {
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const selected = e.target.files[0];
-      console.log('[UI] File Selected:', selected.name, selected.size);
       if (selected.size > 10 * 1024 * 1024) {
         toast({ variant: "destructive", title: "File Too Large", description: "Limit: 10MB" });
         return;
@@ -77,157 +80,58 @@ export default function ResumeAnalysisPage() {
   };
 
   const handleRunAnalysis = async () => {
-    console.log('[UI] Launching Neural Audit process...');
-    
-    if (!file) {
-      toast({ variant: "destructive", title: "Missing Blueprint", description: "Please upload a resume file first." });
-      return;
-    }
-
-    if (!user || !db) {
-      console.error('[UI] Auth/DB not initialized', { user: !!user, db: !!db });
-      toast({ 
-        variant: "destructive", 
-        title: "Identity Error", 
-        description: "Authentication or database service is offline. Please try refreshing." 
-      });
-      return;
-    }
+    if (!file || !user || !db) return;
 
     setIsAnalyzing(true);
     setAuditResult(null);
 
     try {
-      console.log('[UI] Reading document stream...');
       const base64 = await new Promise<string>((resolve, reject) => {
         const reader = new FileReader();
-        reader.onload = () => {
-          console.log('[UI] Document stream read successfully.');
-          resolve(reader.result as string);
-        };
-        reader.onerror = (err) => {
-          console.error('[UI] FileReader error:', err);
-          reject(new Error("System failed to read the document."));
-        };
+        reader.onload = () => resolve(reader.result as string);
+        reader.onerror = reject;
         reader.readAsDataURL(file);
       });
 
-      console.log('[UI] Initiating Neural Deep Audit flow...');
       const result = await deepAuditResume({ resumeDataUri: base64, targetRole });
-      
-      console.log('[UI] Neural response status:', result ? 'RECEIVED' : 'FAILED');
-      
-      if (!result) {
-        throw new Error("Neural synthesis returned empty intelligence nodes.");
-      }
-
       setAuditResult(result);
 
-      // Save to Firestore
-      try {
-        console.log('[UI] Synchronizing audit with cloud archives...');
-        const resumesRef = collection(db, 'users', user.uid, 'resumes');
-        await addDoc(resumesRef, {
-          userId: user.uid,
-          filename: file.name,
-          targetRole,
-          atsScore: result.atsScore,
-          analysis: result,
-          createdAt: serverTimestamp(),
-        });
-
-        await updateDoc(doc(db, 'users', user.uid), {
-          resumeScore: result.atsScore
-        });
-        console.log('[UI] Cloud synchronization successful.');
-      } catch (fsErr) {
-        console.warn('[UI] Archive synchronization failed, but audit displayed.', fsErr);
-      }
-
-      toast({ 
-        title: result.isOffline ? "Audit Synchronized (Offline)" : "Analysis Complete", 
-        description: result.isOffline 
-          ? "System utilized local intelligence nodes." 
-          : "Your neural audit has been synthesized successfully." 
+      // Persistence
+      const resumesRef = collection(db, 'users', user.uid, 'resumes');
+      await addDoc(resumesRef, {
+        userId: user.uid,
+        filename: file.name,
+        targetRole,
+        atsScore: result.atsAnalysis.overallScore,
+        analysis: result,
+        createdAt: serverTimestamp(),
       });
 
-    } catch (e: any) {
-      console.error('[UI] CRITICAL AUDIT FAILURE:', e);
-      toast({ 
-        variant: "destructive", 
-        title: "Analysis Failed", 
-        description: e instanceof Error ? e.message : "System encountered a neural synchronization error." 
+      await updateDoc(doc(db, 'users', user.uid), {
+        resumeScore: result.atsAnalysis.overallScore
       });
+
+      toast({ 
+        title: result.isOffline ? "Audit Synchronized (Offline)" : "Intelligence Synthesis Complete", 
+        description: "Your comprehensive career audit is ready for review." 
+      });
+
+    } catch (e) {
+      console.error(e);
+      toast({ variant: "destructive", title: "Audit Failed", description: "System encountered a neural synchronization error." });
     } finally {
       setIsAnalyzing(false);
-      console.log('[UI] Analysis sequence completed.');
     }
   };
 
-  const downloadImprovedPDF = () => {
-    if (!auditResult) return;
-    const doc = new jsPDF();
-    doc.setFontSize(22);
-    doc.text(user?.displayName || "Improved Resume", 20, 20);
-    doc.setFontSize(14);
-    doc.text("Professional Summary", 20, 35);
-    doc.setFontSize(10);
-    const splitSummary = doc.splitTextToSize(auditResult.improvedResume.summary, 170);
-    doc.text(splitSummary, 20, 45);
-
-    let y = 45 + (splitSummary.length * 5) + 10;
-    doc.setFontSize(14);
-    doc.text("Experience", 20, y);
-    y += 10;
-    doc.setFontSize(10);
-    auditResult.improvedResume.experience.forEach(exp => {
-      const splitExp = doc.splitTextToSize("• " + exp, 170);
-      doc.text(splitExp, 20, y);
-      y += (splitExp.length * 5) + 2;
-      if (y > 270) { doc.addPage(); y = 20; }
-    });
-
-    doc.save("Improved_Resume.pdf");
-    toast({ title: "PDF Exported", description: "Your optimized blueprint has been downloaded." });
-  };
-
-  const startInterviewWithImproved = () => {
-    if (!auditResult) return;
-    const improvedContext = {
-      analysis: {
-        skillAnalysis: auditResult.improvedResume.skills.map(s => ({ skill: s, proficiency: 'Expert' })),
-        sections: {
-          experience: auditResult.improvedResume.experience,
-          projects: auditResult.improvedResume.projects
-        },
-        atsScore: auditResult.atsScore
-      }
-    };
-    localStorage.setItem("resumeAnalysis", JSON.stringify(improvedContext));
-    const sessionId = Math.random().toString(36).substring(7);
-    router.push(`/interview/${sessionId}?role=${encodeURIComponent(targetRole)}&exp=Senior&round=Technical%20Round&company=Standard`);
-  };
-
   const getScoreColor = (score: number) => {
-    if (score >= 80) return "text-green-400";
-    if (score >= 60) return "text-yellow-400";
+    if (score >= 85) return "text-accent";
+    if (score >= 70) return "text-green-400";
+    if (score >= 50) return "text-orange-400";
     return "text-red-400";
   };
 
-  const getScoreLabel = (score: number) => {
-    if (score >= 85) return "Excellent";
-    if (score >= 70) return "Good";
-    if (score >= 50) return "Average";
-    return "Poor";
-  };
-
-  if (authLoading) {
-    return (
-      <div className="min-h-screen bg-[#050816] flex items-center justify-center">
-        <Loader2 className="w-12 h-12 text-accent animate-spin" />
-      </div>
-    );
-  }
+  if (authLoading) return <div className="h-screen flex items-center justify-center bg-[#050816]"><Loader2 className="w-12 h-12 text-accent animate-spin" /></div>;
 
   if (isAnalyzing) {
     return (
@@ -237,8 +141,8 @@ export default function ResumeAnalysisPage() {
           <Cpu className="w-12 h-12 text-accent absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 animate-pulse" />
         </div>
         <div className="text-center space-y-4">
-          <h2 className="text-3xl font-bold tracking-tighter text-premium">Synthesizing Neural Audit...</h2>
-          <p className="text-muted-foreground font-light uppercase tracking-[0.4em] text-[10px]">Deconstructing career nodes • Rebuilding professional vectors</p>
+          <h2 className="text-3xl font-bold tracking-tighter text-premium">Synthesizing Career Intelligence...</h2>
+          <p className="text-muted-foreground font-light uppercase tracking-[0.4em] text-[10px]">Deconstructing projects • Auditing skill vectors • Building roadmap</p>
         </div>
       </div>
     );
@@ -254,26 +158,26 @@ export default function ResumeAnalysisPage() {
         {!auditResult ? (
           <div className="max-w-4xl mx-auto space-y-16">
             <header className="text-center space-y-6">
-              <Badge className="bg-accent/20 text-accent border-none px-6 py-1.5 font-bold tracking-[0.4em] text-[10px] uppercase">Neural Blueprint Auditor</Badge>
+              <Badge className="bg-accent/20 text-accent border-none px-6 py-1.5 font-bold tracking-[0.4em] text-[10px] uppercase">Neural Identity Auditor</Badge>
               <h1 className="text-6xl font-bold tracking-tighter text-premium">Resume <span className="text-gradient-purple">Intelligence.</span></h1>
               <p className="text-xl text-muted-foreground font-light max-w-2xl mx-auto leading-relaxed">
                 Deploy an enterprise-grade AI audit to reveal ATS bottlenecks and architect a high-fidelity professional identity.
               </p>
             </header>
 
-            <Card className="premium-card bg-white/[0.01] border-white/5 p-12 shadow-[0_0_100px_rgba(34,211,238,0.05)]">
+            <Card className="premium-card bg-white/[0.01] border-white/5 p-12">
               <div className="space-y-12">
                 <div 
-                  onClick={() => document.getElementById('resume-deep-upload')?.click()}
+                  onClick={() => document.getElementById('resume-master-upload')?.click()}
                   className={`border-2 border-dashed rounded-[2.5rem] p-20 text-center transition-all cursor-pointer group relative overflow-hidden ${file ? 'border-accent bg-accent/5' : 'border-white/10 hover:border-accent/30 hover:bg-white/[0.02]'}`}
                 >
-                  <input type="file" id="resume-deep-upload" className="hidden" accept=".pdf,.docx,.doc" onChange={handleFileChange} />
+                  <input type="file" id="resume-master-upload" className="hidden" accept=".pdf" onChange={handleFileChange} />
                   {!file ? (
                     <div className="space-y-6">
                       <div className="w-24 h-24 rounded-3xl bg-accent/10 flex items-center justify-center mx-auto transition-all group-hover:scale-110"><Upload className="w-12 h-12 text-accent" /></div>
                       <div>
-                        <p className="text-2xl font-bold mb-2">Initialize Career Scan</p>
-                        <p className="text-[10px] text-muted-foreground uppercase tracking-[0.3em] font-bold">PDF, DOCX • 10MB Limit</p>
+                        <p className="text-2xl font-bold mb-2">Initialize Identity Scan</p>
+                        <p className="text-[10px] text-muted-foreground uppercase tracking-[0.3em] font-bold">PDF Only • 10MB Limit</p>
                       </div>
                     </div>
                   ) : (
@@ -281,7 +185,7 @@ export default function ResumeAnalysisPage() {
                       <div className="w-20 h-20 rounded-2xl bg-accent/20 flex items-center justify-center"><FileText className="w-10 h-10 text-accent" /></div>
                       <div className="text-left">
                         <p className="font-bold text-xl">{file.name}</p>
-                        <p className="text-[10px] text-accent uppercase tracking-widest font-bold">READY FOR DEEP AUDIT</p>
+                        <p className="text-[10px] text-accent uppercase tracking-widest font-bold">READY FOR MASTER AUDIT</p>
                       </div>
                       <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); setFile(null); }} className="rounded-xl h-12 w-12 hover:bg-red-500/10 text-red-400"><Trash2 className="w-6 h-6" /></Button>
                     </div>
@@ -289,22 +193,18 @@ export default function ResumeAnalysisPage() {
                 </div>
 
                 <div className="space-y-4">
-                  <label className="text-[10px] font-bold uppercase tracking-[0.4em] text-muted-foreground ml-2">Target Career Vector</label>
+                  <label className="text-[10px] font-bold uppercase tracking-[0.4em] text-muted-foreground ml-2">Target Career Node</label>
                   <Input
                     type="text"
                     value={targetRole}
                     onChange={(e) => setTargetRole(e.target.value)}
-                    placeholder="e.g. Senior Full Stack Engineer"
-                    className="h-16 px-8 rounded-2xl glass border-white/10 bg-transparent text-white text-lg font-light focus:border-accent"
+                    placeholder="e.g. Senior Software Architect"
+                    className="h-16 px-8 rounded-2xl glass border-white/10 bg-transparent text-white text-lg font-light"
                   />
                 </div>
 
-                <Button 
-                  onClick={handleRunAnalysis}
-                  disabled={!file || isAnalyzing}
-                  className="w-full h-20 text-lg btn-premium shadow-[0_0_60px_rgba(147,51,234,0.3)]"
-                >
-                  {isAnalyzing ? <><Loader2 className="w-6 h-6 mr-4 animate-spin" /> <span className="tracking-[0.3em] uppercase text-sm font-bold">Extracting Knowledge Nodes...</span></> : <><Zap className="w-6 h-6 mr-4 group-hover:animate-pulse" /> <span className="tracking-[0.3em] uppercase text-sm font-bold">Launch Neural Audit</span></>}
+                <Button onClick={handleRunAnalysis} disabled={!file} className="w-full h-20 text-lg btn-premium shadow-[0_0_60px_rgba(147,51,234,0.3)]">
+                  <Zap className="w-6 h-6 mr-4 group-hover:animate-pulse" /> <span className="tracking-[0.3em] uppercase text-sm font-bold">Launch Neural Audit</span>
                 </Button>
               </div>
             </Card>
@@ -312,20 +212,14 @@ export default function ResumeAnalysisPage() {
         ) : (
           <div className="max-w-7xl mx-auto space-y-12">
             <header className="flex flex-col md:flex-row justify-between items-end gap-8">
-              <div>
-                <Badge className="bg-accent/20 text-accent mb-4 border-none px-4 py-1 text-[10px] tracking-widest font-bold uppercase">Audit Result v4.0</Badge>
-                <h1 className="text-5xl font-bold tracking-tighter text-premium">Performance Intelligence</h1>
-                <p className="text-muted-foreground font-light mt-2 uppercase tracking-widest text-[10px]">Validated for: {targetRole}</p>
-                {auditResult.isOffline && (
-                   <div className="flex items-center gap-2 mt-4 text-orange-400 animate-pulse">
-                     <AlertTriangle className="w-4 h-4" />
-                     <span className="text-[10px] font-black uppercase tracking-widest">[OFFLINE MODE ACTIVE]</span>
-                   </div>
-                )}
+              <div className="space-y-4">
+                <Badge className="bg-accent/20 text-accent px-4 py-1 text-[10px] tracking-widest font-bold uppercase border-none">Master Dossier v5.0</Badge>
+                <h1 className="text-5xl font-bold tracking-tighter text-premium">{auditResult.candidateIdentity.name}</h1>
+                <p className="text-muted-foreground font-light uppercase tracking-widest text-[10px]">{auditResult.candidateIdentity.yearsOfExperience} Years Experience • {targetRole}</p>
               </div>
               <div className="flex gap-4">
-                <Button onClick={() => setAuditResult(null)} variant="outline" className="h-14 px-8 glass border-white/10 text-[10px] font-bold uppercase tracking-widest">New Scan</Button>
-                <Button onClick={startInterviewWithImproved} className="h-14 px-8 btn-premium text-[10px] font-bold uppercase tracking-widest">Start Improved Interview</Button>
+                <Button onClick={() => setAuditResult(null)} variant="outline" className="h-14 px-8 glass border-white/10 text-[10px] font-bold uppercase tracking-widest">New Session</Button>
+                <Button onClick={() => router.push('/interview')} className="h-14 px-8 btn-premium text-[10px] font-bold uppercase tracking-widest">Start Arena Simulation</Button>
               </div>
             </header>
 
@@ -333,61 +227,58 @@ export default function ResumeAnalysisPage() {
               <div className="lg:col-span-4 space-y-8">
                 <Card className="premium-card bg-white/[0.02] border-white/5 p-10 text-center relative overflow-hidden">
                   <div className="absolute inset-0 bg-gradient-to-br from-accent/5 to-transparent opacity-50" />
-                  <div className="relative z-10">
-                    <div className="relative w-48 h-48 mx-auto mb-8 flex items-center justify-center">
+                  <div className="relative z-10 space-y-8">
+                    <div className="relative w-48 h-48 mx-auto flex items-center justify-center">
                       <svg className="w-full h-full transform -rotate-90">
                         <circle className="text-white/5" strokeWidth="8" stroke="currentColor" fill="transparent" r="88" cx="96" cy="96" />
                         <motion.circle 
                           initial={{ strokeDashoffset: 553 }}
-                          animate={{ strokeDashoffset: 553 - (553 * auditResult.atsScore) / 100 }}
+                          animate={{ strokeDashoffset: 553 - (553 * auditResult.atsAnalysis.overallScore) / 100 }}
                           transition={{ duration: 2, ease: "easeOut" }}
-                          className={getScoreColor(auditResult.atsScore)} 
+                          className={getScoreColor(auditResult.atsAnalysis.overallScore)} 
                           strokeWidth="8" 
                           strokeDasharray={553} 
                           strokeLinecap="round" 
                           stroke="currentColor" 
                           fill="transparent" 
-                          r="88" 
-                          cx="96" 
-                          cy="96" 
+                          r="88" cx="96" cy="96" 
                         />
                       </svg>
                       <div className="absolute inset-0 flex flex-col items-center justify-center">
-                        <span className="text-6xl font-bold tracking-tighter">{auditResult.atsScore}</span>
-                        <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">ATS Index</span>
+                        <span className="text-6xl font-bold tracking-tighter">{auditResult.atsAnalysis.overallScore}</span>
+                        <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">ATS Composite</span>
                       </div>
                     </div>
-                    <Badge variant="outline" className={`border-none text-lg font-bold uppercase tracking-widest ${getScoreColor(auditResult.atsScore)}`}>
-                      {getScoreLabel(auditResult.atsScore)}
-                    </Badge>
-                    <p className="text-muted-foreground text-sm font-light mt-6 leading-relaxed">
-                      Your career blueprint is currently optimized for {auditResult.atsScore}% of industry benchmarks.
-                    </p>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="p-4 glass rounded-2xl border-white/5">
+                        <p className="text-[8px] uppercase font-bold text-white/30 tracking-widest mb-1">Match Index</p>
+                        <p className="text-xl font-bold text-accent">{auditResult.roleMatch.matchPercentage}%</p>
+                      </div>
+                      <div className="p-4 glass rounded-2xl border-white/5">
+                        <p className="text-[8px] uppercase font-bold text-white/30 tracking-widest mb-1">Hiring Risk</p>
+                        <p className={`text-xl font-bold ${auditResult.hiringRisk.missingNumbers ? 'text-red-400' : 'text-green-400'}`}>{auditResult.hiringRisk.missingNumbers ? 'High' : 'Low'}</p>
+                      </div>
+                    </div>
                   </div>
                 </Card>
 
-                <Card className="premium-card bg-white/[0.01] border-white/5 p-8">
-                  <h3 className="text-xl font-bold mb-8 flex items-center gap-3"><Globe className="w-5 h-5 text-accent" /> Company Readiness</h3>
-                  <div className="space-y-6">
-                    {Object.entries(auditResult.companyPrediction).map(([company, percent], i) => (
-                      <div key={i} className="space-y-2">
-                        <div className="flex justify-between items-end">
-                          <span className="text-xs font-bold text-white/70 uppercase tracking-widest">{company}</span>
-                          <span className="text-sm font-bold text-accent">{percent}%</span>
-                        </div>
-                        <div className="h-1 bg-white/5 rounded-full overflow-hidden">
-                          <motion.div initial={{ width: 0 }} animate={{ width: `${percent}%` }} className="h-full bg-accent" />
-                        </div>
+                <Card className="premium-card bg-red-500/[0.02] border-red-500/10 p-8">
+                  <h3 className="text-red-400 font-bold mb-6 flex items-center gap-3"><ShieldAlert className="w-5 h-5" /> Risk Audit Log</h3>
+                  <div className="space-y-4">
+                    {auditResult.hiringRisk.weakSections.map((s, i) => (
+                      <div key={i} className="flex gap-3 text-xs font-light text-white/60">
+                        <AlertCircle className="w-3.5 h-3.5 text-red-400 shrink-0" /> {s}
                       </div>
                     ))}
+                    <p className="text-[10px] italic text-muted-foreground mt-4 border-t border-white/5 pt-4">"{auditResult.hiringRisk.riskSummary}"</p>
                   </div>
                 </Card>
               </div>
 
               <div className="lg:col-span-8 space-y-8">
-                <Tabs defaultValue="overview" className="w-full">
+                <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
                   <TabsList className="glass border-white/5 p-2 rounded-2xl h-auto bg-white/[0.01] mb-8">
-                    {["overview", "rewrites", "skills", "formatting"].map(tab => (
+                    {["overview", "projects", "skills", "roadmap", "prep"].map(tab => (
                       <TabsTrigger key={tab} value={tab} className="data-[state=active]:bg-accent data-[state=active]:text-black h-12 px-8 rounded-xl font-bold text-[10px] uppercase tracking-widest">
                         {tab}
                       </TabsTrigger>
@@ -395,137 +286,145 @@ export default function ResumeAnalysisPage() {
                   </TabsList>
 
                   <TabsContent value="overview" className="space-y-8">
+                    <Card className="premium-card bg-white/[0.01] border-white/5 p-10">
+                      <h3 className="text-xl font-bold mb-8 flex items-center gap-3"><BarChart3 className="w-6 h-6 text-accent" /> ATS Deduction Matrix</h3>
+                      <div className="space-y-6">
+                        {auditResult.atsAnalysis.deductions.map((d, i) => (
+                          <div key={i} className="p-6 glass rounded-2xl border-white/5 flex justify-between items-center gap-8">
+                            <div className="space-y-1">
+                              <p className="text-sm font-bold uppercase tracking-widest">{d.category}</p>
+                              <p className="text-xs text-muted-foreground font-light">{d.explanation}</p>
+                            </div>
+                            <div className="text-red-400 font-bold tabular-nums">-{d.deduction}</div>
+                          </div>
+                        ))}
+                      </div>
+                    </Card>
+
                     <div className="grid md:grid-cols-2 gap-8">
                       <Card className="premium-card bg-green-500/[0.02] border-green-500/10 p-8">
-                        <h3 className="text-green-400 font-bold mb-6 flex items-center gap-3"><CheckCircle2 className="w-5 h-5" /> Intelligence Strengths</h3>
-                        <div className="space-y-4">
-                          {auditResult.strengths.map((s, i) => (
-                            <div key={i} className="flex gap-3 text-sm font-light text-white/70">
-                              <div className="w-1.5 h-1.5 rounded-full bg-green-400 mt-2 shrink-0" /> {s}
-                            </div>
-                          ))}
+                        <h3 className="text-green-400 font-bold mb-6 flex items-center gap-3"><CheckCircle2 className="w-5 h-5" /> Strong Vectors</h3>
+                        <div className="flex flex-wrap gap-2">
+                          {auditResult.skillAudit.strong.map((s, i) => <Badge key={i} className="bg-green-400/10 text-green-400 border-green-400/20">{s}</Badge>)}
                         </div>
                       </Card>
-                      <Card className="premium-card bg-red-500/[0.02] border-red-500/10 p-8">
-                        <h3 className="text-red-400 font-bold mb-6 flex items-center gap-3"><AlertCircle className="w-5 h-5" /> Critical Weaknesses</h3>
-                        <div className="space-y-4">
-                          {auditResult.weaknesses.map((w, i) => (
-                            <div key={i} className="flex gap-3 text-sm font-light text-white/70">
-                              <div className="w-1.5 h-1.5 rounded-full bg-red-400 mt-2 shrink-0" /> {w}
-                            </div>
-                          ))}
+                      <Card className="premium-card bg-purple-500/[0.02] border-purple-500/10 p-8">
+                        <h3 className="text-purple-400 font-bold mb-6 flex items-center gap-3"><Target className="w-5 h-5" /> Recommended Nodes</h3>
+                        <div className="flex flex-wrap gap-2">
+                          {auditResult.roleMatch.recommendedTechnologies.map((s, i) => <Badge key={i} className="bg-purple-400/10 text-purple-400 border-purple-400/20">{s}</Badge>)}
                         </div>
                       </Card>
                     </div>
-
-                    <Card className="premium-card bg-white/[0.01] border-white/5 p-10">
-                      <h3 className="text-xl font-bold mb-8">Vector Calibration</h3>
-                      <div className="grid md:grid-cols-2 gap-10">
-                        {Object.entries(auditResult.skillsScore).map(([label, score], i) => (
-                          <div key={i} className="space-y-4">
-                            <div className="flex justify-between items-center text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                              <span>{label} Node</span>
-                              <span className="text-white">{score}%</span>
-                            </div>
-                            <Progress value={score} className="h-1.5" />
-                          </div>
-                        ))}
-                      </div>
-                    </Card>
-
-                    <Card className="premium-card bg-purple-500/[0.02] border-purple-500/10 p-10">
-                      <h3 className="text-xl font-bold mb-6 text-purple-400 flex items-center gap-3"><Target className="w-6 h-6" /> Missing Intelligence Keywords</h3>
-                      <div className="flex flex-wrap gap-3">
-                        {auditResult.missingKeywords.map((k, i) => (
-                          <Badge key={i} variant="outline" className="border-purple-500/20 text-purple-400 bg-purple-500/5 px-4 py-2 rounded-xl text-[10px] font-bold uppercase tracking-widest">
-                            {k}
-                          </Badge>
-                        ))}
-                      </div>
-                    </Card>
                   </TabsContent>
 
-                  <TabsContent value="rewrites" className="space-y-8">
-                    <Card className="premium-card bg-white/[0.01] border-white/5 p-10">
-                      <header className="flex justify-between items-center mb-10">
-                        <h3 className="text-2xl font-bold">Neural Narrative Optimizer</h3>
-                        <div className="flex gap-4">
-                          <Button onClick={downloadImprovedPDF} className="btn-premium h-12 px-6 text-[10px] uppercase font-bold tracking-widest"><Download className="w-4 h-4 mr-2" /> Export Optimized</Button>
+                  <TabsContent value="projects" className="space-y-8">
+                    {auditResult.projectAnalysis.map((p, i) => (
+                      <Card key={i} className="premium-card bg-white/[0.01] border-white/5 p-10 space-y-8">
+                        <div className="flex justify-between items-start">
+                          <div className="space-y-2">
+                            <h3 className="text-3xl font-bold tracking-tight text-white">{p.name}</h3>
+                            <div className="flex gap-2">
+                              {p.technologiesUsed.map((t, j) => <Badge key={j} variant="outline" className="text-[8px] border-white/10 uppercase tracking-widest">{t}</Badge>)}
+                            </div>
+                          </div>
+                          <Badge className="bg-accent/20 text-accent border-none font-bold text-[10px] tracking-widest px-4 py-1">{p.complexity} Complexity</Badge>
                         </div>
-                      </header>
-
-                      <div className="space-y-12">
-                        <section className="space-y-6">
-                          <h4 className="text-[10px] font-bold uppercase tracking-[0.4em] text-accent">Professional Summary Audit</h4>
-                          <div className="grid md:grid-cols-2 gap-6">
-                            <div className="p-6 glass rounded-2xl text-xs font-light text-white/40 italic">
-                              <span className="block mb-2 font-bold uppercase tracking-widest">Current</span>
-                              "{auditResult.summaryImprovement.current}"
-                            </div>
-                            <div className="p-6 glass rounded-2xl border-accent/20 bg-accent/5 text-sm font-light text-white">
-                              <span className="block mb-2 font-bold uppercase tracking-widest text-accent flex items-center gap-2"><Zap className="w-3 h-3" /> Improved</span>
-                              "{auditResult.summaryImprovement.improved}"
-                            </div>
-                          </div>
-                        </section>
-
-                        <section className="space-y-6">
-                          <h4 className="text-[10px] font-bold uppercase tracking-[0.4em] text-accent">Experience Node Refinements</h4>
+                        <div className="grid md:grid-cols-2 gap-12">
                           <div className="space-y-6">
-                            {auditResult.experienceSuggestions.map((s, i) => (
-                              <div key={i} className="p-8 glass rounded-3xl space-y-4">
-                                <p className="text-xs font-light text-white/30 line-through">"{s.original}"</p>
-                                <p className="text-lg font-bold text-white leading-tight">"{s.improved}"</p>
-                                <div className="flex items-center gap-3 text-accent text-[9px] font-bold uppercase tracking-widest">
-                                  <TrendingUp className="w-3 h-3" /> {s.reasons}
-                                </div>
-                              </div>
-                            ))}
+                            <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Architectural Purpose</p>
+                            <p className="text-sm font-light text-white/80 leading-relaxed">{p.purpose}</p>
+                            <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mt-6">Real-World Impact</p>
+                            <p className="text-sm font-light text-accent/80 leading-relaxed italic">"{p.realWorldImpact}"</p>
                           </div>
-                        </section>
-                      </div>
-                    </Card>
+                          <div className="space-y-6">
+                            <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Simulation Probes</p>
+                            <div className="space-y-3">
+                              {p.possibleInterviewQuestions.map((q, j) => (
+                                <div key={j} className="flex gap-3 text-xs font-light text-white/60 leading-relaxed">
+                                  <ChevronRight className="w-3.5 h-3.5 text-accent shrink-0 mt-0.5" /> {q}
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        </div>
+                      </Card>
+                    ))}
                   </TabsContent>
 
                   <TabsContent value="skills" className="space-y-8">
-                    <div className="grid md:grid-cols-3 gap-8">
-                      {Object.entries(auditResult.skillsSuggestions).map(([category, skills], i) => (
-                        <Card key={i} className="premium-card bg-white/[0.01] border-white/5 p-8">
-                          <h3 className="text-[10px] font-bold uppercase tracking-[0.4em] text-accent mb-6">{category} Path</h3>
-                          <div className="space-y-3">
-                            {skills.map((s, j) => (
-                              <div key={j} className="flex items-center gap-3 text-sm font-light text-white/70">
-                                <div className="w-1.5 h-1.5 rounded-full bg-accent" /> {s}
-                              </div>
-                            ))}
-                          </div>
-                        </Card>
-                      ))}
+                    <div className="grid md:grid-cols-2 gap-8">
+                      {["Strong", "Intermediate", "Beginner", "Missing", "Outdated", "Most Valuable"].map(cat => {
+                        const key = cat.toLowerCase().replace(' ', '') as keyof typeof auditResult.skillAudit;
+                        const skills = (auditResult.skillAudit as any)[key] as string[];
+                        if (!skills) return null;
+                        return (
+                          <Card key={cat} className="premium-card bg-white/[0.01] border-white/5 p-8">
+                            <h3 className="text-[10px] font-bold uppercase tracking-[0.4em] text-accent mb-6">{cat} Vectors</h3>
+                            <div className="flex flex-wrap gap-2">
+                              {skills.map((s, i) => (
+                                <Badge key={i} variant="outline" className="bg-white/5 border-white/10 px-3 py-1.5 text-[10px] font-bold text-white/70">
+                                  {s}
+                                </Badge>
+                              ))}
+                            </div>
+                          </Card>
+                        );
+                      })}
                     </div>
                   </TabsContent>
 
-                  <TabsContent value="formatting" className="space-y-8">
+                  <TabsContent value="roadmap" className="space-y-8">
                     <Card className="premium-card bg-white/[0.01] border-white/5 p-10">
-                      <h3 className="text-xl font-bold mb-8 flex items-center gap-3"><ShieldCheck className="w-6 h-6 text-accent" /> ATS Formatting Scan</h3>
-                      <div className="grid md:grid-cols-2 gap-8">
-                        {auditResult.formattingIssues.map((issue, i) => (
-                          <div key={i} className="flex gap-4 p-6 glass rounded-2xl border-red-500/10 bg-red-500/[0.02]">
-                            <AlertTriangle className="w-6 h-6 text-red-400 shrink-0" />
-                            <div>
-                              <p className="font-bold text-sm mb-1">{issue}</p>
-                              <p className="text-[10px] text-muted-foreground uppercase tracking-widest">Detected during neural parse</p>
+                      <h3 className="text-xl font-bold mb-10 flex items-center gap-3"><Map className="w-6 h-6 text-accent" /> 90-Day Evolution Pathway</h3>
+                      <div className="space-y-6">
+                        {auditResult.careerEvolution.map((node, i) => (
+                          <div key={i} className="p-8 glass rounded-[2.5rem] border-white/5 relative overflow-hidden group hover:bg-white/[0.03] transition-all">
+                            <div className="absolute top-0 right-0 p-8">
+                              <Badge className={`${node.priority === 'P0' ? 'bg-red-500/20 text-red-400' : 'bg-orange-500/20 text-orange-400'} border-none font-black`}>
+                                {node.priority}
+                              </Badge>
+                            </div>
+                            <div className="flex gap-8">
+                              <div className="w-12 h-12 rounded-2xl bg-white/5 flex items-center justify-center text-accent shrink-0">
+                                <Code2 className="w-6 h-6" />
+                              </div>
+                              <div className="space-y-2">
+                                <h4 className="text-xl font-bold text-white">{node.topic}</h4>
+                                <div className="flex gap-6 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                                  <span className="flex items-center gap-2"><Clock className="w-3 h-3" /> {node.estimatedTime}</span>
+                                  <span className="flex items-center gap-2"><TrendingUp className="w-3 h-3" /> {node.expectedImpact}</span>
+                                </div>
+                              </div>
                             </div>
                           </div>
                         ))}
-                        {auditResult.formattingIssues.length === 0 && (
-                          <div className="col-span-2 py-12 text-center">
-                            <CheckCircle2 className="w-12 h-12 text-green-400 mx-auto mb-4" />
-                            <p className="text-lg font-bold">Protocol Structure Optimal</p>
-                            <p className="text-sm text-muted-foreground">No formatting bottlenecks detected by the ATS parser.</p>
-                          </div>
-                        )}
                       </div>
                     </Card>
+                  </TabsContent>
+
+                  <TabsContent value="prep" className="space-y-8">
+                    <div className="grid md:grid-cols-2 gap-8">
+                      <Card className="premium-card bg-white/[0.01] border-white/5 p-8">
+                        <h3 className="text-[10px] font-bold uppercase tracking-[0.4em] text-accent mb-6">Technical Nodes (10)</h3>
+                        <div className="space-y-4">
+                          {auditResult.interviewPreparation.technicalQuestions.map((q, i) => (
+                            <div key={i} className="p-4 glass rounded-xl border-white/5 text-xs font-light text-white/70 leading-relaxed flex gap-3">
+                              <span className="text-accent font-bold">{i+1}.</span> {q}
+                            </div>
+                          ))}
+                        </div>
+                      </Card>
+                      <Card className="premium-card bg-white/[0.01] border-white/5 p-8">
+                        <h3 className="text-[10px] font-bold uppercase tracking-[0.4em] text-purple-400 mb-6">Simulation Scenarios (5)</h3>
+                        <div className="space-y-4">
+                          {auditResult.interviewPreparation.scenarioQuestions.map((q, i) => (
+                            <div key={i} className="p-4 glass rounded-xl border-white/5 text-xs font-light text-white/70 leading-relaxed flex gap-3">
+                              <span className="text-purple-400 font-bold">{i+1}.</span> {q}
+                            </div>
+                          ))}
+                        </div>
+                      </Card>
+                    </div>
                   </TabsContent>
                 </Tabs>
               </div>
@@ -536,3 +435,4 @@ export default function ResumeAnalysisPage() {
     </div>
   );
 }
+

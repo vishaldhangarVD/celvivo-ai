@@ -1,68 +1,101 @@
-
 'use server';
 /**
- * @fileOverview Nexvoro AI Deep Resume Auditor.
+ * @fileOverview Nexvoro AI Master Resume Intelligence Engine.
  * Conducts a multi-dimensional high-fidelity audit of professional documents.
- * Produces structured intelligence for scoring, rewriting, and predictive matching.
- * Includes automatic retry on validation failure and a deterministic fallback engine.
+ * Produces structured intelligence for scoring, risk assessment, and prep.
  */
 
 import { ai, runWithResilience } from '@/ai/genkit';
 import { z } from 'genkit';
 
+const ProjectDeepAnalysisSchema = z.object({
+  name: z.string(),
+  technologiesUsed: z.array(z.string()),
+  purpose: z.string(),
+  complexity: z.enum(['Low', 'Medium', 'High', 'Expert']),
+  realWorldImpact: z.string(),
+  possibleInterviewQuestions: z.array(z.string()),
+  weakAreas: z.array(z.string()),
+  strongAreas: z.array(z.string()),
+  confidenceLevel: z.number().min(0).max(100),
+});
+
+const ResumeDeepAuditOutputSchema = z.object({
+  candidateIdentity: z.object({
+    name: z.string(),
+    yearsOfExperience: z.number(),
+    education: z.array(z.string()),
+    leadershipExperience: z.array(z.string()),
+    links: z.object({
+      github: z.string().optional(),
+      portfolio: z.string().optional(),
+      linkedin: z.string().optional(),
+    }),
+  }),
+  projectAnalysis: z.array(ProjectDeepAnalysisSchema),
+  skillAudit: z.object({
+    strong: z.array(z.string()),
+    intermediate: z.array(z.string()),
+    beginner: z.array(z.string()),
+    missing: z.array(z.string()),
+    outdated: z.array(z.string()),
+    mostValuable: z.array(z.string()),
+  }),
+  atsAnalysis: z.object({
+    overallScore: z.number().min(0).max(100),
+    formattingScore: z.number(),
+    keywordScore: z.number(),
+    achievementScore: z.number(),
+    actionVerbScore: z.number(),
+    deductions: z.array(z.object({
+      category: z.string(),
+      deduction: z.number(),
+      explanation: z.string(),
+    })),
+  }),
+  roleMatch: z.object({
+    matchPercentage: z.number(),
+    missingTechnologies: z.array(z.string()),
+    recommendedTechnologies: z.array(z.string()),
+  }),
+  interviewPreparation: z.object({
+    technicalQuestions: z.array(z.string()).length(10),
+    hrQuestions: z.array(z.string()).length(5),
+    projectQuestions: z.array(z.string()).length(5),
+    scenarioQuestions: z.array(z.string()).length(5),
+  }),
+  hiringRisk: z.object({
+    weakSections: z.array(z.string()),
+    questionableClaims: z.array(z.string()),
+    unclearProjects: z.array(z.string()),
+    missingNumbers: z.boolean(),
+    missingAchievements: z.boolean(),
+    riskSummary: z.string(),
+  }),
+  improvementRoadmap: z.object({
+    resume: z.array(z.string()),
+    projects: z.array(z.string()),
+    skills: z.array(z.string()),
+    certifications: z.array(z.string()),
+    portfolio: z.array(z.string()),
+  }),
+  careerEvolution: z.array(z.object({
+    topic: z.string(),
+    priority: z.enum(['P0', 'P1', 'P2']),
+    estimatedTime: z.string(),
+    expectedImpact: z.string(),
+  })),
+  isOffline: z.boolean().optional().default(false),
+});
+
+export type ResumeDeepAuditOutput = z.infer<typeof ResumeDeepAuditOutputSchema>;
+
 const ResumeDeepAuditInputSchema = z.object({
   resumeDataUri: z.string().describe("Base64 encoded resume file data URI."),
   targetRole: z.string().optional().default("Software Engineer"),
 });
-export type ResumeDeepAuditInput = z.infer<typeof ResumeDeepAuditInputSchema>;
 
-const ResumeDeepAuditOutputSchema = z.object({
-  atsScore: z.number().min(0).max(100),
-  strengths: z.array(z.string()),
-  weaknesses: z.array(z.string()),
-  missingKeywords: z.array(z.string()),
-  skillsScore: z.object({
-    technical: z.number().min(0).max(100),
-    soft: z.number().min(0).max(100),
-    projects: z.number().min(0).max(100),
-    experience: z.number().min(0).max(100),
-    education: z.number().min(0).max(100),
-    atsFormatting: z.number().min(0).max(100),
-  }),
-  summaryImprovement: z.object({
-    current: z.string(),
-    improved: z.string(),
-  }),
-  experienceSuggestions: z.array(z.object({
-    original: z.string(),
-    improved: z.string(),
-    reasons: z.string(),
-  })),
-  projectSuggestions: z.array(z.object({
-    name: z.string(),
-    original: z.string(),
-    improved: z.string(),
-    metricsAdded: z.string(),
-  })),
-  skillsSuggestions: z.object({
-    technical: z.array(z.string()),
-    soft: z.array(z.string()),
-    certifications: z.array(z.string()),
-  }),
-  formattingIssues: z.array(z.string()),
-  companyPrediction: z.record(z.string(), z.number()),
-  finalFeedback: z.string(),
-  improvedResume: z.object({
-    summary: z.string(),
-    experience: z.array(z.string()),
-    projects: z.array(z.string()),
-    skills: z.array(z.string()),
-  }),
-  isOffline: z.boolean().optional().default(false),
-});
-export type ResumeDeepAuditOutput = z.infer<typeof ResumeDeepAuditOutputSchema>;
-
-export async function deepAuditResume(input: ResumeDeepAuditInput): Promise<ResumeDeepAuditOutput> {
+export async function deepAuditResume(input: z.infer<typeof ResumeDeepAuditInputSchema>): Promise<ResumeDeepAuditOutput> {
   return resumeDeepAuditFlow(input);
 }
 
@@ -70,80 +103,95 @@ const prompt = ai.definePrompt({
   name: 'resumeDeepAuditPrompt',
   input: { schema: ResumeDeepAuditInputSchema },
   output: { schema: ResumeDeepAuditOutputSchema },
-  prompt: `You are an elite AI HR Auditor and ATS Expert at a Tier-1 Tech Firm.
-Your mission is to conduct a multi-dimensional neural audit of the provided resume against the requirements for a "{{{targetRole}}}".
+  prompt: `You are the Nexvoro AI Resume Intelligence Engine. 
+You are NOT an ATS scanner; you are a Senior Technical Recruiter, Engineering Manager, and Career Coach.
+Deeply analyze the resume against the target role: "{{{targetRole}}}".
 
-INSTRUCTIONS:
-1. Deeply analyze the resume content provided in the media part.
-2. Calculate a precise ATS Score (0-100).
-3. Identify exactly which keywords are missing for a top-tier "{{{targetRole}}}".
-4. Provide comprehensive improvements for every experience node and project node. 
-5. Use measurable achievements and action verbs in improved versions.
-6. Predict match percentages for major companies (Google, Amazon, Microsoft, Meta, IBM, etc.).
-7. Generate an "improvedResume" object that contains rewritten, ATS-optimized content.
+CORE PROTOCOL:
+- Never guess. If information is missing, state it clearly in the Hiring Risk or Identity nodes.
+- Audits must be rigorous. Deduct ATS points for missing metrics (%, $, time) or weak action verbs.
+- Identify "Outdated Skills" based on current 2024+ industry standards.
+- Generate interview questions anchored ONLY in the resume content.
 
-REWRITE RULES:
-- Focus on IMPACT, not just tasks.
-- Include metrics (%, $, time) where implied.
-- Use professional engineering terminology.
+PROJECT ANALYSIS:
+- For every project, determine its architectural complexity and real-world impact.
+- Provide a confidence level for each project based on the detail provided.
 
-Resume Document: {{media url=resumeDataUri}}`,
+SKILL AUDIT:
+- Segment skills by proficiency.
+- Identify "Most Valuable Skills" relative to the target role.
+
+RETURN ONLY VALID JSON.`,
 });
 
 function getFallbackAudit(targetRole: string): ResumeDeepAuditOutput {
-  console.warn('[AUDIT FALLBACK] Generating deterministic intelligence nodes.');
   return {
-    atsScore: 68,
-    strengths: ["Strong technical core detected", "Effective section hierarchy"],
-    weaknesses: ["Missing quantified impact metrics", "Keyword density below Tier-1 threshold"],
-    missingKeywords: ["Distributed Systems", "Cloud-Native Architecture", "Kubernetes", "CI/CD Pipelines"],
-    skillsScore: {
-      technical: 75,
-      soft: 80,
-      projects: 60,
-      experience: 65,
-      education: 90,
-      atsFormatting: 85
+    candidateIdentity: {
+      name: "DETERMINISTIC_ENTITY",
+      yearsOfExperience: 5,
+      education: ["B.S. Computer Science"],
+      leadershipExperience: ["Team Lead Node"],
+      links: {}
     },
-    summaryImprovement: {
-      current: "Experienced professional seeking opportunities in tech.",
-      improved: "Strategic Software Engineer specialized in architecting scalable distributed systems and optimizing high-throughput API layers for global enterprise applications."
+    projectAnalysis: [{
+      name: "Core Scaling Engine",
+      technologiesUsed: ["React", "Go"],
+      purpose: "Infrastructure optimization",
+      complexity: "High",
+      realWorldImpact: "Reduced latency by 40%",
+      possibleInterviewQuestions: ["How did you handle the state transition?"],
+      weakAreas: ["Security documentation"],
+      strongAreas: ["Concurrency logic"],
+      confidenceLevel: 85
+    }],
+    skillAudit: {
+      strong: ["TypeScript", "React"],
+      intermediate: ["Docker"],
+      beginner: ["Rust"],
+      missing: ["AWS", "CI/CD"],
+      outdated: ["jQuery"],
+      mostValuable: ["System Design"]
     },
-    experienceSuggestions: [
-      {
-        original: "Responsible for developing the frontend using React.",
-        improved: "Engineered 12+ modular React components using TypeScript, achieving a 40% reduction in client-side bundle size and improving lighthouse scores by 25 points.",
-        reasons: "Added measurable KPIs and specific technology depth."
-      }
-    ],
-    projectSuggestions: [
-      {
-        name: "Cloud Project",
-        original: "Built a deployment tool.",
-        improved: "Architected an automated CI/CD pipeline using GitHub Actions and AWS Lambda, reducing deployment lead time from 2 hours to 8 minutes.",
-        metricsAdded: "93% reduction in deployment latency"
-      }
-    ],
-    skillsSuggestions: {
-      technical: ["Next.js", "Redis", "Kafka", "Docker"],
-      soft: ["Cross-functional Leadership", "Architectural Decision Making"],
-      certifications: ["AWS Solutions Architect", "CKAD"]
+    atsAnalysis: {
+      overallScore: 68,
+      formattingScore: 80,
+      keywordScore: 65,
+      achievementScore: 60,
+      actionVerbScore: 70,
+      deductions: [{ category: "Achievements", deduction: 15, explanation: "Missing quantifiable metrics in 3/4 projects." }]
     },
-    formattingIssues: ["Consider increasing line spacing in experience sections for readability."],
-    companyPrediction: {
-      "Google": 45,
-      "Amazon": 62,
-      "Microsoft": 58,
-      "Accenture": 82,
-      "TCS": 88
+    roleMatch: {
+      matchPercentage: 72,
+      missingTechnologies: ["Cloud Native"],
+      recommendedTechnologies: ["Terraform"]
     },
-    finalFeedback: "Your profile is solid for mid-market firms but requires significant quantification of achievements to pass elite Big Tech filters. Focus on adding exact percentages to your impact nodes.",
-    improvedResume: {
-      summary: "High-performance engineer focused on cloud-native excellence.",
-      experience: ["Lead Developer at Tech Hub: Optimized database indexing, resulting in a 50% faster query execution time across 1M+ records."],
-      projects: ["Neural Pulse: AI-driven telemetry dashboard built with Genkit and Gemini."],
-      skills: ["React", "TypeScript", "Go", "AWS", "Terraform"]
+    interviewPreparation: {
+      technicalQuestions: Array(10).fill("Tell me about your approach to architecture."),
+      hrQuestions: Array(5).fill("Why this role?"),
+      projectQuestions: Array(5).fill("Walk me through your scaling project."),
+      scenarioQuestions: Array(5).fill("How do you handle a production crash?")
     },
+    hiringRisk: {
+      weakSections: ["Certifications"],
+      questionableClaims: ["None detected"],
+      unclearProjects: ["Minor project 2"],
+      missingNumbers: true,
+      missingAchievements: false,
+      riskSummary: "Profile is strong but lacks quantifiable evidence of impact."
+    },
+    improvementRoadmap: {
+      resume: ["Add metrics"],
+      projects: ["Open source the core"],
+      skills: ["Learn AWS"],
+      certifications: ["Solutions Architect"],
+      portfolio: ["Add live demos"]
+    },
+    careerEvolution: [{
+      topic: "Cloud Architecture",
+      priority: "P0",
+      estimatedTime: "30 days",
+      expectedImpact: "High"
+    }],
     isOffline: true
   };
 }
@@ -155,28 +203,13 @@ const resumeDeepAuditFlow = ai.defineFlow(
     outputSchema: ResumeDeepAuditOutputSchema,
   },
   async (input) => {
-    console.log('[Flow] Initializing Deep Audit for:', input.targetRole);
-    
-    // Internal Retry Logic for Validation/Model Flakiness
-    for (let attempt = 1; attempt <= 2; attempt++) {
-      try {
-        console.log(`[Flow] Execution Attempt ${attempt}/2...`);
-        const { output } = await runWithResilience(prompt, input);
-        
-        if (output) {
-          console.log('[Flow] Neural Synthesis Successful.');
-          return {
-            ...output,
-            isOffline: false
-          };
-        }
-      } catch (error: any) {
-        console.warn(`[Flow] Attempt ${attempt} failed:`, error.message || error);
-        if (attempt === 2) break;
-      }
+    try {
+      const { output } = await runWithResilience(prompt, input);
+      if (output) return { ...output, isOffline: false };
+      return getFallbackAudit(input.targetRole);
+    } catch (error) {
+      console.error('[Engine] Critical Fault:', error);
+      return getFallbackAudit(input.targetRole);
     }
-
-    console.error('[Flow] All attempts exhausted. Reverting to fallback protocol.');
-    return getFallbackAudit(input.targetRole || "Software Engineer");
   }
 );
