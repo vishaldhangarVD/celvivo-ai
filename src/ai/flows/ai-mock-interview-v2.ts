@@ -1,8 +1,8 @@
 'use server';
 /**
- * @fileOverview Nexvoro AI Virtual Interview Agent (Elite Senior Interviewer v45.0).
+ * @fileOverview Nexvoro AI Virtual Interview Agent (Elite Senior Interviewer v46.0).
  * Calibrated for zero-chatbot behavior. Mimics a Lead Engineer at a Tier-1 tech firm.
- * Implements high-fidelity memory, performance-aware probing, and adaptive difficulty.
+ * Implements firm-specific questioning styles (Google, Amazon, Microsoft, TCS, Startups).
  */
 
 import { ai, runWithResilience } from '@/ai/genkit';
@@ -69,6 +69,14 @@ CRITICAL PERSONA RULES:
 - DO NOT TEACH. DO NOT EXPLAIN. ONLY INTERVIEW.
 - KEEP QUESTIONS SHORT AND SHARP.
 
+FIRM-SPECIFIC QUESTIONING STYLE ({{{targetCompany}}}):
+- If Google: Focus on System Design, Scalability, and deep DSA. Constantly ask "Why" and demand rigorous Trade-off analysis.
+- If Amazon: Incorporate Leadership Principles. Focus on Ownership and Customer Obsession.
+- If Microsoft: Focus on System Architecture, clean modular patterns, and Clean Code standards.
+- If TCS: Focus on Core Engineering Concepts (OOP, SQL, DBMS) and walkthroughs of their specific Projects.
+- If Startup: Focus on Practical implementation, Fast Development cycles, and impact in Real Projects.
+- If other: Default to a high-fidelity Senior Engineering assessment focusing on performance and scalability.
+
 CANDIDATE INTELLIGENCE DOSSIER:
 - Resume Summary: {{{resumeSummary}}}
 - Skills: {{#each resumeSkills}}{{{this}}}, {{/each}}
@@ -99,7 +107,7 @@ STRATEGIC DIRECTIVES:
 
 INTERVIEW PROTOCOL:
 - Node 1: Start with a professional introduction and ask about a specific technical node in their resume.
-- Nodes 2-14: Technical deep-dives, scenario-based system design, and role-specific challenges.
+- Nodes 2-14: Technical deep-dives, scenario-based system design, and behavioral probes aligned with {{{targetCompany}}}'s specific profile.
 - Node 15: Professional closing. Set isInterviewComplete to true.
 
 Output only the ONE next question in valid JSON.`,

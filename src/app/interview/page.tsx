@@ -62,7 +62,8 @@ import {
   AlertCircle,
   Home,
   ArrowLeft,
-  Terminal as DevIcon
+  Terminal as DevIcon,
+  Rocket
 } from 'lucide-react';
 import { 
   AlertDialog,
@@ -121,7 +122,7 @@ const EXPERIENCE_OPTIONS = [
   { id: '5+', label: '5+ Years', desc: 'Expert / Lead grade', icon: Target },
 ];
 
-const COMPANIES = ["Google", "Amazon", "Microsoft", "Meta", "TCS", "Infosys", "Wipro", "Accenture", "Deloitte"];
+const COMPANIES = ["Google", "Amazon", "Microsoft", "Meta", "TCS", "Infosys", "Startup", "Accenture", "Deloitte"];
 
 const INTERVIEW_STEPS = [
   { id: 1, title: 'Job Role', icon: Briefcase },
