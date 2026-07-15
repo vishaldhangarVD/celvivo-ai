@@ -38,8 +38,13 @@ export default function LandingPage() {
 
   if (authLoading) return <div className="min-h-screen bg-[#050816] flex items-center justify-center"><Loader2 className="w-12 h-12 text-accent animate-spin" /></div>;
 
+  const companies = [
+    "Google", "Microsoft", "Amazon", "Meta", "Oracle", 
+    "IBM", "Cisco", "TCS", "Tata Consultancy Services", "Infosys"
+  ];
+
   return (
-    <div className="flex flex-col h-screen relative overflow-hidden bg-[#050816]">
+    <div className="flex flex-col min-h-screen relative overflow-x-hidden bg-[#050816]">
       {/* Dynamic Background Elements */}
       <div className="particles-bg" />
       <div className="absolute top-[-10%] right-[-5%] w-[500px] h-[500px] bg-purple-600/10 rounded-full blur-[120px] pointer-events-none" />
@@ -47,9 +52,9 @@ export default function LandingPage() {
       
       <Navbar />
       
-      <section className="relative flex-1 flex items-center justify-center pt-12 px-8">
+      <section className="relative flex flex-col items-center justify-center pt-32 pb-16 px-8">
         <div className="container mx-auto max-w-7xl">
-          <div className="grid lg:grid-cols-2 items-center gap-12 lg:gap-16">
+          <div className="grid lg:grid-cols-2 items-center gap-12 lg:gap-16 mb-12">
             
             {/* Left Content Section */}
             <motion.div 
@@ -187,7 +192,7 @@ export default function LandingPage() {
                       fill
                       priority
                       sizes="(max-width:768px)100vw,40vw"
-                      className="object-cover object-center w-full h-full transition-all duration-700 group-hover:scale-105"
+                      className="object-cover object-[65%_center] scale-[1.10]"
                     />
 
                     {/* Premium Light Effect */}
@@ -203,6 +208,35 @@ export default function LandingPage() {
               </Card>
             </motion.div>
           </div>
+
+          {/* Trusted Companies Section */}
+          <motion.div 
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.8, delay: 0.4 }}
+            className="mt-12 mb-16"
+          >
+            <div className="text-center mb-8">
+              <p className="text-[10px] font-bold tracking-[0.4em] uppercase text-white/60">
+                TRUSTED BY TOP COMPANIES WORLDWIDE
+              </p>
+            </div>
+            
+            <div className="glass rounded-[2rem] border-white/5 py-10 px-8 flex flex-wrap items-center justify-center gap-x-12 gap-y-10">
+              {companies.map((company, i) => (
+                <motion.div
+                  key={i}
+                  whileHover={{ scale: 1.1, opacity: 1 }}
+                  className="opacity-55 cursor-default transition-all hover:text-accent hover:drop-shadow-[0_0_12px_rgba(34,211,238,0.5)]"
+                >
+                  <span className="text-sm font-bold tracking-widest uppercase text-white hover:text-accent">
+                    {company}
+                  </span>
+                </motion.div>
+              ))}
+            </div>
+          </motion.div>
         </div>
       </section>
     </div>
