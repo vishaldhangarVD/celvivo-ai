@@ -3,7 +3,6 @@ import { Suspense, useEffect, useState, useRef, useMemo } from "react";
 import { useRouter, useParams, useSearchParams } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { 
   Loader2, 
@@ -70,16 +69,8 @@ function VirtualArenaContent() {
   useEffect(() => {
     if (videoRef.current && activeMediaStream) {
       if (videoRef.current.srcObject !== activeMediaStream) {
-        console.log("[WebRTC Sync] Re-attaching MediaStream to video element...");
         videoRef.current.srcObject = activeMediaStream;
-        
         videoRef.current.onloadedmetadata = () => {
-          console.log("[WebRTC Telemetry]", {
-            dimensions: `${videoRef.current?.videoWidth}x${videoRef.current?.videoHeight}`,
-            readyState: videoRef.current?.readyState,
-            paused: videoRef.current?.paused,
-            streamActive: activeMediaStream.active
-          });
           videoRef.current?.play().catch(e => console.error("[WebRTC Play Failure]", e));
         };
       }
@@ -132,11 +123,9 @@ function VirtualArenaContent() {
         auth: { type: 'key', clientKey: clientKey },
         callbacks: {
           onSrcObjectReady: (stream: MediaStream) => {
-             console.log("[D-ID] MediaStream Ready");
              setActiveMediaStream(stream);
           },
           onConnectionStateChange: (state: string) => {
-            console.log("[D-ID] Connection State:", state);
             setIsAgentConnected(state === "connected");
             if (state === "disconnected") setActiveMediaStream(null);
           },

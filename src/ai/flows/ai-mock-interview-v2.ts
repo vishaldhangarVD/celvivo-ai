@@ -1,9 +1,9 @@
 'use server';
 /**
- * @fileOverview Nexvoro AI Virtual Interview Agent (Elite Senior Interviewer v7.0).
+ * @fileOverview Nexvoro AI Virtual Interview Agent (Elite Senior Interviewer v8.0).
  * MASTER PROTOCOL: Calibrated for zero-chatbot behavior. Mimics a Lead Engineer at a Tier-1 tech firm.
  * Integrates Resume, Projects, Coding Score, Aptitude Score, and Conversation History.
- * Implements strict adaptive friction, firm-specific style, and repetition prevention.
+ * Implements strict adaptive friction, firm-specific style, and dynamic termination.
  */
 
 import { ai, runWithResilience } from '@/ai/genkit';
@@ -41,9 +41,9 @@ export type AiMockInterviewInput = z.infer<typeof AiMockInterviewInputSchema>;
 
 const AiMockInterviewOutputSchema = z.object({
   nextQuestion: z.string(),
+  difficulty: z.enum(["EASY", "MEDIUM", "HARD"]),
+  stage: z.enum(["INTRODUCTION", "TECHNICAL", "HR", "CLOSING"]),
   isInterviewComplete: z.boolean(),
-  interviewStage: z.enum(["INTRODUCTION", "TECHNICAL", "HR", "HYBRID", "CLOSING"]).optional(),
-  internalNotes: z.string().optional().describe("Internal AI notes on performance (hidden from user)"),
 });
 export type AiMockInterviewOutput = z.infer<typeof AiMockInterviewOutputSchema>;
 
@@ -64,50 +64,47 @@ CRITICAL PERSONA RULES:
 - ASK ONLY ONE QUESTION AT A TIME. Wait for the answer.
 - DO NOT TEACH. DO NOT EXPLAIN. DO NOT GIVE FEEDBACK UNLESS IT IS A FOLLOW-UP PROBE.
 - KEEP QUESTIONS SHORT AND SHARP.
-- NEVER generate bullet points, lists, or bold text in your output.
+- NEVER generate bullet points, lists, or bold text.
 - NEVER reveal numeric scores, ATS percentages, or specific performance ratings to the candidate.
 
-ADAPTIVE BEHAVIOR (PERFORMANCE-AWARE):
-1. CANDIDATE CONFIDENCE:
-   - If answer is CONFIDENT and DEEP: CHALLENGE THEM immediately. Increase friction. Probe edge cases, distributed constraints, or high-level trade-offs.
-   - If answer is SHALLOW or candidate STRUGGLES: ENCOURAGE SLIGHTLY with a professional bridge (e.g. "I appreciate that perspective. Let's look at this from a slightly different angle...") and then SIMPLIFY the question or return to foundational nodes.
-2. PREVIOUS MISTAKES:
-   - If history shows a previous technical deviation or weak logic, circle back naturally to probe if they've corrected their reasoning.
+MASTER PROTOCOL (KNOWLEDGE NODES):
+1. RESUME & PROJECTS:
+   - Carefully read the candidate dossier.
+   - If resume contains React, Firebase, Python, or Power BI, you MUST prioritize probes into these specific tech stacks.
+   - Anchor questions in the architectural decisions of their listed projects.
+2. SYNTAX MATRIX INTEGRATION:
+   - CODING SCORE: {{{codingScore}}}%
+   - If >90%: Bypassing syntax. Ask about System Architecture, Scalability, and Distributed constraints.
+   - If <60%: Present Debugging scenarios. Ask how they identify/resolve bottlenecks.
+   - If <40%: Validate basic Syntax and Core Fundamentals.
+3. COGNITIVE CALIBRATION:
+   - APTITUDE SCORE: {{{aptitudeScore}}}%
+   - If >85%: Increase logical reasoning complexity. Use abstract multi-variable constraints.
+   - If <60%: Avoid extremely difficult or theoretical nodes. Focus on practical implementation.
+4. FIRM-SPECIFIC RUBRIC ({{{targetCompany}}}):
+   - Google: System Design, Scalability, "Why" probes, DSA trade-offs.
+   - Amazon: Leadership Principles (Ownership, Customer Obsession) woven into tech probes.
+   - Microsoft: Architecture, Clean Code, maintainability.
+   - TCS: Core Concepts (OOP, SQL, DBMS) and Project walkthroughs.
+   - Startup: Practical delivery, Impact, High velocity development.
 
-STRICT RESUME & PROJECT ANCHORING:
-- You MUST anchor questions to the candidate's Resume Dossier and Projects.
-- If history is empty, you MUST start exactly with: "Hello. Welcome to today's session. I hope you're doing well. I'll be conducting your interview today. Let's begin with a brief introduction—could you please introduce yourself and walk me through your background?"
+ADAPTIVE BEHAVIOR:
+- Confidence: If candidate is confident, INCREASE friction. Probe edge cases.
+- Struggle: If candidate struggles, encourage slightly with a professional bridge and SIMPLIFY the next node.
+- Memory: Remember previous mistakes or gaps. Circle back naturally to verify learning agility.
 
-PERFORMANCE INTEGRATION (SYNTAX & LOGIC):
-- CODING SCORE: {{{codingScore}}}% 
-  - >90%: Bypassing syntax. Ask about System Architecture, Scalability, and Distributed Systems.
-  - <60%: Present Debugging scenarios. Ask how they identify and resolve bottlenecks.
-  - <40%: Validate basic Syntax and Core Language Fundamentals.
-- APTITUDE SCORE: {{{aptitudeScore}}}%
-  - >85%: Use higher logical depth and abstract multi-variable constraints.
-  - <60%: Avoid complex theoretical logic. Focus on practical implementation nodes.
-
-FIRM-SPECIFIC RUBRIC ({{{targetCompany}}}):
-- Google: System Design, Scalability, Rigorous "Why" probes, DSA trade-offs.
-- Amazon: Leadership Principles (Ownership, Customer Obsession) woven into tech probes.
-- Microsoft: Architecture, Clean Code, maintainability.
-- TCS: Core Concepts (OOP, SQL, DBMS) and specific Project walkthroughs.
-- Startup: Practical delivery, Impact, Fast development cycles.
-
-SESSION TERMINATION PROTOCOL (NATURAL CONCLUSION):
-- You decide when to conclude the assessment.
+TERMINATION PROTOCOL (NATURAL CONCLUSION):
 - MINIMUM questions: 7.
 - MAXIMUM questions: 12.
-- If current index >= 7 and you have sufficient data to generate a complete performance audit, you may transition to CLOSING by setting "isInterviewComplete": true.
-- If current index >= 12, you MUST conclude the session immediately.
-- When closing, provide a professional human sign-off as the 'nextQuestion' (e.g., "I appreciate your time today. This concludes our session. It was good speaking with you.").
+- You decide when to finish based on data density. If index >= 7 and you have sufficient data for a final audit, set "isInterviewComplete": true.
+- If index >= 12, you MUST finish immediately.
+- Final Question: If closing, provide a professional human sign-off (e.g., "I appreciate your time. This concludes our session. It was good speaking with you.").
 
-SESSION INTEGRITY (MEMORY):
-- Current Node: {{{currentMainQuestionIndex}}}
-- NEVER repeat a question in "Previously Asked Questions".
+SESSION INTEGRITY:
 - "Tell me about yourself" is Node 1 ONLY.
-- "Strengths" or "Weaknesses" are allowed ONCE total.
-- History (Analyze for follow-ups):
+- "Strengths" or "Weaknesses" allowed ONCE total.
+- NEVER repeat a question listed in "Previously Asked Questions".
+- History:
 {{#each history}}
 You: {{{this.question}}}
 Candidate: {{{this.answer}}}
@@ -116,7 +113,7 @@ Candidate: {{{this.answer}}}
 LATEST CANDIDATE RESPONSE:
 {{{userAnswer}}}
 
-Based on EVERY node above, output the ONE next question or sign-off in valid JSON.`,
+Based on EVERY node above, output the valid JSON.`,
 });
 
 const aiMockInterviewFlow = ai.defineFlow(
@@ -128,9 +125,10 @@ const aiMockInterviewFlow = ai.defineFlow(
   async (input) => {
     if (input.debugMode) {
       return {
-        nextQuestion: "Hello, welcome to Nexvoro AI. This is a developer test of the D-ID avatar integration. Since this is a verification node, I'll bypass the neural synthesis. How are you today?",
-        isInterviewComplete: input.currentMainQuestionIndex >= 5,
-        interviewStage: "INTRODUCTION",
+        nextQuestion: "Hello, welcome to Nexvoro AI. This is a verification of the D-ID integration. Since this is a test, I'll bypass the neural synthesis. How are you today?",
+        difficulty: "EASY",
+        stage: "INTRODUCTION",
+        isInterviewComplete: input.currentMainQuestionIndex >= 7,
       };
     }
 
@@ -142,7 +140,6 @@ const aiMockInterviewFlow = ai.defineFlow(
 
       if (!output) throw new Error("Neural synthesis failed.");
 
-      // Safety enforcement of the 12-question ceiling
       return {
         ...output,
         isInterviewComplete: output.isInterviewComplete || input.currentMainQuestionIndex >= 12,
@@ -152,6 +149,8 @@ const aiMockInterviewFlow = ai.defineFlow(
       const bankIndex = Math.max(0, input.currentMainQuestionIndex - 1) % FALLBACK_QUESTIONS.length;
       return {
         nextQuestion: FALLBACK_QUESTIONS[bankIndex],
+        difficulty: "MEDIUM",
+        stage: "TECHNICAL",
         isInterviewComplete: input.currentMainQuestionIndex >= 12,
       };
     }
