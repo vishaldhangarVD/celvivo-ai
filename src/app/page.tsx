@@ -25,7 +25,10 @@ import {
   LayoutGrid,
   CheckCircle2,
   Building2,
-  Check
+  Check,
+  Users,
+  ShieldAlert,
+  Lock
 } from 'lucide-react';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
 import { useUser } from '@/firebase';
@@ -46,6 +49,39 @@ const COMPANIES = [
   { name: "Capgemini", logo: "CAP", color: "text-blue-400" },
   { name: "Wipro", logo: "WIT", color: "text-blue-300" },
   { name: "Cognizant", logo: "CTSH", color: "text-blue-600" },
+];
+
+const TRUST_CARDS = [
+  {
+    icon: Star,
+    title: "4.9/5 User Rating",
+    subtitle: "Thousands of students trust Nexvoro AI.",
+    color: "text-yellow-400"
+  },
+  {
+    icon: Users,
+    title: "Students & Professionals",
+    subtitle: "Used by freshers, graduates and experienced candidates.",
+    color: "text-blue-400"
+  },
+  {
+    icon: BrainCircuit,
+    title: "Powered by Advanced AI",
+    subtitle: "AI-driven interview simulation with intelligent feedback.",
+    color: "text-purple-400"
+  },
+  {
+    icon: Zap,
+    title: "Real Interview Experience",
+    subtitle: "Experience realistic HR and Technical interview environments.",
+    color: "text-accent"
+  },
+  {
+    icon: Lock,
+    title: "100% Secure & Private",
+    subtitle: "Your resume, interview data and reports remain secure.",
+    color: "text-green-400"
+  }
 ];
 
 export default function LandingPage() {
@@ -292,23 +328,23 @@ export default function LandingPage() {
                 <div className="absolute inset-y-0 right-0 w-24 bg-gradient-to-l from-[#050816]/50 to-transparent z-10" />
               </div>
 
-              {/* Performance Badges */}
-              <div className="mt-12 flex flex-wrap justify-center gap-6">
-                {[
-                  { label: "AI Interview Ready", icon: BrainCircuit },
-                  { label: "ATS Optimized", icon: ShieldCheck },
-                  { label: "Industry Standard Questions", icon: Award }
-                ].map((badge, i) => (
-                  <motion.div 
+              {/* Premium Trust Indicator Cards */}
+              <div className="mt-12 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 relative z-10">
+                {TRUST_CARDS.map((card, i) => (
+                  <motion.div
                     key={i}
-                    whileHover={{ y: -5 }}
-                    className="flex items-center gap-3 px-5 py-2.5 glass border-white/5 rounded-2xl shadow-[0_0_20px_rgba(34,211,238,0.1)] hover:shadow-[0_0_30px_rgba(34,211,238,0.2)] transition-all cursor-default"
+                    initial={{ opacity: 0, y: 20 }}
+                    whileInView={{ opacity: 1, y: 0 }}
+                    viewport={{ once: true }}
+                    transition={{ delay: i * 0.1, duration: 0.5 }}
+                    whileHover={{ translateY: -8, scale: 1.03 }}
+                    className="glass rounded-[18px] p-6 border-cyan-500/20 bg-white/[0.02] shadow-[0_0_30px_rgba(34,211,238,0.05)] hover:shadow-[0_0_40px_rgba(34,211,238,0.15)] transition-all duration-300 group/card"
                   >
-                    <div className="w-6 h-6 rounded-lg bg-accent/10 flex items-center justify-center">
-                      <badge.icon className="w-3.5 h-3.5 text-accent" />
+                    <div className="w-12 h-12 rounded-full bg-accent/10 flex items-center justify-center mb-5 group-hover/card:bg-accent/20 transition-colors">
+                      <card.icon className={`w-6 h-6 ${card.color}`} />
                     </div>
-                    <span className="text-[9px] font-bold uppercase tracking-widest text-white/70">{badge.label}</span>
-                    <Check className="w-3 h-3 text-accent" />
+                    <h3 className="text-sm font-bold text-white mb-2 group-hover/card:text-accent transition-colors">{card.title}</h3>
+                    <p className="text-[11px] text-white/50 leading-relaxed font-medium">{card.subtitle}</p>
                   </motion.div>
                 ))}
               </div>
