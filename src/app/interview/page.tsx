@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import Navbar from '@/components/layout/Navbar';
@@ -22,9 +22,14 @@ import {
   Clock,
   Sparkles,
   CheckCircle2,
-  Cpu
+  Cpu,
+  Loader2,
+  AlertTriangle
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useUser, useFirestore } from '@/firebase';
+import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
+import { useToast } from '@/hooks/use-toast';
 
 const ALL_ROLES = [
   "Software Engineer", "Frontend Developer", "Backend Developer", "Full Stack Developer",
@@ -55,19 +60,32 @@ const COMPANIES = [
 
 const EXPERIENCE_LEVELS = ["Fresher", "0-1 Years", "1-3 Years", "3-5 Years", "5-8 Years", "8+ Years"];
 
+const LOADING_MESSAGES = [
+  "Initializing AI Interview...",
+  "Loading Company Interview Pattern...",
+  "Preparing Resume Analysis Engine...",
+  "Creating Candidate Session...",
+  "Neural Engine Ready..."
+];
+
 export default function InterviewSetupPage() {
   const router = useRouter();
+  const { user } = useUser();
+  const db = useFirestore();
+  const { toast } = useToast();
   
   // Selection States
   const [selectedRole, setSelectedRole] = useState("");
   const [selectedCompany, setSelectedCompany] = useState("");
   const [selectedExp, setSelectedExp] = useState("");
   
-  // Search States
+  // UI States
   const [roleSearch, setRoleSearch] = useState("");
   const [isRoleOpen, setIsRoleOpen] = useState(false);
   const [companySearch, setCompanySearch] = useState("");
   const [isCompanyOpen, setIsCompanyOpen] = useState(false);
+  const [isTransitioning, setIsTransitioning] = useState(false);
+  const [loadingMsgIdx, setLoadingMsgIdx] = useState(0);
 
   // Filter Logic
   const filteredRoles = useMemo(() => 
@@ -78,10 +96,65 @@ export default function InterviewSetupPage() {
     COMPANIES.filter(c => c.toLowerCase().includes(companySearch.toLowerCase())),
   [companySearch]);
 
-  const handleContinue = () => {
-    if (selectedRole && selectedCompany && selectedExp) {
-      // Transition to Resume Upload node
-      router.push('/resume-upload');
+  // Loading Sequence Timer
+  useEffect(() => {
+    let interval: NodeJS.Timeout;
+    if (isTransitioning && loadingMsgIdx < LOADING_MESSAGES.length - 1) {
+      interval = setInterval(() => {
+        setLoadingMsgIdx(prev => prev + 1);
+      }, 800);
+    }
+    return () => clearInterval(interval);
+  }, [isTransitioning, loadingMsgIdx]);
+
+  const handleContinue = async () => {
+    if (!selectedRole || !selectedCompany || !selectedExp) {
+      toast({
+        variant: "destructive",
+        title: "Calibration Incomplete",
+        description: "Please select a Role, Company, and Seniority Grade to proceed.",
+      });
+      return;
+    }
+
+    if (!user || !db) {
+      toast({
+        variant: "destructive",
+        title: "Auth Required",
+        description: "Please sign in to initialize your interview session.",
+      });
+      return;
+    }
+
+    setIsTransitioning(true);
+    
+    try {
+      const sessionId = Math.random().toString(36).substring(7);
+      
+      // Save Session to Firestore
+      await setDoc(doc(db, 'users', user.uid, 'journey', 'active'), {
+        role: selectedRole,
+        company: selectedCompany,
+        experience: selectedExp,
+        sessionId,
+        status: "Resume Upload Pending",
+        updatedAt: serverTimestamp(),
+        step: 1
+      }, { merge: true });
+
+      // Automatically navigate after loading sequence finishes
+      setTimeout(() => {
+        router.push('/resume-upload');
+      }, 4000);
+
+    } catch (error) {
+      console.error("Session Init Error:", error);
+      toast({
+        variant: "destructive",
+        title: "Protocol Fault",
+        description: "Failed to initialize neural session. Please try again.",
+      });
+      setIsTransitioning(false);
     }
   };
 
@@ -233,10 +306,14 @@ export default function InterviewSetupPage() {
               <div className="pt-4">
                 <Button 
                   onClick={handleContinue}
-                  disabled={!selectedRole || !selectedCompany || !selectedExp}
+                  disabled={isTransitioning}
                   className="w-full h-20 btn-premium rounded-[1.75rem] text-xl font-black uppercase tracking-[0.4em] shadow-[0_20px_60px_rgba(147,51,234,0.3)] group"
                 >
-                  Continue Journey <ArrowRight className="ml-4 w-6 h-6 transition-transform group-hover:translate-x-2" />
+                  {isTransitioning ? (
+                    <Loader2 className="w-6 h-6 animate-spin" />
+                  ) : (
+                    <>Continue Journey <ArrowRight className="ml-4 w-6 h-6 transition-transform group-hover:translate-x-2" /></>
+                  )}
                 </Button>
               </div>
             </Card>
@@ -304,6 +381,49 @@ export default function InterviewSetupPage() {
 
         </div>
       </main>
+
+      {/* Fullscreen Neural Loading Overlay */}
+      <AnimatePresence>
+        {isTransitioning && (
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[200] bg-[#050816]/95 backdrop-blur-2xl flex flex-col items-center justify-center p-12 text-center"
+          >
+            <div className="relative mb-12">
+              <div className="w-32 h-32 rounded-full border-2 border-accent/20 border-t-accent animate-spin" />
+              <Cpu className="w-12 h-12 text-accent absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 animate-pulse" />
+            </div>
+            
+            <div className="space-y-6 max-w-md">
+              <h2 className="text-4xl font-bold tracking-tighter text-premium">Synthesizing Environment</h2>
+              <div className="h-1 w-full bg-white/5 rounded-full overflow-hidden">
+                <motion.div 
+                  initial={{ width: 0 }}
+                  animate={{ width: "100%" }}
+                  transition={{ duration: 4, ease: "linear" }}
+                  className="h-full bg-accent shadow-[0_0_20px_rgba(34,211,238,0.5)]"
+                />
+              </div>
+              <div className="flex flex-col gap-2">
+                <AnimatePresence mode="wait">
+                  <motion.p 
+                    key={loadingMsgIdx}
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -10 }}
+                    className="text-[10px] font-black uppercase tracking-[0.5em] text-accent h-4"
+                  >
+                    {LOADING_MESSAGES[loadingMsgIdx]}
+                  </motion.p>
+                </AnimatePresence>
+                <p className="text-[8px] text-white/30 uppercase font-bold tracking-widest">Protocol Version 8.4.2 Active</p>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       <style jsx global>{`
         .custom-scrollbar::-webkit-scrollbar {
