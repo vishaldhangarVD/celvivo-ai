@@ -93,7 +93,7 @@ export default function ResumeAnalysisPage() {
                <Button onClick={handleDownloadPDF} variant="outline" className="h-14 px-8 glass border-white/10 rounded-2xl text-[10px] font-bold uppercase tracking-widest">
                  <Download className="w-4 h-4 mr-2" /> PDF Report
                </Button>
-               <Button onClick={() => router.push('/aptitude-test')} className="h-14 px-10 btn-premium rounded-2xl text-[10px] font-bold uppercase tracking-widest shadow-2xl">
+               <Button onClick={() => router.push('/assessment-ready')} className="h-14 px-10 btn-premium rounded-2xl text-[10px] font-bold uppercase tracking-widest shadow-2xl">
                  Continue to Aptitude <ChevronRight className="w-4 h-4 ml-2" />
                </Button>
             </div>
@@ -162,7 +162,7 @@ export default function ResumeAnalysisPage() {
                  <Card className="glass rounded-[30px] border-white/5 p-8 bg-white/[0.01] space-y-6">
                    <h3 className="text-[10px] font-bold uppercase tracking-widest text-green-400 flex items-center gap-3"><CheckCircle2 className="w-4 h-4" /> Strategic Strengths</h3>
                    <div className="space-y-4">
-                     {analysis.strengths.map((s, i) => (
+                     {analysis.strengths.map((s: string, i: number) => (
                        <div key={i} className="flex gap-4 p-4 glass rounded-2xl border-white/5">
                          <div className="w-1.5 h-1.5 rounded-full bg-green-400 mt-1.5 shrink-0" />
                          <p className="text-xs font-light text-white/70">{s}</p>
@@ -174,7 +174,7 @@ export default function ResumeAnalysisPage() {
                  <Card className="glass rounded-[30px] border-white/5 p-8 bg-white/[0.01] space-y-6">
                    <h3 className="text-[10px] font-bold uppercase tracking-widest text-red-400 flex items-center gap-3"><XCircle className="w-4 h-4" /> Missing Nodes</h3>
                    <div className="flex flex-wrap gap-2">
-                     {analysis.missingSkills.map((s, i) => (
+                     {analysis.missingSkills.map((s: string, i: number) => (
                        <Badge key={i} variant="outline" className="bg-red-500/10 border-red-500/20 text-red-400 px-3 py-1.5 rounded-xl text-[9px] font-bold uppercase">{s}</Badge>
                      ))}
                    </div>
@@ -213,7 +213,7 @@ export default function ResumeAnalysisPage() {
                   <div className="space-y-4">
                     <p className="text-[10px] font-black uppercase tracking-widest text-white/20 ml-2">Improvement Directives</p>
                     <div className="space-y-3">
-                      {analysis.improvementSuggestions.slice(0, 3).map((s, i) => (
+                      {analysis.improvementSuggestions.slice(0, 3).map((s: string, i: number) => (
                         <div key={i} className="p-4 glass rounded-2xl border-white/5 flex gap-4">
                           <Zap className="w-4 h-4 text-yellow-400 shrink-0 mt-1" />
                           <p className="text-[10px] font-bold uppercase tracking-widest text-white/60 leading-tight">{s}</p>
@@ -222,7 +222,7 @@ export default function ResumeAnalysisPage() {
                     </div>
                   </div>
                   <div className="pt-8 border-t border-white/5">
-                    <Button onClick={() => router.push('/aptitude-test')} className="w-full h-16 btn-premium rounded-2xl text-[10px] font-black uppercase tracking-[0.3em]">
+                    <Button onClick={() => router.push('/assessment-ready')} className="w-full h-16 btn-premium rounded-2xl text-[10px] font-black uppercase tracking-[0.3em]">
                       Enter Arena <ChevronRight className="ml-3 w-4 h-4" />
                     </Button>
                   </div>
