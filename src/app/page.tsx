@@ -138,6 +138,11 @@ export default function LandingPage() {
                 >
                   🎤 Start Mock Interview <Zap className="ml-3 w-4 h-4 fill-current" />
                 </Button>
+                <Link href="/resume">
+                  <Button variant="outline" className="h-14 px-8 glass border-white/10 rounded-2xl text-[10px] font-bold tracking-widest uppercase hover:bg-white/5">
+                    🤖 AI Resume Analysis
+                  </Button>
+                </Link>
               </div>
 
               <div className="flex items-center gap-8 pt-4 border-t border-white/5">
