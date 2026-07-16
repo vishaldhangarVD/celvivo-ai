@@ -129,6 +129,8 @@ export default function ResumeIntelligencePage() {
       });
 
       const result = await deepAuditResume({ resumeDataUri: base64, targetRole });
+      
+      // Artificial delay to show the cinematic scanning steps
       await new Promise(r => setTimeout(r, 4500));
 
       setAnalysis(result);
@@ -145,7 +147,7 @@ export default function ResumeIntelligencePage() {
 
     } catch (e) {
       console.error(e);
-      toast({ variant: "destructive", title: "Neural Fault", description: "Analysis synthesis failed." });
+      toast({ variant: "destructive", title: "Neural Fault", description: "Analysis synthesis failed. Check your API key configuration." });
       setIsAnalyzing(false);
     }
   };
@@ -363,6 +365,20 @@ export default function ResumeIntelligencePage() {
                   </div>
                 </Card>
               </div>
+
+              {/* Header Info */}
+              <Card className="glass rounded-[30px] border-white/5 p-10 bg-white/[0.01]">
+                <div className="flex flex-col md:flex-row justify-between items-start gap-8">
+                  <div className="space-y-4">
+                    <h1 className="text-4xl font-bold tracking-tighter text-premium">{targetRole}<br /><span className="text-gradient-purple">Dossier.</span></h1>
+                    <div className="flex items-center gap-6">
+                      <div className="flex items-center gap-2 text-white/40"><User className="w-4 h-4" /> <span className="text-xs font-bold uppercase tracking-widest">{analysis.candidateIdentity.name}</span></div>
+                      <div className="w-1 h-1 rounded-full bg-white/20" />
+                      <div className="flex items-center gap-2 text-white/40"><Clock className="w-4 h-4" /> <span className="text-xs font-bold uppercase tracking-widest">{analysis.candidateIdentity.yearsOfExperience}y Experience</span></div>
+                    </div>
+                  </div>
+                </div>
+              </Card>
 
               {/* 4. AI Summary */}
               <Card className="glass rounded-[30px] border-white/5 p-10 bg-white/[0.01] relative overflow-hidden">

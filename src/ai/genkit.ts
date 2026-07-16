@@ -33,7 +33,7 @@ if (typeof window === 'undefined') {
   console.log(`- GOOGLE_API_KEY:       ${process.env.GOOGLE_API_KEY ? 'EXISTS' : 'MISSING'}`);
   
   if (!apiKey) {
-    console.error('[CRITICAL FAILURE] No authorization token found in .env. All AI simulations will fail with 401.');
+    console.warn('[WARNING] No API key found in environment variables. Genkit will attempt to use default credentials.');
   } else {
     const isAQKey = apiKey.startsWith('AQ');
     const activeVar = process.env.GOOGLE_GENAI_API_KEY ? 'GOOGLE_GENAI_API_KEY' : process.env.GEMINI_API_KEY ? 'GEMINI_API_KEY' : 'GOOGLE_API_KEY';
@@ -49,9 +49,7 @@ if (typeof window === 'undefined') {
 
 export const ai = genkit({
   plugins: [
-    googleAI({
-      apiKey: apiKey,
-    }),
+    googleAI(apiKey ? { apiKey } : {}),
   ],
   model: PRIMARY_MODEL,
 });
@@ -75,8 +73,8 @@ export async function runWithResilience(promptFn: any, input: any) {
         // Detailed error logging for auth failures
         if (status === 400 || status === 401) {
           console.error(`[Neural Auth Failure] Model: ${model}, Status: ${status}, Message: ${message}`);
-          if (message.includes('API key not valid')) {
-             console.error('[Neural Tip] Your API key was rejected by Google. Verify it in AI Studio and ensure it is pasted correctly in your .env file.');
+          if (message.includes('API key not valid') || status === 401) {
+             console.error('[Neural Tip] Your API key was rejected or missing. Verify your GOOGLE_GENAI_API_KEY in the .env file.');
           }
           throw e;
         }
