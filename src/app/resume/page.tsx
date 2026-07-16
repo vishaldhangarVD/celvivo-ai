@@ -46,7 +46,8 @@ import {
   Flag,
   PenTool,
   Clock,
-  ArrowRight
+  ArrowRight,
+  User
 } from 'lucide-react';
 import { useUser, useFirestore } from '@/firebase';
 import { collection, addDoc, serverTimestamp, doc, updateDoc } from 'firebase/firestore';
@@ -589,4 +590,3 @@ export default function ResumeIntelligencePage() {
     </div>
   );
 }
-
