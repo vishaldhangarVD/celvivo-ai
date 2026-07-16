@@ -188,27 +188,27 @@ export default function InterviewSetupPage() {
       <Navbar />
       <NavigationControls onHome={() => router.push('/')} />
 
-      <main className="flex-1 container mx-auto px-6 flex items-center justify-center relative z-10">
-        <div className="grid lg:grid-cols-12 gap-8 max-w-6xl w-full">
+      <main className="flex-1 container mx-auto px-6 flex items-center justify-center relative z-10 pt-16">
+        <div className="grid lg:grid-cols-12 gap-6 max-w-6xl w-full max-h-full">
           
           {/* Configuration Node */}
           <motion.div 
             initial={{ opacity: 0, x: -30 }}
             animate={{ opacity: 1, x: 0 }}
-            className="lg:col-span-8"
+            className="lg:col-span-8 flex flex-col h-full"
           >
-            <Card className="premium-card bg-white/[0.01] border-white/5 p-12 space-y-12 shadow-[0_40px_100px_rgba(0,0,0,0.5)]">
-              <header className="space-y-4">
-                <Badge className="bg-accent/20 text-accent border-none px-4 py-1.5 text-[10px] tracking-[0.4em] font-black uppercase">Neural Interview Engine</Badge>
-                <div className="space-y-2">
-                  <h1 className="text-5xl font-bold tracking-tighter text-premium">Interview Setup</h1>
-                  <p className="text-muted-foreground font-light text-lg">Configure your interview journey before entering the AI Interview Room.</p>
+            <Card className="premium-card bg-white/[0.01] border-white/5 p-8 flex flex-col justify-between shadow-[0_40px_100px_rgba(0,0,0,0.5)] h-full">
+              <header className="space-y-2">
+                <Badge className="bg-accent/20 text-accent border-none px-4 py-1 text-[10px] tracking-[0.4em] font-black uppercase">Neural Interview Engine</Badge>
+                <div className="space-y-1">
+                  <h1 className="text-4xl font-bold tracking-tighter text-premium">Interview Setup</h1>
+                  <p className="text-muted-foreground font-light text-base">Configure your journey before entering the Arena.</p>
                 </div>
               </header>
 
-              <div className="space-y-10">
+              <div className="space-y-6 py-4">
                 {/* Search Job Role */}
-                <div className="space-y-4 relative">
+                <div className="space-y-2 relative">
                   <div className="flex items-center justify-between px-2">
                     <span className="text-[10px] font-black uppercase tracking-[0.3em] text-white/30">Deployment Track</span>
                     {selectedRole && <span className="text-[10px] font-bold text-accent animate-in fade-in slide-in-from-right-2 uppercase tracking-widest">Selected</span>}
@@ -216,26 +216,26 @@ export default function InterviewSetupPage() {
                   <div className="relative group">
                     <Search className="absolute left-6 top-1/2 -translate-y-1/2 w-5 h-5 text-white/20 group-focus-within:text-accent transition-colors" />
                     <input 
-                      placeholder="Search Job Role... e.g. Data Analyst"
+                      placeholder="Search Job Role..."
                       value={roleSearch || selectedRole}
                       onChange={(e) => { setRoleSearch(e.target.value); setSelectedRole(""); setIsRoleOpen(true); }}
                       onFocus={() => setIsRoleOpen(true)}
-                      className="w-full h-16 pl-16 pr-8 rounded-[1.25rem] glass border-white/10 bg-transparent text-lg font-light focus:outline-none focus:border-accent/50 focus:shadow-[0_0_40px_rgba(34,211,238,0.1)] transition-all"
+                      className="w-full h-14 pl-16 pr-8 rounded-xl glass border-white/10 bg-transparent text-lg font-light focus:outline-none focus:border-accent/50 transition-all"
                     />
                     <AnimatePresence>
                       {isRoleOpen && (
                         <motion.div 
                           initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 10 }}
-                          className="absolute top-full left-0 right-0 mt-3 p-3 glass border-white/10 bg-[#0b0e1a]/95 rounded-[1.5rem] z-[100] max-h-[280px] overflow-y-auto custom-scrollbar shadow-2xl backdrop-blur-3xl"
+                          className="absolute top-full left-0 right-0 mt-2 p-2 glass border-white/10 bg-[#0b0e1a]/95 rounded-xl z-[100] max-h-[200px] overflow-y-auto custom-scrollbar shadow-2xl backdrop-blur-3xl"
                         >
                           {filteredRoles.map(role => (
                             <button 
                               key={role} 
                               onClick={() => { setSelectedRole(role); setIsRoleOpen(false); setRoleSearch(""); }}
-                              className="w-full text-left p-4 hover:bg-accent/10 hover:text-accent rounded-xl text-sm font-bold uppercase tracking-widest transition-all flex items-center justify-between group/item"
+                              className="w-full text-left p-3 hover:bg-accent/10 hover:text-accent rounded-lg text-[10px] font-bold uppercase tracking-widest transition-all flex items-center justify-between group/item"
                             >
                               {role}
-                              <ChevronRight className="w-4 h-4 opacity-0 group-hover/item:opacity-100 transition-all translate-x-[-10px] group-hover/item:translate-x-0" />
+                              <ChevronRight className="w-4 h-4 opacity-0 group-hover/item:opacity-100 transition-all" />
                             </button>
                           ))}
                         </motion.div>
@@ -245,7 +245,7 @@ export default function InterviewSetupPage() {
                 </div>
 
                 {/* Search Company */}
-                <div className="space-y-4 relative">
+                <div className="space-y-2 relative">
                   <div className="flex items-center justify-between px-2">
                     <span className="text-[10px] font-black uppercase tracking-[0.3em] text-white/30">Target Agency</span>
                     {selectedCompany && <span className="text-[10px] font-bold text-purple-400 animate-in fade-in slide-in-from-right-2 uppercase tracking-widest">Selected</span>}
@@ -253,26 +253,26 @@ export default function InterviewSetupPage() {
                   <div className="relative group">
                     <Building2 className="absolute left-6 top-1/2 -translate-y-1/2 w-5 h-5 text-white/20 group-focus-within:text-purple-400 transition-colors" />
                     <input 
-                      placeholder="Search Company... e.g. OpenAI"
+                      placeholder="Search Company..."
                       value={companySearch || selectedCompany}
                       onChange={(e) => { setCompanySearch(e.target.value); setSelectedCompany(""); setIsCompanyOpen(true); }}
                       onFocus={() => setIsCompanyOpen(true)}
-                      className="w-full h-16 pl-16 pr-8 rounded-[1.25rem] glass border-white/10 bg-transparent text-lg font-light focus:outline-none focus:border-purple-500/50 focus:shadow-[0_0_40px_rgba(168,85,247,0.1)] transition-all"
+                      className="w-full h-14 pl-16 pr-8 rounded-xl glass border-white/10 bg-transparent text-lg font-light focus:outline-none focus:border-purple-500/50 transition-all"
                     />
                     <AnimatePresence>
                       {isCompanyOpen && (
                         <motion.div 
                           initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 10 }}
-                          className="absolute top-full left-0 right-0 mt-3 p-3 glass border-white/10 bg-[#0b0e1a]/95 rounded-[1.5rem] z-[100] max-h-[280px] overflow-y-auto custom-scrollbar shadow-2xl backdrop-blur-3xl"
+                          className="absolute top-full left-0 right-0 mt-2 p-2 glass border-white/10 bg-[#0b0e1a]/95 rounded-xl z-[100] max-h-[200px] overflow-y-auto custom-scrollbar shadow-2xl backdrop-blur-3xl"
                         >
                           {filteredCompanies.map(comp => (
                             <button 
                               key={comp} 
                               onClick={() => { setSelectedCompany(comp); setIsCompanyOpen(false); setCompanySearch(""); }}
-                              className="w-full text-left p-4 hover:bg-purple-500/10 hover:text-purple-400 rounded-xl text-sm font-bold uppercase tracking-widest transition-all flex items-center justify-between group/item"
+                              className="w-full text-left p-3 hover:bg-purple-500/10 hover:text-purple-400 rounded-lg text-[10px] font-bold uppercase tracking-widest transition-all flex items-center justify-between group/item"
                             >
                               {comp}
-                              <ChevronRight className="w-4 h-4 opacity-0 group-hover/item:opacity-100 transition-all translate-x-[-10px] group-hover/item:translate-x-0" />
+                              <ChevronRight className="w-4 h-4 opacity-0 group-hover/item:opacity-100 transition-all" />
                             </button>
                           ))}
                         </motion.div>
@@ -282,18 +282,18 @@ export default function InterviewSetupPage() {
                 </div>
 
                 {/* Experience Segmented Selector */}
-                <div className="space-y-4">
+                <div className="space-y-2">
                   <span className="text-[10px] font-black uppercase tracking-[0.3em] text-white/30 px-2">Seniority Grade</span>
-                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+                  <div className="grid grid-cols-3 md:grid-cols-6 gap-2">
                     {EXPERIENCE_LEVELS.map(level => (
                       <button
                         key={level}
                         onClick={() => setSelectedExp(level)}
                         className={cn(
-                          "h-14 rounded-xl border font-bold text-[10px] uppercase tracking-widest transition-all duration-300",
+                          "h-12 rounded-lg border font-bold text-[9px] uppercase tracking-widest transition-all duration-300",
                           selectedExp === level 
                           ? "bg-accent/20 border-accent text-accent shadow-[0_0_20px_rgba(34,211,238,0.1)]" 
-                          : "glass border-white/10 text-white/40 hover:bg-white/5 hover:text-white"
+                          : "glass border-white/10 text-white/40 hover:bg-white/5"
                         )}
                       >
                         {level}
@@ -303,16 +303,16 @@ export default function InterviewSetupPage() {
                 </div>
               </div>
 
-              <div className="pt-4">
+              <div className="pt-2">
                 <Button 
                   onClick={handleContinue}
                   disabled={isTransitioning}
-                  className="w-full h-20 btn-premium rounded-[1.75rem] text-xl font-black uppercase tracking-[0.4em] shadow-[0_20px_60px_rgba(147,51,234,0.3)] group"
+                  className="w-full h-18 btn-premium rounded-2xl text-lg font-black uppercase tracking-[0.3em] shadow-[0_20px_60px_rgba(147,51,234,0.3)] group"
                 >
                   {isTransitioning ? (
                     <Loader2 className="w-6 h-6 animate-spin" />
                   ) : (
-                    <>Continue Journey <ArrowRight className="ml-4 w-6 h-6 transition-transform group-hover:translate-x-2" /></>
+                    <>Continue Journey <ChevronRight className="ml-4 w-6 h-6 transition-transform group-hover:translate-x-2" /></>
                   )}
                 </Button>
               </div>
@@ -330,19 +330,19 @@ export default function InterviewSetupPage() {
                 <Command className="w-48 h-48 text-accent" />
               </div>
 
-              <div className="space-y-8 relative z-10">
+              <div className="space-y-6 relative z-10">
                 <h3 className="text-lg font-black uppercase tracking-tighter text-accent flex items-center gap-3">
                   <Sparkles className="w-5 h-5" /> Simulation Blueprint
                 </h3>
 
-                <div className="space-y-6">
-                  <div className="p-6 glass rounded-2xl border-white/5 space-y-1 transition-all hover:bg-white/5">
+                <div className="space-y-4">
+                  <div className="p-5 glass rounded-xl border-white/5 space-y-1">
                     <p className="text-[8px] font-black uppercase text-white/30 tracking-widest">Active Protocol</p>
-                    <p className="text-xl font-bold text-white leading-tight">{selectedRole || "Awaiting Selection"}</p>
+                    <p className="text-lg font-bold text-white leading-tight truncate">{selectedRole || "Awaiting Selection"}</p>
                     <p className="text-[10px] text-accent font-bold mt-1 uppercase tracking-wider">{selectedCompany || "---"} • {selectedExp || "---"}</p>
                   </div>
 
-                  <div className="space-y-4">
+                  <div className="space-y-3">
                     <p className="text-[8px] font-black uppercase text-white/30 tracking-widest ml-1">Logic Path Sequence</p>
                     {[
                       { label: "Resume Upload", status: "Step 01" },
@@ -351,11 +351,11 @@ export default function InterviewSetupPage() {
                       { label: "HR Virtual Arena", status: "Step 04" }
                     ].map((step, i) => (
                       <div key={i} className="flex items-center gap-4 group/item">
-                        <div className="w-8 h-8 rounded-lg bg-white/[0.03] border border-white/10 flex items-center justify-center text-[10px] font-black text-white/20 transition-all group-hover/item:border-accent/40 group-hover/item:text-accent">
+                        <div className="w-8 h-8 rounded-lg bg-white/[0.03] border border-white/10 flex items-center justify-center text-[9px] font-black text-white/20 transition-all group-hover/item:border-accent/40 group-hover/item:text-accent">
                           0{i + 1}
                         </div>
                         <div className="flex-1 flex justify-between items-center">
-                          <span className="text-[10px] font-bold uppercase tracking-widest text-white/60">{step.label}</span>
+                          <span className="text-[9px] font-bold uppercase tracking-widest text-white/60">{step.label}</span>
                           <span className="text-[8px] font-black text-white/10 uppercase">{step.status}</span>
                         </div>
                       </div>
@@ -364,15 +364,15 @@ export default function InterviewSetupPage() {
                 </div>
               </div>
 
-              <div className="pt-8 border-t border-white/5 space-y-4 relative z-10">
+              <div className="pt-6 border-t border-white/5 relative z-10">
                  <div className="grid grid-cols-2 gap-4">
                     <div className="p-4 glass rounded-xl border-white/5 text-center">
                        <p className="text-[8px] font-black text-white/20 uppercase mb-1">Rounds</p>
                        <p className="text-sm font-bold">4 Nodes</p>
                     </div>
                     <div className="p-4 glass rounded-xl border-white/5 text-center">
-                       <p className="text-[8px] font-black text-white/20 uppercase mb-1">Efficiency</p>
-                       <p className="text-sm font-bold">AI Audited</p>
+                       <p className="text-[8px] font-black text-white/20 uppercase mb-1">Passing</p>
+                       <p className="text-sm font-bold text-accent">70%</p>
                     </div>
                  </div>
               </div>
@@ -441,22 +441,5 @@ export default function InterviewSetupPage() {
         }
       `}</style>
     </div>
-  );
-}
-
-function ArrowRight({ className }: { className?: string }) {
-  return (
-    <svg 
-      className={className}
-      viewBox="0 0 24 24" 
-      fill="none" 
-      stroke="currentColor" 
-      strokeWidth="3" 
-      strokeLinecap="round" 
-      strokeLinejoin="round"
-    >
-      <path d="M5 12h14" />
-      <path d="m12 5 7 7-7 7" />
-    </svg>
   );
 }
