@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useMemo, useEffect } from 'react';
@@ -86,6 +85,7 @@ export default function InterviewSetupPage() {
   const [isCompanyOpen, setIsCompanyOpen] = useState(false);
   const [isTransitioning, setIsTransitioning] = useState(false);
   const [loadingMsgIdx, setLoadingMsgIdx] = useState(0);
+  const [errors, setErrors] = useState<{role?: boolean, company?: boolean, exp?: boolean}>({});
 
   // Filter Logic
   const filteredRoles = useMemo(() => 
@@ -108,11 +108,19 @@ export default function InterviewSetupPage() {
   }, [isTransitioning, loadingMsgIdx]);
 
   const handleContinue = async () => {
-    if (!selectedRole || !selectedCompany || !selectedExp) {
+    const newErrors = {
+      role: !selectedRole,
+      company: !selectedCompany,
+      exp: !selectedExp
+    };
+
+    setErrors(newErrors);
+
+    if (newErrors.role || newErrors.company || newErrors.exp) {
       toast({
         variant: "destructive",
         title: "Calibration Incomplete",
-        description: "Please select a Role, Company, and Seniority Grade to proceed.",
+        description: "Please define all required neural parameters to proceed.",
       });
       return;
     }
@@ -137,7 +145,8 @@ export default function InterviewSetupPage() {
         company: selectedCompany,
         experience: selectedExp,
         sessionId,
-        status: "Resume Upload Pending",
+        status: "Active",
+        currentStage: "Resume Upload",
         updatedAt: serverTimestamp(),
         step: 1
       }, { merge: true });
@@ -160,7 +169,6 @@ export default function InterviewSetupPage() {
 
   return (
     <div className="h-screen bg-[#050816] flex flex-col overflow-hidden relative selection:bg-accent/30 selection:text-white">
-      {/* Cinematic Environment */}
       <div className="particles-bg" />
       <div className="fixed inset-0 overflow-hidden pointer-events-none">
         <motion.div 
@@ -191,7 +199,6 @@ export default function InterviewSetupPage() {
       <main className="flex-1 container mx-auto px-6 flex items-center justify-center relative z-10 pt-16">
         <div className="grid lg:grid-cols-12 gap-6 max-w-6xl w-full max-h-full">
           
-          {/* Configuration Node */}
           <motion.div 
             initial={{ opacity: 0, x: -30 }}
             animate={{ opacity: 1, x: 0 }}
@@ -202,7 +209,7 @@ export default function InterviewSetupPage() {
                 <Badge className="bg-accent/20 text-accent border-none px-4 py-1 text-[10px] tracking-[0.4em] font-black uppercase">Neural Interview Engine</Badge>
                 <div className="space-y-1">
                   <h1 className="text-4xl font-bold tracking-tighter text-premium">Interview Setup</h1>
-                  <p className="text-muted-foreground font-light text-base">Configure your journey before entering the Arena.</p>
+                  <p className="text-muted-foreground font-light text-base">Configure your journey before entering the AI Interview Room.</p>
                 </div>
               </header>
 
@@ -210,17 +217,22 @@ export default function InterviewSetupPage() {
                 {/* Search Job Role */}
                 <div className="space-y-2 relative">
                   <div className="flex items-center justify-between px-2">
-                    <span className="text-[10px] font-black uppercase tracking-[0.3em] text-white/30">Deployment Track</span>
+                    <span className={cn("text-[10px] font-black uppercase tracking-[0.3em]", errors.role ? "text-red-400" : "text-white/30")}>
+                      Deployment Track {errors.role && "• Required"}
+                    </span>
                     {selectedRole && <span className="text-[10px] font-bold text-accent animate-in fade-in slide-in-from-right-2 uppercase tracking-widest">Selected</span>}
                   </div>
                   <div className="relative group">
-                    <Search className="absolute left-6 top-1/2 -translate-y-1/2 w-5 h-5 text-white/20 group-focus-within:text-accent transition-colors" />
+                    <Search className={cn("absolute left-6 top-1/2 -translate-y-1/2 w-5 h-5 transition-colors", errors.role ? "text-red-400" : "text-white/20 group-focus-within:text-accent")} />
                     <input 
                       placeholder="Search Job Role..."
                       value={roleSearch || selectedRole}
                       onChange={(e) => { setRoleSearch(e.target.value); setSelectedRole(""); setIsRoleOpen(true); }}
                       onFocus={() => setIsRoleOpen(true)}
-                      className="w-full h-14 pl-16 pr-8 rounded-xl glass border-white/10 bg-transparent text-lg font-light focus:outline-none focus:border-accent/50 transition-all"
+                      className={cn(
+                        "w-full h-14 pl-16 pr-8 rounded-xl glass border-white/10 bg-transparent text-lg font-light focus:outline-none focus:border-accent/50 transition-all",
+                        errors.role && "border-red-500/50"
+                      )}
                     />
                     <AnimatePresence>
                       {isRoleOpen && (
@@ -247,17 +259,22 @@ export default function InterviewSetupPage() {
                 {/* Search Company */}
                 <div className="space-y-2 relative">
                   <div className="flex items-center justify-between px-2">
-                    <span className="text-[10px] font-black uppercase tracking-[0.3em] text-white/30">Target Agency</span>
+                    <span className={cn("text-[10px] font-black uppercase tracking-[0.3em]", errors.company ? "text-red-400" : "text-white/30")}>
+                      Target Agency {errors.company && "• Required"}
+                    </span>
                     {selectedCompany && <span className="text-[10px] font-bold text-purple-400 animate-in fade-in slide-in-from-right-2 uppercase tracking-widest">Selected</span>}
                   </div>
                   <div className="relative group">
-                    <Building2 className="absolute left-6 top-1/2 -translate-y-1/2 w-5 h-5 text-white/20 group-focus-within:text-purple-400 transition-colors" />
+                    <Building2 className={cn("absolute left-6 top-1/2 -translate-y-1/2 w-5 h-5 transition-colors", errors.company ? "text-red-400" : "text-white/20 group-focus-within:text-purple-400")} />
                     <input 
                       placeholder="Search Company..."
                       value={companySearch || selectedCompany}
                       onChange={(e) => { setCompanySearch(e.target.value); setSelectedCompany(""); setIsCompanyOpen(true); }}
                       onFocus={() => setIsCompanyOpen(true)}
-                      className="w-full h-14 pl-16 pr-8 rounded-xl glass border-white/10 bg-transparent text-lg font-light focus:outline-none focus:border-purple-500/50 transition-all"
+                      className={cn(
+                        "w-full h-14 pl-16 pr-8 rounded-xl glass border-white/10 bg-transparent text-lg font-light focus:outline-none focus:border-purple-500/50 transition-all",
+                        errors.company && "border-red-500/50"
+                      )}
                     />
                     <AnimatePresence>
                       {isCompanyOpen && (
@@ -281,9 +298,11 @@ export default function InterviewSetupPage() {
                   </div>
                 </div>
 
-                {/* Experience Segmented Selector */}
+                {/* Experience Selector */}
                 <div className="space-y-2">
-                  <span className="text-[10px] font-black uppercase tracking-[0.3em] text-white/30 px-2">Seniority Grade</span>
+                  <span className={cn("text-[10px] font-black uppercase tracking-[0.3em] px-2", errors.exp ? "text-red-400" : "text-white/30")}>
+                    Seniority Grade {errors.exp && "• Required"}
+                  </span>
                   <div className="grid grid-cols-3 md:grid-cols-6 gap-2">
                     {EXPERIENCE_LEVELS.map(level => (
                       <button
@@ -293,7 +312,8 @@ export default function InterviewSetupPage() {
                           "h-12 rounded-lg border font-bold text-[9px] uppercase tracking-widest transition-all duration-300",
                           selectedExp === level 
                           ? "bg-accent/20 border-accent text-accent shadow-[0_0_20px_rgba(34,211,238,0.1)]" 
-                          : "glass border-white/10 text-white/40 hover:bg-white/5"
+                          : "glass border-white/10 text-white/40 hover:bg-white/5",
+                          errors.exp && !selectedExp && "border-red-500/30"
                         )}
                       >
                         {level}
@@ -319,7 +339,7 @@ export default function InterviewSetupPage() {
             </Card>
           </motion.div>
 
-          {/* Blueprint Node (Sidebar) */}
+          {/* Blueprint Node */}
           <motion.div 
             initial={{ opacity: 0, x: 30 }}
             animate={{ opacity: 1, x: 0 }}
@@ -345,10 +365,10 @@ export default function InterviewSetupPage() {
                   <div className="space-y-3">
                     <p className="text-[8px] font-black uppercase text-white/30 tracking-widest ml-1">Logic Path Sequence</p>
                     {[
-                      { label: "Resume Upload", status: "Step 01" },
-                      { label: "Aptitude Audit", status: "Step 02" },
-                      { label: "Coding Matrix", status: "Step 03" },
-                      { label: "HR Virtual Arena", status: "Step 04" }
+                      { label: "Resume Upload", status: "Node 01" },
+                      { label: "Aptitude Assessment", status: "Node 02" },
+                      { label: "Syntax Matrix", status: "Node 03" },
+                      { label: "HR Virtual Arena", status: "Node 04" }
                     ].map((step, i) => (
                       <div key={i} className="flex items-center gap-4 group/item">
                         <div className="w-8 h-8 rounded-lg bg-white/[0.03] border border-white/10 flex items-center justify-center text-[9px] font-black text-white/20 transition-all group-hover/item:border-accent/40 group-hover/item:text-accent">
@@ -382,7 +402,6 @@ export default function InterviewSetupPage() {
         </div>
       </main>
 
-      {/* Fullscreen Neural Loading Overlay */}
       <AnimatePresence>
         {isTransitioning && (
           <motion.div 
@@ -424,22 +443,6 @@ export default function InterviewSetupPage() {
           </motion.div>
         )}
       </AnimatePresence>
-
-      <style jsx global>{`
-        .custom-scrollbar::-webkit-scrollbar {
-          width: 4px;
-        }
-        .custom-scrollbar::-webkit-scrollbar-track {
-          background: transparent;
-        }
-        .custom-scrollbar::-webkit-scrollbar-thumb {
-          background: rgba(255, 255, 255, 0.1);
-          border-radius: 10px;
-        }
-        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-          background: rgba(34, 211, 238, 0.3);
-        }
-      `}</style>
     </div>
   );
 }
