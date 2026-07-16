@@ -1,6 +1,6 @@
 'use client';
 
-import { motion, useScroll, useTransform, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
@@ -9,7 +9,6 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
 import { 
-  Sparkles, 
   Zap, 
   ChevronRight, 
   Rocket,
@@ -18,21 +17,11 @@ import {
   BrainCircuit,
   ShieldCheck,
   Star,
-  Globe,
-  Award,
-  ExternalLink,
-  Flame,
-  LayoutGrid,
-  CheckCircle2,
-  Building2,
-  Check,
   Users,
-  ShieldAlert,
   Lock
 } from 'lucide-react';
-import { PlaceHolderImages } from '@/lib/placeholder-images';
 import { useUser } from '@/firebase';
-import { useState, useRef } from 'react';
+import { useState } from 'react';
 
 const COMPANIES = [
   { name: "Google", logo: "GOOG", color: "text-blue-400" },
@@ -79,7 +68,7 @@ const TRUST_CARDS = [
   {
     icon: Lock,
     title: "100% Secure & Private",
-    subtitle: "Your resume, interview data and reports remain secure.",
+    subtitle: "Your interview data and reports remain secure.",
     color: "text-green-400"
   }
 ];
@@ -103,7 +92,6 @@ export default function LandingPage() {
 
   return (
     <div className="flex flex-col min-h-screen relative overflow-x-hidden bg-[#050816]">
-      {/* Dynamic Background Elements */}
       <div className="particles-bg" />
       <div className="absolute top-[-10%] right-[-5%] w-[500px] h-[500px] bg-purple-600/10 rounded-full blur-[120px] pointer-events-none" />
       <div className="absolute bottom-[-10%] left-[-5%] w-[600px] h-[600px] bg-blue-600/10 rounded-full blur-[150px] pointer-events-none" />
@@ -112,9 +100,8 @@ export default function LandingPage() {
       
       <section className="relative flex flex-col items-center justify-center pt-32 pb-16 px-8">
         <div className="container mx-auto max-w-7xl">
-          <div className="grid lg:grid-cols-2 items-center gap-14 lg:gap-14 mb-12">
+          <div className="grid lg:grid-cols-2 items-center gap-14 mb-12">
             
-            {/* Left Content Section */}
             <motion.div 
               initial={{ opacity: 0, x: -30 }}
               animate={{ opacity: 1, x: 0 }}
@@ -151,18 +138,8 @@ export default function LandingPage() {
                 >
                   🎤 Start Mock Interview <Zap className="ml-3 w-4 h-4 fill-current" />
                 </Button>
-                <Link href="/question-bank">
-                  <Button 
-                    variant="outline" 
-                    className="h-14 px-8 text-xs glass border-white/10 hover:bg-white/5 flex gap-3 group rounded-2xl transition-all"
-                  >
-                    <Star className="w-4 h-4 text-accent transition-transform group-hover:rotate-12" />
-                    🤖 AI Resume Analysis
-                  </Button>
-                </Link>
               </div>
 
-              {/* Trust Badge / Metrics */}
               <div className="flex items-center gap-8 pt-4 border-t border-white/5">
                 {[
                   { label: "Precision", val: "98.4%", icon: Cpu },
@@ -179,7 +156,6 @@ export default function LandingPage() {
               </div>
             </motion.div>
 
-            {/* Right Card Section */}
             <motion.div 
               initial={{ opacity: 0, scale: 0.95, x: 30 }} 
               animate={{ opacity: 1, scale: 1, x: 0 }} 
@@ -200,7 +176,6 @@ export default function LandingPage() {
                     
                     <div className="space-y-3 pl-1">
                       {[
-                        { label: "Resume Intelligence", desc: "Identity Verification", color: "text-purple-400" },
                         { label: "Aptitude Screening", desc: "Logic Node Audit", color: "text-blue-400" },
                         { label: "Syntax Matrix", desc: "Implementation Check", color: "text-emerald-400" },
                         { label: "Neural Arena", desc: "Elite Virtual Interview", color: "text-accent" },
@@ -250,14 +225,8 @@ export default function LandingPage() {
                       sizes="(max-width:768px)100vw,40vw"
                       className="object-cover object-center scale-[1.10]"
                     />
-
-                    {/* Premium Light Effect */}
                     <div className="absolute inset-0 bg-gradient-to-t from-[#050816]/30 via-transparent to-transparent z-20" />
-
-                    {/* Blue Glow */}
                     <div className="absolute inset-0 bg-gradient-to-r from-transparent via-cyan-500/5 to-blue-500/10 z-20" />
-
-                    {/* Premium Border Glow */}
                     <div className="absolute inset-0 ring-1 ring-cyan-400/10 rounded-r-[3rem] z-20" />
                   </div>
                 </div>
@@ -265,27 +234,17 @@ export default function LandingPage() {
             </motion.div>
           </div>
 
-          {/* Premium Interactive Trust Section */}
           <motion.div 
             initial={{ opacity: 0, y: 40 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
             className="mt-[40px] mb-[60px] relative"
           >
-            {/* Background Particles & Glow Orbs */}
             <div className="absolute -inset-24 bg-accent/5 rounded-full blur-[100px] pointer-events-none opacity-20" />
             
             <Card className="relative overflow-hidden glass border-cyan-500/20 rounded-[24px] p-[30px] bg-white/[0.01] shadow-[0_0_40px_rgba(34,211,238,0.05)] group">
-              {/* Light Streak Animation */}
               <div className="absolute inset-0 pointer-events-none">
                 <div className="absolute top-0 -left-[100%] w-full h-full bg-gradient-to-r from-transparent via-white/[0.03] to-transparent animate-light-streak" />
-              </div>
-
-              {/* Floating Particles Mockup (CSS dots) */}
-              <div className="absolute inset-0 pointer-events-none opacity-10">
-                <div className="absolute top-10 left-10 w-1 h-1 bg-white rounded-full animate-pulse" />
-                <div className="absolute top-20 right-20 w-1 h-1 bg-accent rounded-full animate-pulse" />
-                <div className="absolute bottom-10 left-1/3 w-1 h-1 bg-purple-500 rounded-full animate-pulse" />
               </div>
 
               <div className="text-center mb-10">
@@ -294,7 +253,6 @@ export default function LandingPage() {
                 </h2>
               </div>
 
-              {/* Infinite Logo Marquee */}
               <div 
                 className="relative overflow-hidden py-4"
                 onMouseEnter={() => setIsScrollingPaused(true)}
@@ -323,12 +281,10 @@ export default function LandingPage() {
                   ))}
                 </motion.div>
                 
-                {/* Marquee Gradient Overlays */}
                 <div className="absolute inset-y-0 left-0 w-24 bg-gradient-to-r from-[#050816]/50 to-transparent z-10" />
                 <div className="absolute inset-y-0 right-0 w-24 bg-gradient-to-l from-[#050816]/50 to-transparent z-10" />
               </div>
 
-              {/* Premium Trust Indicator Cards */}
               <div className="mt-12 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 relative z-10">
                 {TRUST_CARDS.map((card, i) => (
                   <motion.div

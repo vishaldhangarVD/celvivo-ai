@@ -10,22 +10,16 @@ import { Badge } from '@/components/ui/badge';
 import { 
   Zap, 
   Activity, 
-  FileText, 
   Trophy,
   History,
   ArrowRight,
   Loader2,
   ChevronRight,
   MessageSquare,
-  Target,
   Flame,
   Award,
   Sparkles,
   LayoutGrid,
-  TrendingUp,
-  Clock,
-  Command,
-  FileBadge,
   Mic,
   Brain,
   Map,
@@ -64,15 +58,6 @@ export default function Dashboard() {
     );
   }, [db, user?.uid]);
 
-  const resumesQuery = useMemo(() => {
-    if (!db || !user?.uid) return null;
-    return query(
-      collection(db, 'users', user.uid, 'resumes'),
-      orderBy('createdAt', 'desc'),
-      limit(5)
-    );
-  }, [db, user?.uid]);
-
   const appsQuery = useMemo(() => {
     if (!db || !user?.uid) return null;
     return query(
@@ -91,7 +76,6 @@ export default function Dashboard() {
   }, [db, user?.uid]);
 
   const { data: interviews, loading: interviewsLoading } = useCollection(interviewsQuery);
-  const { data: resumes, loading: resumesLoading } = useCollection(resumesQuery);
   const { data: applications, loading: appsLoading } = useCollection(appsQuery);
   const { data: letters, loading: lettersLoading } = useCollection(lettersQuery);
 
@@ -119,10 +103,7 @@ export default function Dashboard() {
 
     // Job Tracker Stats
     const totalApps = applications?.length || 0;
-    const shortlisted = applications?.filter((a: any) => a.status === 'Shortlisted').length || 0;
-    const interviewedCount = applications?.filter((a: any) => a.status === 'Interview Scheduled').length || 0;
     const selected = applications?.filter((a: any) => a.status === 'Selected').length || 0;
-    const rejected = applications?.filter((a: any) => a.status === 'Rejected').length || 0;
     const successRate = totalApps > 0 ? Math.round((selected / totalApps) * 100) : 0;
 
     return {
@@ -135,10 +116,6 @@ export default function Dashboard() {
       technical: `${avgTech}%`,
       tracker: {
         total: totalApps,
-        shortlisted,
-        interviewed: interviewedCount,
-        selected,
-        rejected,
         successRate: `${successRate}%`
       }
     };
@@ -161,7 +138,6 @@ export default function Dashboard() {
       <main className="container mx-auto px-6 pt-32">
         <div className="max-w-7xl mx-auto space-y-12">
           
-          {/* Dashboard Header */}
           <motion.header 
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -188,7 +164,6 @@ export default function Dashboard() {
             </div>
           </motion.header>
 
-          {/* Top Statistics Row */}
           <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4">
             {[
               { label: "Interviews", val: stats.total, icon: History, color: "text-blue-400" },
@@ -216,9 +191,7 @@ export default function Dashboard() {
           </div>
 
           <div className="grid lg:grid-cols-12 gap-8">
-            {/* Sidebar Column (Moved to Left) */}
             <div className="lg:col-span-4 space-y-8">
-              {/* Daily Challenge Highlight */}
               <Card className="premium-card bg-orange-500/5 border-orange-500/20 p-8">
                 <CardHeader className="p-0 mb-6 flex items-center justify-between">
                   <CardTitle className="text-lg font-bold flex items-center gap-3 text-orange-400">
@@ -260,13 +233,11 @@ export default function Dashboard() {
                 </CardContent>
               </Card>
 
-              {/* AI Career Tools Row in Sidebar Style */}
               <div className="space-y-4">
                 <h3 className="text-xs font-bold uppercase tracking-[0.3em] text-white/30 ml-2">AI Career Tools</h3>
                 <div className="grid gap-4">
                   {[
                     { title: "Start Interview", icon: Mic, color: "text-accent", href: "/interview" },
-                    { title: "Resume Analyzer", icon: FileText, color: "text-purple-400", href: "/resume" },
                     { title: "Certificates", icon: Award, color: "text-orange-300", href: "/certificates" },
                     { title: "Skill Gap Analysis", icon: Brain, color: "text-yellow-400", href: "/skill-gap" },
                     { title: "Career Roadmap", icon: Map, color: "text-blue-400", href: "/roadmap" },
@@ -287,7 +258,6 @@ export default function Dashboard() {
                 </div>
               </div>
 
-              {/* Deployment Pulse Section (Job Tracker Summary) */}
               <Card className="premium-card bg-blue-500/5 border-blue-500/20 p-8">
                 <CardHeader className="p-0 mb-6">
                   <CardTitle className="text-lg font-bold flex items-center gap-3 text-blue-400">
@@ -312,9 +282,7 @@ export default function Dashboard() {
               </Card>
             </div>
 
-            {/* Main Content Column (Moved to Right) */}
             <div className="lg:col-span-8 space-y-8">
-              {/* Recent Interviews Card */}
               <Card className="premium-card bg-white/[0.01] border-white/5 p-8">
                 <CardHeader className="p-0 mb-8 flex flex-row items-center justify-between">
                   <CardTitle className="text-xl font-bold flex items-center gap-3">
@@ -334,7 +302,7 @@ export default function Dashboard() {
                       <div key={i} className="flex items-center justify-between p-5 glass rounded-2xl border-white/5 group hover:bg-white/[0.03] transition-all">
                         <div className="flex items-center gap-4">
                           <div className="w-10 h-10 rounded-xl bg-accent/10 flex items-center justify-center text-accent">
-                            <Target className="w-5 h-5" />
+                            <mic className="w-5 h-5" />
                           </div>
                           <div>
                             <p className="font-bold text-sm">{session.role}</p>
@@ -364,52 +332,10 @@ export default function Dashboard() {
                 </CardContent>
               </Card>
 
-              {/* Resume Reports Card */}
               <Card className="premium-card bg-white/[0.01] border-white/5 p-8">
                 <CardHeader className="p-0 mb-8 flex flex-row items-center justify-between">
                   <CardTitle className="text-xl font-bold flex items-center gap-3">
-                    <FileText className="w-5 h-5 text-purple-400" /> Resume Intelligence
-                  </CardTitle>
-                  <Link href="/resume">
-                    <Button variant="ghost" className="text-[10px] uppercase font-bold tracking-widest text-purple-400 hover:text-purple-300">New Audit</Button>
-                  </Link>
-                </CardHeader>
-                <CardContent className="p-0 space-y-4">
-                  {resumesLoading ? (
-                    <div className="py-12 flex justify-center"><Loader2 className="w-8 h-8 animate-spin text-purple-400" /></div>
-                  ) : resumes && resumes.length > 0 ? (
-                    resumes.slice(0, 3).map((resume: any, i) => (
-                      <div key={i} className="flex items-center justify-between p-5 glass rounded-2xl border-white/5">
-                        <div className="flex items-center gap-4">
-                          <div className="w-10 h-10 rounded-xl bg-purple-500/10 flex items-center justify-center text-purple-400">
-                            <FileText className="w-5 h-5" />
-                          </div>
-                          <div>
-                            <p className="font-bold text-sm">{resume.filename}</p>
-                            <p className="text-[10px] text-muted-foreground uppercase tracking-widest">{resume.targetRole}</p>
-                          </div>
-                        </div>
-                        <Badge className="bg-purple-500/20 text-purple-400 border-none font-bold tabular-nums">ATS: {resume.atsScore}%</Badge>
-                      </div>
-                    ))
-                  ) : (
-                    <div className="py-16 text-center glass rounded-3xl border-white/5 border-dashed">
-                      <FileText className="w-12 h-12 text-white/5 mx-auto mb-6" />
-                      <h3 className="text-xl font-bold mb-2">No resumes audited</h3>
-                      <p className="text-muted-foreground font-light text-sm mb-8">Upload your career blueprints for high-fidelity ATS calibration.</p>
-                      <Link href="/resume">
-                        <Button className="btn-premium px-8">Initialize Blueprint Audit</Button>
-                      </Link>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-
-              {/* Recent Cover Letters Card */}
-              <Card className="premium-card bg-white/[0.01] border-white/5 p-8">
-                <CardHeader className="p-0 mb-8 flex flex-row items-center justify-between">
-                  <CardTitle className="text-xl font-bold flex items-center gap-3">
-                    <FileBadge className="w-5 h-5 text-green-400" /> Recent Directives
+                    <Sparkles className="w-5 h-5 text-green-400" /> Recent Directives
                   </CardTitle>
                   <Link href="/cover-letter">
                     <Button variant="ghost" className="text-[10px] uppercase font-bold tracking-widest text-green-400 hover:text-green-300">Generate New</Button>
@@ -441,7 +367,7 @@ export default function Dashboard() {
                     <div className="py-16 text-center glass rounded-3xl border-white/5 border-dashed">
                       <Sparkles className="w-12 h-12 text-white/5 mx-auto mb-6" />
                       <h3 className="text-xl font-bold mb-2">No cover letters generated</h3>
-                      <p className="text-muted-foreground font-light text-sm mb-8">Architect mission-specific cover letters using your resume context.</p>
+                      <p className="text-muted-foreground font-light text-sm mb-8">Architect mission-specific cover letters using your career context.</p>
                       <Link href="/cover-letter">
                         <Button className="btn-premium px-8">Synthesize Cover Letter</Button>
                       </Link>
