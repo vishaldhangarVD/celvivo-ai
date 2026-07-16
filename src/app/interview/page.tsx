@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useMemo, useEffect } from 'react';
@@ -8,7 +9,6 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
-import { Progress } from '@/components/ui/progress';
 import { 
   Briefcase, 
   Building2, 
@@ -63,7 +63,9 @@ import {
   Home,
   ArrowLeft,
   Terminal as DevIcon,
-  Rocket
+  Rocket,
+  ShieldAlert,
+  Command
 } from 'lucide-react';
 import { 
   AlertDialog,
@@ -86,58 +88,47 @@ import { evaluateCodingSubmission } from '@/ai/flows/ai-coding-evaluator';
 import { executeCode } from '@/lib/piston';
 import { useToast } from '@/hooks/use-toast';
 import { motion, AnimatePresence } from 'framer-motion';
+import { cn } from '@/lib/utils';
 
 const ALL_ROLES = [
-  { id: 'fullstack', name: "Full Stack Developer", category: "Full Stack", icon: Layers },
-  { id: 'java', name: "Java Developer", category: "Software Development", icon: Code2 },
-  { id: 'python', name: "Python Developer", category: "Software Development", icon: Code2 },
-  { id: 'c', name: "C Developer", category: "Software Development", icon: Code2 },
-  { id: 'cpp', name: "C++ Developer", category: "Software Development", icon: Code2 },
-  { id: 'csharp', name: "C# Developer", category: "Software Development", icon: Code2 },
-  { id: 'dotnet', name: ".NET Developer", category: "Software Development", icon: Code2 },
-  { id: 'golang', name: "Golang Developer", category: "Software Development", icon: Code2 },
-  { id: 'rust', name: "Rust Developer", category: "Software Development", icon: Code2 },
-  { id: 'php', name: "PHP Developer", category: "Software Development", icon: Code2 },
-  { id: 'react', name: "React Developer", category: "Frontend", icon: Monitor },
-  { id: 'angular', name: "Angular Developer", category: "Frontend", icon: Monitor },
-  { id: 'vue', name: "Vue.js Developer", category: "Frontend", icon: Monitor },
-  { id: 'frontend', name: "Frontend Developer", category: "Frontend", icon: Monitor },
-  { id: 'nodejs', name: "Node.js Developer", category: "Backend", icon: Database },
-  { id: 'springboot', name: "Spring Boot Developer", category: "Backend", icon: Database },
-  { id: 'django', name: "Django Developer", category: "Backend", icon: Database },
-  { id: 'laravel', name: "Laravel Developer", category: "Backend", icon: Database },
-  { id: 'backend', name: "Backend Developer", category: "Backend", icon: Database },
-  { id: 'data-analyst', name: "Data Analyst", category: "Data", icon: TrendingUp },
-  { id: 'data-scientist', name: "Data Scientist", category: "Data", icon: Database },
-  { id: 'data-engineer', name: "Data Engineer", category: "Data", icon: Layers },
-  { id: 'devops', name: "DevOps Engineer", category: "Cloud & DevOps", icon: Cloud },
-  { id: 'ai', name: "AI Engineer", category: "AI & ML", icon: Zap },
+  "Software Engineer", "Frontend Developer", "Backend Developer", "Full Stack Developer",
+  "MERN Stack Developer", "MEAN Stack Developer", "Java Developer", "Python Developer",
+  "React Developer", "Angular Developer", "Node.js Developer", ".NET Developer",
+  "C# Developer", "C++ Developer", "Android Developer", "iOS Developer",
+  "Flutter Developer", "React Native Developer", "DevOps Engineer", "Cloud Engineer",
+  "AWS Engineer", "Azure Engineer", "GCP Engineer", "Data Analyst", "Business Analyst",
+  "Data Scientist", "Machine Learning Engineer", "AI Engineer", "Prompt Engineer",
+  "Gen AI Engineer", "Cyber Security Analyst", "SOC Analyst", "Network Engineer",
+  "Database Administrator", "SQL Developer", "QA Engineer", "Automation Tester",
+  "Manual Tester", "SDET", "Salesforce Developer", "SAP Consultant", "ServiceNow Developer",
+  "UI UX Designer", "Product Manager", "Technical Support Engineer", "System Engineer",
+  "Site Reliability Engineer", "Embedded Engineer", "Blockchain Developer", "Game Developer",
+  "AR VR Developer", "Big Data Engineer", "Power BI Developer", "Tableau Developer"
 ];
 
-const EXPERIENCE_OPTIONS = [
-  { id: 'fresher', label: 'Fresher', desc: 'Entry-level talent', icon: Zap },
-  { id: '0-1', label: '0–1 Years', desc: 'Early career', icon: Clock },
-  { id: '1-3', label: '1–3 Years', desc: 'Junior / Mid-level', icon: Award },
-  { id: '3-5', label: '3–5 Years', desc: 'Mid / Senior grade', icon: ShieldCheck },
-  { id: '5+', label: '5+ Years', desc: 'Expert / Lead grade', icon: Target },
+const COMPANIES = [
+  "Google", "Microsoft", "Amazon", "Apple", "Meta", "Netflix", "Adobe", "Oracle",
+  "IBM", "Intel", "Cisco", "Salesforce", "NVIDIA", "Uber", "Airbnb", "Tesla",
+  "Spotify", "PayPal", "Accenture", "Capgemini", "Infosys", "TCS", "Wipro", "HCL",
+  "Tech Mahindra", "Cognizant", "Deloitte", "EY", "PwC", "KPMG", "JP Morgan",
+  "Goldman Sachs", "Morgan Stanley", "Zoho", "Flipkart", "PhonePe", "Swiggy",
+  "Zomato", "Meesho", "Razorpay", "Freshworks", "BrowserStack", "Postman",
+  "Dream11", "Groww", "CRED", "Upstox", "Juspay", "Myntra", "LinkedIn", "OpenAI",
+  "Anthropic", "Perplexity"
 ];
 
-const COMPANIES = ["Google", "Amazon", "Microsoft", "Meta", "TCS", "Infosys", "Startup", "Accenture", "Deloitte"];
+const EXPERIENCE_LEVELS = ["Fresher", "0-1 Years", "1-3 Years", "3-5 Years", "5-8 Years", "8+ Years"];
 
 const INTERVIEW_STEPS = [
-  { id: 1, title: 'Job Role', icon: Briefcase },
-  { id: 2, title: 'Experience', icon: GraduationCap },
-  { id: 3, title: 'Company', icon: Building2 },
-  { id: 4, title: 'Resume', icon: Upload },
-  { id: 5, title: 'Analysis', icon: SearchCheck },
-  { id: 6, title: 'Aptitude', icon: Zap },
-  { id: 7, title: 'Aptitude Result', icon: FileText },
-  { id: 8, title: 'Coding Round', icon: Code2 },
-  { id: 9, title: 'Coding Result', icon: Award },
-  { id: 10, title: 'HR Interview', icon: Mic },
+  { id: 1, title: 'Job Setup', icon: Command },
+  { id: 2, title: 'Resume Node', icon: Upload },
+  { id: 3, title: 'Aptitude Audit', icon: Zap },
+  { id: 4, title: 'Aptitude Result', icon: FileText },
+  { id: 5, title: 'Syntax Matrix', icon: Code2 },
+  { id: 6, title: 'Coding Result', icon: Award },
+  { id: 7, title: 'Virtual Arena', icon: Mic },
+  { id: 8, title: 'Final Dossier', icon: FileSearch2 },
 ];
-
-const DEV_MODE = true; // Temporary flag for test mode
 
 export default function InterviewJourney() {
   const router = useRouter();
@@ -147,9 +138,17 @@ export default function InterviewJourney() {
 
   const [currentStep, setCurrentStep] = useState(1);
   const [selectedRole, setSelectedRole] = useState("");
-  const [selectedExp, setSelectedExp] = useState("");
   const [selectedCompany, setSelectedCompany] = useState("");
+  const [selectedExp, setSelectedExp] = useState("");
+  
   const [roleSearch, setRoleSearch] = useState("");
+  const [isRoleSearchOpen, setIsRoleSearchOpen] = useState(false);
+  const [companySearch, setCompanySearch] = useState("");
+  const [isCompanySearchOpen, setIsCompanySearchOpen] = useState(false);
+
+  const [isInitializingProtocol, setIsInitializingProtocol] = useState(false);
+  const [loadingMsgIdx, setLoadingMsgIdx] = useState(0);
+
   const [file, setFile] = useState<File | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [resumeAnalysis, setResumeAnalysis] = useState<any>(null);
@@ -162,7 +161,6 @@ export default function InterviewJourney() {
   const [aptitudeReport, setAptitudeReport] = useState<any>(null);
   const [aptitudeStartTime, setAptitudeStartTime] = useState<number | null>(null);
   const [aptitudeRemainingTime, setAptitudeRemainingTime] = useState<number | null>(null);
-  const [hasWarnedTime, setHasWarnedTime] = useState(false);
 
   const [isGeneratingCoding, setIsGeneratingCoding] = useState(false);
   const [codingProblem, setCodingProblem] = useState<any>(null);
@@ -174,6 +172,14 @@ export default function InterviewJourney() {
   const [showRecovery, setShowRecovery] = useState(false);
   const [isInitializing, setIsInitializing] = useState(true);
 
+  const LOADING_MESSAGES = [
+    "Initializing AI Interview...",
+    "Loading Company Pattern...",
+    "Preparing Assessment...",
+    "Building Interview Pipeline...",
+    "AI Ready..."
+  ];
+
   useEffect(() => {
     async function loadActiveSession() {
       if (!user || !db) return;
@@ -181,7 +187,7 @@ export default function InterviewJourney() {
       const snap = await getDoc(docRef);
       if (snap.exists()) {
         const data = snap.data();
-        if (data.step < 11) {
+        if (data.step < 10) {
           setShowRecovery(true);
         }
       }
@@ -230,61 +236,7 @@ export default function InterviewJourney() {
     setCode("");
     setFile(null);
     setShowRecovery(false);
-    toast({ title: "Session Reset", description: "Simulation state has been cleared." });
   };
-
-  const skipToInterviewDev = async () => {
-    if (!user || !db) return;
-    const sessId = "dev-" + Math.random().toString(36).substring(7);
-    const docRef = doc(db, 'users', user.uid, 'journey', 'active');
-    await setDoc(docRef, {
-      step: 10,
-      role: "Developer Advocate",
-      experience: "Senior",
-      company: "Nexvoro AI",
-      debugMode: true,
-      updatedAt: serverTimestamp(),
-    }, { merge: true });
-    
-    router.push(`/interview/${sessId}?role=Developer%20Advocate&company=Nexvoro%20AI&exp=Senior&round=Virtual%20Interview`);
-    toast({ title: "DEV MODE ACTIVE", description: "Bypassing journey phases for D-ID verification." });
-  };
-
-  const handleBackNavigation = () => {
-    if (currentStep > 1) {
-      setCurrentStep(prev => prev - 1);
-    } else {
-      router.push('/');
-    }
-  };
-
-  const handleGoHome = () => {
-    router.push('/');
-  };
-
-  // Aptitude Timer Logic
-  useEffect(() => {
-    let interval: NodeJS.Timeout;
-    if (currentStep === 6 && aptitudeRemainingTime !== null && aptitudeRemainingTime > 0) {
-      interval = setInterval(() => {
-        setAptitudeRemainingTime((prev) => {
-          if (prev === null) return null;
-          if (prev <= 1) {
-            clearInterval(interval);
-            handleAptitudeSubmit();
-            return 0;
-          }
-          const next = prev - 1;
-          if (next === 120 && !hasWarnedTime) {
-            toast({ variant: "destructive", title: "2-Minute Warning", description: "Aptitude time is nearly exhausted." });
-            setHasWarnedTime(true);
-          }
-          return next;
-        });
-      }, 1000);
-    }
-    return () => clearInterval(interval);
-  }, [currentStep, aptitudeRemainingTime, hasWarnedTime]);
 
   const saveProgress = async (step: number, extra = {}) => {
     if (!user || !db) return;
@@ -302,13 +254,28 @@ export default function InterviewJourney() {
     }, { merge: true });
   };
 
-  const nextStep = (step?: number) => {
-    const nextS = step || currentStep + 1;
-    setCurrentStep(nextS);
-    saveProgress(nextS);
+  const handleInitializeTerminal = async () => {
+    if (!selectedRole || !selectedCompany || !selectedExp) {
+      toast({ variant: "destructive", title: "Configuration Incomplete", description: "Select job role, company and seniority level." });
+      return;
+    }
+
+    setIsInitializingProtocol(true);
+    let idx = 0;
+    const interval = setInterval(() => {
+      idx++;
+      if (idx < LOADING_MESSAGES.length) {
+        setLoadingMsgIdx(idx);
+      } else {
+        clearInterval(interval);
+        saveProgress(2);
+        setCurrentStep(2);
+        setIsInitializingProtocol(false);
+      }
+    }, 800);
   };
 
-  const handleResumeSync = async () => {
+  const handleResumeStep = async () => {
     if (!file) return;
     setIsAnalyzing(true);
     try {
@@ -324,497 +291,350 @@ export default function InterviewJourney() {
         targetCompany: selectedCompany
       });
       setResumeAnalysis(result);
-      saveProgress(5, { resumeAnalysis: result });
-      setCurrentStep(5);
+      saveProgress(3, { resumeAnalysis: result });
+      setCurrentStep(3);
     } catch (e) {
-      toast({ variant: "destructive", title: "Sync Failed" });
+      toast({ variant: "destructive", title: "Audit Failed" });
     } finally {
       setIsAnalyzing(false);
     }
   };
 
-  const handleStartAptitude = async () => {
-    setIsGeneratingAptitude(true);
-    try {
-      const result = await generateAptitudeTest({
-        role: selectedRole,
-        company: selectedCompany,
-        experienceLevel: selectedExp,
-        resumeSummary: resumeAnalysis?.summary || ""
-      });
-      const initialTime = 900;
-      setAiAptitudeQuestions(result.questions);
-      setAptitudeStartTime(Date.now());
-      setAptitudeRemainingTime(initialTime);
-      saveProgress(6, { 
-        aiAptitudeQuestions: result.questions,
-        aptitudeRemainingTime: initialTime,
-        aptitudeIdx: 0,
-        aptitudeAnswers: {}
-      });
-      setCurrentStep(6);
-    } catch (e) {
-      toast({ variant: "destructive", title: "Synthesis Error" });
-    } finally {
-      setIsGeneratingAptitude(false);
-    }
-  };
+  const filteredRoles = useMemo(() => 
+    ALL_ROLES.filter(r => r.toLowerCase().includes(roleSearch.toLowerCase())),
+  [roleSearch]);
 
-  const handleAptitudeAnswerSelection = (idx: number, opt: string) => {
-    const newAnswers = { ...aptitudeAnswers, [idx]: opt };
-    setAptitudeAnswers(newAnswers);
-    saveProgress(6, { aptitudeAnswers: newAnswers });
-  };
-
-  const handleAptitudeSubmit = async () => {
-    setIsAptitudeEvaluating(true);
-    try {
-      const timeTaken = aptitudeStartTime ? Math.round((Date.now() - aptitudeStartTime) / 1000) : 900;
-      const results = aiAptitudeQuestions.map((q, idx) => ({
-        question: q.question,
-        category: q.category,
-        difficulty: q.difficulty,
-        userAnswer: aptitudeAnswers[idx] || "Skipped",
-        correctAnswer: q.answer,
-        isCorrect: aptitudeAnswers[idx] === q.answer
-      }));
-
-      const evaluation = await evaluateAptitude({
-        role: selectedRole,
-        company: selectedCompany,
-        experienceLevel: selectedExp,
-        timeTakenSeconds: timeTaken,
-        totalQuestions: aiAptitudeQuestions.length,
-        results
-      });
-
-      setAptitudeReport(evaluation);
-      saveProgress(7, { aptitudeReport: evaluation });
-      setCurrentStep(7);
-    } catch (e) {
-      toast({ variant: "destructive", title: "Audit Error" });
-    } finally {
-      setIsAptitudeEvaluating(false);
-    }
-  };
-
-  const handleStartCoding = async () => {
-    setIsGeneratingCoding(true);
-    try {
-      const result = await generateCodingChallenge({
-        role: selectedRole,
-        company: selectedCompany,
-        experienceLevel: selectedExp,
-        resumeSummary: resumeAnalysis?.summary || "",
-        aptitudePerformance: aptitudeReport?.recommendation || ""
-      });
-      setCodingProblem(result);
-      setCode(result.starterCode.javascript);
-      saveProgress(8, { codingProblem: result, code: result.starterCode.javascript });
-      setCurrentStep(8);
-    } catch (e) {
-      toast({ variant: "destructive", title: "Synthesis Error" });
-    } finally {
-      setIsGeneratingCoding(false);
-    }
-  };
-
-  const handleCodingSubmit = async () => {
-    setIsCodingEvaluating(true);
-    try {
-      const execResult = await executeCode(selectedLanguage, code);
-      const audit = await evaluateCodingSubmission({
-        problem: codingProblem,
-        code,
-        language: selectedLanguage,
-        executionOutput: execResult.output,
-        executionError: execResult.stderr
-      });
-      setCodingReport(audit);
-      saveProgress(9, { codingReport: audit });
-      setCurrentStep(9);
-    } catch (e) {
-      toast({ variant: "destructive", title: "Audit Error" });
-    } finally {
-      setIsCodingEvaluating(false);
-    }
-  };
-
-  const startArena = async () => {
-    const sessId = Math.random().toString(36).substring(7);
-    await saveProgress(10, { sessionId: sessId });
-    router.push(`/interview/${sessId}?role=${encodeURIComponent(selectedRole)}&company=${encodeURIComponent(selectedCompany)}&exp=${encodeURIComponent(selectedExp)}&round=Virtual%20Interview`);
-  };
+  const filteredCompanies = useMemo(() => 
+    COMPANIES.filter(c => c.toLowerCase().includes(companySearch.toLowerCase())),
+  [companySearch]);
 
   if (isInitializing) return <div className="h-screen flex items-center justify-center bg-[#050816]"><Loader2 className="w-12 h-12 text-accent animate-spin" /></div>;
 
   return (
-    <div className="min-h-screen bg-[#050816] pb-32">
+    <div className="min-h-screen bg-[#050816] pb-32 selection:bg-accent/30 selection:text-white">
       <div className="particles-bg" />
-      <Navbar />
-      <NavigationControls onHome={handleGoHome} onBack={handleBackNavigation} />
       
-      <div className="container mx-auto px-6 py-32">
-        <div className="max-w-7xl mx-auto grid lg:grid-cols-12 gap-12">
-          
-          <aside className="lg:col-span-3 space-y-8">
-            <div className="space-y-4">
-              <Badge className="bg-accent/20 text-accent border-none px-4 py-1 text-[10px] tracking-widest font-bold uppercase">Simulation Journey</Badge>
-              <h1 className="text-3xl font-bold tracking-tighter text-premium">Mission <br /><span className="text-gradient-purple">Progress.</span></h1>
-            </div>
+      {/* Animated Gradient Blobs */}
+      <div className="fixed inset-0 overflow-hidden pointer-events-none z-0">
+        <div className="absolute top-[-10%] left-[-10%] w-[500px] h-[500px] bg-purple-600/10 rounded-full blur-[120px] animate-pulse" />
+        <div className="absolute bottom-[-10%] right-[-10%] w-[600px] h-[600px] bg-blue-600/10 rounded-full blur-[150px] animate-pulse delay-1000" />
+      </div>
 
-            <nav className="space-y-2">
-              {INTERVIEW_STEPS.map((step) => {
-                const isCompleted = step.id < currentStep;
-                const isActive = step.id === currentStep;
-                return (
-                  <div key={step.id} className={`flex items-center gap-4 p-4 rounded-2xl border transition-all ${isActive ? 'bg-accent/10 border-accent/30 shadow-[0_0_20px_rgba(34,211,238,0.1)]' : isCompleted ? 'bg-green-500/10 border-green-500/20' : 'opacity-20 grayscale'}`}>
-                    <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${isCompleted ? 'bg-green-500/20 text-green-400' : isActive ? 'bg-accent/20 text-accent' : 'bg-white/5 text-white/40'}`}>
-                      {isCompleted ? <CircleCheck className="w-4 h-4" /> : <step.icon className="w-4 h-4" />}
-                    </div>
-                    <p className={`text-[10px] font-bold uppercase tracking-widest ${isActive ? 'text-white' : 'text-white/40'}`}>{step.title}</p>
+      <Navbar />
+      <NavigationControls onHome={() => router.push('/')} onBack={() => currentStep > 1 ? setCurrentStep(prev => prev - 1) : router.back()} />
+
+      <main className="container mx-auto px-6 pt-40 relative z-10">
+        <AnimatePresence mode="wait">
+          {isInitializingProtocol && (
+            <motion.div 
+              initial={{ opacity: 0 }} 
+              animate={{ opacity: 1 }} 
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 z-[200] bg-[#050816]/95 backdrop-blur-3xl flex flex-col items-center justify-center p-12"
+            >
+              <div className="max-w-md w-full text-center space-y-12">
+                <div className="relative w-32 h-32 mx-auto">
+                  <div className="absolute inset-0 border-2 border-accent/20 rounded-full animate-ping" />
+                  <div className="absolute inset-0 border-b-2 border-accent rounded-full animate-spin duration-[2s]" />
+                  <div className="absolute inset-4 glass rounded-full flex items-center justify-center"><Command className="w-10 h-10 text-accent animate-pulse" /></div>
+                </div>
+                <div className="space-y-4">
+                  <h2 className="text-3xl font-bold tracking-tighter text-premium">{LOADING_MESSAGES[loadingMsgIdx]}</h2>
+                  <div className="h-1.5 w-full bg-white/5 rounded-full overflow-hidden">
+                    <motion.div 
+                      className="h-full bg-accent shadow-[0_0_15px_rgba(34,211,238,0.5)]"
+                      initial={{ width: "0%" }}
+                      animate={{ width: `${(loadingMsgIdx + 1) * 20}%` }}
+                    />
                   </div>
-                );
-              })}
-            </nav>
+                </div>
+              </div>
+            </motion.div>
+          )}
 
-            <div className="pt-8 border-t border-white/5 space-y-4">
-               {DEV_MODE && (
-                 <Button onClick={skipToInterviewDev} variant="outline" className="w-full h-14 rounded-2xl border-accent/30 text-accent hover:bg-accent/10 gap-3 text-[10px] font-bold uppercase tracking-widest">
-                   <DevIcon className="w-4 h-4" /> Skip to Interview (Dev)
-                 </Button>
-               )}
-
-               <AlertDialog>
-                 <AlertDialogTrigger asChild>
-                   <Button variant="ghost" className="w-full h-14 rounded-2xl glass border-white/5 text-red-400 hover:bg-red-500/10 hover:text-red-300 gap-3 text-[10px] font-bold uppercase tracking-widest">
-                     <RotateCcw className="w-4 h-4" /> Restart Session
+          {showRecovery ? (
+            <motion.div key="recovery" initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} className="flex items-center justify-center py-20">
+              <Card className="premium-card bg-white/[0.02] border-white/10 p-16 text-center max-w-2xl space-y-12 shadow-[0_0_80px_rgba(147,51,234,0.1)]">
+                <div className="w-24 h-24 rounded-full bg-accent/20 flex items-center justify-center mx-auto border border-accent/30 shadow-2xl">
+                   <History className="w-12 h-12 text-accent animate-pulse" />
+                </div>
+                <div className="space-y-6">
+                   <h2 className="text-4xl font-bold tracking-tighter">Neural Link Interrupted</h2>
+                   <p className="text-xl text-muted-foreground font-light leading-relaxed">
+                     We detected an unfinished interview protocol. Would you like to resume your active session or initialize a fresh simulation?
+                   </p>
+                </div>
+                <div className="flex flex-col sm:flex-row gap-6 pt-4">
+                   <Button onClick={resumeSession} className="flex-1 h-18 btn-premium text-xs font-bold uppercase tracking-[0.2em] shadow-xl">
+                     Resume Active Mission <ChevronRight className="ml-2 w-5 h-5" />
                    </Button>
-                 </AlertDialogTrigger>
-                 <AlertDialogContent className="glass border-white/10 bg-[#0b0e1a] text-white">
-                   <AlertDialogHeader>
-                     <AlertDialogTitle>Restart Simulation Journey?</AlertDialogTitle>
-                     <AlertDialogDescription className="text-muted-foreground">
-                       This will terminate your active progress and purge current draft data. Historical interview archives will remain intact. Account stays logged in. Confirm?
-                     </AlertDialogDescription>
-                   </AlertDialogHeader>
-                   <AlertDialogFooter>
-                     <AlertDialogCancel className="bg-transparent text-white border-white/10 hover:bg-white/5">Cancel</AlertDialogCancel>
-                     <AlertDialogAction onClick={handleGlobalReset} className="bg-red-500 text-white hover:bg-red-600">Execute Reset</AlertDialogAction>
-                   </AlertDialogFooter>
-                 </AlertDialogContent>
-               </AlertDialog>
+                   <Button onClick={handleGlobalReset} variant="outline" className="flex-1 h-18 rounded-2xl glass border-white/10 hover:bg-white/5 text-xs font-bold uppercase tracking-[0.2em]">
+                     Initialize New Protocol
+                   </Button>
+                </div>
+              </Card>
+            </motion.div>
+          ) : currentStep === 1 ? (
+            <motion.div key="setup" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="max-w-6xl mx-auto space-y-12">
+              <header className="text-center space-y-4">
+                <Badge className="bg-accent/20 text-accent border-none px-6 py-2 text-[10px] tracking-[0.4em] font-black uppercase">Neural Interview Engine</Badge>
+                <h1 className="text-7xl font-bold tracking-tighter text-premium">Interview Setup</h1>
+                <p className="text-xl text-muted-foreground font-light">Configure your interview journey before entering the AI Interview Room.</p>
+              </header>
 
-               <Button onClick={handleGoHome} variant="ghost" className="w-full h-14 rounded-2xl glass border-white/5 text-accent hover:bg-accent/10 gap-3 text-[10px] font-bold uppercase tracking-widest">
-                  <Home className="w-4 h-4" /> Go to Website
-               </Button>
-            </div>
-          </aside>
-
-          <main className="lg:col-span-9">
-            <AnimatePresence mode="wait">
-              {showRecovery ? (
-                <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} className="flex items-center justify-center py-20">
-                  <Card className="premium-card bg-white/[0.02] border-accent/20 p-12 text-center max-w-xl space-y-10">
-                    <div className="w-20 h-20 rounded-full bg-accent/20 flex items-center justify-center mx-auto border border-accent/30 shadow-2xl">
-                       <History className="w-10 h-10 text-accent animate-pulse" />
+              <div className="grid lg:grid-cols-12 gap-8 items-start">
+                {/* Left Side: Configuration */}
+                <Card className="lg:col-span-8 premium-card bg-white/[0.01] border-white/5 p-12 space-y-12">
+                  
+                  {/* Job Role Picker */}
+                  <div className="space-y-6">
+                    <div className="flex items-center justify-between">
+                      <Label className="text-[10px] font-black uppercase tracking-[0.3em] text-white/40 ml-2">Deployment Track</Label>
+                      {selectedRole && <Badge className="bg-accent/20 text-accent border-none text-[8px] font-black uppercase">{selectedRole}</Badge>}
                     </div>
-                    <div className="space-y-4">
-                       <h2 className="text-3xl font-bold tracking-tighter">Neural Handshake Recovery</h2>
-                       <p className="text-muted-foreground font-light leading-relaxed">
-                         We detected an abandoned simulation protocol. Would you like to resume your active mission or initialize a fresh protocol?
-                       </p>
-                    </div>
-                    <div className="flex flex-col sm:flex-row gap-4">
-                       <Button onClick={resumeSession} className="flex-1 h-16 btn-premium text-[10px] font-bold uppercase tracking-[0.2em]">
-                         Resume Session <ChevronRight className="ml-2 w-4 h-4" />
-                       </Button>
-                       <Button onClick={handleGlobalReset} variant="outline" className="flex-1 h-16 rounded-2xl glass border-white/10 hover:bg-white/5 text-[10px] font-bold uppercase tracking-[0.2em]">
-                         Initialize New
-                       </Button>
-                    </div>
-                  </Card>
-                </motion.div>
-              ) : (
-                <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="space-y-8">
-                  {currentStep === 1 && (
-                    <Card className="premium-card bg-white/[0.01] border-white/5 p-12 space-y-10">
-                      <h2 className="text-4xl font-bold tracking-tighter text-center">Deployment Target</h2>
-                      <div className="relative group max-w-xl mx-auto w-full">
-                        <Search className="absolute left-6 top-1/2 -translate-y-1/2 w-5 h-5 text-white/20" />
-                        <Input placeholder="Search global IT roles..." value={roleSearch} onChange={(e) => setRoleSearch(e.target.value)} className="h-16 pl-16 rounded-2xl glass border-white/10" />
-                      </div>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        {ALL_ROLES.filter(r => r.name.toLowerCase().includes(roleSearch.toLowerCase())).slice(0, 10).map(role => (
-                          <button key={role.id} onClick={() => { setSelectedRole(role.name); nextStep(); }} className="p-6 rounded-2xl border transition-all text-left flex items-center gap-6 glass border-white/5 hover:bg-white/5 group">
-                            <div className="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center text-accent transition-transform group-hover:scale-110"><role.icon className="w-5 h-5" /></div>
-                            <span className="font-bold text-sm">{role.name}</span>
-                          </button>
-                        ))}
-                      </div>
-                    </Card>
-                  )}
-
-                  {currentStep === 2 && (
-                    <Card className="premium-card bg-white/[0.01] border-white/5 p-12 space-y-12">
-                      <h2 className="text-4xl font-bold tracking-tighter text-center">Seniority Calibration</h2>
-                      <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-                        {EXPERIENCE_OPTIONS.map(opt => (
-                          <button key={opt.id} onClick={() => { setSelectedExp(opt.label); nextStep(); }} className={`p-8 rounded-3xl border transition-all text-left group ${selectedExp === opt.label ? 'bg-accent/20 border-accent' : 'glass border-white/5 hover:bg-white/5'}`}>
-                            <opt.icon className="w-8 h-8 text-accent mb-4 transition-transform group-hover:scale-110" />
-                            <p className="text-xl font-bold">{opt.label}</p>
-                            <p className="text-xs text-muted-foreground mt-1">{opt.desc}</p>
-                          </button>
-                        ))}
-                      </div>
-                    </Card>
-                  )}
-
-                  {currentStep === 3 && (
-                    <Card className="premium-card bg-white/[0.01] border-white/5 p-12 space-y-12 text-center">
-                      <h2 className="text-4xl font-bold tracking-tighter">Target Agency</h2>
-                      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                        {COMPANIES.map(c => (
-                          <button key={c} onClick={() => { setSelectedCompany(c); nextStep(); }} className={`p-6 rounded-2xl border transition-all text-center group ${selectedCompany === c ? 'bg-accent/20 border-accent' : 'glass border-white/5 hover:bg-white/5'}`}>
-                            <Building2 className="w-6 h-6 text-accent mx-auto mb-3 transition-transform group-hover:scale-110" />
-                            <p className="text-xs font-bold uppercase tracking-widest">{c}</p>
-                          </button>
-                        ))}
-                      </div>
-                    </Card>
-                  )}
-
-                  {currentStep === 4 && (
-                    <Card className="premium-card bg-white/[0.01] border-white/5 p-12 space-y-12 text-center">
-                      <div className="space-y-4">
-                        <Badge className="bg-accent/20 text-accent border-none px-6 py-1.5 font-bold tracking-[0.4em] text-[10px] uppercase">Neural Identity Protocol</Badge>
-                        <h2 className="text-4xl font-bold tracking-tighter">AI Resume Audit</h2>
-                        <p className="text-muted-foreground font-light max-w-xl mx-auto">Provide your career blueprint for ATS screening and skill node extraction.</p>
-                      </div>
-                      <div onClick={() => !isAnalyzing && document.getElementById('resume-journey-upload')?.click()} className={`border-2 border-dashed rounded-[2.5rem] p-16 transition-all cursor-pointer group relative overflow-hidden ${file ? 'border-accent bg-accent/5' : 'border-white/10 hover:border-accent/30 hover:bg-white/[0.02]'}`}>
-                        <input type="file" id="resume-journey-upload" className="hidden" accept=".pdf" onChange={(e) => e.target.files && setFile(e.target.files[0])} />
-                        {isAnalyzing ? (
-                          <div className="flex flex-col items-center gap-4">
-                            <Loader2 className="w-12 h-12 text-accent animate-spin" />
-                            <p className="text-xs font-bold uppercase tracking-[0.3em] text-accent">Extracting Knowledge Nodes...</p>
-                          </div>
-                        ) : (
-                          <div className="space-y-6">
-                             <div className="w-16 h-16 rounded-2xl bg-white/5 flex items-center justify-center mx-auto text-accent group-hover:scale-110 transition-transform"><Upload className="w-8 h-8" /></div>
-                             <div className="space-y-1">
-                               <p className="font-bold text-lg">{file ? file.name : "📄 Drop Blueprint Here"}</p>
-                               <p className="text-[10px] text-muted-foreground uppercase tracking-widest font-bold">PDF Only • 5MB Operational Limit</p>
-                             </div>
-                          </div>
-                        )}
-                      </div>
-                      <Button onClick={handleResumeSync} disabled={!file || isAnalyzing} className="w-full h-18 btn-premium uppercase tracking-[0.3em] text-xs font-bold">
-                        {isAnalyzing ? <><Loader2 className="w-5 h-5 animate-spin mr-3" /> Analyzing...</> : "Initialize Audit Sequence"}
-                      </Button>
-                    </Card>
-                  )}
-
-                  {currentStep === 5 && (
-                    <Card className="premium-card bg-white/[0.01] border-white/5 p-12 space-y-12">
-                      <div className="flex justify-between items-end border-b border-white/5 pb-10">
-                        <div className="space-y-2">
-                          <Badge className="bg-accent/20 text-accent border-none px-4 py-1 text-[8px] uppercase font-bold tracking-widest">Audit Result v4.0</Badge>
-                          <h2 className="text-4xl font-bold tracking-tighter text-premium">Performance Matrix</h2>
-                        </div>
-                        <div className="flex gap-12 text-right">
-                           <div className="space-y-1">
-                             <div className="text-4xl font-bold text-accent tabular-nums">{resumeAnalysis?.atsScore}%</div>
-                             <p className="text-[8px] uppercase font-bold tracking-widest text-muted-foreground">ATS Rating</p>
-                           </div>
-                        </div>
-                      </div>
-                      <div className="grid lg:grid-cols-2 gap-8">
-                         <div className="space-y-6">
-                           <h3 className="text-xs font-bold uppercase tracking-widest text-white/40 flex items-center gap-3"><CheckCircle2 className="w-4 h-4 text-accent" /> Verified Skills</h3>
-                           <div className="flex flex-wrap gap-2">
-                             {resumeAnalysis?.skillAnalysis?.map((s: any, i: number) => (
-                               <Badge key={i} variant="outline" className="bg-white/5 border-white/10 px-3 py-1.5 text-[10px] font-bold text-white/70">{s.skill}</Badge>
-                             ))}
-                           </div>
-                         </div>
-                         <div className="space-y-6">
-                           <h3 className="text-xs font-bold uppercase tracking-widest text-white/40 flex items-center gap-3"><CircleAlert className="w-4 h-4 text-red-400" /> Critical Gaps</h3>
-                           <div className="flex flex-wrap gap-2">
-                             {resumeAnalysis?.missingSkills?.map((s: string, i: number) => (
-                               <Badge key={i} variant="outline" className="bg-red-500/5 border-red-500/20 text-red-400 px-3 py-1.5 text-[10px] font-bold">{s}</Badge>
-                             ))}
-                           </div>
-                         </div>
-                      </div>
-                      <Button onClick={handleStartAptitude} className="w-full h-18 btn-premium uppercase tracking-[0.3em] text-xs font-bold">
-                        Continue to Aptitude Phase →
-                      </Button>
-                    </Card>
-                  )}
-
-                  {currentStep === 6 && (
-                    <div className="space-y-8 relative">
-                      <div className="sticky top-24 z-[40] space-y-4">
-                        <Card className="flex items-center gap-6 px-8 py-4 glass border-white/10 rounded-2xl">
-                          <div className="flex items-center gap-3">
-                            <TimerIcon className={`w-5 h-5 ${aptitudeRemainingTime && aptitudeRemainingTime > 120 ? 'text-accent' : 'text-red-400 animate-pulse'}`} />
-                            <div className="flex flex-col">
-                              <span className="text-[8px] uppercase font-bold text-white/30 tracking-widest">Time Remaining</span>
-                              <span className="text-xl font-bold tabular-nums">
-                                {Math.floor((aptitudeRemainingTime || 0)/60)}:{(aptitudeRemainingTime || 0)%60 < 10 ? '0' : ''}{(aptitudeRemainingTime || 0)%60}
-                              </span>
-                            </div>
-                          </div>
-                          <div className="w-px h-10 bg-white/5" />
-                          <div className="flex items-center gap-3">
-                            <ClipboardCheck className="w-5 h-5 text-accent" />
-                            <div className="flex flex-col">
-                              <span className="text-[8px] uppercase font-bold text-white/30 tracking-widest">Logic Node</span>
-                              <span className="text-xl font-bold text-white tabular-nums">{aptitudeIdx + 1} / 15</span>
-                            </div>
-                          </div>
-                        </Card>
-                      </div>
-                      <Card className="premium-card bg-white/[0.01] border-white/5 p-12 min-h-[500px] flex flex-col">
-                          <div className="flex justify-between items-center mb-10">
-                             <Badge className="bg-accent/20 text-accent border-none px-4 py-1 text-[8px] uppercase font-bold tracking-widest">{aiAptitudeQuestions[aptitudeIdx]?.category}</Badge>
-                             <Badge variant="outline" className="border-white/10 text-white/40 text-[8px] uppercase font-bold px-3 py-1">Level: {aiAptitudeQuestions[aptitudeIdx]?.difficulty}</Badge>
-                          </div>
-                          <h3 className="text-3xl font-bold leading-tight tracking-tight text-white/90 mb-12">{aiAptitudeQuestions[aptitudeIdx]?.question}</h3>
-                          <div className="grid md:grid-cols-2 gap-4 mb-12">
-                            {aiAptitudeQuestions[aptitudeIdx]?.options.map((opt: any, i: number) => (
-                              <button key={i} onClick={() => handleAptitudeAnswerSelection(aptitudeIdx, opt)} className={`p-8 rounded-[2rem] border text-left transition-all duration-300 ${aptitudeAnswers[aptitudeIdx] === opt ? 'bg-accent/10 border-accent' : 'glass border-white/5 hover:bg-white/5'}`}>
-                                <div className="flex items-center gap-6">
-                                   <div className={`w-8 h-8 rounded-full border flex items-center justify-center font-bold text-xs ${aptitudeAnswers[aptitudeIdx] === opt ? 'bg-accent border-accent text-black' : 'border-white/20 text-white/40'}`}>
-                                      {String.fromCharCode(65 + i)}
-                                   </div>
-                                   <span className="text-lg font-light">{opt}</span>
-                                </div>
+                    <div className="relative">
+                      <Search className="absolute left-6 top-1/2 -translate-y-1/2 w-5 h-5 text-white/20" />
+                      <input 
+                        placeholder="Search Job Role..." 
+                        value={roleSearch || selectedRole}
+                        onChange={(e) => { setRoleSearch(e.target.value); setSelectedRole(""); setIsRoleSearchOpen(true); }}
+                        onFocus={() => setIsRoleSearchOpen(true)}
+                        className="w-full h-18 pl-16 pr-8 rounded-[1.5rem] glass border-white/10 bg-transparent text-lg font-light focus:outline-none focus:border-accent/50 focus:shadow-[0_0_30px_rgba(34,211,238,0.1)] transition-all"
+                      />
+                      <AnimatePresence>
+                        {isRoleSearchOpen && (
+                          <motion.div 
+                            initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 10 }}
+                            className="absolute top-full left-0 right-0 mt-3 p-3 glass border-white/10 bg-[#0b0e1a]/95 rounded-[1.5rem] z-[100] max-h-[300px] overflow-y-auto custom-scrollbar shadow-2xl border-glow-premium"
+                          >
+                            {filteredRoles.map(role => (
+                              <button 
+                                key={role} 
+                                onClick={() => { setSelectedRole(role); setIsRoleSearchOpen(false); setRoleSearch(""); }}
+                                className="w-full text-left p-4 hover:bg-accent/10 hover:text-accent rounded-xl text-sm font-bold uppercase tracking-widest transition-all flex items-center justify-between group"
+                              >
+                                {role}
+                                <ChevronRight className="w-4 h-4 opacity-0 group-hover:opacity-100 transition-all translate-x-[-10px] group-hover:translate-x-0" />
                               </button>
                             ))}
-                          </div>
-                          <div className="mt-auto pt-10 border-t border-white/5 flex justify-between">
-                            <Button onClick={() => setAptitudeIdx(Math.max(0, aptitudeIdx - 1))} disabled={aptitudeIdx === 0} variant="ghost" className="h-14 px-8 rounded-xl glass border-white/5 flex gap-3 text-xs font-bold uppercase tracking-widest">
-                              <ChevronLeft className="w-4 h-4" /> Previous
-                            </Button>
-                            <Button onClick={() => aptitudeIdx < 14 ? setAptitudeIdx(aptitudeIdx + 1) : handleAptitudeSubmit()} className="h-14 px-10 btn-premium text-xs font-bold uppercase tracking-[0.2em]">
-                              {aptitudeIdx < 14 ? "Next Node" : isAptitudeEvaluating ? <Loader2 className="animate-spin" /> : "Finalize Protocol"}
-                            </Button>
-                          </div>
-                      </Card>
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
                     </div>
-                  )}
+                  </div>
 
-                  {currentStep === 7 && aptitudeReport && (
-                    <div className="space-y-12">
-                      <header className="text-center space-y-4">
-                        <Badge className="bg-accent/20 text-accent px-4 py-1 text-[10px] font-bold uppercase tracking-widest border-none">Intelligence Audit Complete</Badge>
-                        <h2 className="text-5xl font-bold tracking-tighter text-premium">Aptitude Results</h2>
-                      </header>
-                      <div className="grid lg:grid-cols-12 gap-8">
-                        <Card className="lg:col-span-4 premium-card bg-white/[0.01] border-white/5 flex flex-col items-center justify-center p-12 text-center">
-                          <div className="text-7xl font-bold mb-6 tabular-nums">{aptitudeReport.overallScore}%</div>
-                          <Badge className={`${aptitudeReport.status === 'Pass' ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'} border-none px-10 py-2 text-xs font-black tracking-[0.4em]`}>
-                            {aptitudeReport.status.toUpperCase()}
-                          </Badge>
-                        </Card>
-                        <div className="lg:col-span-8 grid grid-cols-2 md:grid-cols-3 gap-4">
-                          {[
-                            { label: "Correct Nodes", val: aptitudeReport.correctCount, icon: CheckCircle2, color: "text-green-400" },
-                            { label: "Accuracy", val: `${aptitudeReport.accuracy}%`, icon: Target, color: "text-accent" },
-                            { label: "Percentile", val: aptitudeReport.percentile, icon: Award, color: "text-yellow-400" }
-                          ].map((stat, i) => (
-                            <Card key={i} className="glass p-6 rounded-2xl border-white/5 text-center flex flex-col items-center gap-2">
-                               <stat.icon className={`w-5 h-5 ${stat.color}`} />
-                               <div className="text-xl font-bold">{stat.val}</div>
-                               <div className="text-[8px] uppercase font-bold tracking-widest text-muted-foreground">{stat.label}</div>
-                            </Card>
-                          ))}
+                  {/* Company Picker */}
+                  <div className="space-y-6">
+                    <div className="flex items-center justify-between">
+                      <Label className="text-[10px] font-black uppercase tracking-[0.3em] text-white/40 ml-2">Target Agency</Label>
+                      {selectedCompany && <Badge className="bg-purple-500/20 text-purple-400 border-none text-[8px] font-black uppercase">{selectedCompany}</Badge>}
+                    </div>
+                    <div className="relative">
+                      <Building2 className="absolute left-6 top-1/2 -translate-y-1/2 w-5 h-5 text-white/20" />
+                      <input 
+                        placeholder="Search Company..." 
+                        value={companySearch || selectedCompany}
+                        onChange={(e) => { setCompanySearch(e.target.value); setSelectedCompany(""); setIsCompanySearchOpen(true); }}
+                        onFocus={() => setIsCompanySearchOpen(true)}
+                        className="w-full h-18 pl-16 pr-8 rounded-[1.5rem] glass border-white/10 bg-transparent text-lg font-light focus:outline-none focus:border-purple-500/50 focus:shadow-[0_0_30px_rgba(168,85,247,0.1)] transition-all"
+                      />
+                      <AnimatePresence>
+                        {isCompanySearchOpen && (
+                          <motion.div 
+                            initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 10 }}
+                            className="absolute top-full left-0 right-0 mt-3 p-3 glass border-white/10 bg-[#0b0e1a]/95 rounded-[1.5rem] z-[100] max-h-[300px] overflow-y-auto custom-scrollbar shadow-2xl border-glow-premium"
+                          >
+                            {filteredCompanies.map(comp => (
+                              <button 
+                                key={comp} 
+                                onClick={() => { setSelectedCompany(comp); setIsCompanySearchOpen(false); setCompanySearch(""); }}
+                                className="w-full text-left p-4 hover:bg-purple-500/10 hover:text-purple-400 rounded-xl text-sm font-bold uppercase tracking-widest transition-all flex items-center justify-between group"
+                              >
+                                {comp}
+                                <ChevronRight className="w-4 h-4 opacity-0 group-hover:opacity-100 transition-all translate-x-[-10px] group-hover:translate-x-0" />
+                              </button>
+                            ))}
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
+                    </div>
+                  </div>
+
+                  {/* Experience Segmented Selector */}
+                  <div className="space-y-6">
+                    <Label className="text-[10px] font-black uppercase tracking-[0.3em] text-white/40 ml-2">Seniority Grade</Label>
+                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+                      {EXPERIENCE_LEVELS.map(level => (
+                        <button
+                          key={level}
+                          onClick={() => setSelectedExp(level)}
+                          className={cn(
+                            "h-14 rounded-xl border font-bold text-[10px] uppercase tracking-widest transition-all duration-300",
+                            selectedExp === level 
+                            ? "bg-accent/20 border-accent text-accent shadow-[0_0_20px_rgba(34,211,238,0.1)]" 
+                            : "glass border-white/10 text-white/40 hover:bg-white/5 hover:text-white"
+                          )}
+                        >
+                          {level}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <Button 
+                    onClick={handleInitializeTerminal} 
+                    className="w-full h-20 btn-premium rounded-[2rem] text-xl font-black uppercase tracking-[0.4em] shadow-[0_20px_80px_rgba(147,51,234,0.3)] group"
+                  >
+                    Initialize Simulation <ArrowRight className="ml-4 w-6 h-6 transition-transform group-hover:translate-x-2" />
+                  </Button>
+                </Card>
+
+                {/* Right Side: Preview & Info */}
+                <div className="lg:col-span-4 space-y-6">
+                  <Card className="premium-card bg-accent/[0.02] border-accent/20 p-8 space-y-8 sticky top-32">
+                    <h3 className="text-lg font-black uppercase tracking-tighter text-accent flex items-center gap-3">
+                      <Sparkles className="w-5 h-5" /> Simulation Blueprint
+                    </h3>
+                    
+                    <div className="space-y-6">
+                      <div className="p-5 glass rounded-2xl border-white/5 space-y-1">
+                        <p className="text-[8px] font-black uppercase text-white/30 tracking-widest">Active Protocol</p>
+                        <p className="text-lg font-bold text-white leading-tight">{selectedRole || "Awaiting Selection"}</p>
+                        <p className="text-[10px] text-accent font-bold mt-1 uppercase">{selectedCompany || "---"} • {selectedExp || "---"}</p>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-3">
+                        <div className="p-4 glass rounded-xl border-white/5">
+                          <p className="text-[8px] font-black uppercase text-white/20 tracking-widest mb-1">Difficulty</p>
+                          <p className="text-sm font-bold">{selectedExp ? (selectedExp.includes('5') || selectedExp.includes('8') ? 'Expert' : 'Standard') : '---'}</p>
+                        </div>
+                        <div className="p-4 glass rounded-xl border-white/5">
+                          <p className="text-[8px] font-black uppercase text-white/20 tracking-widest mb-1">Duration</p>
+                          <p className="text-sm font-bold">~45 Mins</p>
                         </div>
                       </div>
 
-                      {aptitudeReport.status === 'Pass' ? (
-                        <div className="p-12 glass rounded-[3rem] border-green-500/20 bg-green-500/[0.02] text-center space-y-8">
-                          <div className="w-20 h-20 rounded-full bg-green-500/20 flex items-center justify-center mx-auto shadow-2xl">
-                             <CheckCircle2 className="w-10 h-10 text-green-400" />
-                          </div>
-                          <div>
-                            <h3 className="text-3xl font-bold">Protocol Passed.</h3>
-                            <p className="text-muted-foreground font-light mt-2">You have cleared the cognitive screening phase. Proceed to Syntax Matrix.</p>
-                          </div>
-                          <Button onClick={handleStartCoding} className="h-18 px-12 btn-premium text-xs font-bold uppercase tracking-[0.3em]">
-                            Enter Coding Round →
-                          </Button>
-                        </div>
-                      ) : (
-                        <div className="p-12 glass rounded-[3rem] border-red-500/20 bg-red-500/[0.02] text-center space-y-8">
-                          <div className="w-20 h-20 rounded-full bg-red-500/20 flex items-center justify-center mx-auto">
-                             <XCircle className="w-10 h-10 text-red-400" />
-                          </div>
-                          <div className="space-y-2">
-                            <h3 className="text-3xl font-bold">Protocol Insufficient.</h3>
-                            <p className="text-muted-foreground font-light">Minimum qualification score (70%) not met for this track.</p>
-                          </div>
-                          <div className="flex justify-center gap-4">
-                            <Button onClick={handleGlobalReset} className="h-14 px-10 btn-premium text-[10px] font-bold uppercase tracking-widest gap-2">
-                              <RefreshCcw className="w-4 h-4" /> Restart Simulation
-                            </Button>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  )}
-
-                  {currentStep === 8 && (
-                    <Card className="premium-card bg-white/[0.01] border-white/5 p-12 space-y-8 min-h-[600px] flex flex-col">
-                       <Badge className="bg-orange-500/20 text-orange-400 border-none w-fit px-4 py-1 text-[8px] uppercase font-bold tracking-widest">{codingProblem?.difficulty} NODE</Badge>
-                       <div>
-                         <h3 className="text-3xl font-bold tracking-tighter mb-4">{codingProblem?.title}</h3>
-                         <p className="text-sm text-muted-foreground leading-relaxed font-light">{codingProblem?.description}</p>
-                       </div>
-                       <textarea value={code} onChange={(e) => { setCode(e.target.value); saveProgress(8, { code: e.target.value }); }} className="w-full flex-1 glass border-white/10 bg-black/40 p-8 font-mono text-sm resize-none rounded-3xl focus:outline-none focus:border-accent transition-all" />
-                       <Button onClick={handleCodingSubmit} disabled={isCodingEvaluating} className="w-full h-20 btn-premium uppercase tracking-[0.3em] text-xs font-bold">
-                         {isCodingEvaluating ? <Loader2 className="w-5 h-5 animate-spin mr-3" /> : "Finalize Syntax Protocol"}
-                       </Button>
-                    </Card>
-                  )}
-
-                  {currentStep === 9 && codingReport && (
-                    <div className="space-y-12">
-                       <Card className="premium-card bg-white/[0.01] border-white/5 p-12 space-y-12">
-                          <div className="flex justify-between items-center">
-                            <h2 className="text-3xl font-bold">Syntax Audit Results</h2>
-                            <div className="text-6xl font-bold text-accent tabular-nums">{codingReport?.score}%</div>
-                          </div>
-                          <div className="grid grid-cols-2 gap-6">
-                             <div className="p-8 glass rounded-3xl bg-white/[0.01]">
-                                <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mb-2">Complexity Node</p>
-                                <p className="text-2xl font-bold text-accent">{codingReport?.timeComplexity}</p>
-                             </div>
-                             <div className="p-8 glass rounded-3xl bg-white/[0.01]">
-                                <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mb-2">Readability Index</p>
-                                <p className="text-2xl font-bold text-purple-400 tabular-nums">{codingReport?.readabilityScore}%</p>
-                             </div>
-                          </div>
-
-                          {codingReport.score >= 60 ? (
-                            <Button onClick={startArena} className="w-full h-18 btn-premium uppercase tracking-[0.3em] text-xs font-bold">Enter Virtual Arena</Button>
-                          ) : (
-                            <div className="p-8 glass border-red-500/20 bg-red-500/[0.02] rounded-3xl text-center space-y-6">
-                               <p className="text-red-400 font-bold">Syntax Matrix deficiency detected.</p>
-                               <Button onClick={handleGlobalReset} variant="outline" className="h-14 px-10 rounded-2xl glass border-white/10 text-red-400">Restart Session</Button>
+                      <div className="space-y-3">
+                        <p className="text-[8px] font-black uppercase text-white/30 tracking-widest ml-1">Logic Path Sequence</p>
+                        {[
+                          { label: "Resume Node", status: "Input" },
+                          { label: "Aptitude Audit", status: "15 Nodes" },
+                          { label: "Syntax Matrix", status: "Compiler" },
+                          { label: "HR Interview", status: "Virtual" }
+                        ].map((step, i, arr) => (
+                          <div key={i} className="flex items-center gap-4">
+                            <div className="relative">
+                              <div className="w-6 h-6 rounded-full border border-white/10 flex items-center justify-center text-[8px] font-black text-white/40">
+                                {i + 1}
+                              </div>
+                              {i < arr.length - 1 && <div className="absolute top-6 left-1/2 -translate-x-1/2 w-px h-3 bg-white/5" />}
                             </div>
-                          )}
-                       </Card>
+                            <div className="flex-1 flex justify-between items-center text-[10px] font-bold uppercase tracking-widest text-white/60">
+                              <span>{step.label}</span>
+                              <span className="text-[8px] text-white/20">{step.status}</span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
                     </div>
-                  )}
 
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </main>
-        </div>
-      </div>
+                    <div className="pt-6 border-t border-white/5 grid grid-cols-2 gap-4">
+                      {[
+                        { icon: Rocket, label: "Rounds", val: "4" },
+                        { icon: ShieldCheck, label: "Evaluation", val: "AI" },
+                        { icon: Award, label: "Pass Index", val: "70%" },
+                        { icon: FileText, label: "Certificate", val: "True" }
+                      ].map((info, i) => (
+                        <div key={i} className="flex flex-col items-center p-3 glass rounded-xl border-white/5">
+                           <info.icon className="w-4 h-4 text-accent/50 mb-2" />
+                           <span className="text-[8px] font-black text-white/20 uppercase mb-1">{info.label}</span>
+                           <span className="text-[10px] font-bold text-white/80">{info.val}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </Card>
+                </div>
+              </div>
+            </motion.div>
+          ) : currentStep === 2 ? (
+            <motion.div key="resume" initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="max-w-4xl mx-auto space-y-12">
+               <header className="text-center space-y-4">
+                <Badge className="bg-accent/20 text-accent border-none px-6 py-2 text-[10px] tracking-[0.4em] font-black uppercase">Identity Verification</Badge>
+                <h1 className="text-6xl font-bold tracking-tighter text-premium">Upload Resume</h1>
+                <p className="text-xl text-muted-foreground font-light max-w-xl mx-auto">Provide your career blueprint to calibrate the simulated environment.</p>
+              </header>
+
+              <Card 
+                onClick={() => !isAnalyzing && document.getElementById('journey-resume-upload')?.click()}
+                className={cn(
+                  "premium-card bg-white/[0.01] border-white/5 p-20 flex flex-col items-center justify-center text-center cursor-pointer group transition-all duration-500",
+                  file ? "border-accent/40 bg-accent/[0.02] shadow-[0_0_50px_rgba(34,211,238,0.1)]" : "hover:border-accent/30"
+                )}
+              >
+                <input type="file" id="journey-resume-upload" className="hidden" accept=".pdf" onChange={(e) => e.target.files && setFile(e.target.files[0])} />
+                {isAnalyzing ? (
+                  <div className="flex flex-col items-center gap-8">
+                    <div className="relative w-24 h-24">
+                       <div className="absolute inset-0 border-2 border-accent/20 rounded-full animate-ping" />
+                       <div className="absolute inset-0 border-b-2 border-accent rounded-full animate-spin" />
+                       <Cpu className="w-10 h-10 text-accent absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 animate-pulse" />
+                    </div>
+                    <p className="text-sm font-black uppercase tracking-[0.4em] text-accent">Extracting Knowledge Nodes...</p>
+                  </div>
+                ) : (
+                  <div className="space-y-8">
+                    <div className="w-24 h-24 rounded-[2rem] bg-accent/10 flex items-center justify-center mx-auto border border-accent/20 group-hover:scale-110 transition-transform">
+                      {file ? <CheckCircle2 className="w-12 h-12 text-green-400" /> : <Upload className="w-12 h-12 text-accent" />}
+                    </div>
+                    <div className="space-y-2">
+                      <h3 className="text-3xl font-bold">{file ? "Blueprint Secured" : "Deploy Career History"}</h3>
+                      <p className="text-sm text-muted-foreground font-light uppercase tracking-widest">{file ? file.name : "Drag & Drop PDF or DOCX (Max 10MB)"}</p>
+                    </div>
+                    {file && (
+                      <Button variant="ghost" className="h-10 px-8 rounded-xl glass border-white/10 text-[10px] font-black uppercase tracking-widest text-accent hover:bg-accent/10">Replace Blueprint</Button>
+                    )}
+                  </div>
+                )}
+              </Card>
+
+              <div className="flex flex-col sm:flex-row gap-6">
+                <Button variant="ghost" onClick={() => setCurrentStep(1)} className="flex-1 h-18 rounded-2xl glass border-white/10 text-xs font-bold uppercase tracking-widest">Back to Calibration</Button>
+                <Button onClick={handleResumeStep} disabled={!file || isAnalyzing} className="flex-[2] h-18 btn-premium text-xs font-black uppercase tracking-[0.3em] shadow-2xl">
+                  {isAnalyzing ? "Processing Data..." : "Finalize Neural Scan"}
+                </Button>
+              </div>
+            </motion.div>
+          ) : (
+            <motion.div key="other" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-center py-32 space-y-12">
+               <div className="w-24 h-24 rounded-full bg-white/5 border border-white/10 flex items-center justify-center mx-auto">
+                 <Loader2 className="w-10 h-10 text-accent animate-spin" />
+               </div>
+               <h2 className="text-2xl font-bold tracking-tighter uppercase text-white/40">Synchronizing Assessment Environment...</h2>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </main>
+
+      <style jsx global>{`
+        .border-glow-premium {
+          position: relative;
+          z-index: 1;
+        }
+        .border-glow-premium::before {
+          content: '';
+          position: absolute;
+          inset: -1px;
+          z-index: -1;
+          background: linear-gradient(45deg, rgba(34, 211, 238, 0.3), rgba(147, 51, 234, 0.3));
+          border-radius: inherit;
+          mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+          -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+          mask-composite: exclude;
+          -webkit-mask-composite: destination-out;
+          padding: 1px;
+        }
+      `}</style>
     </div>
   );
 }
+
