@@ -616,7 +616,7 @@ export default function AptitudeEnginePage() {
 
                         {result.status === 'Pass' ? (
                           <Button onClick={() => router.push('/interview/coding')} className="w-full h-16 btn-premium rounded-2xl text-[10px] font-black uppercase tracking-[0.3em] shadow-[0_20px_60px_rgba(34,211,238,0.2)]">
-                            Enter Syntax Matrix <ChevronRight className="ml-2 w-4 h-4" />
+                            💻 Coding Round
                           </Button>
                         ) : (
                           <Button onClick={() => window.location.reload()} className="w-full h-16 glass border-white/10 hover:bg-white/5 rounded-2xl text-[10px] font-black uppercase tracking-widest">
