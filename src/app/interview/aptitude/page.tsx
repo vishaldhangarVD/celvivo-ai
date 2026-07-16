@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useEffect, useMemo, useCallback } from 'react';
@@ -160,32 +159,32 @@ export default function AptitudeEnginePage() {
     };
   }, [isInitializing, isEvaluating, result]);
 
+  // Side-effect handler for warnings
+  useEffect(() => {
+    if (warnings > 0 && !result && !isEvaluating) {
+      if (warnings >= 4) {
+        handleSubmit();
+        toast({ 
+          variant: "destructive", 
+          title: "Security Breach", 
+          description: "Automated submission triggered due to multiple tab switches." 
+        });
+      } else {
+        toast({ 
+          variant: "destructive", 
+          title: `Warning ${warnings}/3`, 
+          description: "Unauthorized tab switch detected. High-fidelity monitoring is active." 
+        });
+      }
+    }
+  }, [warnings, handleSubmit, result, isEvaluating, toast]);
+
   // Handle auto-submit on timeout
   useEffect(() => {
     if (timeLeft <= 0 && !isInitializing && !isEvaluating && !result) {
       handleSubmit();
     }
   }, [timeLeft, isInitializing, isEvaluating, result, handleSubmit]);
-
-  // Handle Security Warnings Side Effects
-  useEffect(() => {
-    if (warnings === 0 || isEvaluating || result) return;
-
-    if (warnings >= 4) {
-      handleSubmit();
-      toast({ 
-        variant: "destructive", 
-        title: "Security Breach", 
-        description: "Automated submission triggered due to multiple tab switches." 
-      });
-    } else {
-      toast({ 
-        variant: "destructive", 
-        title: `Warning ${warnings}/3`, 
-        description: "Unauthorized tab switch detected. High-fidelity monitoring is active." 
-      });
-    }
-  }, [warnings, isEvaluating, result, handleSubmit, toast]);
 
   const handleOptionSelect = (ans: string) => {
     setAnswers(prev => ({ ...prev, [currentIdx]: ans }));
@@ -208,7 +207,7 @@ export default function AptitudeEnginePage() {
 
   if (isInitializing || journeyLoading) {
     return (
-      <div className="h-screen bg-[#050816] flex flex-col items-center justify-center space-y-8">
+      <div className="min-h-screen bg-[#050816] flex flex-col items-center justify-center space-y-8">
         <div className="relative">
           <div className="w-24 h-24 rounded-full border-2 border-accent/20 border-t-accent animate-spin" />
           <Brain className="w-10 h-10 text-accent absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 animate-pulse" />
@@ -222,12 +221,12 @@ export default function AptitudeEnginePage() {
   }
 
   return (
-    <div className="h-screen bg-[#050816] flex flex-col overflow-hidden relative">
+    <div className="min-h-screen bg-[#050816] flex flex-col relative">
       <div className="particles-bg" />
       <Navbar />
       
       {/* 1. Header Protocol */}
-      <header className="h-20 border-b border-white/5 bg-[#0b0e1a]/80 backdrop-blur-xl flex items-center justify-between px-8 z-50">
+      <header className="h-20 border-b border-white/5 bg-[#0b0e1a]/80 backdrop-blur-xl flex items-center justify-between px-8 z-50 sticky top-0">
         <div className="flex items-center gap-6">
           <div className="w-10 h-10 rounded-xl bg-accent/10 flex items-center justify-center text-accent border border-accent/20">
             <Command className="w-5 h-5" />
@@ -253,9 +252,9 @@ export default function AptitudeEnginePage() {
         </div>
       </header>
 
-      <main className="flex-1 container mx-auto px-6 py-6 grid lg:grid-cols-12 gap-6 overflow-hidden">
+      <main className="flex-1 container mx-auto px-6 py-6 grid lg:grid-cols-12 gap-6">
         {/* Left: Question Arena */}
-        <div className="lg:col-span-9 flex flex-col gap-6 overflow-hidden">
+        <div className="lg:col-span-9 flex flex-col gap-6">
           
           <AnimatePresence mode="wait">
             {!result && !isEvaluating ? (
@@ -264,7 +263,7 @@ export default function AptitudeEnginePage() {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -20 }}
-                className="flex-1 flex flex-col gap-6 overflow-hidden"
+                className="flex flex-col gap-6"
               >
                 {/* Progress Bar */}
                 <div className="space-y-2">
@@ -282,7 +281,7 @@ export default function AptitudeEnginePage() {
                 </div>
 
                 {/* Question Card */}
-                <Card className="flex-1 premium-card bg-white/[0.01] border-white/5 p-12 flex flex-col justify-center relative overflow-hidden">
+                <Card className="premium-card bg-white/[0.01] border-white/5 p-12 flex flex-col justify-center relative overflow-hidden min-h-[500px]">
                   <div className="absolute top-0 right-0 p-8">
                     <Badge variant="outline" className="border-accent/20 text-accent text-[9px] font-black uppercase tracking-widest">{questions[currentIdx]?.difficulty} LEVEL</Badge>
                   </div>
@@ -369,7 +368,7 @@ export default function AptitudeEnginePage() {
                 key="evaluating"
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
-                className="flex-1 flex flex-col items-center justify-center p-12 text-center"
+                className="flex flex-col items-center justify-center p-12 text-center"
               >
                 <div className="relative mb-12">
                   <div className="w-32 h-32 rounded-full border-2 border-accent/20 border-t-accent animate-spin" />
@@ -397,7 +396,7 @@ export default function AptitudeEnginePage() {
                 key="result"
                 initial={{ opacity: 0, scale: 0.95 }}
                 animate={{ opacity: 1, scale: 1 }}
-                className="flex-1 flex flex-col gap-6"
+                className="flex flex-col gap-6"
               >
                 <Card className="premium-card p-12 flex flex-col items-center text-center space-y-10 relative overflow-hidden">
                   <div className="absolute top-0 right-0 p-12">
@@ -490,8 +489,8 @@ export default function AptitudeEnginePage() {
         </div>
 
         {/* Right: Palette Sidebar */}
-        <div className="lg:col-span-3 flex flex-col gap-6 overflow-hidden">
-          <Card className="premium-card bg-white/[0.01] border-white/5 p-8 space-y-8 h-fit">
+        <div className="lg:col-span-3 flex flex-col gap-6">
+          <Card className="premium-card bg-white/[0.01] border-white/5 p-8 space-y-8 h-fit sticky top-24">
             <div className="space-y-2">
               <h3 className="text-xs font-black uppercase tracking-[0.3em] text-accent flex items-center gap-3">
                 <LayoutGrid className="w-4 h-4" /> Node Palette
@@ -546,7 +545,7 @@ export default function AptitudeEnginePage() {
             </div>
           </Card>
 
-          <Card className="glass border-accent/20 bg-accent/[0.02] p-8 space-y-4">
+          <Card className="glass border-accent/20 bg-accent/[0.02] p-8 space-y-4 sticky top-[500px]">
             <h4 className="text-[10px] font-black uppercase tracking-widest text-accent flex items-center gap-3">
               <ShieldCheck className="w-4 h-4" /> Security Active
             </h4>
