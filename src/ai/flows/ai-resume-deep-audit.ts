@@ -1,91 +1,48 @@
-
 'use server';
 /**
- * @fileOverview Nexvoro AI Master Resume Intelligence Engine.
+ * @fileOverview Nexvoro AI Master Resume Intelligence Engine (v6.0).
  * Conducts a multi-dimensional high-fidelity audit of professional documents.
- * Produces structured intelligence for scoring, risk assessment, and prep.
+ * Calibrated for strict adherence to actual resume data and job role requirements.
  */
 
 import { ai, runWithResilience } from '@/ai/genkit';
 import { z } from 'genkit';
-
-const ProjectDeepAnalysisSchema = z.object({
-  name: z.string(),
-  technologiesUsed: z.array(z.string()),
-  purpose: z.string(),
-  complexity: z.enum(['Low', 'Medium', 'High', 'Expert']),
-  realWorldImpact: z.string(),
-  possibleInterviewQuestions: z.array(z.string()),
-  weakAreas: z.array(z.string()),
-  strongAreas: z.array(z.string()),
-  confidenceLevel: z.number().min(0).max(100),
-});
 
 const ResumeDeepAuditOutputSchema = z.object({
   candidateIdentity: z.object({
     name: z.string(),
     yearsOfExperience: z.number(),
     education: z.array(z.string()),
-    leadershipExperience: z.array(z.string()),
-    links: z.object({
-      github: z.string().optional(),
-      portfolio: z.string().optional(),
-      linkedin: z.string().optional(),
-    }),
   }),
-  projectAnalysis: z.array(ProjectDeepAnalysisSchema),
-  skillAudit: z.object({
-    strong: z.array(z.string()),
-    intermediate: z.array(z.string()),
-    beginner: z.array(z.string()),
-    missing: z.array(z.string()),
-    outdated: z.array(z.string()),
-    mostValuable: z.array(z.string()),
-  }),
-  atsAnalysis: z.object({
-    overallScore: z.number().min(0).max(100),
-    formattingScore: z.number(),
-    keywordScore: z.number(),
-    achievementScore: z.number(),
-    actionVerbScore: z.number(),
-    deductions: z.array(z.object({
-      category: z.string(),
-      deduction: z.number(),
-      explanation: z.string(),
-    })),
-  }),
+  overallScore: z.number().min(0).max(100),
+  atsScore: z.number().min(0).max(100),
   roleMatch: z.object({
-    matchPercentage: z.number(),
-    missingTechnologies: z.array(z.string()),
-    recommendedTechnologies: z.array(z.string()),
+    percentage: z.number().min(0).max(100),
+    recommendation: z.enum(['Excellent Match', 'Good Match', 'Needs Improvement']),
   }),
-  interviewPreparation: z.object({
-    technicalQuestions: z.array(z.string()).length(10),
-    hrQuestions: z.array(z.string()).length(5),
-    projectQuestions: z.array(z.string()).length(5),
-    scenarioQuestions: z.array(z.string()).length(5),
-  }),
-  hiringRisk: z.object({
-    weakSections: z.array(z.string()),
-    questionableClaims: z.array(z.string()),
-    unclearProjects: z.array(z.string()),
-    missingNumbers: z.boolean(),
-    missingAchievements: z.boolean(),
-    riskSummary: z.string(),
-  }),
-  improvementRoadmap: z.object({
-    resume: z.array(z.string()),
-    projects: z.array(z.string()),
-    skills: z.array(z.string()),
-    certifications: z.array(z.string()),
-    portfolio: z.array(z.string()),
-  }),
-  careerEvolution: z.array(z.object({
-    topic: z.string(),
-    priority: z.enum(['P0', 'P1', 'P2']),
-    estimatedTime: z.string(),
-    expectedImpact: z.string(),
+  summary: z.string().describe("Professional summary based on resume content."),
+  technicalSkills: z.array(z.object({
+    skill: z.string(),
+    proficiency: z.enum(['Beginner', 'Intermediate', 'Advanced', 'Expert']),
   })),
+  strengths: z.array(z.string()),
+  missingSkills: z.array(z.string()),
+  resumeProblems: z.array(z.string()).describe("Issues like missing metrics, poor formatting, etc."),
+  improvementSuggestions: z.array(z.string()),
+  keywordAnalysis: z.object({
+    matched: z.array(z.string()),
+    missing: z.array(z.string()),
+  }),
+  sectionScores: z.object({
+    education: z.number(),
+    skills: z.number(),
+    projects: z.number(),
+    experience: z.number(),
+    certifications: z.number(),
+    achievements: z.number(),
+  }),
+  recommendedRoles: z.array(z.string()),
+  finalVerdict: z.string().describe("Recruiter-style conclusion and final strategic advice."),
   isOffline: z.boolean().optional().default(false),
 });
 
@@ -104,95 +61,68 @@ const prompt = ai.definePrompt({
   name: 'resumeDeepAuditPrompt',
   input: { schema: ResumeDeepAuditInputSchema },
   output: { schema: ResumeDeepAuditOutputSchema },
-  prompt: `You are the Nexvoro AI Resume Intelligence Engine. 
-You are NOT an ATS scanner; you are a Senior Technical Recruiter, Engineering Manager, and Career Coach.
-Deeply analyze the resume against the target role: "{{{targetRole}}}".
+  prompt: `You are the Nexvoro AI Master Recruiter and ATS Auditor.
+Your objective is to perform a high-fidelity audit of the uploaded resume relative to the target role: "{{{targetRole}}}".
 
 CORE PROTOCOL:
-- Never guess. If information is missing, state it clearly in the Hiring Risk or Identity nodes.
-- Audits must be rigorous. Deduct ATS points for missing metrics (%, $, time) or weak action verbs.
-- Identify "Outdated Skills" based on current 2024+ industry standards.
-- Generate interview questions anchored ONLY in the resume content.
+- Analyze ONLY the provided resume content.
+- Do NOT generate fake or placeholder values. 
+- Scores must be calculated realistically based on industry standards.
+- Compare the resume skills and experience against the standard requirements of the "{{{targetRole}}}".
 
-PROJECT ANALYSIS:
-- For every project, determine its architectural complexity and real-world impact.
-- Provide a confidence level for each project based on the detail provided.
+DATA VECTORS TO EXTRACT:
+1. OVERALL SCORE: A weighted average of clarity, impact, and role alignment.
+2. ATS SCORE: Evaluate formatting, keyword density, and scanability.
+3. ROLE MATCH: Direct comparison with "{{{targetRole}}}".
+4. TECHNICAL SKILLS: Identify every detected tech node and assign a proficiency level.
+5. MISSING SKILLS: Identify critical gaps relative to the target role.
+6. RESUME PROBLEMS: Flag specific issues like "No quantified metrics", "Missing LinkedIn", or "Weak project descriptions".
+7. KEYWORD ANALYSIS: List specific industry keywords present and those missing.
+8. SECTION SCORES: Score individual segments (Education, Skills, Projects, Experience, Certifications, Achievements) from 0-100.
+9. FINAL VERDICT: A high-impact, professional recruiter summary.
 
-SKILL AUDIT:
-- Segment skills by proficiency.
-- Identify "Most Valuable Skills" relative to the target role.
+RETURN ONLY VALID JSON matching the schema.
 
-RETURN ONLY VALID JSON.`,
+Resume:
+{{media url=resumeDataUri}}`,
 });
 
 function getFallbackAudit(targetRole: string): ResumeDeepAuditOutput {
   return {
     candidateIdentity: {
-      name: "DETERMINISTIC_ENTITY",
-      yearsOfExperience: 5,
-      education: ["B.S. Computer Science"],
-      leadershipExperience: ["Team Lead Node"],
-      links: {}
+      name: "IDENTIFIED_OPERATOR",
+      yearsOfExperience: 3,
+      education: ["B.S. in Computer Science"],
     },
-    projectAnalysis: [{
-      name: "Core Scaling Engine",
-      technologiesUsed: ["React", "Go"],
-      purpose: "Infrastructure optimization",
-      complexity: "High",
-      realWorldImpact: "Reduced latency by 40%",
-      possibleInterviewQuestions: ["How did you handle the state transition?"],
-      weakAreas: ["Security documentation"],
-      strongAreas: ["Concurrency logic"],
-      confidenceLevel: 85
-    }],
-    skillAudit: {
-      strong: ["TypeScript", "React"],
-      intermediate: ["Docker"],
-      beginner: ["Rust"],
-      missing: ["AWS", "CI/CD"],
-      outdated: ["jQuery"],
-      mostValuable: ["System Design"]
-    },
-    atsAnalysis: {
-      overallScore: 68,
-      formattingScore: 80,
-      keywordScore: 65,
-      achievementScore: 60,
-      actionVerbScore: 70,
-      deductions: [{ category: "Achievements", deduction: 15, explanation: "Missing quantifiable metrics in 3/4 projects." }]
-    },
+    overallScore: 65,
+    atsScore: 70,
     roleMatch: {
-      matchPercentage: 72,
-      missingTechnologies: ["Cloud Native"],
-      recommendedTechnologies: ["Terraform"]
+      percentage: 60,
+      recommendation: "Needs Improvement",
     },
-    interviewPreparation: {
-      technicalQuestions: Array(10).fill("Tell me about your approach to architecture."),
-      hrQuestions: Array(5).fill("Why this role?"),
-      projectQuestions: Array(5).fill("Walk me through your scaling project."),
-      scenarioQuestions: Array(5).fill("How do you handle a production crash?")
+    summary: "A developing professional with core technical foundations. (Detailed AI synthesis unavailable in fallback mode).",
+    technicalSkills: [
+      { skill: "Core Engineering", proficiency: "Intermediate" },
+      { skill: "Strategic Logic", proficiency: "Advanced" }
+    ],
+    strengths: ["Clear Project Descriptions", "Standard Academic Background"],
+    missingSkills: ["Cloud Architecture", "Advanced System Design"],
+    resumeProblems: ["Missing quantifiable achievements", "Low keyword density for target role"],
+    improvementSuggestions: ["Add performance metrics to project nodes", "Integrate more ATS keywords"],
+    keywordAnalysis: {
+      matched: ["Development", "Project Management"],
+      missing: ["AWS", "Microservices", "Docker"]
     },
-    hiringRisk: {
-      weakSections: ["Certifications"],
-      questionableClaims: ["None detected"],
-      unclearProjects: ["Minor project 2"],
-      missingNumbers: true,
-      missingAchievements: false,
-      riskSummary: "Profile is strong but lacks quantifiable evidence of impact."
+    sectionScores: {
+      education: 80,
+      skills: 60,
+      projects: 55,
+      experience: 50,
+      certifications: 30,
+      achievements: 20
     },
-    improvementRoadmap: {
-      resume: ["Add metrics"],
-      projects: ["Open source the core"],
-      skills: ["Learn AWS"],
-      certifications: ["Solutions Architect"],
-      portfolio: ["Add live demos"]
-    },
-    careerEvolution: [{
-      topic: "Cloud Architecture",
-      priority: "P0",
-      estimatedTime: "30 days",
-      expectedImpact: "High"
-    }],
+    recommendedRoles: ["Junior Software Engineer", "Quality Analyst"],
+    finalVerdict: "The resume shows potential but lacks the quantifiable impact required for elite tier placements. Focus on metrics and missing technical nodes.",
     isOffline: true
   };
 }
