@@ -59,7 +59,7 @@ export const ai = genkit({
  * Implements exponential backoff and model fallback.
  */
 export async function runWithResilience(promptFn: any, input: any) {
-  const delays = [3000, 7000, 15000];
+  const delays = [5000, 15000, 30000]; // Increased delays for better quota recovery
   const retryableStatuses = [429, 500, 502, 503, 504];
 
   async function attemptExecution(model: string) {
@@ -73,21 +73,23 @@ export async function runWithResilience(promptFn: any, input: any) {
         // Detailed error logging for auth failures
         if (status === 400 || status === 401) {
           console.error(`[Neural Auth Failure] Model: ${model}, Status: ${status}, Message: ${message}`);
-          if (message.includes('API key not valid') || status === 401) {
-             console.error('[Neural Tip] Your API key was rejected or missing. Verify your GOOGLE_GENAI_API_KEY in the .env file.');
-          }
           throw e;
         }
 
         if (status === 429) {
           console.warn(`[Neural Quota] Gemini ${model} is exhausted. Attempt ${i + 1}/3...`);
+          // For quota issues, we wait specifically longer
+          const quotaDelay = i === 0 ? 10000 : i === 1 ? 25000 : 45000;
+          if (i < 3) {
+            await new Promise(r => setTimeout(r, quotaDelay));
+            continue;
+          }
         } else {
           console.warn(`[Neural Resilience] Server Error ${status} from ${model}. Retrying...`);
-        }
-
-        if (i < 3 && retryableStatuses.includes(status)) {
-          await new Promise(r => setTimeout(r, delays[i]));
-          continue;
+          if (i < 3 && retryableStatuses.includes(status)) {
+            await new Promise(r => setTimeout(r, delays[i]));
+            continue;
+          }
         }
         throw e;
       }
@@ -97,6 +99,10 @@ export async function runWithResilience(promptFn: any, input: any) {
   try {
     return await attemptExecution(PRIMARY_MODEL);
   } catch (primaryError: any) {
+    // If primary was 429, wait a bit before trying fallback to avoid instant secondary throttle
+    if (primaryError.status === 429) {
+      await new Promise(r => setTimeout(r, 2000));
+    }
     console.warn(`[Neural Fallback] Primary model failure. Trying ${FALLBACK_MODEL}...`);
     try {
       return await attemptExecution(FALLBACK_MODEL);
