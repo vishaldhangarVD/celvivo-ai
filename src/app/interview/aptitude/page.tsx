@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect, useMemo, useCallback } from 'react';
@@ -82,64 +83,10 @@ export default function AptitudeEnginePage() {
       }
     }
     init();
-  }, [journey]);
+  }, [journey, questions.length, toast]);
 
-  // Timer & Security
-  useEffect(() => {
-    if (isInitializing || isEvaluating || result) return;
-
-    const timer = setInterval(() => {
-      setTimeLeft(prev => {
-        if (prev <= 1) {
-          clearInterval(timer);
-          handleSubmit();
-          return 0;
-        }
-        return prev - 1;
-      });
-    }, 1000);
-
-    const handleVisibility = () => {
-      if (document.hidden) {
-        setWarnings(prev => {
-          const next = prev + 1;
-          if (next >= 4) {
-            handleSubmit();
-            toast({ variant: "destructive", title: "Security Breach", description: "Automated submission triggered due to multiple tab switches." });
-          } else {
-            toast({ 
-              variant: "destructive", 
-              title: `Warning ${next}/3`, 
-              description: "Unauthorized tab switch detected. High-fidelity monitoring is active." 
-            });
-          }
-          return next;
-        });
-      }
-    };
-
-    document.addEventListener("visibilitychange", handleVisibility);
-    return () => {
-      clearInterval(timer);
-      document.removeEventListener("visibilitychange", handleVisibility);
-    };
-  }, [isInitializing, isEvaluating, result]);
-
-  const handleOptionSelect = (ans: string) => {
-    setAnswers(prev => ({ ...prev, [currentIdx]: ans }));
-  };
-
-  const toggleMarkForReview = () => {
-    setMarkedForReview(prev => {
-      const next = new Set(prev);
-      if (next.has(currentIdx)) next.delete(currentIdx);
-      else next.add(currentIdx);
-      return next;
-    });
-  };
-
-  const handleSubmit = async () => {
-    if (isEvaluating || !journey) return;
+  const handleSubmit = useCallback(async () => {
+    if (isEvaluating || !journey || !journeyRef) return;
     setIsEvaluating(true);
 
     const formattedResults = questions.map((q, idx) => ({
@@ -177,7 +124,7 @@ export default function AptitudeEnginePage() {
       setResult(report);
       
       // Update Firestore Journey
-      await updateDoc(journeyRef!, {
+      await updateDoc(journeyRef, {
         aptitudeReport: report,
         currentStage: report.status === 'Pass' ? 'Coding Assessment' : 'Aptitude Assessment',
         step: report.status === 'Pass' ? 4 : 3,
@@ -190,6 +137,67 @@ export default function AptitudeEnginePage() {
     } finally {
       setIsEvaluating(false);
     }
+  }, [isEvaluating, journey, journeyRef, questions, answers, timeLeft, toast]);
+
+  // Timer & Security Visibility Watcher
+  useEffect(() => {
+    if (isInitializing || isEvaluating || result) return;
+
+    const timer = setInterval(() => {
+      setTimeLeft(prev => Math.max(0, prev - 1));
+    }, 1000);
+
+    const handleVisibility = () => {
+      if (document.hidden) {
+        setWarnings(prev => prev + 1);
+      }
+    };
+
+    document.addEventListener("visibilitychange", handleVisibility);
+    return () => {
+      clearInterval(timer);
+      document.removeEventListener("visibilitychange", handleVisibility);
+    };
+  }, [isInitializing, isEvaluating, result]);
+
+  // Handle auto-submit on timeout
+  useEffect(() => {
+    if (timeLeft <= 0 && !isInitializing && !isEvaluating && !result) {
+      handleSubmit();
+    }
+  }, [timeLeft, isInitializing, isEvaluating, result, handleSubmit]);
+
+  // Handle Security Warnings Side Effects
+  useEffect(() => {
+    if (warnings === 0 || isEvaluating || result) return;
+
+    if (warnings >= 4) {
+      handleSubmit();
+      toast({ 
+        variant: "destructive", 
+        title: "Security Breach", 
+        description: "Automated submission triggered due to multiple tab switches." 
+      });
+    } else {
+      toast({ 
+        variant: "destructive", 
+        title: `Warning ${warnings}/3`, 
+        description: "Unauthorized tab switch detected. High-fidelity monitoring is active." 
+      });
+    }
+  }, [warnings, isEvaluating, result, handleSubmit, toast]);
+
+  const handleOptionSelect = (ans: string) => {
+    setAnswers(prev => ({ ...prev, [currentIdx]: ans }));
+  };
+
+  const toggleMarkForReview = () => {
+    setMarkedForReview(prev => {
+      const next = new Set(prev);
+      if (next.has(currentIdx)) next.delete(currentIdx);
+      else next.add(currentIdx);
+      return next;
+    });
   };
 
   const formatTime = (seconds: number) => {
@@ -276,19 +284,19 @@ export default function AptitudeEnginePage() {
                 {/* Question Card */}
                 <Card className="flex-1 premium-card bg-white/[0.01] border-white/5 p-12 flex flex-col justify-center relative overflow-hidden">
                   <div className="absolute top-0 right-0 p-8">
-                    <Badge variant="outline" className="border-accent/20 text-accent text-[9px] font-black uppercase tracking-widest">{questions[currentIdx].difficulty} LEVEL</Badge>
+                    <Badge variant="outline" className="border-accent/20 text-accent text-[9px] font-black uppercase tracking-widest">{questions[currentIdx]?.difficulty} LEVEL</Badge>
                   </div>
                   
                   <div className="max-w-3xl mx-auto w-full space-y-12">
                     <div className="space-y-4">
-                      <Badge className="bg-purple-500/10 text-purple-400 border-none text-[10px] font-black uppercase tracking-[0.2em]">{questions[currentIdx].category}</Badge>
+                      <Badge className="bg-purple-500/10 text-purple-400 border-none text-[10px] font-black uppercase tracking-[0.2em]">{questions[currentIdx]?.category}</Badge>
                       <h2 className="text-3xl font-bold tracking-tight text-white/90 leading-tight">
-                        {questions[currentIdx].question}
+                        {questions[currentIdx]?.question}
                       </h2>
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      {questions[currentIdx].options.map((opt: string, i: number) => (
+                      {questions[currentIdx]?.options.map((opt: string, i: number) => (
                         <button
                           key={i}
                           onClick={() => handleOptionSelect(opt)}
