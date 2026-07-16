@@ -22,9 +22,6 @@ const CodingProblemSchema = z.object({
     python: z.string(),
     java: z.string(),
     cpp: z.string(),
-    c: z.string(),
-    csharp: z.string(),
-    go: z.string(),
   }),
 });
 
@@ -53,9 +50,8 @@ CONTEXT:
 
 PROTOCOL:
 1. FIRM STYLE: If Google, focus on complex algorithms/efficiency. If Amazon, focus on data structures/scale. If TCS, focus on implementation accuracy.
-2. UNIQUENESS: Do not use standard problems like "Two Sum" or "Reverse String". Create a fresh scenario relevant to the role.
-3. STARTER CODE: Provide clean starter functions for ALL requested languages (JS, Python, Java, C++, C, C#, Go).
-4. RETURN: ONLY valid JSON matching the schema.`,
+2. STARTER CODE: Provide clean starter functions for JS, Python, Java, and C++.
+3. RETURN: ONLY valid JSON matching the schema.`,
 });
 
 const codingFlow = ai.defineFlow(

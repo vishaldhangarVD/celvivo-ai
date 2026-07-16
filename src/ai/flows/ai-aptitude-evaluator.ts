@@ -2,7 +2,6 @@
 /**
  * @fileOverview Nexvoro AI Aptitude Performance Auditor.
  * Evaluates aptitude results using Gemini to provide deep insights into logic, speed, and accuracy.
- * Generates detailed explanations for every question to support the review protocol.
  */
 
 import { ai, runWithResilience } from '@/ai/genkit';
@@ -28,25 +27,13 @@ const AptitudeEvaluationOutputSchema = z.object({
   overallScore: z.number(),
   correctCount: z.number(),
   wrongCount: z.number(),
-  skippedCount: z.number(),
   accuracy: z.number(),
   percentile: z.string(),
-  categoryScores: z.object({
-    quantitative: z.number(),
-    logical: z.number(),
-    english: z.number(),
-  }),
   feedback: z.object({
     strengths: z.array(z.string()),
     weaknesses: z.array(z.string()),
     speedAnalysis: z.string(),
-    accuracyInsight: z.string(),
-    improvementTips: z.array(z.string()),
   }),
-  questionReviews: z.array(z.object({
-    question: z.string(),
-    explanation: z.string().describe("Clear explanation of why the correct answer is right."),
-  })),
   status: z.enum(['Pass', 'Fail']),
   recommendation: z.string(),
 });
@@ -67,18 +54,16 @@ DATA Dossier:
 - Time Taken: {{{timeTakenSeconds}}} seconds
 - Results: 
 {{#each results}}
-  - Category: {{this.category}}, Difficulty: {{this.difficulty}}, Result: {{#if this.isCorrect}}CORRECT{{else}}WRONG{{/if}}
-  - Question: {{{this.question}}}
+  - Category: {{this.category}}, Result: {{#if this.isCorrect}}CORRECT{{else}}WRONG{{/if}}
 {{/each}}
 
 Audit Requirements:
 1. Accuracy Audit: Calculate category scores and overall precision.
-2. Temporal Audit: Analyze speed vs. accuracy. 15 minutes was the limit.
+2. Temporal Audit: Analyze speed vs. accuracy.
 3. Status Determination: 'Pass' REQUIRES score >= 70%.
-4. Question Review: For EVERY question provided in the results, provide a clear, concise explanation of the logic behind the correct answer.
-5. Recommendation: Provide a high-impact summary of performance.
+4. Recommendation: Provide a high-impact summary of performance.
 
-Return a structured intelligence report matching the output schema.`,
+Return a structured intelligence report.`,
 });
 
 const aptitudeEvaluationFlow = ai.defineFlow(
@@ -94,33 +79,22 @@ const aptitudeEvaluationFlow = ai.defineFlow(
       return output;
     } catch (error) {
       console.error("Aptitude Evaluation Error:", error);
-      // Fallback status logic
+      // Simple fallback logic
       const correct = input.results.filter(r => r.isCorrect).length;
       const score = Math.round((correct / input.totalQuestions) * 100);
-      
-      const qReviews = input.results.map(r => ({
-        question: r.question,
-        explanation: "The logic follows standard principles for " + r.category + ". (Detailed neural explanation unavailable in fallback mode)."
-      }));
-
       return {
         overallScore: score,
         correctCount: correct,
         wrongCount: input.totalQuestions - correct,
-        skippedCount: 0,
         accuracy: score,
         percentile: "Top 30%",
-        categoryScores: { quantitative: score, logical: score, english: score },
         feedback: {
-          strengths: ["Core logical patterns detected"],
-          weaknesses: ["Further refinement in speed recommended"],
-          speedAnalysis: "Standard pace maintained.",
-          accuracyInsight: "Accuracy within expected bounds.",
-          improvementTips: ["Practice high-throughput logic nodes."]
+          strengths: ["Logical pattern recognition"],
+          weaknesses: ["Speed refinement required"],
+          speedAnalysis: "Candidate completed within the allotted time."
         },
-        questionReviews: qReviews,
         status: score >= 70 ? 'Pass' : 'Fail',
-        recommendation: "Continue calibrating core engineering logic nodes."
+        recommendation: "Evaluation based on raw accuracy node."
       };
     }
   }
