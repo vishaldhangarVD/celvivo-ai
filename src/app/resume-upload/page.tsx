@@ -205,13 +205,24 @@ export default function ResumeUploadPage() {
                  ))}
                </div>
 
-               <Button 
-                onClick={handleEnterAptitude}
-                disabled={!isUploaded || isVerifying}
-                className="w-full h-20 btn-premium rounded-2xl text-lg font-black uppercase tracking-[0.3em] shadow-[0_20px_60px_rgba(147,51,234,0.3)] group"
-               >
-                 ENTER APTITUDE TEST <ArrowRight className="ml-4 w-6 h-6 transition-transform group-hover:translate-x-2" />
-               </Button>
+               <div className="space-y-4">
+                 {/* TEMP TEST BUTTON - REMOVE BEFORE PRODUCTION */}
+                 <Button 
+                  variant="outline"
+                  onClick={() => router.push(`/interview/hr?role=${encodeURIComponent(journey?.role || '')}&company=${encodeURIComponent(journey?.company || '')}&exp=${encodeURIComponent(journey?.experience || '')}&round=HR%20Round`)}
+                  className="w-full h-10 glass border-white/10 text-[9px] font-bold uppercase tracking-widest hover:bg-white/5"
+                 >
+                   Skip to HR →
+                 </Button>
+
+                 <Button 
+                  onClick={handleEnterAptitude}
+                  disabled={!isUploaded || isVerifying}
+                  className="w-full h-20 btn-premium rounded-2xl text-lg font-black uppercase tracking-[0.3em] shadow-[0_20px_60px_rgba(147,51,234,0.3)] group"
+                 >
+                   ENTER APTITUDE TEST <ArrowRight className="ml-4 w-6 h-6 transition-transform group-hover:translate-x-2" />
+                 </Button>
+               </div>
             </Card>
           </motion.div>
 
