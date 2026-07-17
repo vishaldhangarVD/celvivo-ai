@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useEffect, useMemo } from 'react';
@@ -40,25 +39,34 @@ export default function FounderConsole() {
   const { data: profile, loading: profileLoading } = useDoc(profileRef);
 
   useEffect(() => {
-    if (!authLoading && !user) {
+    // 1. Wait for auth to initialize
+    if (authLoading) return;
+
+    // 2. Redirect if not authenticated
+    if (!user) {
       router.replace('/login');
       return;
     }
 
-    if (!authLoading && !profileLoading && profile?.role !== 'founder') {
+    // 3. Wait for profile to load
+    if (profileLoading) return;
+
+    // 4. Redirect if role is not founder
+    if (profile?.role !== 'founder') {
       router.replace('/dashboard');
     }
   }, [user, authLoading, profile, profileLoading, router]);
 
-  if (authLoading || profileLoading) {
+  if (authLoading || profileLoading || (user && profile?.role !== 'founder')) {
     return (
       <div className="min-h-screen bg-[#050816] flex items-center justify-center">
-        <Loader2 className="w-12 h-12 text-accent animate-spin" />
+        <div className="flex flex-col items-center gap-4">
+          <Loader2 className="w-12 h-12 text-accent animate-spin" />
+          <p className="text-[10px] font-black uppercase tracking-[0.4em] text-accent animate-pulse">Verifying Authority...</p>
+        </div>
       </div>
     );
   }
-
-  if (profile?.role !== 'founder') return null;
 
   const systemStats = [
     { label: "Total Operators", val: "1,248", icon: Users, color: "text-blue-400" },
@@ -76,13 +84,13 @@ export default function FounderConsole() {
         <div className="max-w-7xl mx-auto space-y-12">
           
           <header className="flex flex-col md:flex-row justify-between items-end gap-8">
-            <div>
-              <Badge className="bg-purple-500/20 text-purple-400 mb-4 border-none px-4 py-1 text-[10px] tracking-widest font-bold uppercase">Restricted Access: Founder Protocol</Badge>
+            <div className="animate-in fade-in slide-in-from-left duration-700">
+              <Badge className="bg-purple-500/20 text-purple-400 border-none px-4 py-1 text-[10px] tracking-widest font-bold uppercase mb-4 block w-fit">Restricted Access: Founder Protocol</Badge>
               <h1 className="text-5xl font-bold tracking-tighter text-premium">Founder Console</h1>
               <p className="text-muted-foreground font-light mt-2">Core system intelligence and neural infrastructure management.</p>
             </div>
             <div className="flex gap-4">
-              <Button variant="outline" className="h-12 rounded-xl glass border-white/10 flex gap-2">
+              <Button variant="outline" className="h-12 rounded-xl glass border-white/10 flex gap-2 text-[10px] font-bold uppercase tracking-widest">
                 <Settings className="w-4 h-4" /> Global Config
               </Button>
             </div>
@@ -95,10 +103,10 @@ export default function FounderConsole() {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: i * 0.1 }}
-                className="premium-card p-8 bg-white/[0.01] border-white/5"
+                className="premium-card p-8 bg-white/[0.01] border-white/5 group hover:border-accent/30 transition-all"
               >
                 <div className="flex justify-between items-start mb-6">
-                  <div className={`w-12 h-12 rounded-xl flex items-center justify-center bg-white/5 ${stat.color}`}>
+                  <div className={`w-12 h-12 rounded-xl flex items-center justify-center bg-white/5 ${stat.color} group-hover:scale-110 transition-transform`}>
                     <stat.icon className="w-6 h-6" />
                   </div>
                 </div>
@@ -116,19 +124,19 @@ export default function FounderConsole() {
                     <TrendingUp className="w-8 h-8 text-accent" /> Platform Metrics
                   </CardTitle>
                 </CardHeader>
-                <CardContent className="h-[350px] flex items-center justify-center relative">
+                <CardContent className="h-auto flex items-center justify-center relative p-0">
                    <div className="grid grid-cols-2 md:grid-cols-3 gap-8 w-full">
                      {[
-                       { label: "Active Interviews", val: "842", icon: Zap },
-                       { label: "API Usage", val: "92.4k", icon: BarChart4 },
-                       { label: "Feedback Loop", val: "4.8/5", icon: MessageSquare },
-                       { label: "Uptime", val: "100%", icon: ShieldCheck },
-                       { label: "Error Logs", val: "0", icon: ServerCrash },
-                       { label: "Tokens Synced", val: "1.2M", icon: Cpu }
+                       { label: "Active Interviews", val: "842", icon: Zap, color: "text-accent" },
+                       { label: "API Usage", val: "92.4k", icon: BarChart4, color: "text-purple-400" },
+                       { label: "Feedback Loop", val: "4.8/5", icon: MessageSquare, color: "text-blue-400" },
+                       { label: "Uptime", val: "100%", icon: ShieldCheck, color: "text-green-400" },
+                       { label: "Error Logs", val: "0", icon: ServerCrash, color: "text-red-400" },
+                       { label: "Tokens Synced", val: "1.2M", icon: Cpu, color: "text-yellow-400" }
                      ].map((m, idx) => (
-                       <div key={idx} className="p-6 glass rounded-2xl border-white/5 space-y-2">
+                       <div key={idx} className="p-6 glass rounded-2xl border-white/5 space-y-2 hover:bg-white/[0.03] transition-all">
                          <div className="flex items-center gap-3 text-white/40">
-                           <m.icon className="w-4 h-4" />
+                           <m.icon className={`w-4 h-4 ${m.color}`} />
                            <span className="text-[10px] font-bold uppercase tracking-widest">{m.label}</span>
                          </div>
                          <p className="text-2xl font-bold">{m.val}</p>
@@ -148,7 +156,7 @@ export default function FounderConsole() {
                     { name: "Sarah Connor", status: "Active", level: "Standard" },
                     { name: "Neo Anderson", status: "Active", level: "Elite" }
                   ].map((usr, i) => (
-                    <div key={i} className="flex items-center justify-between p-6 glass rounded-[2rem] border-white/5">
+                    <div key={i} className="flex items-center justify-between p-6 glass rounded-[2rem] border-white/5 hover:border-accent/20 transition-all">
                       <div className="flex items-center gap-6">
                         <div className="w-10 h-10 rounded-full bg-accent/20 flex items-center justify-center text-accent font-bold">
                           {usr.name[0]}
@@ -184,8 +192,8 @@ export default function FounderConsole() {
                       <span className="text-[10px] font-bold uppercase tracking-widest">Feature Flags</span>
                     </div>
                     <div className="flex gap-2">
-                      <Badge className="bg-accent/20 text-accent">BETA_V6</Badge>
-                      <Badge className="bg-purple-500/20 text-purple-400">AVATAR_NEXT</Badge>
+                      <Badge className="bg-accent/20 text-accent font-bold text-[9px]">BETA_V6</Badge>
+                      <Badge className="bg-purple-500/20 text-purple-400 font-bold text-[9px]">AVATAR_NEXT</Badge>
                     </div>
                   </div>
                 </CardContent>
@@ -195,12 +203,12 @@ export default function FounderConsole() {
                 <CardHeader>
                   <CardTitle className="text-xl font-bold">Founder Directives</CardTitle>
                 </CardHeader>
-                <CardContent className="space-y-4">
+                <CardContent className="space-y-4 p-6">
                   <Button className="w-full h-14 rounded-2xl glass border-white/10 hover:bg-white/10 justify-start gap-4 text-[10px] uppercase font-bold tracking-widest">
-                    <ShieldCheck className="w-4 h-4" /> Security Audit
+                    <ShieldCheck className="w-4 h-4 text-accent" /> Security Audit
                   </Button>
                   <Button className="w-full h-14 rounded-2xl glass border-white/10 hover:bg-white/10 justify-start gap-4 text-[10px] uppercase font-bold tracking-widest">
-                    <TrendingUp className="w-4 h-4" /> Marketing Deck
+                    <TrendingUp className="w-4 h-4 text-purple-400" /> Marketing Deck
                   </Button>
                 </CardContent>
               </Card>
