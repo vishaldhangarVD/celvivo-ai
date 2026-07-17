@@ -1,3 +1,4 @@
+
 'use client';
 
 import Link from 'next/link';
@@ -10,11 +11,12 @@ import {
   ShieldCheck, 
   LogOut, 
   Menu, 
-  X 
+  X,
+  Crown
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useState, useMemo } from 'react';
-import { useUser, useAuth } from '@/firebase';
+import { useUser, useAuth, useDoc, useFirestore } from '@/firebase';
 import { signOut } from 'firebase/auth';
 import { useRouter, usePathname } from 'next/navigation';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -27,13 +29,22 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { cn } from '@/lib/utils';
+import { doc } from 'firebase/firestore';
 
 export default function Navbar() {
   const [isOpen, setIsOpen] = useState(false);
   const { user, loading } = useUser();
   const auth = useAuth();
+  const db = useFirestore();
   const router = useRouter();
   const pathname = usePathname();
+
+  const profileRef = useMemo(() => {
+    if (!db || !user?.uid) return null;
+    return doc(db, 'users', user.uid);
+  }, [db, user?.uid]);
+
+  const { data: profile } = useDoc(profileRef);
 
   const formattedName = useMemo(() => {
     if (!user) return 'Operator';
@@ -46,6 +57,8 @@ export default function Navbar() {
     await signOut(auth);
     router.push('/');
   };
+
+  const isFounder = profile?.role === 'founder';
 
   // Pill Styles for Dashboard and Certificates
   const pillClasses = "relative flex items-center gap-2.5 px-4 py-1.5 rounded-full glass border-white/10 text-[9px] font-black uppercase tracking-widest text-white transition-all duration-250 group/pill";
@@ -78,9 +91,9 @@ export default function Navbar() {
         </div>
 
         {/* Center Section: Navigation Nodes */}
-        <div className="hidden md:flex items-center gap-10">
+        <div className="hidden md:flex items-center gap-4">
           {user && (
-            <div className="flex items-center gap-4">
+            <>
               <Link 
                 href="/dashboard" 
                 className={cn(pillClasses, pillHoverClasses, pathname === '/dashboard' && pillActiveClasses)}
@@ -101,7 +114,19 @@ export default function Navbar() {
                 Certificates
                 <span className={pillUnderlineClasses} />
               </Link>
-            </div>
+              {isFounder && (
+                <Link 
+                  href="/founder" 
+                  className={cn(pillClasses, pillHoverClasses, "border-purple-500/20", pathname === '/founder' && "bg-purple-500/20 border-purple-500/50 shadow-[0_0_20px_rgba(168,85,247,0.3)]")}
+                >
+                  <div className={cn(pillIconWrapperClasses, "border-purple-500/20 bg-purple-500/10 text-purple-400", pathname === '/founder' && "bg-purple-500 border-purple-400 text-white")}>
+                    <Crown className="w-2.5 h-2.5" />
+                  </div>
+                  Founder Console
+                  <span className={cn(pillUnderlineClasses, "bg-purple-400 shadow-[0_0_8px_#a855f7]")} />
+                </Link>
+              )}
+            </>
           )}
         </div>
 
@@ -120,7 +145,7 @@ export default function Navbar() {
             <>
               {user ? (
                 <div className="flex items-center gap-6">
-                  {/* Verified Track Component (Restored Original Design) */}
+                  {/* Verified Track Component */}
                   <Link href="/user-dashboard" className="hidden lg:flex flex-col items-end group transition-all duration-300">
                     <span className="text-white font-bold tracking-[0.2em] text-[10px] md:text-xs leading-none group-hover:text-accent transition-colors">
                       {formattedName.toUpperCase()}
@@ -162,6 +187,11 @@ export default function Navbar() {
                       <DropdownMenuItem onClick={() => router.push('/dashboard')} className="rounded-xl focus:bg-white/5 focus:text-accent cursor-pointer gap-3 text-[10px] uppercase font-bold tracking-widest py-3">
                         <LayoutDashboard className="w-4 h-4" /> System Dashboard
                       </DropdownMenuItem>
+                      {isFounder && (
+                        <DropdownMenuItem onClick={() => router.push('/founder')} className="rounded-xl focus:bg-purple-500/10 focus:text-purple-400 cursor-pointer gap-3 text-[10px] uppercase font-bold tracking-widest py-3 text-purple-400">
+                          <Crown className="w-4 h-4" /> Founder Console
+                        </DropdownMenuItem>
+                      )}
                       <DropdownMenuItem onClick={() => router.push('/settings')} className="rounded-xl focus:bg-white/5 focus:text-accent cursor-pointer gap-3 text-[10px] uppercase font-bold tracking-widest py-3">
                         <Award className="w-4 h-4" /> Credentials
                       </DropdownMenuItem>
@@ -210,6 +240,11 @@ export default function Navbar() {
                 <Link href="/dashboard" onClick={() => setIsOpen(false)} className="text-2xl font-bold tracking-tighter uppercase text-white hover:text-accent flex items-center gap-4">
                   <LayoutDashboard className="w-6 h-6" /> Dashboard
                 </Link>
+                {isFounder && (
+                  <Link href="/founder" onClick={() => setIsOpen(false)} className="text-2xl font-bold tracking-tighter uppercase text-purple-400 hover:text-purple-300 flex items-center gap-4">
+                    <Crown className="w-6 h-6" /> Founder Console
+                  </Link>
+                )}
                 <Link href="/certificates" onClick={() => setIsOpen(false)} className="text-2xl font-bold tracking-tighter uppercase text-white hover:text-accent flex items-center gap-4">
                   <Award className="w-6 h-6" /> Certificates
                 </Link>

@@ -1,3 +1,4 @@
+
 {
   "entities": {
     "UserProfile": {
@@ -9,6 +10,7 @@
         "displayName": { "type": "string" },
         "email": { "type": "string" },
         "photoURL": { "type": "string" },
+        "role": { "type": "string", "enum": ["user", "founder"], "description": "System access level. 'founder' grants console access." },
         "jobReadinessScore": { "type": "number" },
         "resumeScore": { "type": "number" },
         "totalInterviews": { "type": "number" },
