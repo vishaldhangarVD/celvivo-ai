@@ -302,7 +302,7 @@ export default function Dashboard() {
                       <div key={i} className="flex items-center justify-between p-5 glass rounded-2xl border-white/5 group hover:bg-white/[0.03] transition-all">
                         <div className="flex items-center gap-4">
                           <div className="w-10 h-10 rounded-xl bg-accent/10 flex items-center justify-center text-accent">
-                            <mic className="w-5 h-5" />
+                            <Mic className="w-5 h-5" />
                           </div>
                           <div>
                             <p className="font-bold text-sm">{session.role}</p>
