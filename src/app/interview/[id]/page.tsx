@@ -1,5 +1,5 @@
 "use client";
-import { Suspense, useEffect, useState, useRef, useMemo } from "react";
+import { Suspense, useEffect, useState, useRef } from "react";
 import { useRouter, useParams, useSearchParams } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
@@ -9,8 +9,6 @@ import {
   Mic, 
   Command, 
   User, 
-  Settings,
-  AlertTriangle,
   ShieldCheck,
 } from "lucide-react";
 import Navbar from "@/components/layout/Navbar";
@@ -21,12 +19,8 @@ import { useUser, useFirestore } from "@/firebase";
 import { doc, serverTimestamp, collection, addDoc, getDoc, deleteDoc } from "firebase/firestore";
 import { useToast } from "@/hooks/use-toast";
 
-// Global reference for D-ID SDK
-let didSdk: any;
-
 function VirtualArenaContent() {
   const router = useRouter();
-  const params = useParams();
   const searchParams = useSearchParams();
   const { user } = useUser();
   const db = useFirestore();
@@ -46,33 +40,14 @@ function VirtualArenaContent() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [isInitializing, setIsInitializing] = useState(true);
   const [isGeneratingReport, setIsGeneratingReport] = useState(false);
-  const [isAvatarSpeaking, setIsAvatarSpeaking] = useState(false);
   const [assessmentContext, setAssessmentContext] = useState<any>(null);
-  const [configError, setConfigError] = useState<string | null>(null);
 
-  const [agent, setAgent] = useState<any>(null);
-  const [isAgentConnected, setIsAgentConnected] = useState(false);
-  const [activeMediaStream, setActiveMediaStream] = useState<MediaStream | null>(null);
   const [askedQuestions, setAskedQuestions] = useState<string[]>([]);
-
-  const videoRef = useRef<HTMLVideoElement | null>(null);
   const recognitionRef = useRef<any>(null);
-
-  // Handle WebRTC Stream Attachment with state sync
-  useEffect(() => {
-    if (videoRef.current && activeMediaStream) {
-      if (videoRef.current.srcObject !== activeMediaStream) {
-        videoRef.current.srcObject = activeMediaStream;
-        videoRef.current.onloadedmetadata = () => {
-          videoRef.current?.play().catch(e => console.error("[WebRTC Play Failure]", e));
-        };
-      }
-    }
-  }, [activeMediaStream, isAgentConnected]);
 
   // Speech Recognition Setup
   useEffect(() => {
-    const initClient = async () => {
+    const initRecognition = async () => {
       try {
         const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitRecognition;
         if (SpeechRecognition) {
@@ -95,57 +70,17 @@ function VirtualArenaContent() {
         console.error("Recognition Init Fault:", e);
       }
     };
-    initClient();
+    initRecognition();
   }, []);
 
-  const connectToAgent = async () => {
-    if (isAgentConnected) return;
-    
-    const clientKey = process.env.NEXT_PUBLIC_D_ID_CLIENT_KEY;
-    const agentId = process.env.NEXT_PUBLIC_D_ID_AGENT_ID;
-
-    if (!clientKey || !agentId) {
-      setConfigError(`Identity Fault: ${!clientKey ? 'CLIENT_KEY' : 'AGENT_ID'} MISSING`);
-      return;
-    }
-
-    try {
-      if (!didSdk) didSdk = await import("@d-id/client-sdk");
-
-      const agentInstance = await didSdk.createAgentManager(agentId, {
-        auth: { type: 'key', clientKey: clientKey },
-        callbacks: {
-          onSrcObjectReady: (stream: MediaStream) => {
-             setActiveMediaStream(stream);
-          },
-          onConnectionStateChange: (state: string) => {
-            setIsAgentConnected(state === "connected");
-            if (state === "disconnected") setActiveMediaStream(null);
-          },
-          onVideoStatusChange: (status: string) => {
-             setIsAvatarSpeaking(status === 'play');
-          }
-        }
-      });
-      
-      await agentInstance.connect();
-      setAgent(agentInstance);
-      return agentInstance;
-    } catch (error: any) {
-      console.error("D-ID Connection Error:", error);
-      toast({ variant: "destructive", title: "Visual Node Offline" });
-      throw error;
-    }
-  };
-
-  const handleInterviewerSpeech = async (targetAgent: any, text: string) => {
-    if (!targetAgent || !isAgentConnected) return;
-    try {
-      await targetAgent.speak({ type: 'text', input: text });
-    } catch (e) {
-      console.error("Vocal Synthesis Error:", e);
-    }
-  };
+  // Timer Logic
+  useEffect(() => {
+    if (isInitializing || isSimulationComplete) return;
+    const timer = setInterval(() => {
+      setTimeLeft(prev => Math.max(0, prev - 1));
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [isInitializing, isSimulationComplete]);
 
   // Bootstrap Simulation Journey
   useEffect(() => {
@@ -160,8 +95,6 @@ function VirtualArenaContent() {
         setAssessmentContext(data);
         
         try {
-          const agentInstance = await connectToAgent();
-          
           if (transcript.length === 0) {
             const response = await aiMockInterview({
               role, experienceLevel: exp, roundType: round, currentMainQuestionIndex: 1, 
@@ -177,7 +110,6 @@ function VirtualArenaContent() {
 
             setTranscript([{ role: 'interviewer', text: response.nextQuestion }]);
             setAskedQuestions([response.nextQuestion]);
-            if (agentInstance) await handleInterviewerSpeech(agentInstance, response.nextQuestion);
           }
         } catch (e) {
           console.error("Bootstrap Fault:", e);
@@ -189,11 +121,10 @@ function VirtualArenaContent() {
       }
     }
     init();
-    return () => { if (agent) agent.disconnect(); };
-  }, [user, db]);
+  }, [user, db, role, company, exp, round, router, transcript.length]);
 
   const handleSend = async () => {
-    if (!userAnswer.trim() || isProcessing || isSimulationComplete || isAvatarSpeaking) return;
+    if (!userAnswer.trim() || isProcessing || isSimulationComplete) return;
     
     setIsProcessing(true);
     const newTranscript = [...transcript, { role: 'candidate' as const, text: userAnswer }];
@@ -231,8 +162,6 @@ function VirtualArenaContent() {
 
       if (response.isInterviewComplete) {
         finalizeSession(updatedTranscript);
-      } else {
-        await handleInterviewerSpeech(agent, response.nextQuestion);
       }
     } catch (error) {
       console.error(error);
@@ -246,7 +175,6 @@ function VirtualArenaContent() {
     if (!user || !db || isGeneratingReport) return;
     setIsGeneratingReport(true);
     setIsSimulationComplete(true);
-    if (agent) agent.disconnect();
     
     try {
       const transcriptStr = currentTranscript.map(t => `${t.role.toUpperCase()}: ${t.text}`).join('\n\n');
@@ -303,48 +231,37 @@ function VirtualArenaContent() {
       </header>
 
       <main className="flex-1 flex flex-col relative">
-        {/* Massive AI Avatar Area */}
         <div className="flex-1 flex items-center justify-center p-6 relative">
           <div className="w-full h-full max-w-7xl mx-auto relative rounded-[3rem] overflow-hidden bg-black shadow-[0_0_100px_rgba(0,0,0,0.5)] border border-white/5">
-            <video 
-              ref={videoRef} 
-              autoPlay 
-              playsInline 
-              muted 
-              className="absolute inset-0 w-full h-full object-cover z-10" 
-            />
-            
-            {!isAgentConnected && (
-              <div className="absolute inset-0 w-full h-full flex flex-col items-center justify-center bg-[#050816] z-20 space-y-6">
-                <div className="relative">
-                  <div className="w-24 h-24 rounded-full border-2 border-accent/10 border-t-accent animate-spin" />
-                  <User className="w-10 h-10 text-white/20 absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" />
-                </div>
-                <p className="text-[10px] font-bold uppercase tracking-[0.4em] text-accent animate-pulse">Establishing Link...</p>
+            {/* Future Avatar Integration Root */}
+            <div id="avatar-container" className="w-full h-full flex flex-col items-center justify-center bg-[#050816] z-20 space-y-6">
+              <div className="relative">
+                <div className="w-24 h-24 rounded-full border-2 border-accent/10 border-t-accent" />
+                <User className="w-10 h-10 text-white/20 absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" />
               </div>
-            )}
+              <p className="text-[10px] font-bold uppercase tracking-[0.4em] text-accent/40">Visual Node Standby</p>
+            </div>
           </div>
         </div>
 
-        {/* Minimal Bottom Input Panel */}
         <div className="h-[15vh] bg-[#0b0e1a]/95 backdrop-blur-2xl border-t border-white/5 flex items-center px-10 gap-6 z-50">
-           <Button onClick={toggleMic} disabled={isAvatarSpeaking || isProcessing || !isAgentConnected} className={`w-16 h-16 rounded-[1.5rem] shrink-0 transition-all ${isMicActive ? 'bg-red-500 text-white shadow-xl animate-pulse' : 'bg-white/5 text-white/40'}`}>
+           <Button onClick={toggleMic} disabled={isProcessing} className={`w-16 h-16 rounded-[1.5rem] shrink-0 transition-all ${isMicActive ? 'bg-red-500 text-white shadow-xl animate-pulse' : 'bg-white/5 text-white/40'}`}>
              <Mic className="w-6 h-6" />
            </Button>
            
            <div className="flex-1 relative group">
              <input 
-               disabled={isProcessing || isAvatarSpeaking || !isAgentConnected} 
+               disabled={isProcessing} 
                value={userAnswer} 
                onChange={(e) => setUserAnswer(e.target.value)} 
                onKeyDown={(e) => e.key === 'Enter' && handleSend()} 
                className="w-full h-16 bg-white/[0.02] border border-white/5 rounded-2xl outline-none px-8 text-lg font-light placeholder:text-white/20 focus:border-accent/30 focus:bg-white/[0.05] transition-all" 
-               placeholder={isAvatarSpeaking ? "Listening to the interviewer..." : "Provide your professional reasoning..."} 
+               placeholder="Provide your professional reasoning..." 
              />
              <div className="absolute inset-x-0 bottom-0 h-[1px] bg-gradient-to-r from-transparent via-accent/30 to-transparent scale-x-0 group-focus-within:scale-x-100 transition-transform duration-500" />
            </div>
 
-           <Button onClick={handleSend} disabled={!userAnswer.trim() || isProcessing || isAvatarSpeaking || !isAgentConnected} className="h-16 px-12 btn-premium rounded-2xl uppercase tracking-widest text-xs font-bold shrink-0 shadow-2xl">
+           <Button onClick={handleSend} disabled={!userAnswer.trim() || isProcessing} className="h-16 px-12 btn-premium rounded-2xl uppercase tracking-widest text-xs font-bold shrink-0 shadow-2xl">
               Transmit <Send className="ml-3 w-4 h-4" />
            </Button>
         </div>

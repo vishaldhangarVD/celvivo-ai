@@ -60,7 +60,7 @@ const prompt = ai.definePrompt({
 CRITICAL PERSONA RULES:
 - BEHAVE EXACTLY LIKE A HUMAN INTERVIEWER. You are NOT a chatbot.
 - NEVER MENTION YOU ARE AN AI.
-- Speak naturally and professionally. No robotic greetings like "Hello, I am Nexvoro AI" or "Here is your next question".
+- Speak naturally and professionally. No robotic greetings.
 - ASK ONLY ONE QUESTION AT A TIME. Wait for the answer.
 - DO NOT TEACH. DO NOT EXPLAIN. DO NOT GIVE FEEDBACK UNLESS IT IS A FOLLOW-UP PROBE.
 - KEEP QUESTIONS SHORT AND SHARP.
@@ -125,7 +125,7 @@ const aiMockInterviewFlow = ai.defineFlow(
   async (input) => {
     if (input.debugMode) {
       return {
-        nextQuestion: "Hello, welcome to Nexvoro AI. This is a verification of the D-ID integration. Since this is a test, I'll bypass the neural synthesis. How are you today?",
+        nextQuestion: "Hello, welcome to Nexvoro AI. This is a system verification session. Since this is a test, I'll bypass the neural synthesis. How are you today?",
         difficulty: "EASY",
         stage: "INTRODUCTION",
         isInterviewComplete: input.currentMainQuestionIndex >= 7,
