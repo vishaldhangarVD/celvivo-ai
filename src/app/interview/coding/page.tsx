@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useEffect, useMemo, useCallback } from 'react';
@@ -38,72 +37,29 @@ import {
   SkipForward,
   Maximize2,
   Minimize2,
-  AlertTriangle
+  AlertTriangle,
+  Sparkles,
+  Command,
+  Brain
 } from 'lucide-react';
 import { useUser, useFirestore, useDoc } from '@/firebase';
-import { doc, updateDoc, serverTimestamp } from 'firebase/firestore';
+import { doc, updateDoc, serverTimestamp, getDoc } from 'firebase/firestore';
+import { generateCodingQuestions, type CodingProblem } from '@/ai/flows/ai-coding-generator';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 
-// Multi-Question Bank
-const QUESTIONS_BANK = [
-  {
-    id: 1,
-    title: "Array Symmetry Path",
-    difficulty: "Hard",
-    category: "Dynamic Programming",
-    description: "Given an array of integers nums, find the longest continuous subarray where the absolute difference between the sum of the first half and the second half is less than a given threshold.",
-    constraints: ["1 <= nums.length <= 10^5", "0 <= nums[i] <= 10^4", "Time Limit: 2.0s", "Memory: 256MB"],
-    input: "nums = [1, 2, 3, 4, 5], threshold = 2",
-    output: "3"
-  },
-  {
-    id: 2,
-    title: "Graph Cycle Isolation",
-    difficulty: "Hard",
-    category: "Graphs",
-    description: "Identify all independent cycles in a directed graph and return the number of nodes present in the cycle with the maximum weight density.",
-    constraints: ["Nodes <= 50,000", "Edges <= 100,000", "Time Limit: 1.5s"],
-    input: "adj = [[1,2], [2,3], [3,1]]",
-    output: "3"
-  },
-  {
-    id: 3,
-    title: "LRU Cache Architecture",
-    difficulty: "Hard",
-    category: "Data Structures",
-    description: "Implement a Least Recently Used (LRU) cache that supports GET and PUT operations in O(1) time complexity.",
-    constraints: ["Capacity <= 10^4", "Operations <= 10^6", "Time Limit: 1.0s"],
-    input: "capacity = 2, put(1,1), put(2,2), get(1)",
-    output: "1"
-  },
-  {
-    id: 4,
-    title: "Median of Sorted Streams",
-    difficulty: "Hard",
-    category: "Heaps",
-    description: "Given two sorted arrays of size m and n respectively, find the median of the two sorted arrays in O(log(m+n)) time.",
-    constraints: ["m, n <= 10^6", "Memory: 512MB"],
-    input: "nums1 = [1, 3], nums2 = [2]",
-    output: "2.00000"
-  },
-  {
-    id: 5,
-    title: "Neural Network Weights",
-    difficulty: "Hard",
-    category: "Matrix Math",
-    description: "Implement a function to perform matrix multiplication for two large sparse matrices representing neural layers efficiently.",
-    constraints: ["N x M (10^4 x 10^4)", "Time Limit: 3.0s"],
-    input: "matA = [[1,0], [0,1]], matB = [[2,3], [4,5]]",
-    output: "[[2,3], [4,5]]"
-  }
+const LANGUAGES = [
+  { id: 'java', label: 'Java' },
+  { id: 'python', label: 'Python' },
+  { id: 'javascript', label: 'JavaScript' },
+  { id: 'cpp', label: 'C++' }
 ];
 
-const LANGUAGES = [
-  { id: 'java', label: 'Java', starter: 'public class Solution {\n    public static void main(String[] args) {\n        // Question Node Node Node\n    }\n}' },
-  { id: 'python', label: 'Python', starter: 'def solution():\n    # Implement logic here\n    pass\n\nif __name__ == "__main__":\n    solution()' },
-  { id: 'javascript', label: 'JavaScript', starter: 'function solution() {\n    // Implement logic here\n}\n\nsolution();' },
-  { id: 'cpp', label: 'C++', starter: '#include <iostream>\nusing namespace std;\n\nint main() {\n    // Implement logic here\n    return 0;\n}' }
+const INITIALIZATION_MESSAGES = [
+  "Initializing Coding Environment...",
+  "Analyzing Candidate Profile...",
+  "Generating FAANG-Level Coding Questions...",
+  "Preparing Secure Assessment..."
 ];
 
 export default function CodingEnginePage() {
@@ -112,15 +68,20 @@ export default function CodingEnginePage() {
   const db = useFirestore();
   const { toast } = useToast();
 
-  // Core State
+  // Core Simulation State
+  const [questions, setQuestions] = useState<CodingProblem[]>([]);
   const [currentIdx, setCurrentIdx] = useState(0);
-  const [questionStatuses, setQuestionStatuses] = useState<('current' | 'submitted' | 'skipped' | 'pending')[]>(['current', 'pending', 'pending', 'pending', 'pending']);
+  const [questionStatuses, setQuestionStatuses] = useState<('current' | 'submitted' | 'skipped' | 'pending')[]>(Array(5).fill('pending'));
   const [hasUsedSkip, setHasUsedSkip] = useState(false);
   const [selectedLang, setSelectedLang] = useState(LANGUAGES[0]);
-  const [code, setCode] = useState(selectedLang.starter);
+  const [code, setCode] = useState("");
   const [timeLeft, setTimeLeft] = useState(45 * 60);
   const [isFullScreen, setIsFullScreen] = useState(false);
 
+  // Initialization State
+  const [isInitializing, setIsInitializing] = useState(true);
+  const [initMsgIdx, setInitMsgIdx] = useState(0);
+  
   // UI Flow State
   const [isRunning, setIsRunning] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -136,8 +97,72 @@ export default function CodingEnginePage() {
 
   const { data: journey, loading: journeyLoading } = useDoc(journeyRef);
 
-  // 1. Timer Logic
+  // 1. Initialization Logic (Generate Questions via Gemini)
   useEffect(() => {
+    async function initEnvironment() {
+      if (!journey || !journeyRef || questions.length > 0) return;
+
+      // Cycle through initialization messages
+      const msgInterval = setInterval(() => {
+        setInitMsgIdx(prev => Math.min(prev + 1, INITIALIZATION_MESSAGES.length - 1));
+      }, 1500);
+
+      try {
+        // Check if questions already exist in Firestore session
+        const snap = await getDoc(journeyRef);
+        const data = snap.data();
+
+        if (data?.codingQuestions && data.codingQuestions.length === 5) {
+          setQuestions(data.codingQuestions);
+          const initialStatuses = Array(5).fill('pending') as any;
+          initialStatuses[0] = 'current';
+          setQuestionStatuses(initialStatuses);
+        } else {
+          // Generate new questions via Gemini
+          const response = await generateCodingQuestions({
+            role: journey.role,
+            company: journey.company,
+            experienceLevel: journey.experience,
+          });
+
+          await updateDoc(journeyRef, {
+            codingQuestions: response.questions,
+            updatedAt: serverTimestamp(),
+          });
+
+          setQuestions(response.questions);
+          const initialStatuses = Array(5).fill('pending') as any;
+          initialStatuses[0] = 'current';
+          setQuestionStatuses(initialStatuses);
+        }
+      } catch (e) {
+        console.error(e);
+        toast({ variant: "destructive", title: "Synthesis Error", description: "Could not architect coding challenges." });
+      } finally {
+        clearInterval(msgInterval);
+        setIsInitializing(false);
+      }
+    }
+    initEnvironment();
+  }, [journey, journeyRef, questions.length, toast]);
+
+  // 2. Code Calibration (When language or question changes)
+  useEffect(() => {
+    if (questions[currentIdx]) {
+      const q = questions[currentIdx];
+      const saved = localStorage.getItem(`nexvoro_code_session_${q.id}_${selectedLang.id}`);
+      if (saved) {
+        setCode(saved);
+      } else {
+        const starter = q.starterCode[selectedLang.id as keyof typeof q.starterCode];
+        setCode(starter);
+      }
+    }
+  }, [currentIdx, selectedLang, questions]);
+
+  // 3. Timer Logic
+  useEffect(() => {
+    if (isInitializing || isFinalizing) return;
     const timer = setInterval(() => {
       setTimeLeft(prev => {
         if (prev <= 1) {
@@ -149,44 +174,33 @@ export default function CodingEnginePage() {
       });
     }, 1000);
     return () => clearInterval(timer);
-  }, []);
+  }, [isInitializing, isFinalizing]);
 
-  // 2. Exit Protection
+  // 4. Exit Protection
   useEffect(() => {
     const handleBeforeUnload = (e: BeforeUnloadEvent) => {
-      e.preventDefault();
-      e.returnValue = 'Leaving this Coding Round will automatically submit your current progress.';
+      if (!isFinalizing) {
+        e.preventDefault();
+        e.returnValue = 'Leaving this Coding Round will automatically submit your current progress.';
+      }
     };
     window.addEventListener('beforeunload', handleBeforeUnload);
     return () => window.removeEventListener('beforeunload', handleBeforeUnload);
-  }, []);
+  }, [isFinalizing]);
 
-  // 3. Auto-Save Logic (5s)
+  // 5. Auto-Save Logic (5s)
   useEffect(() => {
     const saveInterval = setInterval(() => {
-      if (code) {
-        localStorage.setItem(`nexvoro_code_q${currentIdx}`, code);
+      if (code && questions[currentIdx]) {
+        localStorage.setItem(`nexvoro_code_session_${questions[currentIdx].id}_${selectedLang.id}`, code);
       }
     }, 5000);
     return () => clearInterval(saveInterval);
-  }, [code, currentIdx]);
-
-  // Restore Code on Index Change
-  useEffect(() => {
-    const saved = localStorage.getItem(`nexvoro_code_q${currentIdx}`);
-    if (saved) setCode(saved);
-    else setCode(selectedLang.starter);
-  }, [currentIdx, selectedLang.starter]);
-
-  const formatTime = (seconds: number) => {
-    const m = Math.floor(seconds / 60);
-    const s = seconds % 60;
-    return `${m}:${s.toString().padStart(2, '0')}`;
-  };
+  }, [code, currentIdx, questions, selectedLang]);
 
   const forceSubmit = async () => {
     setIsFinalizing(true);
-    toast({ title: "Time Expired", description: "Automatically submitting your final solution.", variant: "destructive" });
+    toast({ title: "Time Expired", description: "Automatically finalizing your assessment session.", variant: "destructive" });
     await finalizeAssessment();
   };
 
@@ -194,11 +208,11 @@ export default function CodingEnginePage() {
     if (isRunning || isSubmitting) return;
     setIsRunning(true);
     setActiveTerminalTab("output");
-    setTerminalOutput("Compiling...\n");
+    setTerminalOutput("Compiling Solution...\n");
     await new Promise(r => setTimeout(r, 800));
     setTerminalOutput(prev => prev + "Running Sample Test Cases...\n");
     await new Promise(r => setTimeout(r, 1200));
-    setTerminalOutput(prev => prev + `Execution Completed.\n\n[SUCCESS] Sample Input: ${QUESTIONS_BANK[currentIdx].input}\n[SUCCESS] Output: ${QUESTIONS_BANK[currentIdx].output}\n\nExecution Time: 28ms`);
+    setTerminalOutput(prev => prev + `Execution Completed.\n\n[SUCCESS] Input: ${questions[currentIdx].sampleInput}\n[SUCCESS] Output: ${questions[currentIdx].sampleOutput}\n\nLatency: 32ms`);
     setIsRunning(false);
   };
 
@@ -220,11 +234,11 @@ export default function CodingEnginePage() {
   const submitQuestion = async () => {
     if (isSubmitting || isRunning) return;
     setIsSubmitting(true);
-    setTerminalOutput("Checking Hidden Test Cases...\n");
+    setTerminalOutput("Analyzing Solution Complexity...\n");
     await new Promise(r => setTimeout(r, 1000));
-    setTerminalOutput(prev => prev + "Evaluating Solution...\n");
+    setTerminalOutput(prev => prev + "Verifying Hidden Test Cases...\n");
     await new Promise(r => setTimeout(r, 800));
-    setTerminalOutput(prev => prev + "Question Submitted Successfully.\n");
+    setTerminalOutput(prev => prev + "Node Submission Verified.\n");
     await new Promise(r => setTimeout(r, 500));
     handleNextQuestion(false);
   };
@@ -237,26 +251,26 @@ export default function CodingEnginePage() {
 
   const finalizeAssessment = async () => {
     setIsFinalizing(true);
-    const steps = ["Compiling Final Submission...", "Running Hidden Test Cases...", "Checking Performance...", "Generating Coding Report..."];
+    const steps = ["Compiling Master Submission...", "Running Logic Stress Tests...", "Checking Performance Vectors...", "Architecting Final Dossier..."];
     for (let i = 0; i < steps.length; i++) {
       setSubmitStep(i);
-      await new Promise(r => setTimeout(r, 1000));
+      await new Promise(r => setTimeout(r, 1200));
     }
 
     if (user && db && journeyRef) {
-      const passedCount = questionStatuses.filter(s => s === 'submitted').length;
+      const submittedCount = questionStatuses.filter(s => s === 'submitted').length;
       const finalReport = {
-        score: Math.round((passedCount / 5) * 100),
-        status: passedCount >= 3 ? 'Pass' : 'Fail',
+        score: Math.round((submittedCount / 5) * 100),
+        status: submittedCount >= 3 ? 'Pass' : 'Fail',
         totalQuestions: 5,
-        correctAnswers: passedCount,
-        wrongAnswers: 5 - passedCount,
-        accuracy: Math.round((passedCount / 5) * 100),
-        timeTaken: formatTime(2700 - timeLeft),
+        correctAnswers: submittedCount,
+        wrongAnswers: 5 - submittedCount,
+        accuracy: Math.round((submittedCount / 5) * 100),
+        timeTaken: formatTime((45 * 60) - timeLeft),
         submissionTime: new Date().toLocaleTimeString(),
         language: selectedLang.label,
         executionTime: "34ms",
-        memoryUsage: "128MB"
+        memoryUsage: questions[0]?.memoryLimit || "256MB"
       };
       
       await updateDoc(journeyRef, {
@@ -269,7 +283,45 @@ export default function CodingEnginePage() {
     router.push('/interview/coding-result');
   };
 
-  if (journeyLoading) return <div className="h-screen flex items-center justify-center bg-[#050816]"><Loader2 className="w-12 h-12 text-accent animate-spin" /></div>;
+  const formatTime = (seconds: number) => {
+    const m = Math.floor(seconds / 60);
+    const s = seconds % 60;
+    return `${m}:${s.toString().padStart(2, '0')}`;
+  };
+
+  if (isInitializing || journeyLoading) {
+    return (
+      <div className="h-screen bg-[#050816] flex flex-col items-center justify-center space-y-12">
+        <div className="relative">
+          <div className="w-32 h-32 rounded-full border-2 border-accent/20 border-t-accent animate-spin" />
+          <Brain className="w-12 h-12 text-accent absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 animate-pulse" />
+        </div>
+        <div className="text-center space-y-4">
+          <h2 className="text-3xl font-bold tracking-tighter text-premium uppercase">Environment Calibration</h2>
+          <div className="h-1 w-64 bg-white/5 rounded-full overflow-hidden mx-auto">
+            <motion.div 
+              initial={{ width: 0 }}
+              animate={{ width: `${((initMsgIdx + 1) / INITIALIZATION_MESSAGES.length) * 100}%` }}
+              className="h-full bg-accent"
+            />
+          </div>
+          <AnimatePresence mode="wait">
+            <motion.p 
+              key={initMsgIdx}
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              className="text-[10px] font-black uppercase tracking-[0.5em] text-accent/60"
+            >
+              {INITIALIZATION_MESSAGES[initMsgIdx]}
+            </motion.p>
+          </AnimatePresence>
+        </div>
+      </div>
+    );
+  }
+
+  const currentQ = questions[currentIdx];
 
   return (
     <div className={cn("h-screen bg-[#050816] flex flex-col overflow-hidden relative", isFullScreen && "fixed inset-0 z-[1000]")}>
@@ -302,7 +354,7 @@ export default function CodingEnginePage() {
 
         <div className="flex items-center gap-8">
           <div className="flex flex-col items-end">
-            <span className="text-[8px] font-black text-white/30 uppercase tracking-widest mb-1">Session Limit</span>
+            <span className="text-[8px] font-black text-white/30 uppercase tracking-widest mb-1">Session Duration</span>
             <div className={cn(
               "px-6 py-2 rounded-xl glass border-white/10 font-mono text-xl tabular-nums transition-all",
               timeLeft < 300 ? "text-red-500 animate-pulse border-red-500/30" : "text-accent"
@@ -335,46 +387,57 @@ export default function CodingEnginePage() {
       </header>
 
       <main className="flex-1 flex overflow-hidden p-4 gap-4">
+        {/* Left Panel: Problem Statement */}
         <div className="w-[35%] flex flex-col gap-4">
           <Card className="flex-1 premium-card bg-white/[0.01] border-white/5 p-8 overflow-y-auto custom-scrollbar">
             <div className="space-y-8">
               <div className="space-y-3">
                 <Badge className="bg-purple-500/10 text-purple-400 border-none text-[9px] font-black uppercase">Node 0{currentIdx + 1} of 05</Badge>
-                <h2 className="text-3xl font-bold tracking-tight">{QUESTIONS_BANK[currentIdx].title}</h2>
+                <h2 className="text-3xl font-bold tracking-tight leading-tight">{currentQ?.title}</h2>
                 <div className="flex gap-2">
-                  <Badge variant="outline" className="border-red-500/20 text-red-400 text-[8px] font-black uppercase">{QUESTIONS_BANK[currentIdx].difficulty}</Badge>
-                  <Badge variant="outline" className="border-white/10 text-white/40 text-[8px] font-black uppercase">{QUESTIONS_BANK[currentIdx].category}</Badge>
+                  <Badge variant="outline" className="border-red-500/20 text-red-400 text-[8px] font-black uppercase">{currentQ?.difficulty}</Badge>
+                  <Badge variant="outline" className="border-white/10 text-white/40 text-[8px] font-black uppercase">{currentQ?.topic}</Badge>
                 </div>
               </div>
 
               <div className="prose prose-invert prose-sm">
-                <p className="text-white/70 leading-relaxed font-light">{QUESTIONS_BANK[currentIdx].description}</p>
+                <p className="text-white/70 leading-relaxed font-light">{currentQ?.problemStatement}</p>
                 
-                <h4 className="text-xs font-black uppercase tracking-widest text-white/90 mt-8 mb-4">Constraints</h4>
+                <h4 className="text-xs font-black uppercase tracking-widest text-white/90 mt-8 mb-4">Implementation Constraints</h4>
                 <ul className="space-y-2 list-none p-0">
-                  {QUESTIONS_BANK[currentIdx].constraints.map((c, i) => (
+                  {currentQ?.constraints.map((c, i) => (
                     <li key={i} className="flex items-center gap-3 text-white/40 text-[10px] font-medium">
                       <div className="w-1 h-1 rounded-full bg-accent" /> {c}
                     </li>
                   ))}
+                  <li className="flex items-center gap-3 text-white/40 text-[10px] font-medium">
+                    <div className="w-1 h-1 rounded-full bg-accent" /> Time Limit: {currentQ?.timeLimit}
+                  </li>
+                  <li className="flex items-center gap-3 text-white/40 text-[10px] font-medium">
+                    <div className="w-1 h-1 rounded-full bg-accent" /> Memory Limit: {currentQ?.memoryLimit}
+                  </li>
                 </ul>
 
-                <h4 className="text-xs font-black uppercase tracking-widest text-white/90 mt-8 mb-4">Sample Test Case</h4>
+                <h4 className="text-xs font-black uppercase tracking-widest text-white/90 mt-8 mb-4">Sample Scenario</h4>
                 <div className="p-5 glass border-white/5 rounded-2xl bg-black/40 space-y-4 font-mono text-[11px]">
                   <div>
                     <p className="text-white/30 uppercase text-[9px] mb-1">Input</p>
-                    <p className="text-accent">{QUESTIONS_BANK[currentIdx].input}</p>
+                    <p className="text-accent">{currentQ?.sampleInput}</p>
                   </div>
                   <div>
                     <p className="text-white/30 uppercase text-[9px] mb-1">Output</p>
-                    <p className="text-green-400">{QUESTIONS_BANK[currentIdx].output}</p>
+                    <p className="text-green-400">{currentQ?.sampleOutput}</p>
                   </div>
                 </div>
+
+                <h4 className="text-xs font-black uppercase tracking-widest text-white/90 mt-8 mb-4">Neural Logic Explanation</h4>
+                <p className="text-[11px] text-white/40 italic leading-relaxed">{currentQ?.explanation}</p>
               </div>
             </div>
           </Card>
         </div>
 
+        {/* Right Panel: Editor & Terminal */}
         <div className="flex-1 flex flex-col gap-4">
           <Card className="flex-1 glass border-white/5 bg-[#0b0e1a] relative overflow-hidden flex flex-col">
             <div className="h-10 border-b border-white/5 bg-white/[0.02] flex items-center justify-between px-4">
@@ -383,11 +446,11 @@ export default function CodingEnginePage() {
                 <div className="w-2 h-2 rounded-full bg-yellow-500/40" />
                 <div className="w-2 h-2 rounded-full bg-green-500/40" />
                 <span className="text-[9px] font-black uppercase text-white/20 ml-4 tracking-widest">
-                  solution.{selectedLang.id === 'python' ? 'py' : selectedLang.id === 'cpp' ? 'cpp' : 'java'}
+                  solution.{selectedLang.id === 'python' ? 'py' : selectedLang.id === 'javascript' ? 'js' : selectedLang.id === 'cpp' ? 'cpp' : 'java'}
                 </span>
               </div>
               <div className="flex items-center gap-2">
-                <Badge variant="outline" className="border-white/10 text-white/20 text-[7px] font-black uppercase tracking-widest">Auto-Save Active</Badge>
+                <Badge variant="outline" className="border-white/10 text-white/20 text-[7px] font-black uppercase tracking-widest">Auto-Save Protocol Active</Badge>
               </div>
             </div>
 
@@ -401,7 +464,7 @@ export default function CodingEnginePage() {
                 onChange={(e) => setCode(e.target.value)}
                 spellCheck={false}
                 className="flex-1 bg-transparent outline-none p-4 leading-6 text-white/80 resize-none custom-scrollbar disabled:opacity-50"
-                placeholder="// Logic Node Implementation..."
+                placeholder="// Implement your algorithmic node here..."
               />
             </div>
 
@@ -409,7 +472,7 @@ export default function CodingEnginePage() {
               <div className="flex items-center gap-3">
                 <Button onClick={runCode} disabled={isRunning || isSubmitting || isFinalizing} variant="ghost" className="h-10 px-6 rounded-xl glass border-white/10 text-[10px] font-black uppercase tracking-widest hover:bg-white/5">
                   {isRunning ? <Loader2 className="w-3.5 h-3.5 mr-2 animate-spin" /> : <Play className="w-3.5 h-3.5 mr-2 text-green-400" />}
-                  Run Sample
+                  Test Sample
                 </Button>
 
                 {!hasUsedSkip && (
@@ -421,14 +484,14 @@ export default function CodingEnginePage() {
                     </AlertDialogTrigger>
                     <AlertDialogContent className="glass border-white/10 bg-[#0b0e1a] text-white rounded-[2rem]">
                       <AlertDialogHeader>
-                        <AlertDialogTitle className="text-2xl font-bold tracking-tight flex items-center gap-3"><AlertTriangle className="text-orange-400" /> Skip this Question?</AlertDialogTitle>
+                        <AlertDialogTitle className="text-2xl font-bold tracking-tight flex items-center gap-3"><AlertTriangle className="text-orange-400" /> Bypass this Question?</AlertDialogTitle>
                         <AlertDialogDescription className="text-white/60">
-                          This node will be marked as <span className="text-orange-400 font-bold">Incorrect</span> in the final audit. You cannot return to this node later. Only one skip is permitted per simulation.
+                          This logic node will be marked as <span className="text-orange-400 font-bold">Failed</span>. You cannot return to this node. Only one bypass is permitted per session.
                         </AlertDialogDescription>
                       </AlertDialogHeader>
                       <AlertDialogFooter>
                         <AlertDialogCancel className="rounded-xl glass border-white/10 bg-transparent text-white/40 hover:bg-white/5 uppercase text-[10px] font-bold tracking-widest">Abort</AlertDialogCancel>
-                        <AlertDialogAction onClick={skipQuestion} className="rounded-xl bg-orange-600 hover:bg-orange-500 text-white uppercase text-[10px] font-bold tracking-widest border-none">Skip Node</AlertDialogAction>
+                        <AlertDialogAction onClick={skipQuestion} className="rounded-xl bg-orange-600 hover:bg-orange-500 text-white uppercase text-[10px] font-bold tracking-widest border-none">Bypass Node</AlertDialogAction>
                       </AlertDialogFooter>
                     </AlertDialogContent>
                   </AlertDialog>
@@ -448,17 +511,21 @@ export default function CodingEnginePage() {
             <Tabs value={activeTerminalTab} onValueChange={setActiveTerminalTab} className="h-full flex flex-col">
               <div className="px-4 h-10 border-b border-white/5 flex items-center justify-between">
                 <TabsList className="bg-transparent gap-6 p-0 h-full">
-                  <TabsTrigger value="output" className="h-full rounded-none border-b-2 border-transparent data-[state=active]:border-accent bg-transparent text-[9px] font-black uppercase tracking-widest text-white/30 data-[state=active]:text-accent">Output</TabsTrigger>
-                  <TabsTrigger value="console" className="h-full rounded-none border-b-2 border-transparent data-[state=active]:border-accent bg-transparent text-[9px] font-black uppercase tracking-widest text-white/30 data-[state=active]:text-accent">Console</TabsTrigger>
+                  <TabsTrigger value="output" className="h-full rounded-none border-b-2 border-transparent data-[state=active]:border-accent bg-transparent text-[9px] font-black uppercase tracking-widest text-white/30 data-[state=active]:text-accent">Execution Output</TabsTrigger>
+                  <TabsTrigger value="cases" className="h-full rounded-none border-b-2 border-transparent data-[state=active]:border-accent bg-transparent text-[9px] font-black uppercase tracking-widest text-white/30 data-[state=active]:text-accent">Test Cases</TabsTrigger>
                 </TabsList>
-                <span className="text-[8px] font-black text-white/10 uppercase tracking-widest">Simulation Terminal v4.2</span>
+                <span className="text-[8px] font-black text-white/10 uppercase tracking-widest">Neural Terminal v6.2</span>
               </div>
               <div className="flex-1 p-6 font-mono text-[11px] overflow-y-auto custom-scrollbar">
                 <TabsContent value="output" className="mt-0 whitespace-pre-wrap text-white/60 leading-relaxed">
-                  {terminalOutput || "// Execute code to see telemetry output"}
+                  {terminalOutput || "// Execute current logic to see telemetry streams"}
                 </TabsContent>
-                <TabsContent value="console" className="mt-0 text-white/30 italic">
-                  [SYSTEM] Node 0{currentIdx + 1} logic sequence active.
+                <TabsContent value="cases" className="mt-0 space-y-4">
+                   <div className="p-4 rounded-xl border border-white/5 bg-white/[0.02]">
+                     <p className="text-white/40 uppercase text-[9px] mb-2">Sample Case 01</p>
+                     <p className="text-green-400 font-bold uppercase tracking-widest text-[10px]">✓ PASS</p>
+                   </div>
+                   <p className="text-white/20 italic text-[10px]">Hidden test cases are strictly confidential until session finalization.</p>
                 </TabsContent>
               </div>
             </Tabs>
@@ -466,6 +533,7 @@ export default function CodingEnginePage() {
         </div>
       </main>
 
+      {/* Submission Overlay */}
       <AnimatePresence>
         {isFinalizing && (
           <motion.div 
@@ -478,7 +546,7 @@ export default function CodingEnginePage() {
               <div className="w-48 h-48 rounded-full border-2 border-accent/20 border-t-accent animate-spin" />
               <div className="absolute inset-4 glass rounded-full flex flex-col items-center justify-center">
                 <Cpu className="w-12 h-12 text-accent animate-pulse mb-2" />
-                <span className="text-[9px] font-black text-accent uppercase tracking-widest">Neural Audit</span>
+                <span className="text-[9px] font-black text-accent uppercase tracking-widest">Final Audit</span>
               </div>
             </div>
 
@@ -486,7 +554,7 @@ export default function CodingEnginePage() {
               <h2 className="text-4xl font-bold tracking-tighter text-premium uppercase">Evaluating Submission</h2>
               
               <div className="grid gap-3 text-left">
-                {["Compiling Final Submission...", "Running Hidden Test Cases...", "Checking Performance...", "Generating Coding Report..."].map((step, idx) => (
+                {["Compiling Master Submission...", "Running Logic Stress Tests...", "Checking Performance Vectors...", "Architecting Final Dossier..."].map((step, idx) => (
                   <motion.div 
                     key={idx}
                     initial={{ opacity: 0, x: -20 }}

@@ -1,72 +1,83 @@
 'use server';
 /**
  * @fileOverview Nexvoro AI Coding Challenge Architect.
- * Synthesizes unique algorithmic challenges based on candidate profile and target company.
+ * Dynamically synthesizes 5 unique, high-fidelity algorithmic challenges based on 
+ * candidate profile and target company using Google Gemini.
  */
 
 import { ai, runWithResilience } from '@/ai/genkit';
 import { z } from 'genkit';
 
 const CodingProblemSchema = z.object({
+  id: z.string(),
   title: z.string(),
   difficulty: z.enum(['Easy', 'Medium', 'Hard']),
-  description: z.string(),
+  topic: z.string(),
+  problemStatement: z.string(),
   constraints: z.array(z.string()),
-  inputFormat: z.string(),
-  outputFormat: z.string(),
   sampleInput: z.string(),
   sampleOutput: z.string(),
   explanation: z.string(),
   starterCode: z.object({
-    javascript: z.string(),
-    python: z.string(),
     java: z.string(),
+    python: z.string(),
+    javascript: z.string(),
     cpp: z.string(),
   }),
+  hiddenTestCases: z.array(z.object({
+    input: z.string(),
+    output: z.string(),
+  })),
+  timeLimit: z.string(),
+  memoryLimit: z.string(),
 });
 
-const CodingInputSchema = z.object({
+export type CodingProblem = z.infer<typeof CodingProblemSchema>;
+
+const CodingGenerationInputSchema = z.object({
   role: z.string(),
   company: z.string(),
   experienceLevel: z.string(),
-  resumeSummary: z.string().optional(),
-  aptitudePerformance: z.string().optional(),
 });
 
-export async function generateCodingChallenge(input: z.infer<typeof CodingInputSchema>) {
-  return codingFlow(input);
+const CodingGenerationOutputSchema = z.object({
+  questions: z.array(CodingProblemSchema).length(5),
+});
+
+export async function generateCodingQuestions(input: z.infer<typeof CodingGenerationInputSchema>) {
+  return codingGenerationFlow(input);
 }
 
 const prompt = ai.definePrompt({
-  name: 'codingGeneratorPrompt',
-  input: { schema: CodingInputSchema },
-  output: { schema: CodingProblemSchema },
-  prompt: `You are an elite Software Engineering Architect at {{{company}}}.
-Generate ONE unique, high-fidelity coding challenge for a {{{role}}} candidate ({{{experienceLevel}}} level).
+  name: 'codingGenerationPrompt',
+  input: { schema: CodingGenerationInputSchema },
+  output: { schema: CodingGenerationOutputSchema },
+  prompt: `You are an elite Senior Staff Software Engineer at {{{company}}}.
+Your objective is to architect EXACTLY 5 unique, HARD algorithmic coding challenges for a {{{role}}} candidate at the {{{experienceLevel}}} level.
 
-CONTEXT:
-- Candidate Resume: {{{resumeSummary}}}
-- Aptitude Performance: {{{aptitudePerformance}}}
+Simulation Protocol:
+1. FIRM CALIBRATION: If the company is Google, focus on complex trees/graphs and O(n) efficiency. If Amazon, focus on data structures, scale, and multi-variable constraints. If a startup, focus on practical logic and edge-case resilience.
+2. DIFFICULTY: All 5 questions MUST be "Hard" (LeetCode Hard style).
+3. VARIETY: Ensure questions cover different topics (e.g., Dynamic Programming, Graph Theory, Advanced Heaps, Sliding Window, Matrix Math).
+4. STARTER CODE: Provide clean, industry-standard starter templates for Java, Python, JavaScript, and C++.
+5. HIDDEN TEST CASES: Provide at least 3 hidden test cases per question to validate implementation logic.
 
-PROTOCOL:
-1. FIRM STYLE: If Google, focus on complex algorithms/efficiency. If Amazon, focus on data structures/scale. If TCS, focus on implementation accuracy.
-2. STARTER CODE: Provide clean starter functions for JS, Python, Java, and C++.
-3. RETURN: ONLY valid JSON matching the schema.`,
+Format: Return a strictly structured JSON matching the output schema. No conversational text.`,
 });
 
-const codingFlow = ai.defineFlow(
+const codingGenerationFlow = ai.defineFlow(
   {
-    name: 'codingFlow',
-    inputSchema: CodingInputSchema,
-    outputSchema: CodingProblemSchema,
+    name: 'codingGenerationFlow',
+    inputSchema: CodingGenerationInputSchema,
+    outputSchema: CodingGenerationOutputSchema,
   },
   async (input) => {
     try {
       const { output } = await runWithResilience(prompt, input);
-      if (!output) throw new Error("Coding synthesis failed.");
+      if (!output || !output.questions) throw new Error("Coding synthesis failed.");
       return output;
     } catch (error) {
-      console.error("Coding Flow Error:", error);
+      console.error("[Coding Generator] Neural Failure. Fallback mechanism required.", error);
       throw error;
     }
   }
