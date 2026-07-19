@@ -247,7 +247,6 @@ export default function Dashboard() {
             ))}
           </div>
 
-          {/* Rest of the UI remains exactly the same... */}
           <div className="grid lg:grid-cols-12 gap-8">
             <div className="lg:col-span-4 space-y-8">
               <Card className="premium-card bg-orange-500/5 border-orange-500/20 p-8">
@@ -375,6 +374,12 @@ export default function Dashboard() {
       {/* DEV DIAGNOSTIC DIALOGS */}
       <Dialog open={isTestingGemini} onOpenChange={() => {}}>
         <DialogContent className="glass border-white/10 bg-[#0b0e1a] text-white max-w-sm rounded-[2rem] p-12 text-center outline-none">
+          <DialogHeader>
+            <DialogTitle>Gemini Connection Test</DialogTitle>
+            <DialogDescription>
+              Testing Gemini API connection.
+            </DialogDescription>
+          </DialogHeader>
           <div className="space-y-8">
             <div className="relative w-24 h-24 mx-auto">
               <div className="absolute inset-0 border-2 border-accent/20 rounded-full animate-ping" />
@@ -395,6 +400,10 @@ export default function Dashboard() {
 
       <Dialog open={!!testResult} onOpenChange={() => setTestResult(null)}>
         <DialogContent className="glass border-green-500/20 bg-[#0b0e1a] text-white max-w-md rounded-[2.5rem] p-10 outline-none">
+          <DialogHeader className="sr-only">
+            <DialogTitle>Gemini Connection Success</DialogTitle>
+            <DialogDescription>Successfully established neural link with Gemini.</DialogDescription>
+          </DialogHeader>
           <div className="space-y-8">
             <div className="flex items-center gap-6">
               <div className="w-16 h-16 rounded-2xl bg-green-500/10 border border-green-500/20 flex items-center justify-center text-green-400">
@@ -431,6 +440,10 @@ export default function Dashboard() {
 
       <Dialog open={!!testError} onOpenChange={() => setTestError(null)}>
         <DialogContent className="glass border-red-500/20 bg-[#0b0e1a] text-white max-w-md rounded-[2.5rem] p-10 outline-none">
+          <DialogHeader className="sr-only">
+            <DialogTitle>Gemini Connection Failed</DialogTitle>
+            <DialogDescription>System node failed to establish neural bridge.</DialogDescription>
+          </DialogHeader>
           <div className="space-y-8">
             <div className="flex items-center gap-6">
               <div className="w-16 h-16 rounded-2xl bg-red-500/10 border border-red-500/20 flex items-center justify-center text-red-400">
