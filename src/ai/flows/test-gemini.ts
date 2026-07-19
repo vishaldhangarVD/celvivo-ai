@@ -3,32 +3,38 @@
  * @fileOverview Resilient diagnostic flow to verify Gemini API connectivity.
  */
 
-import { ai, runWithResilience } from '@/ai/genkit';
+import { ai, runWithResilience, PRIMARY_MODEL } from '@/ai/genkit';
 import { z } from 'genkit';
 
 const testPrompt = ai.definePrompt({
   name: 'testSignalPrompt',
   input: { schema: z.any() },
-  prompt: "Reply with only these words: GEMINI WORKING"
+  prompt: "Reply with exactly this text: GEMINI CONNECTION SUCCESSFUL"
 });
 
 export async function runGeminiTest() {
+  const startTime = Date.now();
   try {
     console.log('[Diagnostic] Initializing Resilient Gemini Connectivity Test...');
     
     const response = await runWithResilience(testPrompt, {});
+    const latency = Date.now() - startTime;
     
     console.log('[Diagnostic] SUCCESS. Response Received.');
     return { 
       success: true, 
-      data: response.text 
+      data: response.text,
+      model: PRIMARY_MODEL,
+      latency: `${latency}ms`,
+      timestamp: new Date().toISOString()
     };
   } catch (err: any) {
     console.error('[Diagnostic] CRITICAL FAILURE:', err);
     return { 
       success: false, 
       error: err.message || 'Unknown Neural Error',
-      details: err.status || err.code || 'N/A'
+      status: err.status || err.code || '500',
+      details: err.details || 'N/A'
     };
   }
 }

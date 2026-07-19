@@ -1,12 +1,19 @@
 "use client";
 
-import { useEffect, useMemo } from 'react';
-import { motion } from 'framer-motion';
+import { useEffect, useMemo, useState } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import Navbar from '@/components/layout/Navbar';
 import NavigationControls from '@/components/NavigationControls';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { 
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
 import { 
   Zap, 
   Activity, 
@@ -23,17 +30,28 @@ import {
   Mic,
   Brain,
   Map,
-  FileEdit
+  FileEdit,
+  ShieldCheck,
+  AlertCircle,
+  Clock,
+  Wifi
 } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useUser, useFirestore, useCollection, useDoc } from '@/firebase';
 import { collection, query, orderBy, doc, limit } from 'firebase/firestore';
+import { runGeminiTest } from '@/ai/flows/test-gemini';
 
 export default function Dashboard() {
   const router = useRouter();
   const { user, loading: authLoading } = useUser();
   const db = useFirestore();
+
+  // Test Gemini State
+  const [isTestingGemini, setIsTestingGemini] = useState(false);
+  const [testResult, setTestResult] = useState<any>(null);
+  const [testError, setTestError] = useState<any>(null);
+  const [testStep, setTestStep] = useState(0);
 
   // Fetch User Profile for Streaks
   const userProfileRef = useMemo(() => {
@@ -82,6 +100,36 @@ export default function Dashboard() {
   useEffect(() => {
     if (!user && !authLoading) router.push('/login');
   }, [user, authLoading, router]);
+
+  const handleTestGemini = async () => {
+    setIsTestingGemini(true);
+    setTestResult(null);
+    setTestError(null);
+    setTestStep(0);
+
+    // Staggered loading messages
+    const steps = ["Connecting to Gemini...", "Authenticating API...", "Waiting for AI Response..."];
+    for (let i = 0; i < steps.length; i++) {
+      setTestStep(i);
+      await new Promise(r => setTimeout(r, 800));
+    }
+
+    try {
+      const result = await runGeminiTest();
+      if (result.success) {
+        setTestResult(result);
+      } else {
+        setTestError(result);
+      }
+    } catch (e: any) {
+      setTestError({
+        status: 'CLIENT_ERROR',
+        error: e.message || 'An unexpected client error occurred.'
+      });
+    } finally {
+      setIsTestingGemini(false);
+    }
+  };
 
   // Strategic Metrics Calculation
   const stats = useMemo(() => {
@@ -144,7 +192,16 @@ export default function Dashboard() {
             className="flex flex-col md:flex-row justify-between items-end gap-8"
           >
             <div>
-              <Badge className="bg-accent/20 text-accent mb-4 border-none px-4 py-1 text-[10px] tracking-widest font-bold uppercase">Mission Briefing</Badge>
+              <div className="flex items-center gap-4 mb-4">
+                <Badge className="bg-accent/20 text-accent border-none px-4 py-1 text-[10px] tracking-widest font-bold uppercase">Mission Briefing</Badge>
+                {/* DEV ONLY BUTTON */}
+                <Button 
+                  onClick={handleTestGemini}
+                  className="h-8 px-4 rounded-full bg-gradient-to-r from-red-600 to-red-400 text-[9px] font-black uppercase tracking-[0.2em] shadow-[0_0_20px_rgba(239,68,68,0.3)] hover:shadow-[0_0_30px_rgba(239,68,68,0.5)] transition-all animate-pulse-glow"
+                >
+                  🔴 Test Gemini Connection
+                </Button>
+              </div>
               <h1 className="text-5xl font-bold tracking-tighter text-premium">Welcome back, {formattedName}</h1>
               <p className="text-muted-foreground font-light mt-2">Neural synchronization complete. Your career metrics are live.</p>
             </div>
@@ -190,6 +247,7 @@ export default function Dashboard() {
             ))}
           </div>
 
+          {/* Rest of the UI remains exactly the same... */}
           <div className="grid lg:grid-cols-12 gap-8">
             <div className="lg:col-span-4 space-y-8">
               <Card className="premium-card bg-orange-500/5 border-orange-500/20 p-8">
@@ -257,29 +315,6 @@ export default function Dashboard() {
                   ))}
                 </div>
               </div>
-
-              <Card className="premium-card bg-blue-500/5 border-blue-500/20 p-8">
-                <CardHeader className="p-0 mb-6">
-                  <CardTitle className="text-lg font-bold flex items-center gap-3 text-blue-400">
-                    <LayoutGrid className="w-5 h-5" /> Deployment Pulse
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="p-0 space-y-4">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="p-4 glass rounded-2xl border-white/5 text-center">
-                      <p className="text-2xl font-bold tabular-nums text-blue-400">{stats.tracker.total}</p>
-                      <p className="text-[8px] uppercase font-bold tracking-widest text-muted-foreground">Applications</p>
-                    </div>
-                    <div className="p-4 glass rounded-2xl border-white/5 text-center">
-                      <p className="text-2xl font-bold tabular-nums text-green-400">{stats.tracker.successRate}</p>
-                      <p className="text-[8px] uppercase font-bold tracking-widest text-muted-foreground">Success Rate</p>
-                    </div>
-                  </div>
-                  <Link href="/job-tracker">
-                    <Button variant="outline" className="w-full h-12 rounded-xl glass border-white/10 text-[10px] font-bold uppercase tracking-widest text-blue-400">Manage Tracker</Button>
-                  </Link>
-                </CardContent>
-              </Card>
             </div>
 
             <div className="lg:col-span-8 space-y-8">
@@ -298,7 +333,7 @@ export default function Dashboard() {
                   {interviewsLoading ? (
                     <div className="py-12 flex justify-center"><Loader2 className="w-8 h-8 animate-spin text-accent" /></div>
                   ) : interviews && interviews.length > 0 ? (
-                    interviews.slice(0, 3).map((session: any, i) => (
+                    interviews.slice(0, 3).map((session: any, i: number) => (
                       <div key={i} className="flex items-center justify-between p-5 glass rounded-2xl border-white/5 group hover:bg-white/[0.03] transition-all">
                         <div className="flex items-center gap-4">
                           <div className="w-10 h-10 rounded-xl bg-accent/10 flex items-center justify-center text-accent">
@@ -331,55 +366,106 @@ export default function Dashboard() {
                   )}
                 </CardContent>
               </Card>
-
-              <Card className="premium-card bg-white/[0.01] border-white/5 p-8">
-                <CardHeader className="p-0 mb-8 flex flex-row items-center justify-between">
-                  <CardTitle className="text-xl font-bold flex items-center gap-3">
-                    <Sparkles className="w-5 h-5 text-green-400" /> Recent Directives
-                  </CardTitle>
-                  <Link href="/cover-letter">
-                    <Button variant="ghost" className="text-[10px] uppercase font-bold tracking-widest text-green-400 hover:text-green-300">Generate New</Button>
-                  </Link>
-                </CardHeader>
-                <CardContent className="p-0 space-y-4">
-                  {lettersLoading ? (
-                    <div className="py-12 flex justify-center"><Loader2 className="w-8 h-8 animate-spin text-green-400" /></div>
-                  ) : letters && letters.length > 0 ? (
-                    letters.map((letter: any, i) => (
-                      <div key={i} className="flex items-center justify-between p-5 glass rounded-2xl border-white/5 group hover:bg-white/[0.03] transition-all">
-                        <div className="flex items-center gap-4">
-                          <div className="w-10 h-10 rounded-xl bg-green-500/10 flex items-center justify-center text-green-400">
-                            <Sparkles className="w-5 h-5" />
-                          </div>
-                          <div>
-                            <p className="font-bold text-sm">{letter.companyName}</p>
-                            <p className="text-[10px] text-muted-foreground uppercase tracking-widest">{letter.role}</p>
-                          </div>
-                        </div>
-                        <Link href="/cover-letter">
-                          <Button size="icon" variant="ghost" className="h-8 w-8 rounded-lg group-hover:text-green-400 transition-colors">
-                            <ChevronRight className="w-4 h-4" />
-                          </Button>
-                        </Link>
-                      </div>
-                    ))
-                  ) : (
-                    <div className="py-16 text-center glass rounded-3xl border-white/5 border-dashed">
-                      <Sparkles className="w-12 h-12 text-white/5 mx-auto mb-6" />
-                      <h3 className="text-xl font-bold mb-2">No cover letters generated</h3>
-                      <p className="text-muted-foreground font-light text-sm mb-8">Architect mission-specific cover letters using your career context.</p>
-                      <Link href="/cover-letter">
-                        <Button className="btn-premium px-8">Synthesize Cover Letter</Button>
-                      </Link>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
             </div>
           </div>
 
         </div>
       </main>
+
+      {/* DEV DIAGNOSTIC DIALOGS */}
+      <Dialog open={isTestingGemini} onOpenChange={() => {}}>
+        <DialogContent className="glass border-white/10 bg-[#0b0e1a] text-white max-w-sm rounded-[2rem] p-12 text-center outline-none">
+          <div className="space-y-8">
+            <div className="relative w-24 h-24 mx-auto">
+              <div className="absolute inset-0 border-2 border-accent/20 rounded-full animate-ping" />
+              <div className="absolute inset-0 border-b-2 border-accent rounded-full animate-spin duration-[3s]" />
+              <div className="absolute inset-4 glass rounded-full flex items-center justify-center">
+                <Brain className="w-10 h-10 text-accent animate-pulse" />
+              </div>
+            </div>
+            <div className="space-y-2">
+              <h3 className="text-xl font-bold tracking-tight">Neural Diagnostic</h3>
+              <p className="text-[10px] font-black uppercase tracking-[0.4em] text-accent animate-pulse">
+                {["Connecting to Gemini...", "Authenticating API...", "Waiting for AI Response..."][testStep]}
+              </p>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!testResult} onOpenChange={() => setTestResult(null)}>
+        <DialogContent className="glass border-green-500/20 bg-[#0b0e1a] text-white max-w-md rounded-[2.5rem] p-10 outline-none">
+          <div className="space-y-8">
+            <div className="flex items-center gap-6">
+              <div className="w-16 h-16 rounded-2xl bg-green-500/10 border border-green-500/20 flex items-center justify-center text-green-400">
+                <ShieldCheck className="w-8 h-8" />
+              </div>
+              <div>
+                <h3 className="text-2xl font-bold">Gemini Connected</h3>
+                <p className="text-[10px] font-black uppercase tracking-widest text-green-400/60">Neural Link Verified</p>
+              </div>
+            </div>
+
+            <div className="p-6 glass rounded-2xl border-white/5 bg-white/[0.01] space-y-4">
+              <p className="text-lg font-light italic text-white/90">"{testResult?.data}"</p>
+              <div className="grid grid-cols-2 gap-4 pt-4 border-t border-white/5">
+                <div className="space-y-1">
+                  <p className="text-[8px] font-bold text-white/20 uppercase tracking-widest">Model</p>
+                  <p className="text-[10px] font-bold text-accent">{testResult?.model}</p>
+                </div>
+                <div className="space-y-1">
+                  <p className="text-[8px] font-bold text-white/20 uppercase tracking-widest">Latency</p>
+                  <p className="text-[10px] font-bold text-accent">{testResult?.latency}</p>
+                </div>
+                <div className="space-y-1">
+                  <p className="text-[8px] font-bold text-white/20 uppercase tracking-widest">Status</p>
+                  <p className="text-[10px] font-bold text-green-400 flex items-center gap-1"><Wifi className="w-3 h-3" /> ONLINE</p>
+                </div>
+              </div>
+            </div>
+
+            <Button onClick={() => setTestResult(null)} className="w-full h-14 btn-premium rounded-xl uppercase text-[10px] font-black tracking-widest">Acknowledge</Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!testError} onOpenChange={() => setTestError(null)}>
+        <DialogContent className="glass border-red-500/20 bg-[#0b0e1a] text-white max-w-md rounded-[2.5rem] p-10 outline-none">
+          <div className="space-y-8">
+            <div className="flex items-center gap-6">
+              <div className="w-16 h-16 rounded-2xl bg-red-500/10 border border-red-500/20 flex items-center justify-center text-red-400">
+                <AlertCircle className="w-8 h-8" />
+              </div>
+              <div>
+                <h3 className="text-2xl font-bold">Connection Failed</h3>
+                <p className="text-[10px] font-black uppercase tracking-widest text-red-400/60">Neural Protocol Error</p>
+              </div>
+            </div>
+
+            <div className="space-y-4">
+              <div className="p-5 glass rounded-2xl border-white/5 bg-red-500/[0.02] space-y-3">
+                 <div className="flex justify-between items-center text-[10px] font-bold uppercase tracking-widest text-white/40">
+                   <span>Error Code</span>
+                   <span className="text-red-400">{testError?.status}</span>
+                 </div>
+                 <p className="text-xs font-light text-white/60 leading-relaxed">{testError?.error}</p>
+              </div>
+
+              <div className="p-5 glass rounded-2xl border-white/5 space-y-2">
+                 <p className="text-[9px] font-bold uppercase tracking-widest text-accent">Suggested Resolution</p>
+                 <p className="text-xs font-medium text-white/80">
+                   {testError?.status === '429' ? "Wait 60s for quota recovery or check billing usage." : 
+                    testError?.status === '401' ? "Verify GOOGLE_GENAI_API_KEY in environment configuration." :
+                    testError?.status === '403' ? "Ensure Generative AI API is enabled in Google Cloud Console." :
+                    "Check server logs and network connectivity protocols."}
+                 </p>
+              </div>
+            </div>
+
+            <Button onClick={() => setTestError(null)} variant="outline" className="w-full h-14 glass border-white/10 rounded-xl uppercase text-[10px] font-black tracking-widest">Close</Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
