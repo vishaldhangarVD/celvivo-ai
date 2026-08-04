@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useEffect, useMemo, useCallback } from 'react';
@@ -40,7 +39,8 @@ import {
   AlertTriangle, 
   Brain, 
   XCircle,
-  Command
+  Command,
+  ArrowRight
 } from 'lucide-react';
 import { useUser, useFirestore, useDoc } from '@/firebase';
 import { doc, updateDoc, serverTimestamp, getDoc } from 'firebase/firestore';
@@ -104,7 +104,7 @@ export default function CodingEnginePage() {
 
   const { data: journey, loading: journeyLoading } = useDoc(journeyRef);
 
-  // Initialization Logic (Generate Questions via Gemini)
+  // Initialization Logic
   useEffect(() => {
     async function initEnvironment() {
       if (!journey || !journeyRef || questions.length > 0) return;
@@ -173,7 +173,7 @@ export default function CodingEnginePage() {
       setTimeLeft(prev => {
         if (prev <= 1) {
           clearInterval(timer);
-          forceSubmit();
+          finalizeAssessment();
           return 0;
         }
         return prev - 1;
@@ -181,22 +181,6 @@ export default function CodingEnginePage() {
     }, 1000);
     return () => clearInterval(timer);
   }, [isInitializing, isFinalizing]);
-
-  // Auto-Save Logic
-  useEffect(() => {
-    const saveInterval = setInterval(() => {
-      if (code && questions[currentIdx]) {
-        localStorage.setItem(`nexvoro_code_session_${questions[currentIdx].id}_${selectedLang.id}`, code);
-      }
-    }, 5000);
-    return () => clearInterval(saveInterval);
-  }, [code, currentIdx, questions, selectedLang]);
-
-  const forceSubmit = async () => {
-    setIsFinalizing(true);
-    toast({ title: "Time Over", description: "Submitting your assessment...", variant: "destructive" });
-    await finalizeAssessment();
-  };
 
   const runCode = async () => {
     if (isRunning || isSubmitting) return;
@@ -287,17 +271,18 @@ export default function CodingEnginePage() {
 
       if (allPassed) {
         toast({ title: "Node Verified", description: "All hidden test cases passed." });
-        setTimeout(() => handleNextQuestion(false), 1500);
+        setTerminalOutput("✓ All Hidden Test Cases Passed.");
       } else {
         toast({ 
           variant: "destructive", 
           title: "Node Logic Failed", 
           description: `Passed ${passed}/${total} test cases. Please refine your implementation.` 
         });
-        setIsSubmitting(false);
+        setTerminalOutput(`× Assessment failed logic check. Passed ${passed}/${total} nodes.`);
       }
     } catch (error: any) {
       setTerminalOutput(`[CRITICAL FAULT]\nVerification node connection lost.`);
+    } finally {
       setIsSubmitting(false);
     }
   };
@@ -319,8 +304,6 @@ export default function CodingEnginePage() {
   };
 
   const skipQuestion = () => {
-    if (hasUsedSkip) return;
-    setHasUsedSkip(true);
     setSessionResults(prev => ({
       ...prev,
       [currentIdx]: {
@@ -343,23 +326,15 @@ export default function CodingEnginePage() {
     if (user && db && journeyRef) {
       const resultsArray = Object.values(sessionResults);
       const passedCount = resultsArray.filter(r => r.allPassed).length;
-      const totalTC = resultsArray.reduce((acc, r) => acc + (r.results?.length || 0), 0);
-      const passedTC = resultsArray.reduce((acc, r) => acc + (r.results?.filter((res: any) => res.passed).length || 0), 0);
-
+      
       const finalReport = {
         score: Math.round((passedCount / 5) * 100),
         status: passedCount >= 3 ? 'Pass' : 'Fail',
         totalQuestions: 5,
         passedQuestions: passedCount,
-        failedQuestions: 5 - passedCount,
-        totalTestCases: totalTC,
-        passedTestCases: passedTC,
-        failedTestCases: totalTC - passedTC,
-        accuracy: totalTC > 0 ? Math.round((passedTC / totalTC) * 100) : 0,
+        results: sessionResults,
         timeTaken: formatTime((45 * 60) - timeLeft),
         submissionTime: new Date().toLocaleTimeString(),
-        results: sessionResults,
-        language: selectedLang.label
       };
       
       await updateDoc(journeyRef, {
@@ -388,23 +363,9 @@ export default function CodingEnginePage() {
         <div className="text-center space-y-4">
           <h2 className="text-3xl font-bold tracking-tighter text-premium uppercase">Environment Calibration</h2>
           <div className="h-1 w-64 bg-white/5 rounded-full overflow-hidden mx-auto">
-            <motion.div 
-              initial={{ width: 0 }}
-              animate={{ width: `${((initMsgIdx + 1) / INITIALIZATION_MESSAGES.length) * 100}%` }}
-              className="h-full bg-accent"
-            />
+            <motion.div initial={{ width: 0 }} animate={{ width: "100%" }} transition={{ duration: 6, ease: "linear" }} className="h-full bg-accent" />
           </div>
-          <AnimatePresence mode="wait">
-            <motion.p 
-              key={initMsgIdx}
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -10 }}
-              className="text-[10px] font-black uppercase tracking-[0.5em] text-accent/60"
-            >
-              {INITIALIZATION_MESSAGES[initMsgIdx]}
-            </motion.p>
-          </AnimatePresence>
+          <p className="text-[10px] font-black uppercase tracking-[0.5em] text-accent/60">NODE SYNTHESIS ACTIVE</p>
         </div>
       </div>
     );
@@ -443,114 +404,62 @@ export default function CodingEnginePage() {
         </div>
 
         <div className="flex items-center gap-8">
-          <div className="flex flex-col items-end">
-            <span className="text-[8px] font-black text-white/30 uppercase tracking-widest mb-1">Session Duration</span>
-            <div className={cn(
-              "px-6 py-2 rounded-xl glass border-white/10 font-mono text-xl tabular-nums transition-all",
-              timeLeft < 300 ? "text-red-500 animate-pulse border-red-500/30" : "text-accent"
-            )}>
-              ⏱ {formatTime(timeLeft)}
-            </div>
+          <div className={cn(
+            "px-6 py-2 rounded-xl glass border-white/10 font-mono text-xl tabular-nums",
+            timeLeft < 300 ? "text-red-500 animate-pulse" : "text-accent"
+          )}>
+            {formatTime(timeLeft)}
           </div>
-          <div className="h-10 w-px bg-white/10" />
           <div className="flex gap-4">
             <select 
-              disabled={isSubmitting || isFinalizing}
               value={selectedLang.id}
               onChange={(e) => {
                 const lang = LANGUAGES.find(l => l.id === e.target.value);
                 if (lang) setSelectedLang(lang);
               }}
-              className="h-12 px-4 glass border-white/10 bg-[#0b0e1a] rounded-xl text-[10px] font-black uppercase tracking-widest outline-none focus:border-accent disabled:opacity-50"
+              className="h-12 px-4 glass border-white/10 bg-[#0b0e1a] rounded-xl text-[10px] font-black uppercase tracking-widest outline-none focus:border-accent"
             >
               {LANGUAGES.map(l => <option key={l.id} value={l.id}>{l.label}</option>)}
             </select>
-            <Button 
-              variant="ghost" 
-              onClick={() => setIsFullScreen(!isFullScreen)}
-              className="w-12 h-12 rounded-xl glass border-white/10 p-0"
-            >
-              {isFullScreen ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
-            </Button>
           </div>
         </div>
       </header>
 
       <main className="flex-1 flex overflow-hidden p-4 gap-4">
-        {/* Left Panel: Problem Statement */}
         <div className="w-[35%] flex flex-col gap-4">
           <Card className="flex-1 premium-card bg-white/[0.01] border-white/5 p-8 overflow-y-auto custom-scrollbar">
-            <div className="space-y-8">
+            <div className="space-y-6">
               <div className="space-y-3">
-                <Badge className="bg-purple-500/10 text-purple-400 border-none text-[9px] font-black uppercase">Node 0{currentIdx + 1} of 05</Badge>
-                <h2 className="text-3xl font-bold tracking-tight leading-tight">{currentQ?.title}</h2>
+                <Badge className="bg-purple-500/10 text-purple-400 border-none text-[9px] font-black uppercase">Node 0{currentIdx + 1}</Badge>
+                <h2 className="text-2xl font-bold tracking-tight">{currentQ?.title}</h2>
                 <div className="flex gap-2">
                   <Badge variant="outline" className="border-red-500/20 text-red-400 text-[8px] font-black uppercase">{currentQ?.difficulty}</Badge>
                   <Badge variant="outline" className="border-white/10 text-white/40 text-[8px] font-black uppercase">{currentQ?.topic}</Badge>
                 </div>
               </div>
-
-              <div className="prose prose-invert prose-sm">
-                <p className="text-white/70 leading-relaxed font-light">{currentQ?.problemStatement}</p>
-                
-                <h4 className="text-xs font-black uppercase tracking-widest text-white/90 mt-8 mb-4">Implementation Constraints</h4>
-                <ul className="space-y-2 list-none p-0">
-                  {currentQ?.constraints.map((c, i) => (
-                    <li key={i} className="flex items-center gap-3 text-white/40 text-[10px] font-medium">
-                      <div className="w-1 h-1 rounded-full bg-accent" /> {c}
-                    </li>
-                  ))}
-                  <li className="flex items-center gap-3 text-white/40 text-[10px] font-medium">
-                    <div className="w-1 h-1 rounded-full bg-accent" /> Time Limit: {currentQ?.timeLimit}
-                  </li>
-                  <li className="flex items-center gap-3 text-white/40 text-[10px] font-medium">
-                    <div className="w-1 h-1 rounded-full bg-accent" /> Memory Limit: {currentQ?.memoryLimit}
-                  </li>
-                </ul>
-
-                <h4 className="text-xs font-black uppercase tracking-widest text-white/90 mt-8 mb-4">Sample Scenario</h4>
-                <div className="p-5 glass border-white/5 rounded-2xl bg-black/40 space-y-4 font-mono text-[11px]">
-                  <div>
-                    <p className="text-white/30 uppercase text-[9px] mb-1">Input</p>
-                    <p className="text-accent">{currentQ?.sampleInput}</p>
-                  </div>
-                  <div>
-                    <p className="text-white/30 uppercase text-[9px] mb-1">Output</p>
-                    <p className="text-green-400">{currentQ?.sampleOutput}</p>
-                  </div>
-                </div>
+              <p className="text-sm text-white/70 leading-relaxed font-light">{currentQ?.problemStatement}</p>
+              
+              <div className="p-5 glass border-white/5 rounded-2xl bg-black/40 space-y-3 font-mono text-[10px]">
+                <p className="text-white/30 uppercase text-[8px]">Sample Input</p>
+                <p className="text-accent">{currentQ?.sampleInput}</p>
+                <p className="text-white/30 uppercase text-[8px] pt-2">Sample Output</p>
+                <p className="text-green-400">{currentQ?.sampleOutput}</p>
               </div>
             </div>
           </Card>
         </div>
 
-        {/* Right Panel: Editor & Terminal */}
         <div className="flex-1 flex flex-col gap-4">
-          <Card className="flex-1 glass border-white/5 bg-[#0b0e1a] relative overflow-hidden flex flex-col">
-            <div className="h-10 border-b border-white/5 bg-white/[0.02] flex items-center justify-between px-4">
-              <div className="flex items-center gap-2">
-                <div className="w-2 h-2 rounded-full bg-red-500/40" />
-                <div className="w-2 h-2 rounded-full bg-yellow-500/40" />
-                <div className="w-2 h-2 rounded-full bg-green-500/40" />
-                <span className="text-[9px] font-black uppercase text-white/20 ml-4 tracking-widest">
-                  solution.{selectedLang.id === 'python' ? 'py' : selectedLang.id === 'javascript' ? 'js' : selectedLang.id === 'cpp' ? 'cpp' : 'java'}
-                </span>
-              </div>
-              <div className="flex items-center gap-2">
-                <Badge variant="outline" className="border-white/10 text-white/20 text-[7px] font-black uppercase tracking-widest">Auto-Save Protocol Active</Badge>
-              </div>
-            </div>
-
+          <Card className="flex-1 glass border-white/5 bg-[#0b0e1a] flex flex-col relative">
             <div className="flex-1 flex font-mono text-sm relative">
               <div className="w-12 bg-white/[0.01] border-r border-white/5 flex flex-col items-center pt-4 text-white/10 select-none">
                 {Array.from({length: 40}).map((_, i) => <span key={i} className="leading-6 text-[10px]">{i + 1}</span>)}
               </div>
               <textarea 
-                disabled={isSubmitting || isFinalizing || timeLeft <= 0}
                 value={code}
                 onChange={(e) => setCode(e.target.value)}
                 spellCheck={false}
-                className="flex-1 bg-transparent outline-none p-4 leading-6 text-white/80 resize-none custom-scrollbar disabled:opacity-50"
+                className="flex-1 bg-transparent outline-none p-4 leading-6 text-white/80 resize-none custom-scrollbar"
                 placeholder="// Implement your algorithmic node here..."
               />
             </div>
@@ -559,100 +468,73 @@ export default function CodingEnginePage() {
               <div className="flex items-center gap-3">
                 <Button 
                   onClick={runCode} 
-                  disabled={isRunning || isSubmitting || isFinalizing} 
-                  variant="ghost" 
-                  className="h-10 px-8 rounded-xl glass border-white/10 text-[10px] font-black uppercase tracking-[0.2em] hover:bg-white/5 hover:text-accent transition-all"
+                  disabled={isRunning || isSubmitting} 
+                  className="h-10 px-6 bg-white/5 hover:bg-white/10 text-white text-[10px] font-black uppercase tracking-widest rounded-xl border border-white/10 transition-all"
                 >
-                  {isRunning ? <Loader2 className="w-3.5 h-3.5 mr-2 animate-spin" /> : <Play className="w-3.5 h-3.5 mr-2 text-green-400 fill-green-400" />}
+                  {isRunning ? <Loader2 className="w-3.5 h-3.5 mr-2 animate-spin" /> : <Play className="w-3.5 h-3.5 mr-2 text-green-400" />}
                   RUN CODE
                 </Button>
-
-                {!hasUsedSkip && (
-                  <AlertDialog>
-                    <AlertDialogTrigger asChild>
-                      <Button variant="ghost" className="h-10 px-6 rounded-xl glass border-orange-500/20 text-orange-400 text-[10px] font-black uppercase tracking-widest hover:bg-orange-500/10">
-                        <SkipForward className="w-3.5 h-3.5 mr-2" /> Skip Node
-                      </Button>
-                    </AlertDialogTrigger>
-                    <AlertDialogContent className="glass border-white/10 bg-[#0b0e1a] text-white rounded-[2rem]">
-                      <AlertDialogHeader>
-                        <AlertDialogTitle className="text-2xl font-bold tracking-tight flex items-center gap-3"><AlertTriangle className="text-orange-400" /> Bypass this Question?</AlertDialogTitle>
-                        <AlertDialogDescription className="text-white/60">
-                          This logic node will be marked as <span className="text-orange-400 font-bold">Failed</span>. You cannot return to this node. Only one bypass is permitted per session.
-                        </AlertDialogDescription>
-                      </AlertDialogHeader>
-                      <AlertDialogFooter>
-                        <AlertDialogCancel className="rounded-xl glass border-white/10 bg-transparent text-white/40 hover:bg-white/5 uppercase text-[10px] font-bold tracking-widest">Abort</AlertDialogCancel>
-                        <AlertDialogAction onClick={skipQuestion} className="rounded-xl bg-orange-600 hover:bg-orange-500 text-white uppercase text-[10px] font-bold tracking-widest border-none">Bypass Node</AlertDialogAction>
-                      </AlertDialogFooter>
-                    </AlertDialogContent>
-                  </AlertDialog>
-                )}
+                <Button 
+                  onClick={submitQuestion} 
+                  disabled={isRunning || isSubmitting}
+                  className="h-10 px-6 btn-premium rounded-xl text-[10px] font-black uppercase tracking-widest shadow-xl"
+                >
+                  {isSubmitting ? <Loader2 className="w-3.5 h-3.5 mr-2 animate-spin" /> : <ShieldCheck className="w-3.5 h-3.5 mr-2" />}
+                  SUBMIT CODE
+                </Button>
               </div>
-              <Button 
-                onClick={submitQuestion} 
-                disabled={isRunning || isSubmitting || isFinalizing || timeLeft <= 0} 
-                className="h-10 px-10 btn-premium rounded-xl text-[10px] font-black uppercase tracking-[0.2em] shadow-[0_10px_40px_rgba(147,51,234,0.3)]"
-              >
-                {isSubmitting ? <Loader2 className="w-3.5 h-3.5 mr-2 animate-spin" /> : <Send className="ml-2 w-3.5 h-3.5" />}
-                SUBMIT CODE
-              </Button>
+
+              <div className="flex items-center gap-3">
+                <Button 
+                  onClick={skipQuestion} 
+                  variant="ghost" 
+                  className="h-10 px-6 text-[10px] font-black uppercase tracking-widest text-white/40 hover:text-white hover:bg-white/5 rounded-xl"
+                >
+                  SKIP / NEXT QUESTION <ChevronRight className="ml-2 w-4 h-4" />
+                </Button>
+              </div>
             </div>
           </Card>
 
-          <Card className="h-[35%] glass border-white/5 bg-[#0b0e1a] flex flex-col overflow-hidden">
-            <Tabs value={activeTerminalTab} onValueChange={setActiveTerminalTab} className="h-full flex flex-col">
-              <div className="px-4 h-10 border-b border-white/5 flex items-center justify-between bg-white/[0.02] shrink-0">
+          <Card className="h-[35%] glass border-white/5 bg-[#0b0e1a] flex flex-col">
+            <Tabs defaultValue="output" className="h-full flex flex-col">
+              <div className="px-4 h-10 border-b border-white/5 flex items-center justify-between bg-white/[0.02]">
                 <TabsList className="bg-transparent gap-6 p-0 h-full">
-                  <TabsTrigger value="output" className="h-full rounded-none border-b-2 border-transparent data-[state=active]:border-accent bg-transparent text-[9px] font-black uppercase tracking-widest text-white/30 data-[state=active]:text-accent">EXECUTION OUTPUT</TabsTrigger>
-                  <TabsTrigger value="input" className="h-full rounded-none border-b-2 border-transparent data-[state=active]:border-accent bg-transparent text-[9px] font-black uppercase tracking-widest text-white/30 data-[state=active]:text-accent">CUSTOM STDIN</TabsTrigger>
-                  <TabsTrigger value="cases" className="h-full rounded-none border-b-2 border-transparent data-[state=active]:border-accent bg-transparent text-[9px] font-black uppercase tracking-widest text-white/30 data-[state=active]:text-accent">TEST STATUS</TabsTrigger>
+                  <TabsTrigger value="output" className="h-full rounded-none border-b-2 border-transparent data-[state=active]:border-accent text-[9px] font-black uppercase tracking-widest">EXECUTION OUTPUT</TabsTrigger>
+                  <TabsTrigger value="input" className="h-full rounded-none border-b-2 border-transparent data-[state=active]:border-accent text-[9px] font-black uppercase tracking-widest">CUSTOM STDIN</TabsTrigger>
+                  <TabsTrigger value="cases" className="h-full rounded-none border-b-2 border-transparent data-[state=active]:border-accent text-[9px] font-black uppercase tracking-widest">TEST STATUS</TabsTrigger>
                 </TabsList>
-                <span className="text-[8px] font-black text-white/10 uppercase tracking-widest">Neural Terminal v7.0</span>
               </div>
               <div className="flex-1 font-mono text-[11px] overflow-hidden">
-                <TabsContent value="output" className="mt-0 p-6 whitespace-pre-wrap text-white/60 leading-relaxed h-full overflow-y-auto custom-scrollbar">
+                <TabsContent value="output" className="p-6 text-white/60 whitespace-pre-wrap overflow-y-auto h-full custom-scrollbar">
                   {terminalOutput}
                 </TabsContent>
-                <TabsContent value="input" className="mt-0 p-0 h-full overflow-hidden">
+                <TabsContent value="input" className="h-full">
                   <textarea
                     value={customInput}
                     onChange={(e) => setCustomInput(e.target.value)}
-                    className="w-full h-full bg-transparent outline-none p-6 text-white/60 font-mono text-[11px] resize-none custom-scrollbar"
-                    placeholder="// Provide manual input for execution node..."
+                    className="w-full h-full bg-transparent outline-none p-6 text-white/60 font-mono text-[11px] resize-none"
+                    placeholder="Enter manual input nodes for execution..."
                   />
                 </TabsContent>
-                <TabsContent value="cases" className="mt-0 p-6 space-y-4 h-full overflow-y-auto custom-scrollbar">
-                   <div className="space-y-4">
-                     <div className="flex justify-between items-center px-1">
-                        <p className="text-white/40 uppercase text-[9px] font-black tracking-widest">Hidden Verification Matrix</p>
-                        {sessionResults[currentIdx] && (
-                          <span className="text-[10px] font-bold text-accent uppercase tracking-widest">
-                            {sessionResults[currentIdx].passedCount} / {sessionResults[currentIdx].totalCount} Passed
-                          </span>
-                        )}
-                     </div>
-                     <div className="grid gap-2">
-                        {sessionResults[currentIdx]?.results?.map((res: any, i: number) => (
-                          <div key={i} className="flex items-center justify-between p-3 rounded-xl border border-white/5 bg-white/[0.02] group hover:bg-white/[0.04] transition-all">
-                            <div className="flex items-center gap-3">
-                              <ShieldCheck className={cn("w-3.5 h-3.5", res.passed ? "text-green-500" : "text-white/10")} />
-                              <span className="text-[10px] font-bold text-white/40">Verification Node {i+1}</span>
-                            </div>
-                            {res.passed ? (
-                              <Badge className="bg-green-500/20 text-green-400 border-none text-[8px] font-black uppercase px-3 py-1">✓ PASSED</Badge>
-                            ) : (
-                              <Badge className="bg-red-500/20 text-red-400 border-none text-[8px] font-black uppercase px-3 py-1">× FAILED</Badge>
-                            )}
-                          </div>
-                        )) || (
-                          <div className="py-12 flex flex-col items-center gap-4 text-center opacity-20">
-                            <ShieldCheck className="w-8 h-8" />
-                            <p className="text-[10px] font-black uppercase tracking-widest">Awaiting logic submission for neural verification</p>
-                          </div>
-                        )}
-                     </div>
-                   </div>
+                <TabsContent value="cases" className="p-6 space-y-4 overflow-y-auto h-full custom-scrollbar">
+                  {sessionResults[currentIdx] ? (
+                    <div className="space-y-3">
+                      {sessionResults[currentIdx].results.map((res: any, i: number) => (
+                        <div key={i} className="flex items-center justify-between p-3 glass border-white/5 rounded-xl">
+                          <span className="text-white/40 uppercase tracking-widest">Verification Node {i+1}</span>
+                          <Badge className={cn("border-none text-[8px] font-black uppercase px-3 py-1", res.passed ? "bg-green-500/20 text-green-400" : "bg-red-500/20 text-red-400")}>
+                            {res.passed ? "PASSED" : "FAILED"}
+                          </Badge>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="h-full flex flex-col items-center justify-center opacity-20">
+                      <ShieldCheck className="w-8 h-8 mb-2" />
+                      <p className="text-[10px] font-bold uppercase tracking-widest">Awaiting logic submission</p>
+                    </div>
+                  )}
                 </TabsContent>
               </div>
             </Tabs>
@@ -660,57 +542,23 @@ export default function CodingEnginePage() {
         </div>
       </main>
 
-      {/* Submission Overlay */}
       <AnimatePresence>
         {isFinalizing && (
-          <motion.div 
-            initial={{ opacity: 0 }} 
-            animate={{ opacity: 1 }} 
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[200] bg-[#050816]/95 backdrop-blur-3xl flex flex-col items-center justify-center p-12 text-center"
-          >
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="fixed inset-0 z-[200] bg-[#050816]/95 backdrop-blur-3xl flex flex-col items-center justify-center p-12 text-center">
             <div className="relative mb-12">
               <div className="w-48 h-48 rounded-full border-2 border-accent/20 border-t-accent animate-spin" />
-              <div className="absolute inset-4 glass rounded-full flex flex-col items-center justify-center">
-                <Cpu className="w-12 h-12 text-accent animate-pulse mb-2" />
-                <span className="text-[9px] font-black text-accent uppercase tracking-widest">Final Audit</span>
-              </div>
+              <Cpu className="w-12 h-12 text-accent absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 animate-pulse" />
             </div>
-
-            <div className="space-y-8 max-w-md w-full">
-              <h2 className="text-4xl font-bold tracking-tighter text-premium uppercase">Evaluating Submission</h2>
-              
-              <div className="grid gap-3 text-left">
-                {["Compiling Master Submission...", "Running Final Audit...", "Validating Performance Metrics...", "Generating Dossier..."].map((step, idx) => (
-                  <motion.div 
-                    key={idx}
-                    initial={{ opacity: 0, x: -20 }}
-                    animate={{ 
-                      opacity: submitStep >= idx ? 1 : 0.2,
-                      x: submitStep >= idx ? 0 : -20,
-                    }}
-                    className={cn(
-                      "flex items-center gap-4 p-3 rounded-xl transition-all duration-500",
-                      submitStep === idx ? "bg-accent/5 border border-accent/20" : "border border-transparent"
-                    )}
-                  >
-                    <div className={cn(
-                      "w-6 h-6 rounded-full flex items-center justify-center border transition-all",
-                      submitStep > idx ? "bg-green-500 border-green-500 text-black" : 
-                      submitStep === idx ? "border-accent animate-pulse" : "border-white/10"
-                    )}>
-                      {submitStep > idx ? <Check className="w-4 h-4 font-black" /> : <span className="text-[10px]">{idx + 1}</span>}
-                    </div>
-                    <span className={cn(
-                      "text-xs font-bold uppercase tracking-widest",
-                      submitStep > idx ? "text-green-400" : 
-                      submitStep === idx ? "text-accent" : "text-white/20"
-                    )}>
-                      {step}
-                    </span>
-                  </motion.div>
-                ))}
-              </div>
+            <h2 className="text-4xl font-bold tracking-tighter text-premium mb-8 uppercase">Evaluating Submission</h2>
+            <div className="space-y-4 max-w-sm w-full">
+               {["Compiling Master Submission...", "Running Final Audit...", "Validating Performance Metrics...", "Generating Dossier..."].map((step, idx) => (
+                 <motion.div key={idx} initial={{ opacity: 0, x: -20 }} animate={{ opacity: submitStep >= idx ? 1 : 0.2, x: submitStep >= idx ? 0 : -20 }} className="flex items-center gap-4">
+                   <div className={cn("w-5 h-5 rounded-full border flex items-center justify-center text-[10px]", submitStep > idx ? "bg-green-500 border-green-500 text-black" : "border-white/20")}>
+                     {submitStep > idx ? "✓" : idx + 1}
+                   </div>
+                   <span className="text-xs font-bold uppercase tracking-widest">{step}</span>
+                 </motion.div>
+               ))}
             </div>
           </motion.div>
         )}
