@@ -3,6 +3,7 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
+import Editor from '@monaco-editor/react';
 import Navbar from '@/components/layout/Navbar';
 import NavigationControls from '@/components/NavigationControls';
 import { Button } from '@/components/ui/button';
@@ -10,37 +11,22 @@ import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { 
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from "@/components/ui/alert-dialog";
-import { 
   Code2, 
   Play, 
   Send, 
-  RotateCcw, 
   Clock, 
-  Terminal, 
   CheckCircle2, 
   Cpu, 
   ShieldCheck, 
   ChevronRight, 
   Loader2, 
-  Check, 
-  SkipForward, 
-  Maximize2, 
-  Minimize2, 
-  AlertTriangle, 
   Brain, 
   XCircle,
   Command,
-  ArrowRight
+  Activity,
+  Target,
+  Layers,
+  Sparkles
 } from 'lucide-react';
 import { useUser, useFirestore, useDoc } from '@/firebase';
 import { doc, updateDoc, serverTimestamp, getDoc } from 'firebase/firestore';
@@ -50,21 +36,14 @@ import { cn } from '@/lib/utils';
 import { getJudge0LanguageId } from '@/lib/judge0-languages';
 
 const LANGUAGES = [
-  { id: 'python', label: 'Python 3' },
-  { id: 'java', label: 'Java' },
-  { id: 'cpp', label: 'C++' },
-  { id: 'javascript', label: 'JavaScript' },
-  { id: 'c', label: 'C' },
-  { id: 'csharp', label: 'C#' },
-  { id: 'go', label: 'Go' },
-  { id: 'rust', label: 'Rust' }
-];
-
-const INITIALIZATION_MESSAGES = [
-  "Initializing Coding Environment...",
-  "Analyzing Candidate Profile...",
-  "Generating FAANG-Level Coding Questions...",
-  "Preparing Secure Assessment..."
+  { id: 'python', label: 'Python 3', monaco: 'python' },
+  { id: 'java', label: 'Java', monaco: 'java' },
+  { id: 'cpp', label: 'C++', monaco: 'cpp' },
+  { id: 'javascript', label: 'JavaScript', monaco: 'javascript' },
+  { id: 'c', label: 'C', monaco: 'c' },
+  { id: 'csharp', label: 'C#', monaco: 'csharp' },
+  { id: 'go', label: 'Go', monaco: 'go' },
+  { id: 'rust', label: 'Rust', monaco: 'rust' }
 ];
 
 export default function CodingEnginePage() {
@@ -77,19 +56,16 @@ export default function CodingEnginePage() {
   const [questions, setQuestions] = useState<CodingProblem[]>([]);
   const [currentIdx, setCurrentIdx] = useState(0);
   const [questionStatuses, setQuestionStatuses] = useState<('current' | 'submitted' | 'skipped' | 'pending')[]>(Array(5).fill('pending'));
-  const [hasUsedSkip, setHasUsedSkip] = useState(false);
   const [selectedLang, setSelectedLang] = useState(LANGUAGES[0]);
   const [code, setCode] = useState("");
   const [customInput, setCustomInput] = useState("");
   const [timeLeft, setTimeLeft] = useState(45 * 60);
-  const [isFullScreen, setIsFullScreen] = useState(false);
 
   // Stats & Results Tracking
   const [sessionResults, setSessionResults] = useState<Record<number, any>>({});
   
   // Initialization & UI Flow State
   const [isInitializing, setIsInitializing] = useState(true);
-  const [initMsgIdx, setInitMsgIdx] = useState(0);
   const [isRunning, setIsRunning] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isFinalizing, setIsFinalizing] = useState(false);
@@ -108,10 +84,6 @@ export default function CodingEnginePage() {
   useEffect(() => {
     async function initEnvironment() {
       if (!journey || !journeyRef || questions.length > 0) return;
-
-      const msgInterval = setInterval(() => {
-        setInitMsgIdx(prev => Math.min(prev + 1, INITIALIZATION_MESSAGES.length - 1));
-      }, 1500);
 
       try {
         const snap = await getDoc(journeyRef);
@@ -143,7 +115,6 @@ export default function CodingEnginePage() {
         console.error(e);
         toast({ variant: "destructive", title: "Synthesis Error", description: "Could not architect coding challenges." });
       } finally {
-        clearInterval(msgInterval);
         setIsInitializing(false);
       }
     }
@@ -154,15 +125,11 @@ export default function CodingEnginePage() {
   useEffect(() => {
     if (questions[currentIdx]) {
       const q = questions[currentIdx];
-      const saved = localStorage.getItem(`nexvoro_code_session_${q.id}_${selectedLang.id}`);
-      if (saved) {
-        setCode(saved);
-      } else {
-        const starter = q.starterCode[selectedLang.id as keyof typeof q.starterCode] || "// No starter code available.";
-        setCode(starter);
-      }
+      const starter = q.starterCode[selectedLang.id as keyof typeof q.starterCode] || "// Implement solution here";
+      setCode(starter);
       setCustomInput(q.sampleInput || "");
       setTerminalOutput("Ready to execute your code.");
+      setActiveTerminalTab("output");
     }
   }, [currentIdx, selectedLang, questions]);
 
@@ -202,24 +169,23 @@ export default function CodingEnginePage() {
       const data = await response.json();
 
       if (data.error) {
-        setTerminalOutput(`[SYSTEM ERROR]\n${data.error}\n${data.details || ''}`);
+        setTerminalOutput(`[SYSTEM ERROR]\n${data.error}`);
       } else {
-        let output = `[EXECUTION RESULT: ${data.status?.description || 'Unknown'}]\n`;
-        if (data.time) output += `Execution Time: ${data.time}s\n`;
-        if (data.memory) output += `Memory Usage: ${Math.round(data.memory / 1024)}MB\n`;
+        let output = `[STATUS: ${data.status?.description || 'Unknown'}]\n`;
+        if (data.time) output += `Time: ${data.time}s | Memory: ${Math.round(data.memory / 1024)}MB\n\n`;
         
-        if (data.stdout) output += `\nOutput:\n${data.stdout}`;
-        if (data.stderr) output += `\nError:\n${data.stderr}`;
-        if (data.compile_output) output += `\nCompile Output:\n${data.compile_output}`;
+        if (data.stdout) output += `Output:\n${data.stdout}`;
+        if (data.stderr) output += `Error:\n${data.stderr}`;
+        if (data.compile_output) output += `Compile Error:\n${data.compile_output}`;
 
         if (!data.stdout && !data.stderr && !data.compile_output) {
-          output += "\n(No output returned)";
+          output += "(Execution finished with no output)";
         }
 
         setTerminalOutput(output);
       }
     } catch (error: any) {
-      setTerminalOutput(`[NETWORK FAULT]\nFailed to connect to execution node: ${error.message}`);
+      setTerminalOutput(`[NETWORK FAULT]\nFailed to connect to execution node.`);
     } finally {
       setIsRunning(false);
     }
@@ -229,7 +195,7 @@ export default function CodingEnginePage() {
     if (isSubmitting || isRunning) return;
     setIsSubmitting(true);
     setActiveTerminalTab("cases");
-    setTerminalOutput("Initializing hidden verification matrix...\nAuditing implementation logic...");
+    setTerminalOutput("Initializing hidden verification matrix...");
 
     const currentQ = questions[currentIdx];
 
@@ -270,13 +236,14 @@ export default function CodingEnginePage() {
       }));
 
       if (allPassed) {
-        toast({ title: "Node Verified", description: "All hidden test cases passed." });
+        toast({ title: "Node Verified", description: "All test cases passed." });
         setTerminalOutput("✓ All Hidden Test Cases Passed.");
+        handleNextQuestion();
       } else {
         toast({ 
           variant: "destructive", 
-          title: "Node Logic Failed", 
-          description: `Passed ${passed}/${total} test cases. Please refine your implementation.` 
+          title: "Logic Failed", 
+          description: `Passed ${passed}/${total} test cases.` 
         });
         setTerminalOutput(`× Assessment failed logic check. Passed ${passed}/${total} nodes.`);
       }
@@ -287,16 +254,15 @@ export default function CodingEnginePage() {
     }
   };
 
-  const handleNextQuestion = async (wasSkipped: boolean = false) => {
+  const handleNextQuestion = async () => {
     const newStatuses = [...questionStatuses];
-    newStatuses[currentIdx] = wasSkipped ? 'skipped' : 'submitted';
+    newStatuses[currentIdx] = 'submitted';
     
     if (currentIdx < 4) {
       newStatuses[currentIdx + 1] = 'current';
       setQuestionStatuses(newStatuses);
       setCurrentIdx(currentIdx + 1);
       setIsSubmitting(false);
-      setTerminalOutput("Ready to execute your code.");
     } else {
       setQuestionStatuses(newStatuses);
       await finalizeAssessment();
@@ -304,15 +270,16 @@ export default function CodingEnginePage() {
   };
 
   const skipQuestion = () => {
-    setSessionResults(prev => ({
-      ...prev,
-      [currentIdx]: {
-        questionId: questions[currentIdx].id,
-        allPassed: false,
-        skipped: true
-      }
-    }));
-    handleNextQuestion(true);
+    const newStatuses = [...questionStatuses];
+    newStatuses[currentIdx] = 'skipped';
+    if (currentIdx < 4) {
+      newStatuses[currentIdx + 1] = 'current';
+      setQuestionStatuses(newStatuses);
+      setCurrentIdx(currentIdx + 1);
+    } else {
+      setQuestionStatuses(newStatuses);
+      finalizeAssessment();
+    }
   };
 
   const finalizeAssessment = async () => {
@@ -320,7 +287,7 @@ export default function CodingEnginePage() {
     const steps = ["Compiling Master Submission...", "Running Final Audit...", "Validating Performance Metrics...", "Generating Dossier..."];
     for (let i = 0; i < steps.length; i++) {
       setSubmitStep(i);
-      await new Promise(r => setTimeout(r, 1200));
+      await new Promise(r => setTimeout(r, 1000));
     }
 
     if (user && db && journeyRef) {
@@ -362,9 +329,6 @@ export default function CodingEnginePage() {
         </div>
         <div className="text-center space-y-4">
           <h2 className="text-3xl font-bold tracking-tighter text-premium uppercase">Environment Calibration</h2>
-          <div className="h-1 w-64 bg-white/5 rounded-full overflow-hidden mx-auto">
-            <motion.div initial={{ width: 0 }} animate={{ width: "100%" }} transition={{ duration: 6, ease: "linear" }} className="h-full bg-accent" />
-          </div>
           <p className="text-[10px] font-black uppercase tracking-[0.5em] text-accent/60">NODE SYNTHESIS ACTIVE</p>
         </div>
       </div>
@@ -374,7 +338,7 @@ export default function CodingEnginePage() {
   const currentQ = questions[currentIdx];
 
   return (
-    <div className={cn("h-screen bg-[#050816] flex flex-col overflow-hidden relative", isFullScreen && "fixed inset-0 z-[1000]")}>
+    <div className="h-screen bg-[#050816] flex flex-col overflow-hidden relative">
       <div className="particles-bg" />
       <Navbar />
       <NavigationControls onHome={() => router.push('/')} />
@@ -410,18 +374,13 @@ export default function CodingEnginePage() {
           )}>
             {formatTime(timeLeft)}
           </div>
-          <div className="flex gap-4">
-            <select 
-              value={selectedLang.id}
-              onChange={(e) => {
-                const lang = LANGUAGES.find(l => l.id === e.target.value);
-                if (lang) setSelectedLang(lang);
-              }}
-              className="h-12 px-4 glass border-white/10 bg-[#0b0e1a] rounded-xl text-[10px] font-black uppercase tracking-widest outline-none focus:border-accent"
-            >
-              {LANGUAGES.map(l => <option key={l.id} value={l.id}>{l.label}</option>)}
-            </select>
-          </div>
+          <select 
+            value={selectedLang.id}
+            onChange={(e) => setSelectedLang(LANGUAGES.find(l => l.id === e.target.value) || LANGUAGES[0])}
+            className="h-12 px-4 glass border-white/10 bg-[#0b0e1a] rounded-xl text-[10px] font-black uppercase tracking-widest outline-none focus:border-accent"
+          >
+            {LANGUAGES.map(l => <option key={l.id} value={l.id}>{l.label}</option>)}
+          </select>
         </div>
       </header>
 
@@ -441,63 +400,65 @@ export default function CodingEnginePage() {
               
               <div className="p-5 glass border-white/5 rounded-2xl bg-black/40 space-y-3 font-mono text-[10px]">
                 <p className="text-white/30 uppercase text-[8px]">Sample Input</p>
-                <p className="text-accent">{currentQ?.sampleInput}</p>
+                <pre className="text-accent">{currentQ?.sampleInput}</pre>
                 <p className="text-white/30 uppercase text-[8px] pt-2">Sample Output</p>
-                <p className="text-green-400">{currentQ?.sampleOutput}</p>
+                <pre className="text-green-400">{currentQ?.sampleOutput}</pre>
               </div>
             </div>
           </Card>
         </div>
 
         <div className="flex-1 flex flex-col gap-4">
-          <Card className="flex-1 glass border-white/5 bg-[#0b0e1a] flex flex-col relative">
-            <div className="flex-1 flex font-mono text-sm relative">
-              <div className="w-12 bg-white/[0.01] border-r border-white/5 flex flex-col items-center pt-4 text-white/10 select-none">
-                {Array.from({length: 40}).map((_, i) => <span key={i} className="leading-6 text-[10px]">{i + 1}</span>)}
-              </div>
-              <textarea 
+          <Card className="flex-1 glass border-white/5 bg-[#0b0e1a] flex flex-col relative overflow-hidden">
+            <div className="flex-1 relative">
+              <Editor
+                height="100%"
+                theme="vs-dark"
+                language={selectedLang.monaco}
                 value={code}
-                onChange={(e) => setCode(e.target.value)}
-                spellCheck={false}
-                className="flex-1 bg-transparent outline-none p-4 leading-6 text-white/80 resize-none custom-scrollbar"
-                placeholder="// Implement your algorithmic node here..."
+                onChange={(val) => setCode(val || "")}
+                options={{
+                  fontSize: 14,
+                  minimap: { enabled: false },
+                  scrollbar: { vertical: 'hidden' },
+                  automaticLayout: true,
+                  padding: { top: 20 }
+                }}
               />
             </div>
 
-            <div className="h-16 border-t border-white/5 bg-white/[0.02] flex items-center justify-between px-6 shrink-0">
-              <div className="flex items-center gap-3">
+            <div className="h-20 border-t border-white/5 bg-white/[0.02] flex items-center justify-between px-8 shrink-0">
+              <div className="flex items-center gap-4">
                 <Button 
                   onClick={runCode} 
                   disabled={isRunning || isSubmitting} 
-                  className="h-10 px-6 bg-white/5 hover:bg-white/10 text-white text-[10px] font-black uppercase tracking-widest rounded-xl border border-white/10 transition-all"
+                  className="h-12 px-8 bg-white/5 hover:bg-white/10 text-white text-[10px] font-black uppercase tracking-widest rounded-xl border border-white/10"
                 >
-                  {isRunning ? <Loader2 className="w-3.5 h-3.5 mr-2 animate-spin" /> : <Play className="w-3.5 h-3.5 mr-2 text-green-400" />}
+                  {isRunning ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Play className="w-4 h-4 mr-2 text-green-400 fill-current" />}
                   RUN CODE
                 </Button>
                 <Button 
                   onClick={submitQuestion} 
                   disabled={isRunning || isSubmitting}
-                  className="h-10 px-6 btn-premium rounded-xl text-[10px] font-black uppercase tracking-widest shadow-xl"
+                  className="h-12 px-8 btn-premium rounded-xl text-[10px] font-black uppercase tracking-widest shadow-xl"
                 >
-                  {isSubmitting ? <Loader2 className="w-3.5 h-3.5 mr-2 animate-spin" /> : <ShieldCheck className="w-3.5 h-3.5 mr-2" />}
+                  {isSubmitting ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <ShieldCheck className="w-4 h-4 mr-2" />}
                   SUBMIT CODE
                 </Button>
               </div>
 
-              <div className="flex items-center gap-3">
-                <Button 
-                  onClick={skipQuestion} 
-                  variant="ghost" 
-                  className="h-10 px-6 text-[10px] font-black uppercase tracking-widest text-white/40 hover:text-white hover:bg-white/5 rounded-xl"
-                >
-                  SKIP / NEXT QUESTION <ChevronRight className="ml-2 w-4 h-4" />
-                </Button>
-              </div>
+              <Button 
+                onClick={skipQuestion} 
+                variant="ghost" 
+                className="h-12 px-6 text-[10px] font-black uppercase tracking-widest text-white/40 hover:text-white hover:bg-white/5 rounded-xl"
+              >
+                SKIP / NEXT <ChevronRight className="ml-2 w-4 h-4" />
+              </Button>
             </div>
           </Card>
 
-          <Card className="h-[35%] glass border-white/5 bg-[#0b0e1a] flex flex-col">
-            <Tabs defaultValue="output" className="h-full flex flex-col">
+          <Card className="h-[35%] glass border-white/5 bg-[#0b0e1a] flex flex-col overflow-hidden">
+            <Tabs value={activeTerminalTab} onValueChange={setActiveTerminalTab} className="h-full flex flex-col">
               <div className="px-4 h-10 border-b border-white/5 flex items-center justify-between bg-white/[0.02]">
                 <TabsList className="bg-transparent gap-6 p-0 h-full">
                   <TabsTrigger value="output" className="h-full rounded-none border-b-2 border-transparent data-[state=active]:border-accent text-[9px] font-black uppercase tracking-widest">EXECUTION OUTPUT</TabsTrigger>
