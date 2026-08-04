@@ -26,7 +26,9 @@ import {
   Activity,
   Target,
   Layers,
-  Sparkles
+  Sparkles,
+  Check,
+  AlertTriangle
 } from 'lucide-react';
 import { useUser, useFirestore, useDoc } from '@/firebase';
 import { doc, updateDoc, serverTimestamp, getDoc } from 'firebase/firestore';
@@ -200,6 +202,8 @@ export default function CodingEnginePage() {
     const currentQ = questions[currentIdx];
 
     try {
+      // NOTE: For absolute security, testCases should be fetched from a secure source server-side.
+      // Here we use the API proxy which handles comparison server-side.
       const response = await fetch('/api/judge0/execute', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -231,21 +235,22 @@ export default function CodingEnginePage() {
           allPassed,
           passedCount: passed,
           totalCount: total,
-          language: selectedLang.label
+          language: selectedLang.label,
+          time: results[0]?.time || "0.0",
+          memory: results[0]?.memory || "0"
         }
       }));
 
       if (allPassed) {
-        toast({ title: "Node Verified", description: "All test cases passed." });
-        setTerminalOutput("✓ All Hidden Test Cases Passed.");
-        handleNextQuestion();
+        toast({ title: "Node Verified", description: "Accepted — All hidden test cases passed." });
+        setTerminalOutput("Accepted — All Test Cases Passed.");
       } else {
         toast({ 
           variant: "destructive", 
           title: "Logic Failed", 
-          description: `Passed ${passed}/${total} test cases.` 
+          description: `Wrong Answer — Passed ${passed}/${total} nodes.` 
         });
-        setTerminalOutput(`× Assessment failed logic check. Passed ${passed}/${total} nodes.`);
+        setTerminalOutput(`Wrong Answer — Some Test Cases Failed.\nPassed: ${passed}/${total}`);
       }
     } catch (error: any) {
       setTerminalOutput(`[CRITICAL FAULT]\nVerification node connection lost.`);
@@ -256,7 +261,7 @@ export default function CodingEnginePage() {
 
   const handleNextQuestion = async () => {
     const newStatuses = [...questionStatuses];
-    newStatuses[currentIdx] = 'submitted';
+    newStatuses[currentIdx] = sessionResults[currentIdx]?.allPassed ? 'submitted' : 'skipped';
     
     if (currentIdx < 4) {
       newStatuses[currentIdx + 1] = 'current';
@@ -336,6 +341,7 @@ export default function CodingEnginePage() {
   }
 
   const currentQ = questions[currentIdx];
+  const currentResult = sessionResults[currentIdx];
 
   return (
     <div className="h-screen bg-[#050816] flex flex-col overflow-hidden relative">
@@ -448,11 +454,11 @@ export default function CodingEnginePage() {
               </div>
 
               <Button 
-                onClick={skipQuestion} 
+                onClick={handleNextQuestion} 
                 variant="ghost" 
                 className="h-12 px-6 text-[10px] font-black uppercase tracking-widest text-white/40 hover:text-white hover:bg-white/5 rounded-xl"
               >
-                SKIP / NEXT <ChevronRight className="ml-2 w-4 h-4" />
+                NEXT QUESTION <ChevronRight className="ml-2 w-4 h-4" />
               </Button>
             </div>
           </Card>
@@ -479,16 +485,37 @@ export default function CodingEnginePage() {
                   />
                 </TabsContent>
                 <TabsContent value="cases" className="p-6 space-y-4 overflow-y-auto h-full custom-scrollbar">
-                  {sessionResults[currentIdx] ? (
-                    <div className="space-y-3">
-                      {sessionResults[currentIdx].results.map((res: any, i: number) => (
-                        <div key={i} className="flex items-center justify-between p-3 glass border-white/5 rounded-xl">
-                          <span className="text-white/40 uppercase tracking-widest">Verification Node {i+1}</span>
-                          <Badge className={cn("border-none text-[8px] font-black uppercase px-3 py-1", res.passed ? "bg-green-500/20 text-green-400" : "bg-red-500/20 text-red-400")}>
-                            {res.passed ? "PASSED" : "FAILED"}
-                          </Badge>
+                  {currentResult ? (
+                    <div className="space-y-4">
+                      <div className="flex items-center justify-between p-4 glass rounded-2xl border-white/5">
+                        <div className="flex items-center gap-3">
+                          {currentResult.allPassed ? <CheckCircle2 className="w-5 h-5 text-green-400" /> : <XCircle className="w-5 h-5 text-red-400" />}
+                          <span className={cn("text-xs font-black uppercase tracking-widest", currentResult.allPassed ? "text-green-400" : "text-red-400")}>
+                            {currentResult.allPassed ? "ACCEPTED" : "WRONG ANSWER"}
+                          </span>
                         </div>
-                      ))}
+                        <div className="flex gap-4">
+                           <span className="text-[9px] text-white/20 uppercase font-bold">Passed: {currentResult.passedCount}/{currentResult.totalCount}</span>
+                           <span className="text-[9px] text-white/20 uppercase font-bold">Time: {currentResult.time}s</span>
+                        </div>
+                      </div>
+
+                      <div className="grid gap-2">
+                        {currentResult.results.map((res: any, i: number) => (
+                          <div key={i} className="flex items-center justify-between p-3 glass border-white/5 rounded-xl group hover:bg-white/5 transition-all">
+                            <span className="text-white/40 uppercase tracking-widest text-[9px]">Verification Node {i+1}</span>
+                            <div className="flex items-center gap-4">
+                               <div className="flex flex-col items-end mr-4">
+                                 <span className="text-[7px] text-white/10 uppercase">Efficiency</span>
+                                 <span className="text-[9px] text-accent font-bold tabular-nums">{res.time}s</span>
+                               </div>
+                               <Badge className={cn("border-none text-[8px] font-black uppercase px-3 py-1", res.passed ? "bg-green-500/20 text-green-400" : "bg-red-500/20 text-red-400")}>
+                                {res.passed ? "PASSED" : "FAILED"}
+                              </Badge>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
                     </div>
                   ) : (
                     <div className="h-full flex flex-col items-center justify-center opacity-20">
