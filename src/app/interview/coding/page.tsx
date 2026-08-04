@@ -57,11 +57,11 @@ export default function CodingEnginePage() {
   // Core Simulation State
   const [questions, setQuestions] = useState<CodingProblem[]>([]);
   const [currentIdx, setCurrentIdx] = useState(0);
-  const [questionStatuses, setQuestionStatuses] = useState<('current' | 'submitted' | 'skipped' | 'pending')[]>(Array(5).fill('pending'));
   const [selectedLang, setSelectedLang] = useState(LANGUAGES[0]);
   const [code, setCode] = useState("");
   const [customInput, setCustomInput] = useState("");
-  const [timeLeft, setTimeLeft] = useState(45 * 60);
+  const [timeLeft, setTimeLeft] = useState(30 * 60); // 30 Minutes
+  const [isTimeExpired, setIsTimeExpired] = useState(false);
 
   // Stats & Results Tracking
   const [sessionResults, setSessionResults] = useState<Record<number, any>>({});
@@ -93,9 +93,6 @@ export default function CodingEnginePage() {
 
         if (data?.codingQuestions && data.codingQuestions.length === 5) {
           setQuestions(data.codingQuestions);
-          const initialStatuses = Array(5).fill('pending') as any;
-          initialStatuses[0] = 'current';
-          setQuestionStatuses(initialStatuses);
         } else {
           const response = await generateCodingQuestions({
             role: journey.role,
@@ -109,9 +106,6 @@ export default function CodingEnginePage() {
           });
 
           setQuestions(response.questions);
-          const initialStatuses = Array(5).fill('pending') as any;
-          initialStatuses[0] = 'current';
-          setQuestionStatuses(initialStatuses);
         }
       } catch (e) {
         console.error(e);
@@ -123,36 +117,109 @@ export default function CodingEnginePage() {
     initEnvironment();
   }, [journey, journeyRef, questions.length, toast]);
 
-  // Code Calibration
+  // Code Calibration per Question
   useEffect(() => {
     if (questions[currentIdx]) {
       const q = questions[currentIdx];
-      const starter = q.starterCode[selectedLang.id as keyof typeof q.starterCode] || "// Implement solution here";
+      // Load saved code if user visited before, otherwise starter
+      const saved = sessionResults[currentIdx]?.code;
+      const starter = saved || q.starterCode[selectedLang.id as keyof typeof q.starterCode] || "// Implement solution here";
       setCode(starter);
-      setCustomInput(q.sampleInput || "");
+      setCustomInput("");
       setTerminalOutput("Ready to execute your code.");
       setActiveTerminalTab("output");
     }
-  }, [currentIdx, selectedLang, questions]);
+  }, [currentIdx, selectedLang, questions, sessionResults]);
+
+  // Submit Flow Helper
+  const performSubmission = useCallback(async () => {
+    if (isSubmitting || isRunning || !questions[currentIdx]) return;
+    setIsSubmitting(true);
+    setActiveTerminalTab("cases");
+    setTerminalOutput("Initializing hidden verification matrix...");
+
+    const currentQ = questions[currentIdx];
+
+    try {
+      const response = await fetch('/api/judge0/execute', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          source_code: code,
+          language_id: getJudge0LanguageId(selectedLang.id),
+          testCases: currentQ.hiddenTestCases
+        }),
+      });
+
+      const data = await response.json();
+
+      if (data.error) {
+        setTerminalOutput(`[AUDIT ERROR]\n${data.error}`);
+        setIsSubmitting(false);
+        return;
+      }
+
+      const results = data.results || [];
+      const total = results.length;
+      const passed = results.filter((r: any) => r.passed).length;
+      const allPassed = passed === total;
+
+      const submissionReport = {
+        questionId: currentQ.id,
+        code: code,
+        results,
+        allPassed,
+        passedCount: passed,
+        totalCount: total,
+        language: selectedLang.label,
+        time: results[0]?.time || "0.0",
+        memory: results[0]?.memory || "0",
+        status: allPassed ? 'Accepted' : 'Failed'
+      };
+
+      setSessionResults(prev => ({
+        ...prev,
+        [currentIdx]: submissionReport
+      }));
+
+      if (allPassed) {
+        toast({ title: "Node Verified", description: "Accepted — All hidden test cases passed." });
+        setTerminalOutput("Accepted — All Test Cases Passed.");
+      } else {
+        toast({ 
+          variant: "destructive", 
+          title: "Logic Failed", 
+          description: `Wrong Answer — Passed ${passed}/${total} nodes.` 
+        });
+        setTerminalOutput(`Wrong Answer — Some Test Cases Failed.\nPassed: ${passed}/${total}`);
+      }
+    } catch (error: any) {
+      setTerminalOutput(`[CRITICAL FAULT]\nVerification node connection lost.`);
+    } finally {
+      setIsSubmitting(false);
+    }
+  }, [code, selectedLang, currentIdx, questions, isSubmitting, isRunning, toast]);
 
   // Timer Logic
   useEffect(() => {
-    if (isInitializing || isFinalizing) return;
+    if (isInitializing || isFinalizing || isTimeExpired) return;
     const timer = setInterval(() => {
       setTimeLeft(prev => {
         if (prev <= 1) {
           clearInterval(timer);
-          finalizeAssessment();
+          setIsTimeExpired(true);
+          toast({ variant: "destructive", title: "Time Expired", description: "Submission automatically submitted." });
+          performSubmission();
           return 0;
         }
         return prev - 1;
       });
     }, 1000);
     return () => clearInterval(timer);
-  }, [isInitializing, isFinalizing]);
+  }, [isInitializing, isFinalizing, isTimeExpired, performSubmission, toast]);
 
   const runCode = async () => {
-    if (isRunning || isSubmitting) return;
+    if (isRunning || isSubmitting || isTimeExpired) return;
     setIsRunning(true);
     setActiveTerminalTab("output");
     setTerminalOutput("Executing Code...");
@@ -193,97 +260,9 @@ export default function CodingEnginePage() {
     }
   };
 
-  const submitQuestion = async () => {
-    if (isSubmitting || isRunning) return;
-    setIsSubmitting(true);
-    setActiveTerminalTab("cases");
-    setTerminalOutput("Initializing hidden verification matrix...");
-
-    const currentQ = questions[currentIdx];
-
-    try {
-      // NOTE: For absolute security, testCases should be fetched from a secure source server-side.
-      // Here we use the API proxy which handles comparison server-side.
-      const response = await fetch('/api/judge0/execute', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          source_code: code,
-          language_id: getJudge0LanguageId(selectedLang.id),
-          testCases: currentQ.hiddenTestCases
-        }),
-      });
-
-      const data = await response.json();
-
-      if (data.error) {
-        setTerminalOutput(`[AUDIT ERROR]\n${data.error}`);
-        setIsSubmitting(false);
-        return;
-      }
-
-      const results = data.results || [];
-      const total = results.length;
-      const passed = results.filter((r: any) => r.passed).length;
-      const allPassed = passed === total;
-
-      setSessionResults(prev => ({
-        ...prev,
-        [currentIdx]: {
-          questionId: currentQ.id,
-          results,
-          allPassed,
-          passedCount: passed,
-          totalCount: total,
-          language: selectedLang.label,
-          time: results[0]?.time || "0.0",
-          memory: results[0]?.memory || "0"
-        }
-      }));
-
-      if (allPassed) {
-        toast({ title: "Node Verified", description: "Accepted — All hidden test cases passed." });
-        setTerminalOutput("Accepted — All Test Cases Passed.");
-      } else {
-        toast({ 
-          variant: "destructive", 
-          title: "Logic Failed", 
-          description: `Wrong Answer — Passed ${passed}/${total} nodes.` 
-        });
-        setTerminalOutput(`Wrong Answer — Some Test Cases Failed.\nPassed: ${passed}/${total}`);
-      }
-    } catch (error: any) {
-      setTerminalOutput(`[CRITICAL FAULT]\nVerification node connection lost.`);
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
-  const handleNextQuestion = async () => {
-    const newStatuses = [...questionStatuses];
-    newStatuses[currentIdx] = sessionResults[currentIdx]?.allPassed ? 'submitted' : 'skipped';
-    
+  const handleNextQuestion = () => {
     if (currentIdx < 4) {
-      newStatuses[currentIdx + 1] = 'current';
-      setQuestionStatuses(newStatuses);
       setCurrentIdx(currentIdx + 1);
-      setIsSubmitting(false);
-    } else {
-      setQuestionStatuses(newStatuses);
-      await finalizeAssessment();
-    }
-  };
-
-  const skipQuestion = () => {
-    const newStatuses = [...questionStatuses];
-    newStatuses[currentIdx] = 'skipped';
-    if (currentIdx < 4) {
-      newStatuses[currentIdx + 1] = 'current';
-      setQuestionStatuses(newStatuses);
-      setCurrentIdx(currentIdx + 1);
-    } else {
-      setQuestionStatuses(newStatuses);
-      finalizeAssessment();
     }
   };
 
@@ -305,14 +284,14 @@ export default function CodingEnginePage() {
         totalQuestions: 5,
         passedQuestions: passedCount,
         results: sessionResults,
-        timeTaken: formatTime((45 * 60) - timeLeft),
+        timeTaken: formatTime((30 * 60) - timeLeft),
         submissionTime: new Date().toLocaleTimeString(),
       };
       
       await updateDoc(journeyRef, {
         codingReport: finalReport,
-        currentStage: finalReport.status === 'Pass' ? 'HR Interview' : 'Coding Assessment',
-        step: finalReport.status === 'Pass' ? 6 : 5
+        currentStage: 'HR Interview',
+        step: 6
       });
     }
 
@@ -357,33 +336,26 @@ export default function CodingEnginePage() {
           <div>
             <h1 className="text-sm font-black uppercase tracking-widest text-premium">NEXVORO AI CODING ENGINE</h1>
             <div className="flex items-center gap-4 mt-0.5">
-               <div className="flex gap-1.5">
-                 {questionStatuses.map((status, i) => (
-                   <div key={i} className={cn(
-                     "w-6 h-1.5 rounded-full transition-all duration-500",
-                     status === 'current' ? "bg-accent shadow-[0_0_10px_#22d3ee]" :
-                     status === 'submitted' ? "bg-green-500" :
-                     status === 'skipped' ? "bg-orange-500" :
-                     "bg-white/10"
-                   )} />
-                 ))}
-               </div>
-               <span className="text-[9px] font-bold text-white/30 uppercase tracking-widest">Node {currentIdx + 1} / 5</span>
+               <span className="text-[9px] font-bold text-accent uppercase tracking-widest">QUESTION {currentIdx + 1} OF 5</span>
+               <div className="w-1.5 h-1.5 rounded-full bg-white/10" />
+               <Badge className="bg-white/5 text-white/40 border-none text-[8px] font-black px-2 py-0 uppercase">PHASE 03</Badge>
             </div>
           </div>
         </div>
 
         <div className="flex items-center gap-8">
           <div className={cn(
-            "px-6 py-2 rounded-xl glass border-white/10 font-mono text-xl tabular-nums",
-            timeLeft < 300 ? "text-red-500 animate-pulse" : "text-accent"
+            "px-6 py-2 rounded-xl glass border-white/10 font-mono text-xl tabular-nums tracking-widest",
+            timeLeft < 300 ? "text-red-500 animate-pulse border-red-500/30" : "text-accent"
           )}>
+            <span className="text-[8px] font-bold uppercase opacity-50 block mb-0.5">Coding Time Left</span>
             {formatTime(timeLeft)}
           </div>
           <select 
             value={selectedLang.id}
             onChange={(e) => setSelectedLang(LANGUAGES.find(l => l.id === e.target.value) || LANGUAGES[0])}
-            className="h-12 px-4 glass border-white/10 bg-[#0b0e1a] rounded-xl text-[10px] font-black uppercase tracking-widest outline-none focus:border-accent"
+            disabled={isTimeExpired}
+            className="h-12 px-4 glass border-white/10 bg-[#0b0e1a] rounded-xl text-[10px] font-black uppercase tracking-widest outline-none focus:border-accent disabled:opacity-50"
           >
             {LANGUAGES.map(l => <option key={l.id} value={l.id}>{l.label}</option>)}
           </select>
@@ -395,7 +367,7 @@ export default function CodingEnginePage() {
           <Card className="flex-1 premium-card bg-white/[0.01] border-white/5 p-8 overflow-y-auto custom-scrollbar">
             <div className="space-y-6">
               <div className="space-y-3">
-                <Badge className="bg-purple-500/10 text-purple-400 border-none text-[9px] font-black uppercase">Node 0{currentIdx + 1}</Badge>
+                <Badge className="bg-purple-500/10 text-purple-400 border-none text-[9px] font-black uppercase">Challenge Node</Badge>
                 <h2 className="text-2xl font-bold tracking-tight">{currentQ?.title}</h2>
                 <div className="flex gap-2">
                   <Badge variant="outline" className="border-red-500/20 text-red-400 text-[8px] font-black uppercase">{currentQ?.difficulty}</Badge>
@@ -416,6 +388,11 @@ export default function CodingEnginePage() {
 
         <div className="flex-1 flex flex-col gap-4">
           <Card className="flex-1 glass border-white/5 bg-[#0b0e1a] flex flex-col relative overflow-hidden">
+            {isTimeExpired && (
+              <div className="absolute inset-0 z-50 bg-black/60 backdrop-blur-[2px] flex items-center justify-center">
+                 <Badge className="bg-red-500 text-white text-[10px] font-black uppercase px-6 py-2 rounded-xl shadow-2xl">Time Expired — Editor Locked</Badge>
+              </div>
+            )}
             <div className="flex-1 relative">
               <Editor
                 height="100%"
@@ -425,6 +402,7 @@ export default function CodingEnginePage() {
                 onChange={(val) => setCode(val || "")}
                 options={{
                   fontSize: 14,
+                  readOnly: isTimeExpired,
                   minimap: { enabled: false },
                   scrollbar: { vertical: 'hidden' },
                   automaticLayout: true,
@@ -437,15 +415,15 @@ export default function CodingEnginePage() {
               <div className="flex items-center gap-4">
                 <Button 
                   onClick={runCode} 
-                  disabled={isRunning || isSubmitting} 
+                  disabled={isRunning || isSubmitting || isTimeExpired} 
                   className="h-12 px-8 bg-white/5 hover:bg-white/10 text-white text-[10px] font-black uppercase tracking-widest rounded-xl border border-white/10"
                 >
                   {isRunning ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Play className="w-4 h-4 mr-2 text-green-400 fill-current" />}
                   RUN CODE
                 </Button>
                 <Button 
-                  onClick={submitQuestion} 
-                  disabled={isRunning || isSubmitting}
+                  onClick={performSubmission} 
+                  disabled={isRunning || isSubmitting || isTimeExpired}
                   className="h-12 px-8 btn-premium rounded-xl text-[10px] font-black uppercase tracking-widest shadow-xl"
                 >
                   {isSubmitting ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <ShieldCheck className="w-4 h-4 mr-2" />}
@@ -453,13 +431,22 @@ export default function CodingEnginePage() {
                 </Button>
               </div>
 
-              <Button 
-                onClick={handleNextQuestion} 
-                variant="ghost" 
-                className="h-12 px-6 text-[10px] font-black uppercase tracking-widest text-white/40 hover:text-white hover:bg-white/5 rounded-xl"
-              >
-                NEXT QUESTION <ChevronRight className="ml-2 w-4 h-4" />
-              </Button>
+              {currentIdx < 4 ? (
+                <Button 
+                  onClick={handleNextQuestion} 
+                  variant="ghost" 
+                  className="h-12 px-6 text-[10px] font-black uppercase tracking-widest text-white/40 hover:text-white hover:bg-white/5 rounded-xl"
+                >
+                  NEXT QUESTION <ChevronRight className="ml-2 w-4 h-4" />
+                </Button>
+              ) : (
+                <Button 
+                  onClick={finalizeAssessment} 
+                  className="h-12 px-8 bg-accent/20 border border-accent/40 text-accent text-[10px] font-black uppercase tracking-widest rounded-xl hover:bg-accent/30 transition-all"
+                >
+                  VIEW CODING RESULTS <Zap className="ml-2 w-4 h-4" />
+                </Button>
+              )}
             </div>
           </Card>
 
@@ -480,6 +467,7 @@ export default function CodingEnginePage() {
                   <textarea
                     value={customInput}
                     onChange={(e) => setCustomInput(e.target.value)}
+                    disabled={isTimeExpired}
                     className="w-full h-full bg-transparent outline-none p-6 text-white/60 font-mono text-[11px] resize-none"
                     placeholder="Enter manual input nodes for execution..."
                   />
@@ -491,7 +479,7 @@ export default function CodingEnginePage() {
                         <div className="flex items-center gap-3">
                           {currentResult.allPassed ? <CheckCircle2 className="w-5 h-5 text-green-400" /> : <XCircle className="w-5 h-5 text-red-400" />}
                           <span className={cn("text-xs font-black uppercase tracking-widest", currentResult.allPassed ? "text-green-400" : "text-red-400")}>
-                            {currentResult.allPassed ? "ACCEPTED" : "WRONG ANSWER"}
+                            {currentResult.allPassed ? "Accepted — All Test Cases Passed" : "Wrong Answer — Some Test Cases Failed"}
                           </span>
                         </div>
                         <div className="flex gap-4">
@@ -502,17 +490,11 @@ export default function CodingEnginePage() {
 
                       <div className="grid gap-2">
                         {currentResult.results.map((res: any, i: number) => (
-                          <div key={i} className="flex items-center justify-between p-3 glass border-white/5 rounded-xl group hover:bg-white/5 transition-all">
-                            <span className="text-white/40 uppercase tracking-widest text-[9px]">Verification Node {i+1}</span>
-                            <div className="flex items-center gap-4">
-                               <div className="flex flex-col items-end mr-4">
-                                 <span className="text-[7px] text-white/10 uppercase">Efficiency</span>
-                                 <span className="text-[9px] text-accent font-bold tabular-nums">{res.time}s</span>
-                               </div>
-                               <Badge className={cn("border-none text-[8px] font-black uppercase px-3 py-1", res.passed ? "bg-green-500/20 text-green-400" : "bg-red-500/20 text-red-400")}>
+                          <div key={i} className="flex items-center justify-between p-3 glass border-white/5 rounded-xl">
+                            <span className="text-white/40 uppercase tracking-widest text-[9px]">Test Case {i+1}</span>
+                            <Badge className={cn("border-none text-[8px] font-black uppercase px-3 py-1", res.passed ? "bg-green-500/20 text-green-400" : "bg-red-500/20 text-red-400")}>
                                 {res.passed ? "PASSED" : "FAILED"}
                               </Badge>
-                            </div>
                           </div>
                         ))}
                       </div>
@@ -554,3 +536,4 @@ export default function CodingEnginePage() {
     </div>
   );
 }
+
