@@ -45,6 +45,7 @@ import {
 import { useUser, useFirestore, useDoc } from '@/firebase';
 import { doc, updateDoc, serverTimestamp, getDoc } from 'firebase/firestore';
 import { generateCodingQuestions, type CodingProblem } from '@/ai/flows/ai-coding-generator';
+import { executeCode } from '@/lib/piston';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 
@@ -208,12 +209,28 @@ export default function CodingEnginePage() {
     if (isRunning || isSubmitting) return;
     setIsRunning(true);
     setActiveTerminalTab("output");
-    setTerminalOutput("Compiling Solution...\n");
-    await new Promise(r => setTimeout(r, 800));
-    setTerminalOutput(prev => prev + "Running Sample Test Cases...\n");
-    await new Promise(r => setTimeout(r, 1200));
-    setTerminalOutput(prev => prev + `Execution Completed.\n\n[SUCCESS] Input: ${questions[currentIdx].sampleInput}\n[SUCCESS] Output: ${questions[currentIdx].sampleOutput}\n\nLatency: 32ms`);
-    setIsRunning(false);
+    setTerminalOutput("Initializing Execution Node...\n");
+
+    try {
+      const result = await executeCode(selectedLang.id, code);
+      
+      let output = "";
+      if (result.stderr) {
+        output = `[EXECUTION ERROR]\n${result.stderr}`;
+      } else {
+        output = `[EXECUTION SUCCESS]\n\nOutput Stream:\n${result.stdout || '(No output detected)'}`;
+        
+        // Show compare with sample input/output for clarity
+        const currentQ = questions[currentIdx];
+        output += `\n\n--- Sample Reference ---\nInput: ${currentQ.sampleInput}\nExpected: ${currentQ.sampleOutput}`;
+      }
+      
+      setTerminalOutput(output);
+    } catch (error: any) {
+      setTerminalOutput(`[SYSTEM ERROR]\nFailed to connect to execution node: ${error.message}`);
+    } finally {
+      setIsRunning(false);
+    }
   };
 
   const handleNextQuestion = async (wasSkipped: boolean = false) => {
@@ -225,6 +242,7 @@ export default function CodingEnginePage() {
       setQuestionStatuses(newStatuses);
       setCurrentIdx(currentIdx + 1);
       setIsSubmitting(false);
+      setTerminalOutput("");
     } else {
       setQuestionStatuses(newStatuses);
       await finalizeAssessment();
@@ -472,7 +490,7 @@ export default function CodingEnginePage() {
               <div className="flex items-center gap-3">
                 <Button onClick={runCode} disabled={isRunning || isSubmitting || isFinalizing} variant="ghost" className="h-10 px-6 rounded-xl glass border-white/10 text-[10px] font-black uppercase tracking-widest hover:bg-white/5">
                   {isRunning ? <Loader2 className="w-3.5 h-3.5 mr-2 animate-spin" /> : <Play className="w-3.5 h-3.5 mr-2 text-green-400" />}
-                  Test Sample
+                  Run Code
                 </Button>
 
                 {!hasUsedSkip && (
