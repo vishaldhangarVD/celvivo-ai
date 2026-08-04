@@ -28,7 +28,9 @@ import {
   Layers,
   Sparkles,
   Check,
-  AlertTriangle
+  AlertTriangle,
+  RotateCcw,
+  Zap
 } from 'lucide-react';
 import { useUser, useFirestore, useDoc } from '@/firebase';
 import { doc, updateDoc, serverTimestamp, getDoc } from 'firebase/firestore';
@@ -100,6 +102,10 @@ export default function CodingEnginePage() {
             experienceLevel: journey.experience,
           });
 
+          if (!response || !response.questions) {
+            throw new Error("Invalid response from coding generator");
+          }
+
           await updateDoc(journeyRef, {
             codingQuestions: response.questions,
             updatedAt: serverTimestamp(),
@@ -107,21 +113,23 @@ export default function CodingEnginePage() {
 
           setQuestions(response.questions);
         }
-      } catch (e) {
-        console.error(e);
-        toast({ variant: "destructive", title: "Synthesis Error", description: "Could not architect coding challenges." });
+      } catch (e: any) {
+        const message = e instanceof Error ? e.message : String(e);
+        console.error("Coding Round Error (Init):", message);
+        toast({ variant: "destructive", title: "Synthesis Error", description: message || "Could not architect coding challenges." });
       } finally {
         setIsInitializing(false);
       }
     }
-    initEnvironment();
+    initEnvironment().catch(err => {
+      console.error("Unhandled init error:", err);
+    });
   }, [journey, journeyRef, questions.length, toast]);
 
   // Code Calibration per Question
   useEffect(() => {
     if (questions[currentIdx]) {
       const q = questions[currentIdx];
-      // Load saved code if user visited before, otherwise starter
       const saved = sessionResults[currentIdx]?.code;
       const starter = saved || q.starterCode[selectedLang.id as keyof typeof q.starterCode] || "// Implement solution here";
       setCode(starter);
@@ -134,6 +142,7 @@ export default function CodingEnginePage() {
   // Submit Flow Helper
   const performSubmission = useCallback(async () => {
     if (isSubmitting || isRunning || !questions[currentIdx]) return;
+    
     setIsSubmitting(true);
     setActiveTerminalTab("cases");
     setTerminalOutput("Initializing hidden verification matrix...");
@@ -150,6 +159,10 @@ export default function CodingEnginePage() {
           testCases: currentQ.hiddenTestCases
         }),
       });
+
+      if (!response.ok) {
+        throw new Error(`Execution service returned status ${response.status}`);
+      }
 
       const data = await response.json();
 
@@ -194,7 +207,9 @@ export default function CodingEnginePage() {
         setTerminalOutput(`Wrong Answer — Some Test Cases Failed.\nPassed: ${passed}/${total}`);
       }
     } catch (error: any) {
-      setTerminalOutput(`[CRITICAL FAULT]\nVerification node connection lost.`);
+      const message = error instanceof Error ? error.message : String(error);
+      console.error("Coding Round Error (Submit):", message);
+      setTerminalOutput(`[CRITICAL FAULT]\n${message || "Verification node connection lost."}`);
     } finally {
       setIsSubmitting(false);
     }
@@ -203,23 +218,29 @@ export default function CodingEnginePage() {
   // Timer Logic
   useEffect(() => {
     if (isInitializing || isFinalizing || isTimeExpired) return;
+    
     const timer = setInterval(() => {
       setTimeLeft(prev => {
         if (prev <= 1) {
           clearInterval(timer);
           setIsTimeExpired(true);
           toast({ variant: "destructive", title: "Time Expired", description: "Submission automatically submitted." });
-          performSubmission();
+          // Trigger final submission node safely
+          performSubmission().catch(err => {
+            console.error("Auto-submission protocol failure:", err);
+          });
           return 0;
         }
         return prev - 1;
       });
     }, 1000);
+    
     return () => clearInterval(timer);
   }, [isInitializing, isFinalizing, isTimeExpired, performSubmission, toast]);
 
   const runCode = async () => {
     if (isRunning || isSubmitting || isTimeExpired) return;
+    
     setIsRunning(true);
     setActiveTerminalTab("output");
     setTerminalOutput("Executing Code...");
@@ -234,6 +255,10 @@ export default function CodingEnginePage() {
           stdin: customInput
         }),
       });
+
+      if (!response.ok) {
+        throw new Error(`Execution service returned status ${response.status}`);
+      }
 
       const data = await response.json();
 
@@ -254,7 +279,9 @@ export default function CodingEnginePage() {
         setTerminalOutput(output);
       }
     } catch (error: any) {
-      setTerminalOutput(`[NETWORK FAULT]\nFailed to connect to execution node.`);
+      const message = error instanceof Error ? error.message : String(error);
+      console.error("Coding Round Error (Run):", message);
+      setTerminalOutput(`[NETWORK FAULT]\n${message || "Failed to connect to execution node."}`);
     } finally {
       setIsRunning(false);
     }
@@ -267,35 +294,44 @@ export default function CodingEnginePage() {
   };
 
   const finalizeAssessment = async () => {
+    if (isFinalizing) return;
+    
     setIsFinalizing(true);
-    const steps = ["Compiling Master Submission...", "Running Final Audit...", "Validating Performance Metrics...", "Generating Dossier..."];
-    for (let i = 0; i < steps.length; i++) {
-      setSubmitStep(i);
-      await new Promise(r => setTimeout(r, 1000));
-    }
+    try {
+      const steps = ["Compiling Master Submission...", "Running Final Audit...", "Validating Performance Metrics...", "Generating Dossier..."];
+      for (let i = 0; i < steps.length; i++) {
+        setSubmitStep(i);
+        await new Promise(r => setTimeout(r, 1000));
+      }
 
-    if (user && db && journeyRef) {
-      const resultsArray = Object.values(sessionResults);
-      const passedCount = resultsArray.filter(r => r.allPassed).length;
-      
-      const finalReport = {
-        score: Math.round((passedCount / 5) * 100),
-        status: passedCount >= 3 ? 'Pass' : 'Fail',
-        totalQuestions: 5,
-        passedQuestions: passedCount,
-        results: sessionResults,
-        timeTaken: formatTime((30 * 60) - timeLeft),
-        submissionTime: new Date().toLocaleTimeString(),
-      };
-      
-      await updateDoc(journeyRef, {
-        codingReport: finalReport,
-        currentStage: 'HR Interview',
-        step: 6
-      });
-    }
+      if (user && db && journeyRef) {
+        const resultsArray = Object.values(sessionResults);
+        const passedCount = resultsArray.filter(r => r.allPassed).length;
+        
+        const finalReport = {
+          score: Math.round((passedCount / 5) * 100),
+          status: passedCount >= 3 ? 'Pass' : 'Fail',
+          totalQuestions: 5,
+          passedQuestions: passedCount,
+          results: sessionResults,
+          timeTaken: formatTime((30 * 60) - timeLeft),
+          submissionTime: new Date().toLocaleTimeString(),
+        };
+        
+        await updateDoc(journeyRef, {
+          codingReport: finalReport,
+          currentStage: 'HR Interview',
+          step: 6
+        });
+      }
 
-    router.push('/interview/coding-result');
+      router.push('/interview/coding-result');
+    } catch (error: any) {
+      const message = error instanceof Error ? error.message : String(error);
+      console.error("Coding Round Error (Finalize):", message);
+      toast({ variant: "destructive", title: "Final Audit Failed", description: message });
+      setIsFinalizing(false);
+    }
   };
 
   const formatTime = (seconds: number) => {
@@ -354,7 +390,7 @@ export default function CodingEnginePage() {
           <select 
             value={selectedLang.id}
             onChange={(e) => setSelectedLang(LANGUAGES.find(l => l.id === e.target.value) || LANGUAGES[0])}
-            disabled={isTimeExpired}
+            disabled={isTimeExpired || isFinalizing}
             className="h-12 px-4 glass border-white/10 bg-[#0b0e1a] rounded-xl text-[10px] font-black uppercase tracking-widest outline-none focus:border-accent disabled:opacity-50"
           >
             {LANGUAGES.map(l => <option key={l.id} value={l.id}>{l.label}</option>)}
@@ -388,9 +424,11 @@ export default function CodingEnginePage() {
 
         <div className="flex-1 flex flex-col gap-4">
           <Card className="flex-1 glass border-white/5 bg-[#0b0e1a] flex flex-col relative overflow-hidden">
-            {isTimeExpired && (
+            {(isTimeExpired || isFinalizing) && (
               <div className="absolute inset-0 z-50 bg-black/60 backdrop-blur-[2px] flex items-center justify-center">
-                 <Badge className="bg-red-500 text-white text-[10px] font-black uppercase px-6 py-2 rounded-xl shadow-2xl">Time Expired — Editor Locked</Badge>
+                 <Badge className="bg-red-500 text-white text-[10px] font-black uppercase px-6 py-2 rounded-xl shadow-2xl">
+                   {isTimeExpired ? "Time Expired — Editor Locked" : "Audit in Progress"}
+                 </Badge>
               </div>
             )}
             <div className="flex-1 relative">
@@ -402,7 +440,7 @@ export default function CodingEnginePage() {
                 onChange={(val) => setCode(val || "")}
                 options={{
                   fontSize: 14,
-                  readOnly: isTimeExpired,
+                  readOnly: isTimeExpired || isFinalizing,
                   minimap: { enabled: false },
                   scrollbar: { vertical: 'hidden' },
                   automaticLayout: true,
@@ -414,16 +452,16 @@ export default function CodingEnginePage() {
             <div className="h-20 border-t border-white/5 bg-white/[0.02] flex items-center justify-between px-8 shrink-0">
               <div className="flex items-center gap-4">
                 <Button 
-                  onClick={runCode} 
-                  disabled={isRunning || isSubmitting || isTimeExpired} 
+                  onClick={() => runCode().catch(console.error)} 
+                  disabled={isRunning || isSubmitting || isTimeExpired || isFinalizing} 
                   className="h-12 px-8 bg-white/5 hover:bg-white/10 text-white text-[10px] font-black uppercase tracking-widest rounded-xl border border-white/10"
                 >
                   {isRunning ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Play className="w-4 h-4 mr-2 text-green-400 fill-current" />}
                   RUN CODE
                 </Button>
                 <Button 
-                  onClick={performSubmission} 
-                  disabled={isRunning || isSubmitting || isTimeExpired}
+                  onClick={() => performSubmission().catch(console.error)} 
+                  disabled={isRunning || isSubmitting || isTimeExpired || isFinalizing}
                   className="h-12 px-8 btn-premium rounded-xl text-[10px] font-black uppercase tracking-widest shadow-xl"
                 >
                   {isSubmitting ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <ShieldCheck className="w-4 h-4 mr-2" />}
@@ -435,13 +473,15 @@ export default function CodingEnginePage() {
                 <Button 
                   onClick={handleNextQuestion} 
                   variant="ghost" 
+                  disabled={isFinalizing}
                   className="h-12 px-6 text-[10px] font-black uppercase tracking-widest text-white/40 hover:text-white hover:bg-white/5 rounded-xl"
                 >
                   NEXT QUESTION <ChevronRight className="ml-2 w-4 h-4" />
                 </Button>
               ) : (
                 <Button 
-                  onClick={finalizeAssessment} 
+                  onClick={() => finalizeAssessment().catch(console.error)} 
+                  disabled={isRunning || isSubmitting || isFinalizing}
                   className="h-12 px-8 bg-accent/20 border border-accent/40 text-accent text-[10px] font-black uppercase tracking-widest rounded-xl hover:bg-accent/30 transition-all"
                 >
                   VIEW CODING RESULTS <Zap className="ml-2 w-4 h-4" />
@@ -467,7 +507,7 @@ export default function CodingEnginePage() {
                   <textarea
                     value={customInput}
                     onChange={(e) => setCustomInput(e.target.value)}
-                    disabled={isTimeExpired}
+                    disabled={isTimeExpired || isFinalizing}
                     className="w-full h-full bg-transparent outline-none p-6 text-white/60 font-mono text-[11px] resize-none"
                     placeholder="Enter manual input nodes for execution..."
                   />
@@ -536,4 +576,3 @@ export default function CodingEnginePage() {
     </div>
   );
 }
-
