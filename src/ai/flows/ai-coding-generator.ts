@@ -23,6 +23,10 @@ const CodingProblemSchema = z.object({
     python: z.string(),
     javascript: z.string(),
     cpp: z.string(),
+    c: z.string(),
+    csharp: z.string(),
+    go: z.string(),
+    rust: z.string(),
   }),
   hiddenTestCases: z.array(z.object({
     input: z.string(),
@@ -59,7 +63,7 @@ Simulation Protocol:
 1. FIRM CALIBRATION: If the company is Google, focus on complex trees/graphs and O(n) efficiency. If Amazon, focus on data structures, scale, and multi-variable constraints. If a startup, focus on practical logic and edge-case resilience.
 2. DIFFICULTY: All 5 questions MUST be "Hard" (LeetCode Hard style).
 3. VARIETY: Ensure questions cover different topics (e.g., Dynamic Programming, Graph Theory, Advanced Heaps, Sliding Window, Matrix Math).
-4. STARTER CODE: Provide clean, industry-standard starter templates for Java, Python, JavaScript, and C++.
+4. STARTER CODE: Provide clean, industry-standard starter templates for Java, Python, JavaScript, C++, C, C#, Go, and Rust.
 5. HIDDEN TEST CASES: Provide at least 3 hidden test cases per question to validate implementation logic.
 
 Format: Return a strictly structured JSON matching the output schema. No conversational text.`,

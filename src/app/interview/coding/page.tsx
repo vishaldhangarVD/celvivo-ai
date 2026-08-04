@@ -40,20 +40,26 @@ import {
   AlertTriangle,
   Sparkles,
   Command,
-  Brain
+  Brain,
+  Keyboard,
+  XCircle
 } from 'lucide-react';
 import { useUser, useFirestore, useDoc } from '@/firebase';
 import { doc, updateDoc, serverTimestamp, getDoc } from 'firebase/firestore';
 import { generateCodingQuestions, type CodingProblem } from '@/ai/flows/ai-coding-generator';
-import { executeCode } from '@/lib/piston';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
+import { getJudge0LanguageId } from '@/lib/judge0-languages';
 
 const LANGUAGES = [
+  { id: 'python', label: 'Python 3' },
   { id: 'java', label: 'Java' },
-  { id: 'python', label: 'Python' },
+  { id: 'cpp', label: 'C++' },
   { id: 'javascript', label: 'JavaScript' },
-  { id: 'cpp', label: 'C++' }
+  { id: 'c', label: 'C' },
+  { id: 'csharp', label: 'C#' },
+  { id: 'go', label: 'Go' },
+  { id: 'rust', label: 'Rust' }
 ];
 
 const INITIALIZATION_MESSAGES = [
@@ -76,8 +82,12 @@ export default function CodingEnginePage() {
   const [hasUsedSkip, setHasUsedSkip] = useState(false);
   const [selectedLang, setSelectedLang] = useState(LANGUAGES[0]);
   const [code, setCode] = useState("");
+  const [customInput, setCustomInput] = useState("");
   const [timeLeft, setTimeLeft] = useState(45 * 60);
   const [isFullScreen, setIsFullScreen] = useState(false);
+
+  // Stats Tracking for Firestore
+  const [sessionResults, setSessionResults] = useState<any[]>([]);
 
   // Initialization State
   const [isInitializing, setIsInitializing] = useState(true);
@@ -103,13 +113,11 @@ export default function CodingEnginePage() {
     async function initEnvironment() {
       if (!journey || !journeyRef || questions.length > 0) return;
 
-      // Cycle through initialization messages
       const msgInterval = setInterval(() => {
         setInitMsgIdx(prev => Math.min(prev + 1, INITIALIZATION_MESSAGES.length - 1));
       }, 1500);
 
       try {
-        // Check if questions already exist in Firestore session
         const snap = await getDoc(journeyRef);
         const data = snap.data();
 
@@ -119,7 +127,6 @@ export default function CodingEnginePage() {
           initialStatuses[0] = 'current';
           setQuestionStatuses(initialStatuses);
         } else {
-          // Generate new questions via Gemini
           const response = await generateCodingQuestions({
             role: journey.role,
             company: journey.company,
@@ -147,7 +154,7 @@ export default function CodingEnginePage() {
     initEnvironment();
   }, [journey, journeyRef, questions.length, toast]);
 
-  // 2. Code Calibration (When language or question changes)
+  // 2. Code Calibration
   useEffect(() => {
     if (questions[currentIdx]) {
       const q = questions[currentIdx];
@@ -155,9 +162,10 @@ export default function CodingEnginePage() {
       if (saved) {
         setCode(saved);
       } else {
-        const starter = q.starterCode[selectedLang.id as keyof typeof q.starterCode];
+        const starter = q.starterCode[selectedLang.id as keyof typeof q.starterCode] || "// No starter code available.";
         setCode(starter);
       }
+      setCustomInput(q.sampleInput || "");
     }
   }, [currentIdx, selectedLang, questions]);
 
@@ -177,19 +185,7 @@ export default function CodingEnginePage() {
     return () => clearInterval(timer);
   }, [isInitializing, isFinalizing]);
 
-  // 4. Exit Protection
-  useEffect(() => {
-    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
-      if (!isFinalizing) {
-        e.preventDefault();
-        e.returnValue = 'Leaving this Coding Round will automatically submit your current progress.';
-      }
-    };
-    window.addEventListener('beforeunload', handleBeforeUnload);
-    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
-  }, [isFinalizing]);
-
-  // 5. Auto-Save Logic (5s)
+  // 4. Auto-Save Logic
   useEffect(() => {
     const saveInterval = setInterval(() => {
       if (code && questions[currentIdx]) {
@@ -201,7 +197,7 @@ export default function CodingEnginePage() {
 
   const forceSubmit = async () => {
     setIsFinalizing(true);
-    toast({ title: "Time Expired", description: "Automatically finalizing your assessment session.", variant: "destructive" });
+    toast({ title: "Time Over", description: "Submitting your solution...", variant: "destructive" });
     await finalizeAssessment();
   };
 
@@ -209,25 +205,37 @@ export default function CodingEnginePage() {
     if (isRunning || isSubmitting) return;
     setIsRunning(true);
     setActiveTerminalTab("output");
-    setTerminalOutput("Initializing Execution Node...\n");
+    setTerminalOutput("Compiling Code...\nRunning Implementation...\nWaiting for Execution Result...");
 
     try {
-      const result = await executeCode(selectedLang.id, code);
-      
-      let output = "";
-      if (result.stderr) {
-        output = `[EXECUTION ERROR]\n${result.stderr}`;
+      const response = await fetch('/api/judge0/execute', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          source_code: code,
+          language_id: getJudge0LanguageId(selectedLang.id),
+          stdin: customInput
+        }),
+      });
+
+      const data = await response.json();
+
+      if (data.error) {
+        setTerminalOutput(`[SYSTEM ERROR]\n${data.error}\n${data.details || ''}`);
       } else {
-        output = `[EXECUTION SUCCESS]\n\nOutput Stream:\n${result.stdout || '(No output detected)'}`;
+        let output = `[EXECUTION COMPLETED]\n\n`;
+        output += `Status: ${data.status?.description || 'Unknown'}\n`;
+        if (data.time) output += `Time: ${data.time}s\n`;
+        if (data.memory) output += `Memory: ${Math.round(data.memory / 1024)}MB\n`;
         
-        // Show compare with sample input/output for clarity
-        const currentQ = questions[currentIdx];
-        output += `\n\n--- Sample Reference ---\nInput: ${currentQ.sampleInput}\nExpected: ${currentQ.sampleOutput}`;
+        if (data.stdout) output += `\nOutput:\n${data.stdout}`;
+        if (data.stderr) output += `\nError:\n${data.stderr}`;
+        if (data.compile_output) output += `\nCompile Output:\n${data.compile_output}`;
+
+        setTerminalOutput(output);
       }
-      
-      setTerminalOutput(output);
     } catch (error: any) {
-      setTerminalOutput(`[SYSTEM ERROR]\nFailed to connect to execution node: ${error.message}`);
+      setTerminalOutput(`[NETWORK ERROR]\nFailed to connect to execution node: ${error.message}`);
     } finally {
       setIsRunning(false);
     }
@@ -252,43 +260,92 @@ export default function CodingEnginePage() {
   const submitQuestion = async () => {
     if (isSubmitting || isRunning) return;
     setIsSubmitting(true);
-    setTerminalOutput("Analyzing Solution Complexity...\n");
-    await new Promise(r => setTimeout(r, 1000));
-    setTerminalOutput(prev => prev + "Verifying Hidden Test Cases...\n");
-    await new Promise(r => setTimeout(r, 800));
-    setTerminalOutput(prev => prev + "Node Submission Verified.\n");
-    await new Promise(r => setTimeout(r, 500));
-    handleNextQuestion(false);
+    setActiveTerminalTab("output");
+    setTerminalOutput("Checking Hidden Test Cases...\nEvaluating Solution...");
+
+    const currentQ = questions[currentIdx];
+
+    try {
+      const response = await fetch('/api/judge0/execute', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          source_code: code,
+          language_id: getJudge0LanguageId(selectedLang.id),
+          testCases: currentQ.hiddenTestCases
+        }),
+      });
+
+      const data = await response.json();
+
+      if (data.error) {
+        setTerminalOutput(`[EVALUATION ERROR]\n${data.error}`);
+        setIsSubmitting(false);
+        return;
+      }
+
+      const results = data.results || [];
+      const total = results.length;
+      const passed = results.filter((r: any) => r.passed).length;
+      const allPassed = passed === total;
+
+      setSessionResults(prev => [...prev, {
+        questionId: currentQ.id,
+        results,
+        allPassed,
+        language: selectedLang.label
+      }]);
+
+      if (allPassed) {
+        setTerminalOutput(`[QUESTION SUBMITTED]\nAll ${total} Hidden Test Cases Passed.\nNode Verification: SUCCESS`);
+        setTimeout(() => handleNextQuestion(false), 1000);
+      } else {
+        setTerminalOutput(`[EVALUATION FAILED]\nPassed: ${passed}/${total} Test Cases.\nNeural Verification: FAILED\n\nPlease refine your logic and retry.`);
+        setIsSubmitting(false);
+      }
+    } catch (error: any) {
+      setTerminalOutput(`[SYSTEM ERROR]\nEvaluation node connection failed.`);
+      setIsSubmitting(false);
+    }
   };
 
   const skipQuestion = () => {
     if (hasUsedSkip) return;
     setHasUsedSkip(true);
+    setSessionResults(prev => [...prev, {
+      questionId: questions[currentIdx].id,
+      allPassed: false,
+      skipped: true
+    }]);
     handleNextQuestion(true);
   };
 
   const finalizeAssessment = async () => {
     setIsFinalizing(true);
-    const steps = ["Compiling Master Submission...", "Running Logic Stress Tests...", "Checking Performance Vectors...", "Architecting Final Dossier..."];
+    const steps = ["Compiling Final Submission...", "Running Hidden Test Cases...", "Checking Performance...", "Generating Coding Report..."];
     for (let i = 0; i < steps.length; i++) {
       setSubmitStep(i);
       await new Promise(r => setTimeout(r, 1200));
     }
 
     if (user && db && journeyRef) {
-      const submittedCount = questionStatuses.filter(s => s === 'submitted').length;
+      const passedCount = sessionResults.filter(r => r.allPassed).length;
+      const totalTC = sessionResults.reduce((acc, r) => acc + (r.results?.length || 0), 0);
+      const passedTC = sessionResults.reduce((acc, r) => acc + (r.results?.filter((res: any) => res.passed).length || 0), 0);
+
       const finalReport = {
-        score: Math.round((submittedCount / 5) * 100),
-        status: submittedCount >= 3 ? 'Pass' : 'Fail',
+        score: Math.round((passedCount / 5) * 100),
+        status: passedCount >= 3 ? 'Pass' : 'Fail',
         totalQuestions: 5,
-        correctAnswers: submittedCount,
-        wrongAnswers: 5 - submittedCount,
-        accuracy: Math.round((submittedCount / 5) * 100),
+        passedQuestions: passedCount,
+        failedQuestions: 5 - passedCount,
+        totalTestCases: totalTC,
+        passedTestCases: passedTC,
+        failedTestCases: totalTC - passedTC,
+        accuracy: totalTC > 0 ? Math.round((passedTC / totalTC) * 100) : 0,
         timeTaken: formatTime((45 * 60) - timeLeft),
         submissionTime: new Date().toLocaleTimeString(),
-        language: selectedLang.label,
-        executionTime: "34ms",
-        memoryUsage: questions[0]?.memoryLimit || "256MB"
+        results: sessionResults
       };
       
       await updateDoc(journeyRef, {
@@ -447,9 +504,6 @@ export default function CodingEnginePage() {
                     <p className="text-green-400">{currentQ?.sampleOutput}</p>
                   </div>
                 </div>
-
-                <h4 className="text-xs font-black uppercase tracking-widest text-white/90 mt-8 mb-4">Neural Logic Explanation</h4>
-                <p className="text-[11px] text-white/40 italic leading-relaxed">{currentQ?.explanation}</p>
               </div>
             </div>
           </Card>
@@ -525,25 +579,44 @@ export default function CodingEnginePage() {
             </div>
           </Card>
 
-          <Card className="h-[30%] glass border-white/5 bg-[#0b0e1a] flex flex-col overflow-hidden">
+          <Card className="h-[35%] glass border-white/5 bg-[#0b0e1a] flex flex-col overflow-hidden">
             <Tabs value={activeTerminalTab} onValueChange={setActiveTerminalTab} className="h-full flex flex-col">
-              <div className="px-4 h-10 border-b border-white/5 flex items-center justify-between">
+              <div className="px-4 h-10 border-b border-white/5 flex items-center justify-between bg-white/[0.02]">
                 <TabsList className="bg-transparent gap-6 p-0 h-full">
                   <TabsTrigger value="output" className="h-full rounded-none border-b-2 border-transparent data-[state=active]:border-accent bg-transparent text-[9px] font-black uppercase tracking-widest text-white/30 data-[state=active]:text-accent">Execution Output</TabsTrigger>
-                  <TabsTrigger value="cases" className="h-full rounded-none border-b-2 border-transparent data-[state=active]:border-accent bg-transparent text-[9px] font-black uppercase tracking-widest text-white/30 data-[state=active]:text-accent">Test Cases</TabsTrigger>
+                  <TabsTrigger value="input" className="h-full rounded-none border-b-2 border-transparent data-[state=active]:border-accent bg-transparent text-[9px] font-black uppercase tracking-widest text-white/30 data-[state=active]:text-accent">Custom Stdin</TabsTrigger>
+                  <TabsTrigger value="cases" className="h-full rounded-none border-b-2 border-transparent data-[state=active]:border-accent bg-transparent text-[9px] font-black uppercase tracking-widest text-white/30 data-[state=active]:text-accent">Test Status</TabsTrigger>
                 </TabsList>
-                <span className="text-[8px] font-black text-white/10 uppercase tracking-widest">Neural Terminal v6.2</span>
+                <span className="text-[8px] font-black text-white/10 uppercase tracking-widest">Neural Terminal v7.0</span>
               </div>
-              <div className="flex-1 p-6 font-mono text-[11px] overflow-y-auto custom-scrollbar">
-                <TabsContent value="output" className="mt-0 whitespace-pre-wrap text-white/60 leading-relaxed">
+              <div className="flex-1 font-mono text-[11px] overflow-y-auto custom-scrollbar">
+                <TabsContent value="output" className="mt-0 p-6 whitespace-pre-wrap text-white/60 leading-relaxed h-full">
                   {terminalOutput || "// Execute current logic to see telemetry streams"}
                 </TabsContent>
-                <TabsContent value="cases" className="mt-0 space-y-4">
-                   <div className="p-4 rounded-xl border border-white/5 bg-white/[0.02]">
-                     <p className="text-white/40 uppercase text-[9px] mb-2">Sample Case 01</p>
-                     <p className="text-green-400 font-bold uppercase tracking-widest text-[10px]">✓ PASS</p>
+                <TabsContent value="input" className="mt-0 p-0 h-full">
+                  <textarea
+                    value={customInput}
+                    onChange={(e) => setCustomInput(e.target.value)}
+                    className="w-full h-full bg-transparent outline-none p-6 text-white/60 font-mono text-[11px] resize-none"
+                    placeholder="// Provide input for execution..."
+                  />
+                </TabsContent>
+                <TabsContent value="cases" className="mt-0 p-6 space-y-4 h-full">
+                   <div className="space-y-3">
+                     <p className="text-white/40 uppercase text-[9px] mb-2">Hidden Verification Matrix</p>
+                     <div className="grid gap-2">
+                        {sessionResults[currentIdx]?.results?.map((res: any, i: number) => (
+                          <div key={i} className="flex items-center justify-between p-3 rounded-xl border border-white/5 bg-white/[0.02]">
+                            <span className="text-[10px] font-bold text-white/40">Case Node {i+1}</span>
+                            {res.passed ? (
+                              <Badge className="bg-green-500/20 text-green-400 border-none text-[8px] uppercase">✓ PASS</Badge>
+                            ) : (
+                              <Badge className="bg-red-500/20 text-red-400 border-none text-[8px] uppercase">× FAIL</Badge>
+                            )}
+                          </div>
+                        )) || <p className="text-white/20 italic">Awaiting submission for verification...</p>}
+                     </div>
                    </div>
-                   <p className="text-white/20 italic text-[10px]">Hidden test cases are strictly confidential until session finalization.</p>
                 </TabsContent>
               </div>
             </Tabs>
@@ -572,7 +645,7 @@ export default function CodingEnginePage() {
               <h2 className="text-4xl font-bold tracking-tighter text-premium uppercase">Evaluating Submission</h2>
               
               <div className="grid gap-3 text-left">
-                {["Compiling Master Submission...", "Running Logic Stress Tests...", "Checking Performance Vectors...", "Architecting Final Dossier..."].map((step, idx) => (
+                {["Compiling Final Submission...", "Running Hidden Test Cases...", "Checking Performance...", "Generating Coding Report..."].map((step, idx) => (
                   <motion.div 
                     key={idx}
                     initial={{ opacity: 0, x: -20 }}
