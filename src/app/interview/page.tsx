@@ -151,11 +151,44 @@ export default function InterviewSetupPage() {
     }
   };
 
+  const handleSkipToCoding = async () => {
+    if (!user || !db) return;
+    
+    // Ensure at least some default session data exists so Coding Round doesn't break
+    const role = selectedRole || "Software Engineer";
+    const company = selectedCompany || "Google";
+    const exp = selectedExp || "Senior";
+    
+    await setDoc(doc(db, 'users', user.uid, 'journey', 'active'), {
+      role,
+      company,
+      experience: exp,
+      status: "Active",
+      currentStage: "Coding Assessment",
+      updatedAt: serverTimestamp(),
+      step: 4
+    }, { merge: true });
+    
+    router.push('/interview/coding');
+  };
+
   return (
     <div className="h-screen bg-[#050816] flex flex-col overflow-hidden relative selection:bg-accent/30 selection:text-white">
       <div className="particles-bg" />
       <Navbar />
       <NavigationControls onHome={() => router.push('/')} />
+
+      {process.env.NODE_ENV === 'development' && (
+        <div className="fixed top-24 right-8 z-[100]">
+          <Button 
+            onClick={handleSkipToCoding}
+            variant="ghost" 
+            className="h-8 px-3 rounded-lg glass border-white/10 text-[9px] font-black uppercase tracking-widest hover:bg-accent/10 hover:text-accent"
+          >
+            Skip → Coding
+          </Button>
+        </div>
+      )}
 
       <main className="flex-1 container mx-auto px-6 flex items-center justify-center relative z-10 pt-16">
         <div className="grid lg:grid-cols-12 gap-6 max-w-6xl w-full">
@@ -211,7 +244,7 @@ export default function InterviewSetupPage() {
                     />
                     <AnimatePresence>
                       {isCompanyOpen && (
-                        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 10 }} className="absolute top-full left-0 right-0 mt-2 p-2 glass border-white/10 bg-[#0b0e1a]/95 rounded-xl z-[100] max-h-[200px] overflow-y-auto custom-scrollbar shadow-2xl backdrop-blur-3xl">
+                        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 10 }} className="absolute top-full left-0 right-0 mt-2 p-2 glass border-white/10 bg-[#0b0e1a]/95 rounded-xl z-[100] max-h-[180px] overflow-y-auto custom-scrollbar shadow-2xl backdrop-blur-3xl">
                           {filteredCompanies.map(comp => (
                             <button key={comp} onClick={() => { setSelectedCompany(comp); setIsCompanyOpen(false); setCompanySearch(""); }} className="w-full text-left p-3 hover:bg-purple-500/10 hover:text-purple-400 rounded-lg text-[10px] font-bold uppercase tracking-widest transition-all flex items-center justify-between group/item">
                               {comp} <ChevronRight className="w-4 h-4 opacity-0 group-hover/item:opacity-100 transition-all" />

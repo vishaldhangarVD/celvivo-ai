@@ -235,8 +235,19 @@ export default function AptitudeEnginePage() {
             </div>
           </div>
         </div>
-        {!result && (
-          <div className="flex items-center gap-6">
+
+        <div className="flex items-center gap-6">
+          {process.env.NODE_ENV === 'development' && (
+            <Button 
+              onClick={() => router.push('/interview/coding')}
+              variant="ghost" 
+              className="h-8 px-3 rounded-lg glass border-white/10 text-[9px] font-black uppercase tracking-widest hover:bg-accent/10 hover:text-accent mr-4"
+            >
+              Skip → Coding
+            </Button>
+          )}
+
+          {!result && (
             <div className="flex flex-col items-end">
               <div className={cn(
                 "px-6 py-2 rounded-xl glass border-white/10 font-mono text-xl tabular-nums transition-colors duration-500",
@@ -245,8 +256,8 @@ export default function AptitudeEnginePage() {
                 {formatTime(timeLeft)}
               </div>
             </div>
-          </div>
-        )}
+          )}
+        </div>
       </header>
 
       <main className="flex-1 container mx-auto px-6 py-12">

@@ -3,7 +3,6 @@ import { Suspense, useEffect, useState, useRef } from "react";
 import { useRouter, useParams, useSearchParams } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
-import { useDIDAgent } from "@/components/DIDAgent";
 import { 
   Loader2, 
   Send, 
@@ -26,7 +25,6 @@ function VirtualArenaContent() {
   const { user } = useUser();
   const db = useFirestore();
   const { toast } = useToast();
-  const { isReady: isAgentReady, speak } = useDIDAgent();
 
   const role = searchParams.get("role") || "Software Engineer";
   const company = searchParams.get("company") || "Standard Tech";
@@ -112,10 +110,6 @@ function VirtualArenaContent() {
 
             setTranscript([{ role: 'interviewer', text: response.nextQuestion }]);
             setAskedQuestions([response.nextQuestion]);
-// 🔥 Agent ला बोलायला सांग - पहिला प्रश्न
-setTimeout(() => {
-  speak(response.nextQuestion);
-}, 1000);
           }
         } catch (e) {
           console.error("Bootstrap Fault:", e);
@@ -165,10 +159,6 @@ setTimeout(() => {
       setTranscript(updatedTranscript);
       setAskedQuestions(prev => [...prev, response.nextQuestion]);
       setCurrentIdx(prev => prev + 1);
-      // 🔥 Agent ला पुढचा प्रश्न बोलायला सांग
-setTimeout(() => {
-  speak(response.nextQuestion);
-}, 500);
 
       if (response.isInterviewComplete) {
         finalizeSession(updatedTranscript);
@@ -240,7 +230,7 @@ setTimeout(() => {
               variant="ghost" 
               className="h-9 px-4 rounded-xl glass border-white/10 text-[9px] font-black uppercase tracking-widest hover:bg-accent/10 hover:text-accent"
             >
-              Skip to Coding Round
+              Skip → Coding
             </Button>
           )}
           <div className="px-5 py-2 glass rounded-full border-accent/20 font-mono text-accent">
@@ -252,47 +242,7 @@ setTimeout(() => {
       <main className="flex-1 flex flex-col relative">
         <div className="flex-1 flex items-center justify-center p-6 relative">
           <div className="w-full h-full max-w-7xl mx-auto relative rounded-[3rem] overflow-hidden bg-black shadow-[0_0_100px_rgba(0,0,0,0.5)] border border-white/5">
-            {/* Future Avatar Integration Root */}
-           {/* 🔥 D-ID Agent Container - Interview Live Avatar */}
-<div id="avatar-container" className="w-full h-full flex flex-col items-center justify-center bg-[#050816] z-20 relative">
-  
-  {/* Agent Status */}
-  <div className="absolute top-6 left-1/2 -translate-x-1/2 flex items-center gap-2 px-4 py-2 rounded-full bg-white/5 border border-white/10">
-    <div className={`w-2 h-2 rounded-full ${isAgentReady ? 'bg-green-500 animate-pulse' : 'bg-yellow-500'}`} />
-    <span className="text-[10px] font-bold uppercase tracking-widest text-white/60">
-      {isAgentReady ? 'AI Interviewer Online' : 'Initializing Neural Link...'}
-    </span>
-  </div>
-
-  {/* Agent Video Area - D-ID renders here */}
-  <div className="relative w-[300px] h-[300px] rounded-3xl overflow-hidden border border-accent/20 shadow-[0_0_60px_rgba(124,58,237,0.15)] bg-black/50">
-    {/* D-ID Agent will appear here as floating widget, but we style the container */}
-    <div className="absolute inset-0 flex items-center justify-center">
-      {!isAgentReady && (
-        <div className="text-center space-y-4">
-          <div className="w-20 h-20 rounded-full border-2 border-accent/20 border-t-accent animate-spin mx-auto" />
-          <p className="text-[10px] font-bold uppercase tracking-[0.4em] text-accent/40">Loading Avatar...</p>
-        </div>
-      )}
-    </div>
-  </div>
-
-  {/* Current Question Display */}
-  {transcript.length > 0 && transcript[transcript.length - 1].role === 'interviewer' && (
-    <motion.div 
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      className="absolute bottom-6 left-1/2 -translate-x-1/2 w-[90%] max-w-xl"
-    >
-      <div className="bg-black/60 backdrop-blur-xl border border-white/10 rounded-2xl p-5 text-center">
-        <p className="text-[10px] font-bold uppercase tracking-widest text-accent/60 mb-2">Interviewer Says</p>
-        <p className="text-lg text-white/90 font-light leading-relaxed">
-          {transcript[transcript.length - 1].text}
-        </p>
-      </div>
-    </motion.div>
-  )}
-</div>
+            <div id="avatar-placeholder" className="w-full h-full" />
           </div>
         </div>
 

@@ -103,6 +103,18 @@ export default function ResumeUploadPage() {
       <Navbar />
       <NavigationControls onHome={() => router.push('/')} />
 
+      {process.env.NODE_ENV === 'development' && (
+        <div className="fixed top-24 right-8 z-[100]">
+          <Button 
+            onClick={() => router.push('/interview/coding')}
+            variant="ghost" 
+            className="h-8 px-3 rounded-lg glass border-white/10 text-[9px] font-black uppercase tracking-widest hover:bg-accent/10 hover:text-accent"
+          >
+            Skip → Coding
+          </Button>
+        </div>
+      )}
+
       <main className="flex-1 container mx-auto px-6 flex items-center justify-center relative z-10 pt-16">
         <div className="grid lg:grid-cols-12 gap-8 max-w-6xl w-full">
           
@@ -142,7 +154,7 @@ export default function ResumeUploadPage() {
                     <Upload className="w-10 h-10 text-accent" />
                   </div>
                   <div className="space-y-2">
-                    <h3 className="text-2xl font-bold">Select PDF Blueprint</h3>
+                    h3 className="text-2xl font-bold">Select PDF Blueprint</h3>
                     <p className="text-[10px] text-muted-foreground uppercase tracking-widest font-black">Drag & Drop • PDF Only • Max 10MB</p>
                   </div>
                 </div>
