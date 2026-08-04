@@ -30,20 +30,17 @@ import {
   Terminal, 
   CheckCircle2, 
   Cpu, 
-  Settings,
-  ShieldCheck,
-  ChevronRight,
-  Loader2,
-  Check,
-  SkipForward,
-  Maximize2,
-  Minimize2,
-  AlertTriangle,
-  Sparkles,
-  Command,
-  Brain,
-  Keyboard,
-  XCircle
+  ShieldCheck, 
+  ChevronRight, 
+  Loader2, 
+  Check, 
+  SkipForward, 
+  Maximize2, 
+  Minimize2, 
+  AlertTriangle, 
+  Brain, 
+  XCircle,
+  Command
 } from 'lucide-react';
 import { useUser, useFirestore, useDoc } from '@/firebase';
 import { doc, updateDoc, serverTimestamp, getDoc } from 'firebase/firestore';
@@ -87,19 +84,17 @@ export default function CodingEnginePage() {
   const [timeLeft, setTimeLeft] = useState(45 * 60);
   const [isFullScreen, setIsFullScreen] = useState(false);
 
-  // Stats Tracking
+  // Stats & Results Tracking
   const [sessionResults, setSessionResults] = useState<Record<number, any>>({});
-
-  // Initialization State
+  
+  // Initialization & UI Flow State
   const [isInitializing, setIsInitializing] = useState(true);
   const [initMsgIdx, setInitMsgIdx] = useState(0);
-  
-  // UI Flow State
   const [isRunning, setIsRunning] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isFinalizing, setIsFinalizing] = useState(false);
   const [submitStep, setSubmitStep] = useState(0);
-  const [terminalOutput, setTerminalOutput] = useState("");
+  const [terminalOutput, setTerminalOutput] = useState("Ready to execute your code.");
   const [activeTerminalTab, setActiveTerminalTab] = useState("output");
 
   const journeyRef = useMemo(() => {
@@ -109,7 +104,7 @@ export default function CodingEnginePage() {
 
   const { data: journey, loading: journeyLoading } = useDoc(journeyRef);
 
-  // 1. Initialization Logic (Generate Questions via Gemini)
+  // Initialization Logic (Generate Questions via Gemini)
   useEffect(() => {
     async function initEnvironment() {
       if (!journey || !journeyRef || questions.length > 0) return;
@@ -155,7 +150,7 @@ export default function CodingEnginePage() {
     initEnvironment();
   }, [journey, journeyRef, questions.length, toast]);
 
-  // 2. Code Calibration
+  // Code Calibration
   useEffect(() => {
     if (questions[currentIdx]) {
       const q = questions[currentIdx];
@@ -167,10 +162,11 @@ export default function CodingEnginePage() {
         setCode(starter);
       }
       setCustomInput(q.sampleInput || "");
+      setTerminalOutput("Ready to execute your code.");
     }
   }, [currentIdx, selectedLang, questions]);
 
-  // 3. Timer Logic
+  // Timer Logic
   useEffect(() => {
     if (isInitializing || isFinalizing) return;
     const timer = setInterval(() => {
@@ -186,7 +182,7 @@ export default function CodingEnginePage() {
     return () => clearInterval(timer);
   }, [isInitializing, isFinalizing]);
 
-  // 4. Auto-Save Logic
+  // Auto-Save Logic
   useEffect(() => {
     const saveInterval = setInterval(() => {
       if (code && questions[currentIdx]) {
@@ -206,7 +202,7 @@ export default function CodingEnginePage() {
     if (isRunning || isSubmitting) return;
     setIsRunning(true);
     setActiveTerminalTab("output");
-    setTerminalOutput("Initializing node...\nCompiling code streams...\nWaiting for execution telemetry...");
+    setTerminalOutput("Executing Code...");
 
     try {
       const response = await fetch('/api/judge0/execute', {
@@ -224,14 +220,17 @@ export default function CodingEnginePage() {
       if (data.error) {
         setTerminalOutput(`[SYSTEM ERROR]\n${data.error}\n${data.details || ''}`);
       } else {
-        let output = `[EXECUTION RESULT]\n`;
-        output += `Status: ${data.status?.description || 'Unknown'}\n`;
-        if (data.time) output += `Time: ${data.time}s\n`;
-        if (data.memory) output += `Memory: ${Math.round(data.memory / 1024)}MB\n`;
+        let output = `[EXECUTION RESULT: ${data.status?.description || 'Unknown'}]\n`;
+        if (data.time) output += `Execution Time: ${data.time}s\n`;
+        if (data.memory) output += `Memory Usage: ${Math.round(data.memory / 1024)}MB\n`;
         
         if (data.stdout) output += `\nOutput:\n${data.stdout}`;
         if (data.stderr) output += `\nError:\n${data.stderr}`;
         if (data.compile_output) output += `\nCompile Output:\n${data.compile_output}`;
+
+        if (!data.stdout && !data.stderr && !data.compile_output) {
+          output += "\n(No output returned)";
+        }
 
         setTerminalOutput(output);
       }
@@ -239,22 +238,6 @@ export default function CodingEnginePage() {
       setTerminalOutput(`[NETWORK FAULT]\nFailed to connect to execution node: ${error.message}`);
     } finally {
       setIsRunning(false);
-    }
-  };
-
-  const handleNextQuestion = async (wasSkipped: boolean = false) => {
-    const newStatuses = [...questionStatuses];
-    newStatuses[currentIdx] = wasSkipped ? 'skipped' : 'submitted';
-    
-    if (currentIdx < 4) {
-      newStatuses[currentIdx + 1] = 'current';
-      setQuestionStatuses(newStatuses);
-      setCurrentIdx(currentIdx + 1);
-      setIsSubmitting(false);
-      setTerminalOutput("");
-    } else {
-      setQuestionStatuses(newStatuses);
-      await finalizeAssessment();
     }
   };
 
@@ -319,6 +302,22 @@ export default function CodingEnginePage() {
     }
   };
 
+  const handleNextQuestion = async (wasSkipped: boolean = false) => {
+    const newStatuses = [...questionStatuses];
+    newStatuses[currentIdx] = wasSkipped ? 'skipped' : 'submitted';
+    
+    if (currentIdx < 4) {
+      newStatuses[currentIdx + 1] = 'current';
+      setQuestionStatuses(newStatuses);
+      setCurrentIdx(currentIdx + 1);
+      setIsSubmitting(false);
+      setTerminalOutput("Ready to execute your code.");
+    } else {
+      setQuestionStatuses(newStatuses);
+      await finalizeAssessment();
+    }
+  };
+
   const skipQuestion = () => {
     if (hasUsedSkip) return;
     setHasUsedSkip(true);
@@ -359,7 +358,8 @@ export default function CodingEnginePage() {
         accuracy: totalTC > 0 ? Math.round((passedTC / totalTC) * 100) : 0,
         timeTaken: formatTime((45 * 60) - timeLeft),
         submissionTime: new Date().toLocaleTimeString(),
-        results: sessionResults
+        results: sessionResults,
+        language: selectedLang.label
       };
       
       await updateDoc(journeyRef, {
@@ -555,10 +555,15 @@ export default function CodingEnginePage() {
               />
             </div>
 
-            <div className="h-16 border-t border-white/5 bg-white/[0.02] flex items-center justify-between px-6">
+            <div className="h-16 border-t border-white/5 bg-white/[0.02] flex items-center justify-between px-6 shrink-0">
               <div className="flex items-center gap-3">
-                <Button onClick={runCode} disabled={isRunning || isSubmitting || isFinalizing} variant="ghost" className="h-10 px-6 rounded-xl glass border-white/10 text-[10px] font-black uppercase tracking-widest hover:bg-white/5">
-                  {isRunning ? <Loader2 className="w-3.5 h-3.5 mr-2 animate-spin" /> : <Play className="w-3.5 h-3.5 mr-2 text-green-400" />}
+                <Button 
+                  onClick={runCode} 
+                  disabled={isRunning || isSubmitting || isFinalizing} 
+                  variant="ghost" 
+                  className="h-10 px-8 rounded-xl glass border-white/10 text-[10px] font-black uppercase tracking-[0.2em] hover:bg-white/5 hover:text-accent transition-all"
+                >
+                  {isRunning ? <Loader2 className="w-3.5 h-3.5 mr-2 animate-spin" /> : <Play className="w-3.5 h-3.5 mr-2 text-green-400 fill-green-400" />}
                   RUN CODE
                 </Button>
 
@@ -589,14 +594,15 @@ export default function CodingEnginePage() {
                 disabled={isRunning || isSubmitting || isFinalizing || timeLeft <= 0} 
                 className="h-10 px-10 btn-premium rounded-xl text-[10px] font-black uppercase tracking-[0.2em] shadow-[0_10px_40px_rgba(147,51,234,0.3)]"
               >
-                SUBMIT CODE <Send className="ml-2 w-3.5 h-3.5" />
+                {isSubmitting ? <Loader2 className="w-3.5 h-3.5 mr-2 animate-spin" /> : <Send className="ml-2 w-3.5 h-3.5" />}
+                SUBMIT CODE
               </Button>
             </div>
           </Card>
 
           <Card className="h-[35%] glass border-white/5 bg-[#0b0e1a] flex flex-col overflow-hidden">
             <Tabs value={activeTerminalTab} onValueChange={setActiveTerminalTab} className="h-full flex flex-col">
-              <div className="px-4 h-10 border-b border-white/5 flex items-center justify-between bg-white/[0.02]">
+              <div className="px-4 h-10 border-b border-white/5 flex items-center justify-between bg-white/[0.02] shrink-0">
                 <TabsList className="bg-transparent gap-6 p-0 h-full">
                   <TabsTrigger value="output" className="h-full rounded-none border-b-2 border-transparent data-[state=active]:border-accent bg-transparent text-[9px] font-black uppercase tracking-widest text-white/30 data-[state=active]:text-accent">EXECUTION OUTPUT</TabsTrigger>
                   <TabsTrigger value="input" className="h-full rounded-none border-b-2 border-transparent data-[state=active]:border-accent bg-transparent text-[9px] font-black uppercase tracking-widest text-white/30 data-[state=active]:text-accent">CUSTOM STDIN</TabsTrigger>
@@ -604,19 +610,19 @@ export default function CodingEnginePage() {
                 </TabsList>
                 <span className="text-[8px] font-black text-white/10 uppercase tracking-widest">Neural Terminal v7.0</span>
               </div>
-              <div className="flex-1 font-mono text-[11px] overflow-y-auto custom-scrollbar">
-                <TabsContent value="output" className="mt-0 p-6 whitespace-pre-wrap text-white/60 leading-relaxed h-full">
-                  {terminalOutput || "// Execute current logic to see telemetry streams"}
+              <div className="flex-1 font-mono text-[11px] overflow-hidden">
+                <TabsContent value="output" className="mt-0 p-6 whitespace-pre-wrap text-white/60 leading-relaxed h-full overflow-y-auto custom-scrollbar">
+                  {terminalOutput}
                 </TabsContent>
-                <TabsContent value="input" className="mt-0 p-0 h-full">
+                <TabsContent value="input" className="mt-0 p-0 h-full overflow-hidden">
                   <textarea
                     value={customInput}
                     onChange={(e) => setCustomInput(e.target.value)}
-                    className="w-full h-full bg-transparent outline-none p-6 text-white/60 font-mono text-[11px] resize-none"
-                    placeholder="// Provide manual input for execution..."
+                    className="w-full h-full bg-transparent outline-none p-6 text-white/60 font-mono text-[11px] resize-none custom-scrollbar"
+                    placeholder="// Provide manual input for execution node..."
                   />
                 </TabsContent>
-                <TabsContent value="cases" className="mt-0 p-6 space-y-4 h-full">
+                <TabsContent value="cases" className="mt-0 p-6 space-y-4 h-full overflow-y-auto custom-scrollbar">
                    <div className="space-y-4">
                      <div className="flex justify-between items-center px-1">
                         <p className="text-white/40 uppercase text-[9px] font-black tracking-widest">Hidden Verification Matrix</p>
@@ -629,11 +635,14 @@ export default function CodingEnginePage() {
                      <div className="grid gap-2">
                         {sessionResults[currentIdx]?.results?.map((res: any, i: number) => (
                           <div key={i} className="flex items-center justify-between p-3 rounded-xl border border-white/5 bg-white/[0.02] group hover:bg-white/[0.04] transition-all">
-                            <span className="text-[10px] font-bold text-white/40">Test Case Node {i+1}</span>
+                            <div className="flex items-center gap-3">
+                              <ShieldCheck className={cn("w-3.5 h-3.5", res.passed ? "text-green-500" : "text-white/10")} />
+                              <span className="text-[10px] font-bold text-white/40">Verification Node {i+1}</span>
+                            </div>
                             {res.passed ? (
-                              <Badge className="bg-green-500/20 text-green-400 border-none text-[8px] uppercase px-3 py-1">✓ PASSED</Badge>
+                              <Badge className="bg-green-500/20 text-green-400 border-none text-[8px] font-black uppercase px-3 py-1">✓ PASSED</Badge>
                             ) : (
-                              <Badge className="bg-red-500/20 text-red-400 border-none text-[8px] uppercase px-3 py-1">× FAILED</Badge>
+                              <Badge className="bg-red-500/20 text-red-400 border-none text-[8px] font-black uppercase px-3 py-1">× FAILED</Badge>
                             )}
                           </div>
                         )) || (
@@ -706,8 +715,6 @@ export default function CodingEnginePage() {
           </motion.div>
         )}
       </AnimatePresence>
-
-      <NavigationControls onHome={() => router.push('/')} />
     </div>
   );
 }
