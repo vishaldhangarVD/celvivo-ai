@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect, useMemo, useCallback } from 'react';
@@ -86,8 +87,8 @@ export default function CodingEnginePage() {
   const [timeLeft, setTimeLeft] = useState(45 * 60);
   const [isFullScreen, setIsFullScreen] = useState(false);
 
-  // Stats Tracking for Firestore
-  const [sessionResults, setSessionResults] = useState<any[]>([]);
+  // Stats Tracking
+  const [sessionResults, setSessionResults] = useState<Record<number, any>>({});
 
   // Initialization State
   const [isInitializing, setIsInitializing] = useState(true);
@@ -197,7 +198,7 @@ export default function CodingEnginePage() {
 
   const forceSubmit = async () => {
     setIsFinalizing(true);
-    toast({ title: "Time Over", description: "Submitting your solution...", variant: "destructive" });
+    toast({ title: "Time Over", description: "Submitting your assessment...", variant: "destructive" });
     await finalizeAssessment();
   };
 
@@ -205,7 +206,7 @@ export default function CodingEnginePage() {
     if (isRunning || isSubmitting) return;
     setIsRunning(true);
     setActiveTerminalTab("output");
-    setTerminalOutput("Compiling Code...\nRunning Implementation...\nWaiting for Execution Result...");
+    setTerminalOutput("Initializing node...\nCompiling code streams...\nWaiting for execution telemetry...");
 
     try {
       const response = await fetch('/api/judge0/execute', {
@@ -223,7 +224,7 @@ export default function CodingEnginePage() {
       if (data.error) {
         setTerminalOutput(`[SYSTEM ERROR]\n${data.error}\n${data.details || ''}`);
       } else {
-        let output = `[EXECUTION COMPLETED]\n\n`;
+        let output = `[EXECUTION RESULT]\n`;
         output += `Status: ${data.status?.description || 'Unknown'}\n`;
         if (data.time) output += `Time: ${data.time}s\n`;
         if (data.memory) output += `Memory: ${Math.round(data.memory / 1024)}MB\n`;
@@ -235,7 +236,7 @@ export default function CodingEnginePage() {
         setTerminalOutput(output);
       }
     } catch (error: any) {
-      setTerminalOutput(`[NETWORK ERROR]\nFailed to connect to execution node: ${error.message}`);
+      setTerminalOutput(`[NETWORK FAULT]\nFailed to connect to execution node: ${error.message}`);
     } finally {
       setIsRunning(false);
     }
@@ -260,8 +261,8 @@ export default function CodingEnginePage() {
   const submitQuestion = async () => {
     if (isSubmitting || isRunning) return;
     setIsSubmitting(true);
-    setActiveTerminalTab("output");
-    setTerminalOutput("Checking Hidden Test Cases...\nEvaluating Solution...");
+    setActiveTerminalTab("cases");
+    setTerminalOutput("Initializing hidden verification matrix...\nAuditing implementation logic...");
 
     const currentQ = questions[currentIdx];
 
@@ -279,7 +280,7 @@ export default function CodingEnginePage() {
       const data = await response.json();
 
       if (data.error) {
-        setTerminalOutput(`[EVALUATION ERROR]\n${data.error}`);
+        setTerminalOutput(`[AUDIT ERROR]\n${data.error}`);
         setIsSubmitting(false);
         return;
       }
@@ -289,22 +290,31 @@ export default function CodingEnginePage() {
       const passed = results.filter((r: any) => r.passed).length;
       const allPassed = passed === total;
 
-      setSessionResults(prev => [...prev, {
-        questionId: currentQ.id,
-        results,
-        allPassed,
-        language: selectedLang.label
-      }]);
+      setSessionResults(prev => ({
+        ...prev,
+        [currentIdx]: {
+          questionId: currentQ.id,
+          results,
+          allPassed,
+          passedCount: passed,
+          totalCount: total,
+          language: selectedLang.label
+        }
+      }));
 
       if (allPassed) {
-        setTerminalOutput(`[QUESTION SUBMITTED]\nAll ${total} Hidden Test Cases Passed.\nNode Verification: SUCCESS`);
-        setTimeout(() => handleNextQuestion(false), 1000);
+        toast({ title: "Node Verified", description: "All hidden test cases passed." });
+        setTimeout(() => handleNextQuestion(false), 1500);
       } else {
-        setTerminalOutput(`[EVALUATION FAILED]\nPassed: ${passed}/${total} Test Cases.\nNeural Verification: FAILED\n\nPlease refine your logic and retry.`);
+        toast({ 
+          variant: "destructive", 
+          title: "Node Logic Failed", 
+          description: `Passed ${passed}/${total} test cases. Please refine your implementation.` 
+        });
         setIsSubmitting(false);
       }
     } catch (error: any) {
-      setTerminalOutput(`[SYSTEM ERROR]\nEvaluation node connection failed.`);
+      setTerminalOutput(`[CRITICAL FAULT]\nVerification node connection lost.`);
       setIsSubmitting(false);
     }
   };
@@ -312,26 +322,30 @@ export default function CodingEnginePage() {
   const skipQuestion = () => {
     if (hasUsedSkip) return;
     setHasUsedSkip(true);
-    setSessionResults(prev => [...prev, {
-      questionId: questions[currentIdx].id,
-      allPassed: false,
-      skipped: true
-    }]);
+    setSessionResults(prev => ({
+      ...prev,
+      [currentIdx]: {
+        questionId: questions[currentIdx].id,
+        allPassed: false,
+        skipped: true
+      }
+    }));
     handleNextQuestion(true);
   };
 
   const finalizeAssessment = async () => {
     setIsFinalizing(true);
-    const steps = ["Compiling Final Submission...", "Running Hidden Test Cases...", "Checking Performance...", "Generating Coding Report..."];
+    const steps = ["Compiling Master Submission...", "Running Final Audit...", "Validating Performance Metrics...", "Generating Dossier..."];
     for (let i = 0; i < steps.length; i++) {
       setSubmitStep(i);
       await new Promise(r => setTimeout(r, 1200));
     }
 
     if (user && db && journeyRef) {
-      const passedCount = sessionResults.filter(r => r.allPassed).length;
-      const totalTC = sessionResults.reduce((acc, r) => acc + (r.results?.length || 0), 0);
-      const passedTC = sessionResults.reduce((acc, r) => acc + (r.results?.filter((res: any) => res.passed).length || 0), 0);
+      const resultsArray = Object.values(sessionResults);
+      const passedCount = resultsArray.filter(r => r.allPassed).length;
+      const totalTC = resultsArray.reduce((acc, r) => acc + (r.results?.length || 0), 0);
+      const passedTC = resultsArray.reduce((acc, r) => acc + (r.results?.filter((res: any) => res.passed).length || 0), 0);
 
       const finalReport = {
         score: Math.round((passedCount / 5) * 100),
@@ -402,6 +416,7 @@ export default function CodingEnginePage() {
     <div className={cn("h-screen bg-[#050816] flex flex-col overflow-hidden relative", isFullScreen && "fixed inset-0 z-[1000]")}>
       <div className="particles-bg" />
       <Navbar />
+      <NavigationControls onHome={() => router.push('/')} />
       
       <header className="h-20 border-b border-white/5 bg-[#0b0e1a]/80 backdrop-blur-xl flex items-center justify-between px-8 z-50">
         <div className="flex items-center gap-6">
@@ -544,7 +559,7 @@ export default function CodingEnginePage() {
               <div className="flex items-center gap-3">
                 <Button onClick={runCode} disabled={isRunning || isSubmitting || isFinalizing} variant="ghost" className="h-10 px-6 rounded-xl glass border-white/10 text-[10px] font-black uppercase tracking-widest hover:bg-white/5">
                   {isRunning ? <Loader2 className="w-3.5 h-3.5 mr-2 animate-spin" /> : <Play className="w-3.5 h-3.5 mr-2 text-green-400" />}
-                  Run Code
+                  RUN CODE
                 </Button>
 
                 {!hasUsedSkip && (
@@ -574,7 +589,7 @@ export default function CodingEnginePage() {
                 disabled={isRunning || isSubmitting || isFinalizing || timeLeft <= 0} 
                 className="h-10 px-10 btn-premium rounded-xl text-[10px] font-black uppercase tracking-[0.2em] shadow-[0_10px_40px_rgba(147,51,234,0.3)]"
               >
-                Submit Node <Send className="ml-2 w-3.5 h-3.5" />
+                SUBMIT CODE <Send className="ml-2 w-3.5 h-3.5" />
               </Button>
             </div>
           </Card>
@@ -583,9 +598,9 @@ export default function CodingEnginePage() {
             <Tabs value={activeTerminalTab} onValueChange={setActiveTerminalTab} className="h-full flex flex-col">
               <div className="px-4 h-10 border-b border-white/5 flex items-center justify-between bg-white/[0.02]">
                 <TabsList className="bg-transparent gap-6 p-0 h-full">
-                  <TabsTrigger value="output" className="h-full rounded-none border-b-2 border-transparent data-[state=active]:border-accent bg-transparent text-[9px] font-black uppercase tracking-widest text-white/30 data-[state=active]:text-accent">Execution Output</TabsTrigger>
-                  <TabsTrigger value="input" className="h-full rounded-none border-b-2 border-transparent data-[state=active]:border-accent bg-transparent text-[9px] font-black uppercase tracking-widest text-white/30 data-[state=active]:text-accent">Custom Stdin</TabsTrigger>
-                  <TabsTrigger value="cases" className="h-full rounded-none border-b-2 border-transparent data-[state=active]:border-accent bg-transparent text-[9px] font-black uppercase tracking-widest text-white/30 data-[state=active]:text-accent">Test Status</TabsTrigger>
+                  <TabsTrigger value="output" className="h-full rounded-none border-b-2 border-transparent data-[state=active]:border-accent bg-transparent text-[9px] font-black uppercase tracking-widest text-white/30 data-[state=active]:text-accent">EXECUTION OUTPUT</TabsTrigger>
+                  <TabsTrigger value="input" className="h-full rounded-none border-b-2 border-transparent data-[state=active]:border-accent bg-transparent text-[9px] font-black uppercase tracking-widest text-white/30 data-[state=active]:text-accent">CUSTOM STDIN</TabsTrigger>
+                  <TabsTrigger value="cases" className="h-full rounded-none border-b-2 border-transparent data-[state=active]:border-accent bg-transparent text-[9px] font-black uppercase tracking-widest text-white/30 data-[state=active]:text-accent">TEST STATUS</TabsTrigger>
                 </TabsList>
                 <span className="text-[8px] font-black text-white/10 uppercase tracking-widest">Neural Terminal v7.0</span>
               </div>
@@ -598,23 +613,35 @@ export default function CodingEnginePage() {
                     value={customInput}
                     onChange={(e) => setCustomInput(e.target.value)}
                     className="w-full h-full bg-transparent outline-none p-6 text-white/60 font-mono text-[11px] resize-none"
-                    placeholder="// Provide input for execution..."
+                    placeholder="// Provide manual input for execution..."
                   />
                 </TabsContent>
                 <TabsContent value="cases" className="mt-0 p-6 space-y-4 h-full">
-                   <div className="space-y-3">
-                     <p className="text-white/40 uppercase text-[9px] mb-2">Hidden Verification Matrix</p>
+                   <div className="space-y-4">
+                     <div className="flex justify-between items-center px-1">
+                        <p className="text-white/40 uppercase text-[9px] font-black tracking-widest">Hidden Verification Matrix</p>
+                        {sessionResults[currentIdx] && (
+                          <span className="text-[10px] font-bold text-accent uppercase tracking-widest">
+                            {sessionResults[currentIdx].passedCount} / {sessionResults[currentIdx].totalCount} Passed
+                          </span>
+                        )}
+                     </div>
                      <div className="grid gap-2">
                         {sessionResults[currentIdx]?.results?.map((res: any, i: number) => (
-                          <div key={i} className="flex items-center justify-between p-3 rounded-xl border border-white/5 bg-white/[0.02]">
-                            <span className="text-[10px] font-bold text-white/40">Case Node {i+1}</span>
+                          <div key={i} className="flex items-center justify-between p-3 rounded-xl border border-white/5 bg-white/[0.02] group hover:bg-white/[0.04] transition-all">
+                            <span className="text-[10px] font-bold text-white/40">Test Case Node {i+1}</span>
                             {res.passed ? (
-                              <Badge className="bg-green-500/20 text-green-400 border-none text-[8px] uppercase">✓ PASS</Badge>
+                              <Badge className="bg-green-500/20 text-green-400 border-none text-[8px] uppercase px-3 py-1">✓ PASSED</Badge>
                             ) : (
-                              <Badge className="bg-red-500/20 text-red-400 border-none text-[8px] uppercase">× FAIL</Badge>
+                              <Badge className="bg-red-500/20 text-red-400 border-none text-[8px] uppercase px-3 py-1">× FAILED</Badge>
                             )}
                           </div>
-                        )) || <p className="text-white/20 italic">Awaiting submission for verification...</p>}
+                        )) || (
+                          <div className="py-12 flex flex-col items-center gap-4 text-center opacity-20">
+                            <ShieldCheck className="w-8 h-8" />
+                            <p className="text-[10px] font-black uppercase tracking-widest">Awaiting logic submission for neural verification</p>
+                          </div>
+                        )}
                      </div>
                    </div>
                 </TabsContent>
@@ -645,7 +672,7 @@ export default function CodingEnginePage() {
               <h2 className="text-4xl font-bold tracking-tighter text-premium uppercase">Evaluating Submission</h2>
               
               <div className="grid gap-3 text-left">
-                {["Compiling Final Submission...", "Running Hidden Test Cases...", "Checking Performance...", "Generating Coding Report..."].map((step, idx) => (
+                {["Compiling Master Submission...", "Running Final Audit...", "Validating Performance Metrics...", "Generating Dossier..."].map((step, idx) => (
                   <motion.div 
                     key={idx}
                     initial={{ opacity: 0, x: -20 }}
