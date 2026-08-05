@@ -20,8 +20,14 @@ const LANGUAGE_MAP: Record<string, { language: string; version: string }> = {
 
 export async function POST(req: Request) {
   try {
-    const { source_code, language, stdin, testCases } = await req.json();
+    const body = await req.json();
+    const { source_code, language, stdin, testCases } = body;
     const config = LANGUAGE_MAP[language];
+
+    console.log("========== EXECUTION REQUEST ==========");
+    console.log(`Selected Language: ${language}`);
+    console.log(`Mapped Config: ${JSON.stringify(config)}`);
+    console.log("======================================");
 
     if (!config) {
       return NextResponse.json({ error: `Protocol for ${language} not defined.` }, { status: 400 });
@@ -41,16 +47,30 @@ export async function POST(req: Request) {
         }),
       });
 
+      console.log(`[Piston] Response Status: ${response.status} ${response.statusText}`);
+
       if (!response.ok) {
         throw new Error(`Piston API Error: ${response.statusText}`);
       }
 
       const data = await response.json();
+      console.log("========== PISTON RESPONSE (SINGLE) ==========");
+      console.log(JSON.stringify(data, null, 2));
+      console.log("==============================================");
+
+      // Validate Piston Response Structure
+      if (!data || !data.run) {
+        return NextResponse.json({
+          error: "Invalid response from Piston",
+          response: data
+        }, { status: 500 });
+      }
+
       const executionTime = ((Date.now() - startTime) / 1000).toFixed(3);
 
       return NextResponse.json({
-        stdout: data.run.stdout,
-        stderr: data.run.stderr,
+        stdout: data.run.stdout || "",
+        stderr: data.run.stderr || "",
         compile_output: data.compile?.stderr || data.compile?.stdout || "",
         status: { description: data.run.code === 0 ? "Accepted" : "Runtime Error" },
         time: executionTime,
@@ -69,19 +89,49 @@ export async function POST(req: Request) {
             language: config.language,
             version: config.version,
             files: [{ content: source_code }],
-            stdin: tc.input,
+            stdin: tc.input || "",
           }),
         });
 
+        if (!response.ok) {
+          results.push({
+            status: { description: "API Error" },
+            stdout: "",
+            stderr: `Piston API Error: ${response.statusText}`,
+            compile_output: "",
+            time: "0.000",
+            memory: "N/A",
+            passed: false
+          });
+          continue;
+        }
+
         const data = await response.json();
+        console.log("========== PISTON RESPONSE (BATCH) ==========");
+        console.log(JSON.stringify(data, null, 2));
+        console.log("=============================================");
+
+        if (!data || !data.run) {
+          results.push({
+            status: { description: "Piston Error" },
+            stdout: "",
+            stderr: "Invalid response from Piston node.",
+            compile_output: "",
+            time: "0.000",
+            memory: "N/A",
+            passed: false
+          });
+          continue;
+        }
+
         const executionTime = ((Date.now() - startTime) / 1000).toFixed(3);
-        const actualOutput = data.run.stdout?.trim();
-        const expectedOutput = tc.output?.trim();
+        const actualOutput = (data.run.stdout || "").trim();
+        const expectedOutput = (tc.output || "").trim();
         
         results.push({
           status: { description: data.run.code === 0 ? "Accepted" : "Runtime Error" },
-          stdout: data.run.stdout,
-          stderr: data.run.stderr,
+          stdout: data.run.stdout || "",
+          stderr: data.run.stderr || "",
           compile_output: data.compile?.stderr || "",
           time: executionTime,
           memory: "N/A",
