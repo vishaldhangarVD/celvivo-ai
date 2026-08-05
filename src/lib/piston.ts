@@ -1,6 +1,6 @@
 /**
  * @fileOverview Piston API Integration for Nexvoro AI.
- * Handles high-fidelity code execution across 7 core programming languages.
+ * Handles high-fidelity code execution across core programming languages.
  */
 
 export type ExecutionResult = {
@@ -12,16 +12,17 @@ export type ExecutionResult = {
 };
 
 const LANGUAGE_MAP: Record<string, { language: string; version: string }> = {
-  javascript: { language: 'javascript', version: '18.15.0' },
   python: { language: 'python', version: '3.10.0' },
   java: { language: 'java', version: '15.0.2' },
   cpp: { language: 'cpp', version: '10.2.0' },
+  javascript: { language: 'javascript', version: '18.15.0' },
   c: { language: 'c', version: '10.2.0' },
   csharp: { language: 'csharp', version: '6.12.0' },
   go: { language: 'go', version: '1.16.2' },
+  rust: { language: 'rust', version: '1.40.0' },
 };
 
-export async function executeCode(language: string, code: string): Promise<ExecutionResult> {
+export async function executeCode(language: string, code: string, stdin: string = ""): Promise<ExecutionResult> {
   const config = LANGUAGE_MAP[language];
   if (!config) throw new Error(`Protocol for ${language} not defined.`);
 
@@ -33,6 +34,7 @@ export async function executeCode(language: string, code: string): Promise<Execu
         language: config.language,
         version: config.version,
         files: [{ content: code }],
+        stdin: stdin,
       }),
     });
 

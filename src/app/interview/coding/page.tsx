@@ -37,7 +37,6 @@ import { doc, updateDoc, serverTimestamp, getDoc } from 'firebase/firestore';
 import { generateCodingQuestions, type CodingProblem } from '@/ai/flows/ai-coding-generator';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
-import { getJudge0LanguageId } from '@/lib/judge0-languages';
 
 const LANGUAGES = [
   { id: 'python', label: 'Python 3', monaco: 'python' },
@@ -150,12 +149,12 @@ export default function CodingEnginePage() {
     const currentQ = questions[currentIdx];
 
     try {
-      const response = await fetch('/api/judge0/execute', {
+      const response = await fetch('/api/execute', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           source_code: code,
-          language_id: getJudge0LanguageId(selectedLang.id),
+          language: selectedLang.id,
           testCases: currentQ.hiddenTestCases
         }),
       });
@@ -246,12 +245,12 @@ export default function CodingEnginePage() {
     setTerminalOutput("Executing Code...");
 
     try {
-      const response = await fetch('/api/judge0/execute', {
+      const response = await fetch('/api/execute', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           source_code: code,
-          language_id: getJudge0LanguageId(selectedLang.id),
+          language: selectedLang.id,
           stdin: customInput
         }),
       });
@@ -266,7 +265,7 @@ export default function CodingEnginePage() {
         setTerminalOutput(`[SYSTEM ERROR]\n${data.error}`);
       } else {
         let output = `[STATUS: ${data.status?.description || 'Unknown'}]\n`;
-        if (data.time) output += `Time: ${data.time}s | Memory: ${Math.round(data.memory / 1024)}MB\n\n`;
+        if (data.time) output += `Time: ${data.time}s | Memory: ${data.memory}\n\n`;
         
         if (data.stdout) output += `Output:\n${data.stdout}`;
         if (data.stderr) output += `Error:\n${data.stderr}`;
