@@ -1,130 +1,107 @@
 import { NextResponse } from 'next/server';
 
 /**
- * @fileOverview Secure server-side proxy for Piston code execution.
- * Handles single run and batch test case verification with robust error auditing.
+ * @fileOverview JDoodle Neural Execution Gateway.
+ * Provides a secure bridge for real-time code compilation and logic verification.
+ * Replaces legacy Piston/Judge0 protocols.
  */
 
-const PISTON_URL = 'https://emkc.org/api/v2/piston/execute';
+const JDOODLE_URL = 'https://api.jdoodle.com/v1/execute';
 
-const LANGUAGE_MAP: Record<string, { language: string; version: string; extension: string }> = {
-  python: { language: 'python', version: '3.10.0', extension: 'py' },
-  java: { language: 'java', version: '15.0.2', extension: 'java' },
-  cpp: { language: 'cpp', version: '10.2.0', extension: 'cpp' },
-  javascript: { language: 'javascript', version: '18.15.0', extension: 'js' },
-  c: { language: 'c', version: '10.2.0', extension: 'c' },
-  csharp: { language: 'csharp', version: '6.12.0', extension: 'cs' },
-  go: { language: 'go', version: '1.16.2', extension: 'go' },
-  rust: { language: 'rust', version: '1.40.0', extension: 'rs' },
+// Configuration Mapping for JDoodle Language Protocols
+const LANGUAGE_MAP: Record<string, { language: string; versionIndex: string }> = {
+  python: { language: 'python3', versionIndex: '4' },
+  java: { language: 'java', versionIndex: '4' },
+  cpp: { language: 'cpp17', versionIndex: '1' },
+  javascript: { language: 'nodejs', versionIndex: '4' },
+  c: { language: 'c', versionIndex: '4' },
+  csharp: { language: 'csharp', versionIndex: '4' },
+  go: { language: 'go', versionIndex: '4' },
+  rust: { language: 'rust', versionIndex: '4' },
 };
 
 export async function POST(req: Request) {
   try {
-    // 1. Parse and validate the incoming request body
     const body = await req.json().catch(() => null);
-    if (!body) {
-      return NextResponse.json({ error: "Missing or malformed JSON payload." }, { status: 400 });
-    }
+    if (!body) return NextResponse.json({ error: "Missing logic payload." }, { status: 400 });
 
     const { source_code, language, stdin, testCases } = body;
     const config = LANGUAGE_MAP[language];
 
-    if (!config) {
-      return NextResponse.json({ error: `Protocol for language "${language}" is not defined.` }, { status: 400 });
-    }
+    // Placeholder credentials - In production, these should come from process.env.JDOODLE_CLIENT_ID / SECRET
+    const clientId = process.env.JDOODLE_CLIENT_ID || "";
+    const clientSecret = process.env.JDOODLE_CLIENT_SECRET || "";
 
-    if (!source_code) {
-      return NextResponse.json({ error: "Implementation node cannot be empty." }, { status: 400 });
-    }
+    if (!config) return NextResponse.json({ error: `Language protocol "${language}" not supported.` }, { status: 400 });
+    if (!source_code) return NextResponse.json({ error: "Implementation node empty." }, { status: 400 });
 
-    // 2. Single Execution Logic (Run Code Protocol)
+    // Node 1: Single Run Mode (Manual Debugging)
     if (!testCases || !Array.isArray(testCases)) {
-      const response = await fetch(PISTON_URL, {
+      const response = await fetch(JDOODLE_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          language: config.language,
-          version: config.version,
-          files: [{ name: `main.${config.extension}`, content: source_code }],
+          clientId,
+          clientSecret,
+          script: source_code,
           stdin: stdin || "",
+          language: config.language,
+          versionIndex: config.versionIndex,
         }),
       });
 
       const data = await response.json();
-
-      if (!response.ok || !data || !data.run) {
-        return NextResponse.json({
-          error: "Execution node returned an error.",
-          details: data?.message || response.statusText,
-          response: data
-        }, { status: response.status || 500 });
+      
+      if (data.error) {
+        return NextResponse.json({ error: data.error, details: "JDoodle Node Error" }, { status: 500 });
       }
 
       return NextResponse.json({
-        stdout: data.run.stdout || "",
-        stderr: data.run.stderr || "",
-        compile_output: data.compile?.stderr || data.compile?.stdout || "",
-        status: { description: data.run.code === 0 ? "Accepted" : "Runtime Error" },
-        time: data.run.time || "0.000",
-        memory: "N/A"
+        stdout: data.output || "",
+        stderr: "", // JDoodle bundles stderr into output usually
+        compile_output: "",
+        status: { description: data.statusCode === 200 ? "Accepted" : "Execution Finished" },
+        time: data.cpuTime || "0.00",
+        memory: data.memory || "N/A"
       });
-    } 
+    }
 
-    // 3. Batch Execution Logic (Submit Code / Hidden Test Cases)
+    // Node 2: Batch Audit Mode (Hidden Test Case Verification)
     const results = [];
-    
     for (const tc of testCases) {
       try {
-        const response = await fetch(PISTON_URL, {
+        const response = await fetch(JDOODLE_URL, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            language: config.language,
-            version: config.version,
-            files: [{ name: `main.${config.extension}`, content: source_code }],
+            clientId,
+            clientSecret,
+            script: source_code,
             stdin: tc.input || "",
+            language: config.language,
+            versionIndex: config.versionIndex,
           }),
         });
 
         const data = await response.json();
-
-        if (!response.ok || !data || !data.run) {
-          results.push({
-            status: { description: "API Error" },
-            stdout: "",
-            stderr: data?.message || `Piston Node Status: ${response.status}`,
-            passed: false
-          });
-          continue;
-        }
-
-        const actualOutput = (data.run.stdout || "").trim();
+        const actualOutput = (data.output || "").trim();
         const expectedOutput = (tc.output || "").trim();
-        
+
         results.push({
-          status: { description: data.run.code === 0 ? "Accepted" : "Runtime Error" },
-          stdout: data.run.stdout || "",
-          stderr: data.run.stderr || "",
-          compile_output: data.compile?.stderr || "",
-          time: data.run.time || "0.000",
-          passed: actualOutput === expectedOutput && data.run.code === 0
+          status: { description: data.statusCode === 200 ? "Accepted" : "Finished" },
+          stdout: data.output || "",
+          time: data.cpuTime || "0.00",
+          passed: actualOutput === expectedOutput
         });
-      } catch (innerError: any) {
-        results.push({
-          status: { description: "Node Failure" },
-          stderr: innerError.message,
-          passed: false
-        });
+      } catch (e: any) {
+        results.push({ status: { description: "Node Failure" }, passed: false });
       }
     }
 
     return NextResponse.json({ results });
 
   } catch (error: any) {
-    console.error('[Piston API Proxy] Critical Failure:', error);
-    return NextResponse.json({ 
-      error: "Neural execution node encountered a critical fault.", 
-      details: error.message 
-    }, { status: 500 });
+    console.error('[JDoodle API Proxy] Fault:', error);
+    return NextResponse.json({ error: "Neural execution node encountered a critical fault." }, { status: 500 });
   }
 }
