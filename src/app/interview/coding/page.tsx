@@ -30,7 +30,8 @@ import {
   Mic, 
   Sparkles,
   ChevronLeft,
-  Timer
+  Timer,
+  Lightbulb
 } from 'lucide-react';
 import { useUser, useFirestore, useDoc } from '@/firebase';
 import { doc, updateDoc, serverTimestamp, getDoc, collection, addDoc } from 'firebase/firestore';
