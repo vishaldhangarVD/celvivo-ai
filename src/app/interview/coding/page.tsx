@@ -444,6 +444,18 @@ export default function CodingEnginePage() {
                   </div>
                 </div>
 
+                {currentQ?.walkthrough && (
+                  <div className="space-y-4 p-6 glass border-white/5 rounded-3xl bg-white/[0.02]">
+                    <h4 className="text-[11px] font-black uppercase tracking-[0.3em] text-white/40">EXAMPLE WALKTHROUGH</h4>
+                    <div className="space-y-3 text-[10px] font-mono leading-relaxed">
+                       <div className="flex gap-4"><span className="text-white/20 w-24">INPUT:</span> <span className="text-accent">{currentQ.walkthrough.input}</span></div>
+                       <div className="flex gap-4"><span className="text-white/20 w-24">RECEIVED:</span> <span className="text-purple-400">{currentQ.walkthrough.received}</span></div>
+                       <div className="flex gap-4"><span className="text-white/20 w-24">EXPECTED:</span> <span className="text-green-400">{currentQ.walkthrough.expected}</span></div>
+                       <div className="flex gap-4"><span className="text-white/20 w-24">OUTPUT:</span> <span className="text-green-400">{currentQ.walkthrough.output}</span></div>
+                    </div>
+                  </div>
+                )}
+
                 <Card className="p-6 glass border-purple-500/20 bg-purple-500/[0.02] space-y-3">
                   <h4 className="text-[11px] font-black uppercase tracking-[0.3em] text-purple-400 flex items-center gap-2">
                     <Sparkles className="w-4 h-4" /> AI AUDIT NOTE
@@ -465,8 +477,8 @@ export default function CodingEnginePage() {
                  <Rocket className="w-6 h-6 animate-pulse" />
               </div>
               <div>
-                <h3 className="text-sm font-black uppercase tracking-widest text-white">MISSION PROTOCOL</h3>
-                <p className="text-[10px] text-white/40 uppercase tracking-widest mt-1">Complete the logic node inside the IDE. Audit checks all hidden boundary cases.</p>
+                <h3 className="text-sm font-black uppercase tracking-widest text-white">MISSION</h3>
+                <p className="text-[10px] text-white/40 uppercase tracking-widest mt-1">Complete the function provided. Use "Run Sample" to verify and "Submit Node" for audit.</p>
               </div>
             </div>
             <div className="flex items-center gap-3 bg-black/40 px-4 py-2 rounded-xl border border-white/5">
@@ -504,13 +516,27 @@ export default function CodingEnginePage() {
 
             <div className="h-32 border-t border-white/5 bg-white/[0.02] flex items-center justify-between px-10">
               <div className="flex items-center gap-12">
-                <Button onClick={handleRunCode} disabled={isRunning || isSubmitting || isTimeExpired} className="h-12 px-8 glass border-white/10 bg-white/5 text-[10px] font-black uppercase tracking-widest rounded-xl hover:bg-white/10 transition-all">
-                  {isRunning ? <Loader2 className="w-4 animate-spin mr-2" /> : <Activity className="w-4 h-4 mr-2" />} RUN SAMPLE
-                </Button>
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button onClick={handleRunCode} disabled={isRunning || isSubmitting || isTimeExpired} className="h-12 px-8 glass border-white/10 bg-white/5 text-[10px] font-black uppercase tracking-widest rounded-xl hover:bg-white/10 transition-all">
+                        {isRunning ? <Loader2 className="w-4 animate-spin mr-2" /> : <Activity className="w-4 h-4 mr-2" />} RUN SAMPLE
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent className="glass border-white/10 bg-[#0b0e1a] text-white">Run against visible sample only.</TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
 
-                <Button onClick={handleSubmitCode} disabled={isRunning || isSubmitting || isTimeExpired} className="h-12 px-8 btn-premium rounded-xl text-[10px] font-black uppercase tracking-widest shadow-2xl">
-                  {isSubmitting ? <Loader2 className="w-4 animate-spin mr-2" /> : <ShieldCheck className="w-4 h-4 mr-2" />} SUBMIT NODE
-                </Button>
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button onClick={handleSubmitCode} disabled={isRunning || isSubmitting || isTimeExpired} className="h-12 px-8 btn-premium rounded-xl text-[10px] font-black uppercase tracking-widest shadow-2xl">
+                        {isSubmitting ? <Loader2 className="w-4 animate-spin mr-2" /> : <ShieldCheck className="w-4 h-4 mr-2" />} SUBMIT NODE
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent className="glass border-white/10 bg-[#0b0e1a] text-white">Run against all hidden test cases.</TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
               </div>
 
               <div className="flex items-center gap-4">
@@ -523,13 +549,20 @@ export default function CodingEnginePage() {
                 </select>
 
                 {currentIdx < questions.length - 1 ? (
-                  <Button 
-                    onClick={() => setCurrentIdx(prev => prev + 1)} 
-                    disabled={!isCurrentSubmitted} 
-                    className="h-12 px-8 btn-premium rounded-xl text-[10px] font-black uppercase tracking-widest disabled:opacity-20 disabled:grayscale transition-all"
-                  >
-                    NEXT NODE <ChevronRight className="ml-2 w-4 h-4" />
-                  </Button>
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button 
+                          onClick={() => setCurrentIdx(prev => prev + 1)} 
+                          disabled={!isCurrentSubmitted} 
+                          className="h-12 px-8 btn-premium rounded-xl text-[10px] font-black uppercase tracking-widest disabled:opacity-20 disabled:grayscale transition-all"
+                        >
+                          NEXT NODE <ChevronRight className="ml-2 w-4 h-4" />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent className="glass border-white/10 bg-[#0b0e1a] text-white">Available after successful submission.</TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
                 ) : (
                   <Button 
                     onClick={finalizeAssessment} 

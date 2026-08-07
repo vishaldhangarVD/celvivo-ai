@@ -1,5 +1,5 @@
 /**
- * @fileOverview Nexvoro AI Master Question Data (v8.0 - Production Grade).
+ * @fileOverview Nexvoro AI Master Question Data (v9.0 - Production Grade).
  * Calibrated for high-fidelity auditing with 8-language support and resilient hidden test cases.
  */
 
@@ -30,6 +30,12 @@ export interface CodingQuestion {
     returnType: string;
     goal: string;
   };
+  walkthrough?: {
+    input: string;
+    received: string;
+    expected: string;
+    output: string;
+  };
 }
 
 export const MASTER_QUESTIONS: CodingQuestion[] = [
@@ -59,15 +65,21 @@ export const MASTER_QUESTIONS: CodingQuestion[] = [
       returnType: "boolean",
       goal: "Detect if a string is a palindrome."
     },
+    walkthrough: {
+      input: "racecar",
+      received: "s = \"racecar\"",
+      expected: "True",
+      output: "YES"
+    },
     starterCode: {
-      python: "import sys\n\ndef is_mirror_word(s):\n    # TODO: Implement mirror detection\n    pass\n\nif __name__ == '__main__':\n    line = sys.stdin.read().strip()\n    if is_mirror_word(line):\n        print('YES')\n    else:\n        print('NO')",
-      java: "import java.util.Scanner;\n\npublic class Main {\n    public static boolean isMirrorWord(String s) {\n        // TODO: Implement mirror detection\n        return false;\n    }\n\n    public static void main(String[] args) {\n        Scanner sc = new Scanner(System.in);\n        if (sc.hasNext()) {\n            String s = sc.next();\n            System.out.println(isMirrorWord(s) ? \"YES\" : \"NO\");\n        }\n    }\n}",
-      cpp: "#include <iostream>\n#include <string>\nusing namespace std;\n\nbool isMirrorWord(string s) {\n    // TODO: Implement mirror detection\n    return false;\n}\n\nint main() {\n    string s;\n    if (cin >> s) {\n        cout << (isMirrorWord(s) ? \"YES\" : \"NO\") << endl;\n    }\n    return 0;\n}",
-      javascript: "const fs = require('fs');\n\nfunction isMirrorWord(s) {\n    // TODO: Implement mirror detection\n    return false;\n}\n\nconst input = fs.readFileSync(0, 'utf8').trim();\nif (input) {\n    console.log(isMirrorWord(input) ? 'YES' : 'NO');\n}",
-      c: "#include <stdio.h>\n#include <string.h>\n#include <stdbool.h>\n\nbool isMirrorWord(char* s) {\n    // TODO: Implement mirror detection\n    return false;\n}\n\nint main() {\n    char s[10001];\n    if (scanf(\"%s\", s) != EOF) {\n        printf(\"%s\\n\", isMirrorWord(s) ? \"YES\" : \"NO\");\n    }\n    return 0;\n}",
-      csharp: "using System;\n\nclass Program {\n    static bool IsMirrorWord(string s) {\n        // TODO: Implement mirror detection\n        return false;\n    }\n\n    static void Main() {\n        string s = Console.ReadLine();\n        if (s != null) {\n            Console.WriteLine(IsMirrorWord(s.Trim()) ? \"YES\" : \"NO\");\n        }\n    }\n}",
-      go: "package main\nimport \"fmt\"\n\nfunc isMirrorWord(s string) bool {\n    // TODO: Implement mirror detection\n    return false\n}\n\nfunc main() {\n    var s string\n    fmt.Scanln(&s)\n    if isMirrorWord(s) {\n        fmt.Println(\"YES\")\n    } else {\n        fmt.Println(\"NO\")\n    }\n}",
-      rust: "use std::io;\n\nfn is_mirror_word(s: &str) -> bool {\n    // TODO: Implement mirror detection\n    false\n}\n\nfn main() {\n    let mut input = String::new();\n    io::stdin().read_line(&mut input).unwrap();\n    let s = input.trim();\n    if is_mirror_word(s) {\n        println!(\"YES\");\n    } else {\n        println!(\"NO\");\n    }\n}"
+      python: "import sys\n\ndef is_mirror_word(s):\n    # TODO: Replace this logic\n    return False\n\nif __name__ == '__main__':\n    line = sys.stdin.read().strip()\n    if is_mirror_word(line):\n        print('YES')\n    else:\n        print('NO')",
+      java: "import java.util.Scanner;\n\npublic class Main {\n    public static boolean isMirrorWord(String s) {\n        // TODO: Replace this logic\n        return false;\n    }\n\n    public static void main(String[] args) {\n        Scanner sc = new Scanner(System.in);\n        if (sc.hasNext()) {\n            String s = sc.next();\n            System.out.println(isMirrorWord(s) ? \"YES\" : \"NO\");\n        }\n    }\n}",
+      cpp: "#include <iostream>\n#include <string>\n#include <algorithm>\nusing namespace std;\n\nbool isMirrorWord(string s) {\n    // TODO: Replace this logic\n    return false;\n}\n\nint main() {\n    string s;\n    if (cin >> s) {\n        cout << (isMirrorWord(s) ? \"YES\" : \"NO\") << endl;\n    }\n    return 0;\n}",
+      javascript: "const fs = require('fs');\n\nfunction isMirrorWord(s) {\n    // TODO: Replace this logic\n    return false;\n}\n\nconst input = fs.readFileSync(0, 'utf8').trim();\nif (input) {\n    console.log(isMirrorWord(input) ? 'YES' : 'NO');\n}",
+      c: "#include <stdio.h>\n#include <string.h>\n#include <stdbool.h>\n\nbool isMirrorWord(char* s) {\n    // TODO: Replace this logic\n    return false;\n}\n\nint main() {\n    char s[10001];\n    if (scanf(\"%s\", s) != EOF) {\n        printf(\"%s\\n\", isMirrorWord(s) ? \"YES\" : \"NO\");\n    }\n    return 0;\n}",
+      csharp: "using System;\n\nclass Program {\n    static bool IsMirrorWord(string s) {\n        // TODO: Replace this logic\n        return false;\n    }\n\n    static void Main() {\n        string s = Console.ReadLine();\n        if (s != null) {\n            Console.WriteLine(IsMirrorWord(s.Trim()) ? \"YES\" : \"NO\");\n        }\n    }\n}",
+      go: "package main\nimport \"fmt\"\n\nfunc isMirrorWord(s string) bool {\n    // TODO: Replace this logic\n    return false\n}\n\nfunc main() {\n    var s string\n    fmt.Scanln(&s)\n    if isMirrorWord(s) {\n        fmt.Println(\"YES\")\n    } else {\n        fmt.Println(\"NO\")\n    }\n}",
+      rust: "use std::io;\n\nfn is_mirror_word(s: &str) -> bool {\n    // TODO: Replace this logic\n    false\n}\n\nfn main() {\n    let mut input = String::new();\n    io::stdin().read_line(&mut input).unwrap();\n    let s = input.trim();\n    if is_mirror_word(s) {\n        println!(\"YES\");\n    } else {\n        println!(\"NO\");\n    }\n}"
     },
     hiddenTestCases: [
       { input: "madam", output: "YES" },
@@ -95,7 +107,7 @@ export const MASTER_QUESTIONS: CodingQuestion[] = [
     estimatedTime: "10 mins",
     company: "Accenture",
     tags: ["Arrays", "Logic", "Sorting"],
-    inputFormat: "Line 1: Integer N (Number of players). Line 2: N space-separated integers (Scores).",
+    inputFormat: "Line 1: Integer N (Number of players).\nLine 2: N space-separated integers (Scores).",
     outputFormat: "Print the runner-up score as an integer. If no runner-up exists, print -1.",
     constraints: [
       "- 1 <= N <= 100,000",
@@ -110,15 +122,21 @@ export const MASTER_QUESTIONS: CodingQuestion[] = [
       returnType: "int",
       goal: "Find the strictly second-largest unique element."
     },
+    walkthrough: {
+      input: "5\n10 20 20 15 5",
+      received: "scores = [10, 20, 20, 15, 5]",
+      expected: "15",
+      output: "15"
+    },
     starterCode: {
-      python: "import sys\n\ndef get_runner_up(n, scores):\n    # TODO: Implement runner-up detection\n    pass\n\nif __name__ == '__main__':\n    data = sys.stdin.read().split()\n    if len(data) >= 2:\n        n = int(data[0])\n        scores = [int(x) for x in data[1:n+1]]\n        print(get_runner_up(n, scores))",
-      java: "import java.util.Scanner;\n\npublic class Main {\n    public static int getRunnerUp(int n, int[] scores) {\n        // TODO: Implement runner-up detection\n        return -1;\n    }\n\n    public static void main(String[] args) {\n        Scanner sc = new Scanner(System.in);\n        if (sc.hasNextInt()) {\n            int n = sc.nextInt();\n            int[] scores = new int[n];\n            for (int i = 0; i < n; i++) scores[i] = sc.nextInt();\n            System.out.println(getRunnerUp(n, scores));\n        }\n    }\n}",
-      cpp: "#include <iostream>\n#include <vector>\n#include <set>\n#include <algorithm>\nusing namespace std;\n\nint getRunnerUp(int n, vector<int>& scores) {\n    // TODO: Implement runner-up detection\n    return -1;\n}\n\nint main() {\n    int n;\n    if (cin >> n) {\n        vector<int> scores(n);\n        for (int i = 0; i < n; i++) cin >> scores[i];\n        cout << getRunnerUp(n, scores) << endl;\n    }\n    return 0;\n}",
-      javascript: "const fs = require('fs');\n\nfunction getRunnerUp(n, scores) {\n    // TODO: Implement runner-up detection\n    return -1;\n}\n\nconst input = fs.readFileSync(0, 'utf8').split(/\\s+/);\nif (input.length >= 2) {\n    const n = parseInt(input[0]);\n    const scores = input.slice(1, n + 1).map(Number);\n    console.log(getRunnerUp(n, scores));\n}",
-      c: "#include <stdio.h>\n\nint getRunnerUp(int n, int* scores) {\n    // TODO: Implement runner-up detection\n    return -1;\n}\n\nint main() {\n    int n;\n    if (scanf(\"%d\", &n) != EOF) {\n        int scores[100001];\n        for (int i = 0; i < n; i++) scanf(\"%d\", &scores[i]);\n        printf(\"%d\\n\", getRunnerUp(n, scores));\n    }\n    return 0;\n}",
-      csharp: "using System;\nusing System.Linq;\n\nclass Program {\n    static int GetRunnerUp(int n, int[] scores) {\n        // TODO: Implement runner-up detection\n        return -1;\n    }\n\n    static void Main() {\n        string line1 = Console.ReadLine();\n        if (line1 != null) {\n            int n = int.Parse(line1);\n            string[] line2 = Console.ReadLine().Split(' ', StringSplitOptions.RemoveEmptyEntries);\n            int[] scores = Array.ConvertAll(line2, int.Parse);\n            Console.WriteLine(GetRunnerUp(n, scores));\n        }\n    }\n}",
-      go: "package main\nimport \"fmt\"\n\nfunc getRunnerUp(n int, scores []int) int {\n    // TODO: Implement runner-up detection\n    return -1\n}\n\nfunc main() {\n    var n int\n    fmt.Scan(&n)\n    scores := make([]int, n)\n    for i := 0; i < n; i++ {\n        fmt.Scan(&scores[i])\n    }\n    fmt.Println(getRunnerUp(n, scores))\n}",
-      rust: "use std::io::{self, Read};\n\nfn get_runner_up(n: usize, scores: Vec<i32>) -> i32 {\n    // TODO: Implement runner-up detection\n    -1\n}\n\nfn main() {\n    let mut input = String::new();\n    io::stdin().read_to_string(&mut input).unwrap();\n    let mut words = input.split_whitespace();\n    if let Some(n_str) = words.next() {\n        let n: usize = n_str.parse().unwrap();\n        let scores: Vec<i32> = words.map(|s| s.parse().unwrap()).collect();\n        println!(\"{}\", get_runner_up(n, scores));\n    }\n}"
+      python: "import sys\n\ndef get_runner_up(n, scores):\n    # TODO: Replace this logic\n    return -1\n\nif __name__ == '__main__':\n    data = sys.stdin.read().split()\n    if len(data) >= 2:\n        n = int(data[0])\n        scores = [int(x) for x in data[1:n+1]]\n        print(get_runner_up(n, scores))",
+      java: "import java.util.Scanner;\n\npublic class Main {\n    public static int getRunnerUp(int n, int[] scores) {\n        // TODO: Replace this logic\n        return -1;\n    }\n\n    public static void main(String[] args) {\n        Scanner sc = new Scanner(System.in);\n        if (sc.hasNextInt()) {\n            int n = sc.nextInt();\n            int[] scores = new int[n];\n            for (int i = 0; i < n; i++) scores[i] = sc.nextInt();\n            System.out.println(getRunnerUp(n, scores));\n        }\n    }\n}",
+      cpp: "#include <iostream>\n#include <vector>\n#include <algorithm>\nusing namespace std;\n\nint getRunnerUp(int n, vector<int>& scores) {\n    // TODO: Replace this logic\n    return -1;\n}\n\nint main() {\n    int n;\n    if (cin >> n) {\n        vector<int> scores(n);\n        for (int i = 0; i < n; i++) cin >> scores[i];\n        cout << getRunnerUp(n, scores) << endl;\n    }\n    return 0;\n}",
+      javascript: "const fs = require('fs');\n\nfunction getRunnerUp(n, scores) {\n    // TODO: Replace this logic\n    return -1;\n}\n\nconst input = fs.readFileSync(0, 'utf8').split(/\\s+/);\nif (input.length >= 2) {\n    const n = parseInt(input[0]);\n    const scores = input.slice(1, n + 1).filter(x => x !== '').map(Number);\n    console.log(getRunnerUp(n, scores));\n}",
+      c: "#include <stdio.h>\n\nint getRunnerUp(int n, int* scores) {\n    // TODO: Replace this logic\n    return -1;\n}\n\nint main() {\n    int n;\n    if (scanf(\"%d\", &n) != EOF) {\n        int scores[100001];\n        for (int i = 0; i < n; i++) scanf(\"%d\", &scores[i]);\n        printf(\"%d\\n\", getRunnerUp(n, scores));\n    }\n    return 0;\n}",
+      csharp: "using System;\nusing System.Linq;\n\nclass Program {\n    static int GetRunnerUp(int n, int[] scores) {\n        // TODO: Replace this logic\n        return -1;\n    }\n\n    static void Main() {\n        string line1 = Console.ReadLine();\n        if (line1 != null) {\n            int n = int.Parse(line1);\n            string[] line2 = Console.ReadLine().Split(' ', StringSplitOptions.RemoveEmptyEntries);\n            int[] scores = Array.ConvertAll(line2, int.Parse);\n            Console.WriteLine(GetRunnerUp(n, scores));\n        }\n    }\n}",
+      go: "package main\nimport \"fmt\"\n\nfunc getRunnerUp(n int, scores []int) int {\n    // TODO: Replace this logic\n    return -1\n}\n\nfunc main() {\n    var n int\n    fmt.Scan(&n)\n    scores := make([]int, n)\n    for i := 0; i < n; i++ {\n        fmt.Scan(&scores[i])\n    }\n    fmt.Println(getRunnerUp(n, scores))\n}",
+      rust: "use std::io::{self, Read};\n\nfn get_runner_up(n: usize, scores: Vec<i32>) -> i32 {\n    // TODO: Replace this logic\n    -1\n}\n\nfn main() {\n    let mut input = String::new();\n    io::stdin().read_to_string(&mut input).unwrap();\n    let mut words = input.split_whitespace();\n    if let Some(n_str) = words.next() {\n        let n: usize = n_str.parse().unwrap();\n        let scores: Vec<i32> = words.map(|s| s.parse().unwrap()).collect();\n        println!(\"{}\", get_runner_up(n, scores));\n    }\n}"
     },
     hiddenTestCases: [
       { input: "2\n10 10", output: "-1" },

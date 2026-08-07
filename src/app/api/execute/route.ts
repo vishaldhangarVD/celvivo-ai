@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 
 /**
- * @fileOverview JDoodle Neural Execution Gateway v6.0.
+ * @fileOverview JDoodle Neural Execution Gateway v7.0.
  * Securely proxies code execution requests to JDoodle high-performance nodes.
  * Implements resilient batch auditing and detailed telemetry for hidden test cases.
  */
@@ -96,7 +96,7 @@ export async function POST(req: Request) {
 
         const data = await response.json();
         
-        // Detect Errors
+        // Detect Errors (Platform vs Code)
         const isCompileError = data.output?.toLowerCase().includes("error") && (data.statusCode === 400 || data.output?.includes("line"));
         const isRuntimeError = data.output?.toLowerCase().includes("traceback") || data.output?.toLowerCase().includes("exception");
 
