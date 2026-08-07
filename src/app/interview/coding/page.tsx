@@ -319,6 +319,17 @@ export default function CodingEnginePage() {
       <div className="particles-bg" />
       <Navbar />
       
+      {/* DEV ONLY BUTTON */}
+      <div className="fixed top-2 right-2 z-[200]">
+        <Button 
+          onClick={() => console.log("DEV SKIP")}
+          variant="ghost" 
+          className="h-8 px-3 rounded-lg glass border-white/10 text-[9px] font-black uppercase tracking-widest hover:bg-accent/10 hover:text-accent opacity-20 hover:opacity-100 transition-opacity"
+        >
+          DEV SKIP
+        </Button>
+      </div>
+
       <header className="h-[72px] border-b border-white/5 bg-[#0b0e1a]/80 backdrop-blur-xl flex items-center justify-between px-8 z-50">
         <div className="flex items-center gap-6">
           <div className="w-10 h-10 rounded-xl bg-accent/10 flex items-center justify-center border border-accent/20">
@@ -478,7 +489,7 @@ export default function CodingEnginePage() {
               </div>
               <div>
                 <h3 className="text-sm font-black uppercase tracking-widest text-white">MISSION</h3>
-                <p className="text-[10px] text-white/40 uppercase tracking-widest mt-1">Complete the function provided. Use "Run Sample" to verify and "Submit Node" for audit.</p>
+                <p className="text-[10px] text-white/40 uppercase tracking-widest mt-1">Complete the function provided below. Replace the TODO section.</p>
               </div>
             </div>
             <div className="flex items-center gap-3 bg-black/40 px-4 py-2 rounded-xl border border-white/5">
