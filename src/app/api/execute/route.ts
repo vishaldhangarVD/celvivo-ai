@@ -1,9 +1,9 @@
 import { NextResponse } from 'next/server';
 
 /**
- * @fileOverview JDoodle Neural Execution Gateway v5.0.
+ * @fileOverview JDoodle Neural Execution Gateway v6.0.
  * Securely proxies code execution requests to JDoodle high-performance nodes.
- * Supports dual-mode: Single Run (Run Code) and Batch Audit (Submit Code).
+ * Implements resilient batch auditing and detailed telemetry for hidden test cases.
  */
 
 const JDOODLE_URL = 'https://api.jdoodle.com/v1/execute';
@@ -20,6 +20,19 @@ const LANGUAGE_MAP: Record<string, { language: string; versionIndex: string }> =
   rust: { language: 'rust', versionIndex: '4' },
 };
 
+/**
+ * Normalizes output by removing trailing/leading whitespace and converting
+ * multi-line or redundant spacing into single spaces for robust comparison.
+ */
+function normalizeOutput(output: string): string {
+  return (output || "")
+    .split('\n')
+    .map(line => line.trim())
+    .filter(line => line.length > 0)
+    .join('\n')
+    .trim();
+}
+
 export async function POST(req: Request) {
   try {
     const body = await req.json().catch(() => null);
@@ -28,7 +41,6 @@ export async function POST(req: Request) {
     const { source_code, language, stdin, testCases } = body;
     const config = LANGUAGE_MAP[language];
 
-    // Environment Intelligence
     const clientId = process.env.JDOODLE_CLIENT_ID;
     const clientSecret = process.env.JDOODLE_CLIENT_SECRET;
 
@@ -36,10 +48,10 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "JDoodle credentials missing in environment." }, { status: 500 });
     }
 
-    if (!config) return NextResponse.json({ error: `Language "${language}" not supported by JDoodle protocol.` }, { status: 400 });
+    if (!config) return NextResponse.json({ error: `Language "${language}" not supported.` }, { status: 400 });
     if (!source_code) return NextResponse.json({ error: "Implementation buffer empty." }, { status: 400 });
 
-    // Mode A: Single Execution Node (Run Code)
+    // Mode A: Single Execution (Run Sample)
     if (!testCases || !Array.isArray(testCases)) {
       const response = await fetch(JDOODLE_URL, {
         method: 'POST',
@@ -55,21 +67,18 @@ export async function POST(req: Request) {
       });
 
       const data = await response.json();
-      
-      if (data.error) {
-        return NextResponse.json({ error: data.error, details: "JDoodle execution node error" }, { status: 500 });
-      }
+      if (data.error) return NextResponse.json({ error: data.error }, { status: 500 });
 
       return NextResponse.json({
         stdout: data.output || "",
-        status: { description: data.statusCode === 200 ? "Accepted" : "Finished" },
+        status: { description: "Finished" },
         time: data.cpuTime || "0.00",
         memory: data.memory || "N/A"
       });
     }
 
-    // Mode B: Batch Neural Audit (Submit Code - Hidden Test Cases)
-    const results = [];
+    // Mode B: Batch Neural Audit (Submit Node)
+    const auditResults = [];
     for (const tc of testCases) {
       try {
         const response = await fetch(JDOODLE_URL, {
@@ -86,24 +95,44 @@ export async function POST(req: Request) {
         });
 
         const data = await response.json();
-        const actualOutput = (data.output || "").trim();
-        const expectedOutput = (tc.output || "").trim();
+        
+        // Detect Errors
+        const isCompileError = data.output?.toLowerCase().includes("error") && (data.statusCode === 400 || data.output?.includes("line"));
+        const isRuntimeError = data.output?.toLowerCase().includes("traceback") || data.output?.toLowerCase().includes("exception");
 
-        results.push({
-          status: { description: data.statusCode === 200 ? "Accepted" : "Finished" },
-          stdout: data.output || "",
-          time: data.cpuTime || "0.00",
-          passed: actualOutput === expectedOutput
+        const actualRaw = data.output || "";
+        const expectedRaw = tc.output || "";
+
+        const actualNormalized = normalizeOutput(actualRaw);
+        const expectedNormalized = normalizeOutput(expectedRaw);
+
+        const passed = !isCompileError && !isRuntimeError && (actualNormalized === expectedNormalized);
+
+        auditResults.push({
+          input: tc.input,
+          expected: expectedNormalized,
+          actual: actualNormalized,
+          passed: passed,
+          status: isCompileError ? "Compilation Error" : isRuntimeError ? "Runtime Error" : passed ? "Verified" : "Logic Mismatch",
+          executionTime: data.cpuTime || "0.00",
+          memory: data.memory || "N/A",
+          rawOutput: actualRaw
         });
-      } catch (e: any) {
-        results.push({ status: { description: "Node Connection Failed" }, passed: false, stdout: "" });
+      } catch (e) {
+        auditResults.push({
+          input: tc.input,
+          expected: tc.output,
+          actual: "Network Fault",
+          passed: false,
+          status: "Audit Fault"
+        });
       }
     }
 
-    return NextResponse.json({ results });
+    return NextResponse.json({ results: auditResults });
 
   } catch (error: any) {
     console.error('[JDoodle Proxy] Fatal Fault:', error);
-    return NextResponse.json({ error: "Neural execution bridge encountered a critical failure." }, { status: 500 });
+    return NextResponse.json({ error: "Internal Audit Failure" }, { status: 500 });
   }
 }

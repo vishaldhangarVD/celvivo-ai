@@ -35,7 +35,8 @@ import {
   ArrowDownCircle,
   CheckCircle2,
   FileCode,
-  Info
+  Info,
+  Rocket
 } from 'lucide-react';
 import { useUser, useFirestore, useDoc } from '@/firebase';
 import { doc, updateDoc, serverTimestamp, collection, addDoc } from 'firebase/firestore';
@@ -351,12 +352,11 @@ export default function CodingEnginePage() {
         </div>
       </header>
 
-      <main className="flex-1 flex overflow-hidden p-4 gap-4">
-        {/* Left: Problem Statement & Instructions */}
+      <main className="flex-1 container-fluid flex overflow-hidden p-4 gap-4">
+        {/* Left: Problem Statement */}
         <div className="w-[35%] flex flex-col gap-4">
           <Card className="flex-1 glass bg-white/[0.01] border-white/5 p-8 overflow-y-auto custom-scrollbar rounded-[2.5rem]">
             <div className="space-y-10">
-              {/* How to Solve Workflow */}
               <div className="p-6 glass border-accent/20 bg-accent/[0.02] rounded-3xl space-y-4">
                 <h4 className="text-[10px] font-black uppercase tracking-[0.3em] text-accent flex items-center gap-2">
                   <Activity className="w-4 h-4" /> HOW TO SOLVE
@@ -430,7 +430,6 @@ export default function CodingEnginePage() {
                   </ul>
                 </div>
 
-                {/* System Sample & Walkthrough */}
                 <div className="space-y-4 p-6 glass border-white/5 rounded-3xl bg-black/40">
                   <h4 className="text-[11px] font-black uppercase tracking-[0.3em] text-accent">SYSTEM SAMPLE</h4>
                   <div className="space-y-5 font-mono text-[11px]">
@@ -443,33 +442,6 @@ export default function CodingEnginePage() {
                       <pre className="text-green-400 whitespace-pre-wrap p-4 glass rounded-xl bg-white/5 border border-white/5">{currentQ?.sampleOutput}</pre>
                     </div>
                   </div>
-
-                  {currentQ?.walkthrough && (
-                    <div className="mt-8 pt-6 border-t border-white/5 space-y-4">
-                      <h5 className="text-[9px] font-black uppercase tracking-widest text-accent/60">EXAMPLE WALKTHROUGH</h5>
-                      <div className="space-y-3 font-mono text-[10px]">
-                        <div className="flex items-center gap-3">
-                          <span className="text-white/30 w-16">Input</span>
-                          <span className="text-white/80">{currentQ.walkthrough.input}</span>
-                        </div>
-                        <ChevronRight className="w-3 h-3 text-white/10 mx-auto" />
-                        <div className="flex items-center gap-3">
-                          <span className="text-white/30 w-16">Function</span>
-                          <span className="text-accent">{currentQ.walkthrough.receive}</span>
-                        </div>
-                        <ChevronRight className="w-3 h-3 text-white/10 mx-auto" />
-                        <div className="flex items-center gap-3">
-                          <span className="text-white/30 w-16">Return</span>
-                          <span className="text-green-400">{currentQ.walkthrough.return}</span>
-                        </div>
-                        <ChevronRight className="w-3 h-3 text-white/10 mx-auto" />
-                        <div className="flex items-center gap-3">
-                          <span className="text-white/30 w-16">Output</span>
-                          <span className="text-white font-bold">{currentQ.walkthrough.output}</span>
-                        </div>
-                      </div>
-                    </div>
-                  )}
                 </div>
 
                 <Card className="p-6 glass border-purple-500/20 bg-purple-500/[0.02] space-y-3">
@@ -485,9 +457,8 @@ export default function CodingEnginePage() {
           </Card>
         </div>
 
-        {/* Right: Code Editor & Mission Guidance */}
+        {/* Right: Code Editor & Results */}
         <div className="flex-1 flex flex-col gap-4">
-          {/* Mission Card */}
           <Card className="p-6 glass border-accent/20 bg-accent/[0.03] rounded-[2rem] flex items-center justify-between">
             <div className="flex items-center gap-6">
               <div className="w-12 h-12 rounded-2xl bg-accent/20 flex items-center justify-center text-accent">
@@ -495,39 +466,25 @@ export default function CodingEnginePage() {
               </div>
               <div>
                 <h3 className="text-sm font-black uppercase tracking-widest text-white">MISSION PROTOCOL</h3>
-                <p className="text-[10px] text-white/40 uppercase tracking-widest mt-1">Complete the provided function using standard logic. Do not rename variables.</p>
+                <p className="text-[10px] text-white/40 uppercase tracking-widest mt-1">Complete the logic node inside the IDE. Audit checks all hidden boundary cases.</p>
               </div>
             </div>
             <div className="flex items-center gap-3 bg-black/40 px-4 py-2 rounded-xl border border-white/5">
                <Info className="w-4 h-4 text-accent" />
-               <span className="text-[9px] font-bold text-white/60 uppercase tracking-widest">Replenish the TODO section</span>
+               <span className="text-[9px] font-bold text-white/60 uppercase tracking-widest">Replace the TODO section</span>
             </div>
           </Card>
 
           <Card className="flex-1 glass border-white/5 bg-[#0b0e1a] flex flex-col relative overflow-hidden rounded-[2.5rem] shadow-2xl">
-            {/* Function Information Bar */}
-            <div className="h-14 border-b border-white/5 bg-white/[0.02] flex items-center px-10 gap-12 overflow-x-auto custom-scrollbar">
-               <div className="flex items-center gap-3 shrink-0">
+            <div className="h-14 border-b border-white/5 bg-white/[0.02] flex items-center px-10 gap-12">
+               <div className="flex items-center gap-3">
                   <span className="text-[9px] font-black text-white/30 uppercase tracking-widest">Function:</span>
                   <Badge variant="outline" className="border-accent/30 text-accent text-[10px] font-mono px-3">{currentQ?.functionInfo?.name || 'solve()'}</Badge>
                </div>
-               <div className="flex items-center gap-3 shrink-0">
+               <div className="flex items-center gap-3">
                   <span className="text-[9px] font-black text-white/30 uppercase tracking-widest">Return:</span>
                   <span className="text-[10px] font-mono text-purple-400">{currentQ?.functionInfo?.returnType || 'void'}</span>
                </div>
-               <div className="flex items-center gap-3 shrink-0">
-                  <span className="text-[9px] font-black text-white/30 uppercase tracking-widest">Goal:</span>
-                  <span className="text-[10px] font-medium text-white/70 max-w-xs truncate">{currentQ?.functionInfo?.goal || 'Solve the logic node.'}</span>
-               </div>
-            </div>
-
-            <div className="absolute top-16 right-8 z-10 opacity-20 pointer-events-none">
-              <span className="text-[9px] font-black tracking-widest uppercase flex items-center gap-2"><FileCode className="w-3 h-3" /> Matrix IDE v4.2</span>
-            </div>
-
-            <div className="p-4 px-10 bg-accent/5 border-b border-white/5 flex items-center justify-between">
-               <p className="text-[10px] font-bold text-accent/60 uppercase tracking-widest">Where should I write code?</p>
-               <p className="text-[9px] text-white/20 uppercase tracking-widest">Logic must be scoped within the function body.</p>
             </div>
 
             <Editor 
@@ -540,8 +497,6 @@ export default function CodingEnginePage() {
                 fontSize: 15, 
                 readOnly: isTimeExpired || isFinalizing, 
                 minimap: { enabled: false },
-                scrollBeyondLastLine: false,
-                padding: { top: 20, bottom: 20 },
                 fontFamily: 'JetBrains Mono, monospace',
                 lineHeight: 1.6
               }} 
@@ -549,59 +504,32 @@ export default function CodingEnginePage() {
 
             <div className="h-32 border-t border-white/5 bg-white/[0.02] flex items-center justify-between px-10">
               <div className="flex items-center gap-12">
-                <div className="flex flex-col gap-3">
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Button onClick={handleRunCode} disabled={isRunning || isSubmitting || isTimeExpired} className="h-12 px-8 glass border-white/10 bg-white/5 text-[10px] font-black uppercase tracking-widest rounded-xl hover:bg-white/10 transition-all">
-                          {isRunning ? <Loader2 className="w-4 animate-spin mr-2" /> : <Activity className="w-4 h-4 mr-2" />} RUN SAMPLE
-                        </Button>
-                      </TooltipTrigger>
-                      <TooltipContent className="glass border-white/10 text-white text-[10px] uppercase font-bold tracking-widest">Run against visible sample only.</TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
-                  <p className="text-[8px] text-white/20 uppercase tracking-widest ml-1">Test with Sample I/O</p>
-                </div>
+                <Button onClick={handleRunCode} disabled={isRunning || isSubmitting || isTimeExpired} className="h-12 px-8 glass border-white/10 bg-white/5 text-[10px] font-black uppercase tracking-widest rounded-xl hover:bg-white/10 transition-all">
+                  {isRunning ? <Loader2 className="w-4 animate-spin mr-2" /> : <Activity className="w-4 h-4 mr-2" />} RUN SAMPLE
+                </Button>
 
-                <div className="flex flex-col gap-3">
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Button onClick={handleSubmitCode} disabled={isRunning || isSubmitting || isTimeExpired} className="h-12 px-8 btn-premium rounded-xl text-[10px] font-black uppercase tracking-widest shadow-2xl">
-                          {isSubmitting ? <Loader2 className="w-4 animate-spin mr-2" /> : <ShieldCheck className="w-4 h-4 mr-2" />} SUBMIT NODE
-                        </Button>
-                      </TooltipTrigger>
-                      <TooltipContent className="glass border-white/10 text-white text-[10px] uppercase font-bold tracking-widest">Evaluate against all hidden test cases.</TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
-                  <p className="text-[8px] text-accent/40 uppercase tracking-widest ml-1">Audit Hidden Matrix</p>
-                </div>
+                <Button onClick={handleSubmitCode} disabled={isRunning || isSubmitting || isTimeExpired} className="h-12 px-8 btn-premium rounded-xl text-[10px] font-black uppercase tracking-widest shadow-2xl">
+                  {isSubmitting ? <Loader2 className="w-4 animate-spin mr-2" /> : <ShieldCheck className="w-4 h-4 mr-2" />} SUBMIT NODE
+                </Button>
               </div>
 
               <div className="flex items-center gap-4">
                 <select 
                   value={selectedLang.id} 
                   onChange={(e) => setSelectedLang(LANGUAGES.find(l => l.id === e.target.value) || LANGUAGES[0])} 
-                  className="h-11 px-4 glass border-white/10 bg-[#0b0e1a] rounded-xl text-[10px] font-black uppercase tracking-widest outline-none focus:border-accent transition-all cursor-pointer"
+                  className="h-11 px-4 glass border-white/10 bg-[#0b0e1a] rounded-xl text-[10px] font-black uppercase tracking-widest outline-none focus:border-accent"
                 >
                   {LANGUAGES.map(l => <option key={l.id} value={l.id}>{l.label}</option>)}
                 </select>
 
                 {currentIdx < questions.length - 1 ? (
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Button 
-                          onClick={() => setCurrentIdx(prev => prev + 1)} 
-                          disabled={!isCurrentSubmitted} 
-                          className="h-12 px-8 btn-premium rounded-xl text-[10px] font-black uppercase tracking-widest disabled:opacity-20 disabled:grayscale transition-all"
-                        >
-                          NEXT NODE <ChevronRight className="ml-2 w-4 h-4" />
-                        </Button>
-                      </TooltipTrigger>
-                      <TooltipContent className="glass border-white/10 text-white text-[10px] uppercase font-bold tracking-widest">Available after successful submission.</TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
+                  <Button 
+                    onClick={() => setCurrentIdx(prev => prev + 1)} 
+                    disabled={!isCurrentSubmitted} 
+                    className="h-12 px-8 btn-premium rounded-xl text-[10px] font-black uppercase tracking-widest disabled:opacity-20 disabled:grayscale transition-all"
+                  >
+                    NEXT NODE <ChevronRight className="ml-2 w-4 h-4" />
+                  </Button>
                 ) : (
                   <Button 
                     onClick={finalizeAssessment} 
@@ -615,73 +543,71 @@ export default function CodingEnginePage() {
             </div>
           </Card>
 
+          {/* Terminal Console */}
           <Card className="h-[35%] glass border-white/5 bg-[#0b0e1a] flex flex-col overflow-hidden rounded-[2.5rem]">
             <Tabs value={activeTerminalTab} onValueChange={setActiveTerminalTab} className="h-full flex flex-col">
               <TabsList className="bg-white/[0.03] px-10 h-14 border-b border-white/5 gap-8">
                 <TabsTrigger value="output" className="text-[10px] font-black uppercase tracking-[0.2em] data-[state=active]:text-accent data-[state=active]:bg-transparent border-b-2 border-transparent data-[state=active]:border-accent rounded-none h-full transition-all">Execution Output</TabsTrigger>
                 <TabsTrigger value="cases" className="text-[10px] font-black uppercase tracking-[0.2em] data-[state=active]:text-accent data-[state=active]:bg-transparent border-b-2 border-transparent data-[state=active]:border-accent rounded-none h-full transition-all">Audit Matrix</TabsTrigger>
               </TabsList>
+              
               <div className="flex-1 font-mono text-[12px] overflow-hidden bg-black/20">
                 <TabsContent value="output" className="p-10 text-white/60 h-full overflow-y-auto whitespace-pre-wrap leading-relaxed">
-                  {terminalOutput === "Waiting for your implementation." ? (
-                    <div className="h-full flex flex-col items-center justify-center text-center space-y-6 opacity-30">
-                       <HelpCircle className="w-10 h-10 text-white/40" />
-                       <p className="text-[11px] font-black text-white uppercase tracking-[0.3em]">Waiting for implementation.<br/>Click "Run Sample" to verify your code.</p>
-                    </div>
-                  ) : (
-                    <>
-                      <div className="flex items-center gap-3 text-accent/40 mb-4">
-                        <div className="w-2 h-2 rounded-full bg-accent animate-pulse" />
-                        <span className="text-[9px] uppercase font-black">Execution Telemetry Active</span>
-                      </div>
-                      {terminalOutput}
-                    </>
-                  )}
+                  {terminalOutput}
                 </TabsContent>
-                <TabsContent value="cases" className="p-10 h-full overflow-y-auto">
+
+                <TabsContent value="cases" className="p-8 h-full overflow-y-auto space-y-6">
                   {currentResult ? (
-                    <div className="space-y-8">
-                      {/* Node Cleared Success Header */}
-                      <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className={cn("p-6 rounded-[2rem] border flex items-center justify-between mb-8", currentResult.status === 'Solved' ? "bg-green-500/10 border-green-500/20" : "bg-red-500/10 border-red-500/20")}>
-                         <div className="flex items-center gap-5">
-                            <div className={cn("w-12 h-12 rounded-2xl flex items-center justify-center", currentResult.status === 'Solved' ? "bg-green-500/20 text-green-400" : "bg-red-500/20 text-red-400")}>
+                    <div className="space-y-6">
+                      <div className={cn("p-6 rounded-2xl border flex items-center justify-between", currentResult.status === 'Solved' ? "bg-green-500/10 border-green-500/20" : "bg-red-500/10 border-red-500/20")}>
+                         <div className="flex items-center gap-4">
+                            <div className={cn("w-12 h-12 rounded-xl flex items-center justify-center", currentResult.status === 'Solved' ? "bg-green-500/20 text-green-400" : "bg-red-500/20 text-red-400")}>
                                {currentResult.status === 'Solved' ? <Trophy className="w-6 h-6" /> : <XCircle className="w-6 h-6" />}
                             </div>
                             <div>
-                               <h4 className={cn("text-xl font-bold tracking-tight", currentResult.status === 'Solved' ? "text-green-400" : "text-red-400")}>{currentResult.status === 'Solved' ? "NODE CLEARED" : "NODE FAILED"}</h4>
+                               <h4 className={cn("text-lg font-bold tracking-tight", currentResult.status === 'Solved' ? "text-green-400" : "text-red-400")}>{currentResult.status === 'Solved' ? "NODE CLEARED" : "NODE FAILED"}</h4>
                                <p className="text-[9px] font-black text-white/30 uppercase tracking-widest">Audit Trace Summary</p>
                             </div>
                          </div>
-                         <div className="grid grid-cols-3 gap-8">
-                            <div className="text-center">
-                               <p className="text-[8px] font-black text-white/20 uppercase tracking-widest">PASSED</p>
-                               <p className="text-lg font-bold text-white tabular-nums">{currentResult.passedCount}/{currentResult.totalCount}</p>
-                            </div>
-                            <div className="text-center">
-                               <p className="text-[8px] font-black text-white/20 uppercase tracking-widest">SCORE</p>
-                               <p className="text-lg font-bold text-accent tabular-nums">{Math.round((currentResult.passedCount/currentResult.totalCount)*100)}%</p>
-                            </div>
-                            <div className="text-center">
-                               <p className="text-[8px] font-black text-white/20 uppercase tracking-widest">TIME</p>
-                               <p className="text-lg font-bold text-purple-400 tabular-nums">0.02s</p>
-                            </div>
+                         <div className="text-right">
+                            <p className="text-[8px] font-black text-white/20 uppercase tracking-widest">PASSED NODES</p>
+                            <p className="text-lg font-bold text-white tabular-nums">{currentResult.passedCount}/{currentResult.totalCount}</p>
                          </div>
-                      </motion.div>
+                      </div>
 
-                      <div className="grid gap-4">
+                      <div className="grid gap-3">
                         {currentResult.results.map((r: any, i: number) => (
-                          <div key={i} className="flex justify-between items-center p-5 glass border-white/5 rounded-2xl bg-white/[0.01] group hover:border-white/20 transition-all">
-                            <div className="flex items-center gap-4">
-                              <div className={cn("w-2 h-2 rounded-full", r.passed ? "bg-green-500 shadow-[0_0_10px_rgba(34,197,94,0.8)]" : "bg-red-500 shadow-[0_0_10px_rgba(239,68,68,0.8)]")} />
-                              <span className="text-[10px] font-black text-white/40 uppercase tracking-[0.3em]">Matrix Node {i + 1} Logic Verification</span>
+                          <div key={i} className="p-5 glass border-white/5 rounded-xl bg-white/[0.01] space-y-4">
+                            <div className="flex justify-between items-center">
+                              <div className="flex items-center gap-3">
+                                <div className={cn("w-2 h-2 rounded-full", r.passed ? "bg-green-500" : "bg-red-500")} />
+                                <span className="text-[10px] font-black text-white/40 uppercase tracking-widest">Hidden Test #{i + 1}</span>
+                              </div>
+                              <Badge variant="outline" className={cn("text-[8px] uppercase px-2 py-0", r.passed ? "text-green-400 border-green-500/20" : "text-red-400 border-red-500/20")}>{r.status}</Badge>
                             </div>
-                            <span className={cn("text-[9px] font-black uppercase tracking-widest", r.passed ? "text-green-400" : "text-red-400")}>{r.passed ? "VERIFIED" : "FAULT"}</span>
+
+                            {!r.passed && (
+                              <div className="grid grid-cols-2 gap-4 pt-2">
+                                <div className="space-y-1">
+                                  <p className="text-[8px] uppercase font-bold text-white/20">Input Protocol</p>
+                                  <pre className="p-3 bg-black/40 rounded-lg text-white/60 text-[10px] overflow-x-auto">{r.input}</pre>
+                                </div>
+                                <div className="space-y-1">
+                                  <p className="text-[8px] uppercase font-bold text-white/20">Expected Output</p>
+                                  <pre className="p-3 bg-green-500/5 border border-green-500/10 rounded-lg text-green-400/80 text-[10px] overflow-x-auto">{r.expected}</pre>
+                                </div>
+                                <div className="space-y-1 col-span-2">
+                                  <p className="text-[8px] uppercase font-bold text-white/20">Actual System Output</p>
+                                  <pre className="p-3 bg-red-500/5 border border-red-500/10 rounded-lg text-red-400/80 text-[10px] overflow-x-auto">{r.actual || "Empty Output"}</pre>
+                                </div>
+                              </div>
+                            )}
                           </div>
                         ))}
                       </div>
                     </div>
                   ) : (
-                    <div className="h-full flex flex-col items-center justify-center text-center space-y-6 opacity-20">
+                    <div className="h-full flex flex-col items-center justify-center text-center space-y-4 opacity-20">
                       <ShieldCheck className="w-12 h-12" />
                       <p className="text-[11px] font-black text-white uppercase tracking-[0.5em]">Waiting for submission...<br/>Run node to initiate audit.</p>
                     </div>
