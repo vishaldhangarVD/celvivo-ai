@@ -1,7 +1,7 @@
 /**
- * @fileOverview Nexvoro AI Master Question Data (v5.0 - Professional UX Calibration).
- * Curated for Tier-1 hiring standards with real-world scenarios and intuitive explanations.
- * Progression: Q1-2 Easy, Q3-4 Medium, Q5 Hard (Fresher Standard).
+ * @fileOverview Nexvoro AI Master Question Data (v6.0 - Production Grade).
+ * Calibrated for Tier-1 hiring standards with 8-language support and rigorous hidden test cases.
+ * Progression: Q1-2 Easy, Q3-4 Medium, Q5 Hard.
  */
 
 export interface CodingQuestion {
@@ -46,51 +46,72 @@ export const MASTER_QUESTIONS: CodingQuestion[] = [
     sampleOutput: "YES",
     explanation: "How to think: To check if a word is a mirror, imagine a line in the middle. The first character must match the last, the second must match the second-to-last, and so on. If every pair matches until you reach the middle, it's a Mirror Word!",
     starterCode: {
-      python: "def solve():\n    # Read input and convert to lowercase\n    s = input().strip().lower()\n    # Check if string is equal to its reverse\n    if s == s[::-1]:\n        print('YES')\n    else:\n        print('NO')\nsolve()",
-      java: "import java.util.*;\npublic class Main {\n    public static void main(String[] args) {\n        Scanner sc = new Scanner(System.in);\n        if(!sc.hasNext()) return;\n        String s = sc.next().toLowerCase();\n        String rev = new StringBuilder(s).reverse().toString();\n        if(s.equals(rev)) System.out.println(\"YES\");\n        else System.out.println(\"NO\");\n    }\n}",
-      javascript: "const fs = require('fs');\nconst input = fs.readFileSync(0, 'utf8').trim().toLowerCase();\nconst rev = input.split('').reverse().join('');\nprocess.stdout.write(input === rev ? 'YES' : 'NO');"
+      python: "import sys\n\ndef is_mirror_word(s):\n    # TODO: Implement logic\n    return False\n\nif __name__ == '__main__':\n    line = sys.stdin.read().strip()\n    if is_mirror_word(line):\n        print('YES')\n    else:\n        print('NO')",
+      java: "import java.util.Scanner;\n\npublic class Main {\n    public static boolean isMirrorWord(String s) {\n        // TODO: Implement logic\n        return false;\n    }\n\n    public static void main(String[] args) {\n        Scanner sc = new Scanner(System.in);\n        if (sc.hasNext()) {\n            String s = sc.next();\n            System.out.println(isMirrorWord(s) ? \"YES\" : \"NO\");\n        }\n    }\n}",
+      cpp: "#include <iostream>\n#include <string>\nusing namespace std;\n\nbool isMirrorWord(string s) {\n    // TODO: Implement logic\n    return false;\n}\n\nint main() {\n    string s;\n    if (cin >> s) {\n        cout << (isMirrorWord(s) ? \"YES\" : \"NO\") << endl;\n    }\n    return 0;\n}",
+      javascript: "const fs = require('fs');\n\nfunction isMirrorWord(s) {\n    // TODO: Implement logic\n    return false;\n}\n\nconst input = fs.readFileSync(0, 'utf8').trim();\nif (input) {\n    console.log(isMirrorWord(input) ? 'YES' : 'NO');\n}",
+      c: "#include <stdio.h>\n#include <string.h>\n#include <stdbool.h>\n\nbool isMirrorWord(char* s) {\n    // TODO: Implement logic\n    return false;\n}\n\nint main() {\n    char s[10001];\n    if (scanf(\"%s\", s) != EOF) {\n        printf(\"%s\\n\", isMirrorWord(s) ? \"YES\" : \"NO\");\n    }\n    return 0;\n}",
+      csharp: "using System;\n\nclass Program {\n    static bool IsMirrorWord(string s) {\n        // TODO: Implement logic\n        return false;\n    }\n\n    static void Main() {\n        string s = Console.ReadLine();\n        if (s != null) {\n            Console.WriteLine(IsMirrorWord(s.Trim()) ? \"YES\" : \"NO\");\n        }\n    }\n}",
+      go: "package main\nimport \"fmt\"\n\nfunc isMirrorWord(s string) bool {\n    // TODO: Implement logic\n    return false\n}\n\nfunc main() {\n    var s string\n    fmt.Scanln(&s)\n    if isMirrorWord(s) {\n        fmt.Println(\"YES\")\n    } else {\n        fmt.Println(\"NO\")\n    }\n}",
+      rust: "use std::io;\n\nfn is_mirror_word(s: &str) -> bool {\n    // TODO: Implement logic\n    false\n}\n\nfn main() {\n    let mut input = String::new();\n    io::stdin().read_line(&mut input).unwrap();\n    let s = input.trim();\n    if is_mirror_word(s) {\n        println!(\"YES\");\n    } else {\n        println!(\"NO\");\n    }\n}"
     },
     hiddenTestCases: [
       { input: "madam", output: "YES" },
-      { input: "hello", output: "NO" },
+      { input: "a", output: "YES" },
+      { input: "ab", output: "NO" },
       { input: "12321", output: "YES" },
-      { input: "Abba", output: "YES" },
-      { input: "a", output: "YES" }
+      { input: "12345", output: "NO" },
+      { input: "rotor", output: "YES" },
+      { input: "steponnoppets", output: "YES" },
+      { input: "hello", output: "NO" },
+      { input: "9876789", output: "YES" },
+      { input: "abcba", output: "YES" }
     ],
     timeLimit: "1s",
     memoryLimit: "256MB",
-    languageSupport: ["python", "java", "javascript"]
+    languageSupport: ["python", "java", "cpp", "javascript", "c", "csharp", "go", "rust"]
   },
   {
     id: "fresher-easy-02",
     title: "Tournament Runner-Up Finder",
-    description: "You are designing a leaderboard for a gaming tournament. You need to find the score of the person who came in second place (the Runner-Up). If everyone has the same score, there is no runner-up.",
+    description: "You are designing a leaderboard for a gaming tournament. You need to find the score of the person who came in second place (the Runner-Up). If multiple people have the highest score, the runner-up is the next highest unique score.",
     difficulty: "Easy",
     category: "Arrays",
     topic: "Arrays",
     estimatedTime: "10 min",
     company: "Accenture",
-    tags: ["Arrays", "Iteration"],
+    tags: ["Arrays", "Logic"],
     inputFormat: "First line: Number of players N. Second line: N space-separated scores.",
-    outputFormat: "The score of the runner-up. If not found, print -1.",
+    outputFormat: "The score of the runner-up. If everyone has the same score or only one player exists, print -1.",
     constraints: ["1 <= N <= 100,000", "0 <= score <= 10^9"],
     sampleInput: "5\n10 20 20 15 5",
     sampleOutput: "15",
     explanation: "How to think: Don't just pick the second number in the list. First, find the absolute highest score. Then, look for the highest number that is strictly smaller than that maximum. That is your Runner-Up!",
     starterCode: {
-      python: "def solve():\n    try:\n        n = int(input())\n        scores = list(map(int, input().split()))\n        # Use set to remove duplicates and sort\n        unique_scores = sorted(list(set(scores)))\n        if len(unique_scores) < 2:\n            print(-1)\n        else:\n            print(unique_scores[-2])\n    except: pass\nsolve()",
-      java: "import java.util.*;\npublic class Main {\n    public static void main(String[] args) {\n        Scanner sc = new Scanner(System.in);\n        if(!sc.hasNextInt()) return;\n        int n = sc.nextInt();\n        TreeSet<Integer> set = new TreeSet<>();\n        for(int i=0; i<n; i++) set.add(sc.nextInt());\n        if(set.size() < 2) System.out.println(-1);\n        else {\n            set.pollLast(); // Remove largest\n            System.out.println(set.last()); // Print new largest\n        }\n    }\n}"
+      python: "import sys\n\ndef get_runner_up(n, scores):\n    # TODO: Implement logic\n    return -1\n\nif __name__ == '__main__':\n    input_data = sys.stdin.read().split()\n    if len(input_data) >= 2:\n        n = int(input_data[0])\n        scores = [int(x) for x in input_data[1:]]\n        print(get_runner_up(n, scores))",
+      java: "import java.util.Scanner;\n\npublic class Main {\n    public static int getRunnerUp(int n, int[] scores) {\n        // TODO: Implement logic\n        return -1;\n    }\n\n    public static void main(String[] args) {\n        Scanner sc = new Scanner(System.in);\n        if (sc.hasNextInt()) {\n            int n = sc.nextInt();\n            int[] scores = new int[n];\n            for (int i = 0; i < n; i++) scores[i] = sc.nextInt();\n            System.out.println(getRunnerUp(n, scores));\n        }\n    }\n}",
+      cpp: "#include <iostream>\n#include <vector>\nusing namespace std;\n\nint getRunnerUp(int n, vector<int>& scores) {\n    // TODO: Implement logic\n    return -1;\n}\n\nint main() {\n    int n;\n    if (cin >> n) {\n        vector<int> scores(n);\n        for (int i = 0; i < n; i++) cin >> scores[i];\n        cout << getRunnerUp(n, scores) << endl;\n    }\n    return 0;\n}",
+      javascript: "const fs = require('fs');\n\nfunction getRunnerUp(n, scores) {\n    // TODO: Implement logic\n    return -1;\n}\n\nconst input = fs.readFileSync(0, 'utf8').split(/\\s+/);\nif (input.length >= 2) {\n    const n = parseInt(input[0]);\n    const scores = input.slice(1, n + 1).map(Number);\n    console.log(getRunnerUp(n, scores));\n}",
+      c: "#include <stdio.h>\n\nint getRunnerUp(int n, int* scores) {\n    // TODO: Implement logic\n    return -1;\n}\n\nint main() {\n    int n;\n    if (scanf(\"%d\", &n) != EOF) {\n        int scores[100001];\n        for (int i = 0; i < n; i++) scanf(\"%d\", &scores[i]);\n        printf(\"%d\\n\", getRunnerUp(n, scores));\n    }\n    return 0;\n}",
+      csharp: "using System;\n\nclass Program {\n    static int GetRunnerUp(int n, int[] scores) {\n        // TODO: Implement logic\n        return -1;\n    }\n\n    static void Main() {\n        string firstLine = Console.ReadLine();\n        if (firstLine != null) {\n            int n = int.Parse(firstLine);\n            string[] secondLine = Console.ReadLine().Split(' ', StringSplitOptions.RemoveEmptyEntries);\n            int[] scores = Array.ConvertAll(secondLine, int.Parse);\n            Console.WriteLine(GetRunnerUp(n, scores));\n        }\n    }\n}",
+      go: "package main\nimport \"fmt\"\n\nfunc getRunnerUp(n int, scores []int) int {\n    // TODO: Implement logic\n    return -1\n}\n\nfunc main() {\n    var n int\n    if _, err := fmt.Scan(&n); err == nil {\n        scores := make([]int, n)\n        for i := 0; i < n; i++ {\n            fmt.Scan(&scores[i])\n        }\n        fmt.Println(getRunnerUp(n, scores))\n    }\n}",
+      rust: "use std::io::{self, Read};\n\nfn get_runner_up(n: usize, scores: Vec<i32>) -> i32 {\n    // TODO: Implement logic\n    -1\n}\n\nfn main() {\n    let mut input = String::new();\n    io::stdin().read_to_string(&mut input).unwrap();\n    let mut words = input.split_whitespace();\n    if let Some(n_str) = words.next() {\n        let n: usize = n_str.parse().unwrap();\n        let scores: Vec<i32> = words.map(|s| s.parse().unwrap()).collect();\n        println!(\"{}\", get_runner_up(n, scores));\n    }\n}"
     },
     hiddenTestCases: [
       { input: "2\n10 10", output: "-1" },
       { input: "4\n1 2 3 4", output: "3" },
       { input: "1\n50", output: "-1" },
       { input: "5\n100 100 100 99 98", output: "99" },
-      { input: "3\n5 10 2", output: "5" }
+      { input: "3\n5 10 2", output: "5" },
+      { input: "6\n5 5 5 5 5 5", output: "-1" },
+      { input: "5\n10 5 5 5 5", output: "5" },
+      { input: "2\n10 5", output: "5" },
+      { input: "4\n-1 -2 -3 -4", output: "-2" },
+      { input: "10\n1 2 3 4 5 6 7 8 9 10", output: "9" }
     ],
     timeLimit: "1s",
     memoryLimit: "256MB",
-    languageSupport: ["python", "java", "javascript"]
+    languageSupport: ["python", "java", "cpp", "javascript", "c", "csharp", "go", "rust"]
   },
 
   // --- MEDIUM CATEGORY ---
@@ -111,19 +132,30 @@ export const MASTER_QUESTIONS: CodingQuestion[] = [
     sampleOutput: "true",
     explanation: "How to think: Use a 'Stack' (like a stack of plates). When you see an opening bracket, put it on the stack. When you see a closing bracket, check the plate on top of the stack. If they match, remove the plate. If they don't, or the stack is empty, the code is broken!",
     starterCode: {
-      python: "def solve():\n    s = input().strip()\n    stack = []\n    pairs = {')': '(', '}': '{', ']': '['}\n    for char in s:\n        if char in pairs:\n            if not stack or stack.pop() != pairs[char]:\n                print('false'); return\n        else:\n            stack.append(char)\n    print('true' if not stack else 'false')\nsolve()",
-      java: "import java.util.*;\npublic class Main {\n    public static void main(String[] args) {\n        Scanner sc = new Scanner(System.in);\n        if(!sc.hasNext()) return;\n        String s = sc.next();\n        Stack<Character> stack = new Stack<>();\n        for(char c : s.toCharArray()) {\n            if(c == '(' || c == '{' || c == '[') stack.push(c);\n            else {\n                if(stack.isEmpty()) { System.out.println(\"false\"); return; }\n                char top = stack.pop();\n                if(c == ')' && top != '(') { System.out.println(\"false\"); return; }\n                if(c == '}' && top != '{') { System.out.println(\"false\"); return; }\n                if(c == ']' && top != '[') { System.out.println(\"false\"); return; }\n            }\n        }\n        System.out.println(stack.isEmpty() ? \"true\" : \"false\");\n    }\n}"
+      python: "import sys\n\ndef is_balanced(s):\n    # TODO: Implement logic using a stack\n    return False\n\nif __name__ == '__main__':\n    line = sys.stdin.read().strip()\n    if is_balanced(line):\n        print('true')\n    else:\n        print('false')",
+      java: "import java.util.Scanner;\nimport java.util.Stack;\n\npublic class Main {\n    public static boolean isBalanced(String s) {\n        // TODO: Implement logic using a stack\n        return false;\n    }\n\n    public static void main(String[] args) {\n        Scanner sc = new Scanner(System.in);\n        if (sc.hasNext()) {\n            System.out.println(isBalanced(sc.next()) ? \"true\" : \"false\");\n        }\n    }\n}",
+      cpp: "#include <iostream>\n#include <stack>\n#include <string>\nusing namespace std;\n\nbool isBalanced(string s) {\n    // TODO: Implement logic using a stack\n    return false;\n}\n\nint main() {\n    string s;\n    if (cin >> s) {\n        cout << (isBalanced(s) ? \"true\" : \"false\") << endl;\n    }\n    return 0;\n}",
+      javascript: "const fs = require('fs');\n\nfunction isBalanced(s) {\n    // TODO: Implement logic\n    return false;\n}\n\nconst input = fs.readFileSync(0, 'utf8').trim();\nif (input) {\n    console.log(isBalanced(input) ? 'true' : 'false');\n}",
+      c: "#include <stdio.h>\n#include <stdbool.h>\n#include <string.h>\n\nbool isBalanced(char* s) {\n    // TODO: Implement logic\n    return false;\n}\n\nint main() {\n    char s[10001];\n    if (scanf(\"%s\", s) != EOF) {\n        printf(\"%s\\n\", isBalanced(s) ? \"true\" : \"false\");\n    }\n    return 0;\n}",
+      csharp: "using System;\nusing System.Collections.Generic;\n\nclass Program {\n    static bool IsBalanced(string s) {\n        // TODO: Implement logic\n        return false;\n    }\n\n    static void Main() {\n        string s = Console.ReadLine();\n        if (s != null) {\n            Console.WriteLine(IsBalanced(s.Trim()) ? \"true\" : \"false\");\n        }\n    }\n}",
+      go: "package main\nimport \"fmt\"\n\nfunc isBalanced(s string) bool {\n    // TODO: Implement logic\n    return false\n}\n\nfunc main() {\n    var s string\n    fmt.Scanln(&s)\n    if isBalanced(s) {\n        fmt.Println(\"true\")\n    } else {\n        fmt.Println(\"false\")\n    }\n}",
+      rust: "use std::io;\n\nfn is_balanced(s: &str) -> bool {\n    // TODO: Implement logic\n    false\n}\n\nfn main() {\n    let mut input = String::new();\n    io::stdin().read_line(&mut input).unwrap();\n    let s = input.trim();\n    if is_balanced(s) {\n        println!(\"true\");\n    } else {\n        println!(\"false\");\n    }\n}"
     },
     hiddenTestCases: [
       { input: "()", output: "true" },
       { input: "()[]{}", output: "true" },
       { input: "(]", output: "false" },
       { input: "([)]", output: "false" },
-      { input: "((", output: "false" }
+      { input: "((", output: "false" },
+      { input: "]]", output: "false" },
+      { input: "{[()]}", output: "true" },
+      { input: "((()))", output: "true" },
+      { input: "(((", output: "false" },
+      { input: "[{()}]()", output: "true" }
     ],
     timeLimit: "1s",
     memoryLimit: "256MB",
-    languageSupport: ["python", "java", "javascript"]
+    languageSupport: ["python", "java", "cpp", "javascript", "c", "csharp", "go", "rust"]
   },
   {
     id: "fresher-medium-02",
@@ -136,25 +168,36 @@ export const MASTER_QUESTIONS: CodingQuestion[] = [
     company: "Infosys",
     tags: ["Hashing", "Strings"],
     inputFormat: "A single line containing the visitor string.",
-    outputFormat: "The zero-based index of the first unique visitor.",
+    outputFormat: "The zero-based index of the first unique visitor. If none, print -1.",
     constraints: ["1 <= length <= 100,000", "Smallest English letters only."],
     sampleInput: "nexvoroai",
     sampleOutput: "0",
     explanation: "How to think: First, count how many times each letter appears in the whole string using a Hash Map (Dictionary). Then, scan the string from left to right. The first letter you find with a count of exactly 1 is your answer!",
     starterCode: {
-      python: "def solve():\n    s = input().strip()\n    counts = {}\n    for char in s:\n        counts[char] = counts.get(char, 0) + 1\n    for i, char in enumerate(s):\n        if counts[char] == 1:\n            print(i); return\n    print(-1)\nsolve()",
-      java: "import java.util.*;\npublic class Main {\n    public static void main(String[] args) {\n        Scanner sc = new Scanner(System.in);\n        if(!sc.hasNext()) return;\n        String s = sc.next();\n        Map<Character, Integer> counts = new HashMap<>();\n        for(char c : s.toCharArray()) counts.put(c, counts.getOrDefault(c, 0) + 1);\n        for(int i=0; i<s.length(); i++) {\n            if(counts.get(s.charAt(i)) == 1) {\n                System.out.println(i); return;\n            }\n        }\n        System.out.println(-1);\n    }\n}"
+      python: "import sys\n\ndef first_unique(s):\n    # TODO: Implement using a frequency map\n    return -1\n\nif __name__ == '__main__':\n    line = sys.stdin.read().strip()\n    print(first_unique(line))",
+      java: "import java.util.Scanner;\nimport java.util.HashMap;\n\npublic class Main {\n    public static int firstUnique(String s) {\n        // TODO: Implement frequency map logic\n        return -1;\n    }\n\n    public static void main(String[] args) {\n        Scanner sc = new Scanner(System.in);\n        if (sc.hasNext()) {\n            System.out.println(firstUnique(sc.next()));\n        }\n    }\n}",
+      cpp: "#include <iostream>\n#include <string>\n#include <unordered_map>\nusing namespace std;\n\nint firstUnique(string s) {\n    // TODO: Implement frequency map logic\n    return -1;\n}\n\nint main() {\n    string s;\n    if (cin >> s) {\n        cout << firstUnique(s) << endl;\n    }\n    return 0;\n}",
+      javascript: "const fs = require('fs');\n\nfunction firstUnique(s) {\n    // TODO: Implement logic\n    return -1;\n}\n\nconst input = fs.readFileSync(0, 'utf8').trim();\nif (input) {\n    console.log(firstUnique(input));\n}",
+      c: "#include <stdio.h>\n#include <string.h>\n\nint firstUnique(char* s) {\n    // TODO: Implement logic\n    return -1;\n}\n\nint main() {\n    char s[100001];\n    if (scanf(\"%s\", s) != EOF) {\n        printf(\"%d\\n\", firstUnique(s));\n    }\n    return 0;\n}",
+      csharp: "using System;\nusing System.Collections.Generic;\n\nclass Program {\n    static int FirstUnique(string s) {\n        // TODO: Implement logic\n        return -1;\n    }\n\n    static void Main() {\n        string s = Console.ReadLine();\n        if (s != null) {\n            Console.WriteLine(FirstUnique(s.Trim()));\n        }\n    }\n}",
+      go: "package main\nimport \"fmt\"\n\nfunc firstUnique(s string) int {\n    // TODO: Implement logic\n    return -1\n}\n\nfunc main() {\n    var s string\n    fmt.Scanln(&s)\n    fmt.Println(firstUnique(s))\n}",
+      rust: "use std::io;\n\nfn first_unique(s: &str) -> i32 {\n    // TODO: Implement logic\n    -1\n}\n\nfn main() {\n    let mut input = String::new();\n    io::stdin().read_line(&mut input).unwrap();\n    let s = input.trim();\n    println!(\"{}\", first_unique(s));\n}"
     },
     hiddenTestCases: [
       { input: "aabb", output: "-1" },
       { input: "leetcode", output: "0" },
       { input: "loveleetcode", output: "2" },
       { input: "z", output: "0" },
-      { input: "abcabc", output: "-1" }
+      { input: "abcabc", output: "-1" },
+      { input: "aabbccddeeffg", output: "12" },
+      { input: "statistics", output: "3" },
+      { input: "algorithm", output: "0" },
+      { input: "tattarrattat", output: "-1" },
+      { input: "abcdefg", output: "0" }
     ],
     timeLimit: "1s",
     memoryLimit: "256MB",
-    languageSupport: ["python", "java", "javascript"]
+    languageSupport: ["python", "java", "cpp", "javascript", "c", "csharp", "go", "rust"]
   },
 
   // --- HARD CATEGORY ---
@@ -175,18 +218,29 @@ export const MASTER_QUESTIONS: CodingQuestion[] = [
     sampleOutput: "6",
     explanation: "How to think: Imagine you are walking through the list. Keep adding the numbers to a 'Current Sum'. If your 'Current Sum' becomes negative, it's better to reset it to 0 and start fresh from the next day. Always keep track of the 'Best Sum' you've ever seen!",
     starterCode: {
-      python: "def solve():\n    try:\n        n = int(input())\n        arr = list(map(int, input().split()))\n        max_so_far = -float('inf')\n        current_max = 0\n        for x in arr:\n            current_max += x\n            if max_so_far < current_max:\n                max_so_far = current_max\n            if current_max < 0:\n                current_max = 0\n        print(max_so_far)\n    except: pass\nsolve()",
-      java: "import java.util.*;\npublic class Main {\n    public static void main(String[] args) {\n        Scanner sc = new Scanner(System.in);\n        if(!sc.hasNextInt()) return;\n        int n = sc.nextInt();\n        long maxSoFar = Long.MIN_VALUE, currentMax = 0;\n        for(int i=0; i<n; i++) {\n            int val = sc.nextInt();\n            currentMax += val;\n            if(maxSoFar < currentMax) maxSoFar = currentMax;\n            if(currentMax < 0) currentMax = 0;\n        }\n        System.out.println(maxSoFar);\n    }\n}"
+      python: "import sys\n\ndef max_subarray_sum(n, arr):\n    # TODO: Implement Kadane's Algorithm\n    return 0\n\nif __name__ == '__main__':\n    data = sys.stdin.read().split()\n    if len(data) >= 1:\n        n = int(data[0])\n        arr = [int(x) for x in data[1:n+1]]\n        print(max_subarray_sum(n, arr))",
+      java: "import java.util.Scanner;\n\npublic class Main {\n    public static long maxSubarraySum(int n, int[] arr) {\n        // TODO: Implement logic\n        return 0;\n    }\n\n    public static void main(String[] args) {\n        Scanner sc = new Scanner(System.in);\n        if (sc.hasNextInt()) {\n            int n = sc.nextInt();\n            int[] arr = new int[n];\n            for (int i = 0; i < n; i++) arr[i] = sc.nextInt();\n            System.out.println(maxSubarraySum(n, arr));\n        }\n    }\n}",
+      cpp: "#include <iostream>\n#include <vector>\n#include <algorithm>\nusing namespace std;\n\nlong long maxSubarraySum(int n, vector<int>& arr) {\n    // TODO: Implement logic\n    return 0;\n}\n\nint main() {\n    int n;\n    if (cin >> n) {\n        vector<int> arr(n);\n        for (int i = 0; i < n; i++) cin >> arr[i];\n        cout << maxSubarraySum(n, arr) << endl;\n    }\n    return 0;\n}",
+      javascript: "const fs = require('fs');\n\nfunction maxSubarraySum(n, arr) {\n    // TODO: Implement logic\n    return 0;\n}\n\nconst input = fs.readFileSync(0, 'utf8').split(/\\s+/);\nif (input.length >= 1) {\n    const n = parseInt(input[0]);\n    const arr = input.slice(1, n + 1).map(Number);\n    console.log(maxSubarraySum(n, arr));\n}",
+      c: "#include <stdio.h>\n#include <limits.h>\n\nlong long maxSubarraySum(int n, int* arr) {\n    // TODO: Implement logic\n    return 0;\n}\n\nint main() {\n    int n;\n    if (scanf(\"%d\", &n) != EOF) {\n        int arr[100001];\n        for (int i = 0; i < n; i++) scanf(\"%d\", &arr[i]);\n        printf(\"%lld\\n\", maxSubarraySum(n, arr));\n    }\n    return 0;\n}",
+      csharp: "using System;\n\nclass Program {\n    static long MaxSubarraySum(int n, int[] arr) {\n        // TODO: Implement logic\n        return 0;\n    }\n\n    static void Main() {\n        string line1 = Console.ReadLine();\n        if (line1 != null) {\n            int n = int.Parse(line1);\n            string[] line2 = Console.ReadLine().Split(' ', StringSplitOptions.RemoveEmptyEntries);\n            int[] arr = Array.ConvertAll(line2, int.Parse);\n            Console.WriteLine(MaxSubarraySum(n, arr));\n        }\n    }\n}",
+      go: "package main\nimport \"fmt\"\n\nfunc maxSubarraySum(n int, arr []int) int64 {\n    // TODO: Implement logic\n    return 0\n}\n\nfunc main() {\n    var n int\n    if _, err := fmt.Scan(&n); err == nil {\n        arr := make([]int, n)\n        for i := 0; i < n; i++ {\n            fmt.Scan(&arr[i])\n        }\n        fmt.Println(maxSubarraySum(n, arr))\n    }\n}",
+      rust: "use std::io::{self, Read};\n\nfn max_subarray_sum(n: usize, arr: Vec<i32>) -> i64 {\n    // TODO: Implement logic\n    0\n}\n\nfn main() {\n    let mut input = String::new();\n    io::stdin().read_to_string(&mut input).unwrap();\n    let mut words = input.split_whitespace();\n    if let Some(n_str) = words.next() {\n        let n: usize = n_str.parse().unwrap();\n        let arr: Vec<i32> = words.map(|s| s.parse().unwrap()).collect();\n        println!(\"{}\", max_subarray_sum(n, arr));\n    }\n}"
     },
     hiddenTestCases: [
       { input: "1\n-5", output: "-5" },
       { input: "4\n1 2 3 4", output: "10" },
       { input: "5\n-1 -2 -3 -4 -5", output: "-1" },
       { input: "3\n10 -5 20", output: "25" },
-      { input: "6\n-2 1 -3 4 -1 2", output: "5" }
+      { input: "6\n-2 1 -3 4 -1 2", output: "5" },
+      { input: "8\n-2 1 -3 4 -1 2 1 -5", output: "6" },
+      { input: "5\n2 3 -1 4 5", output: "13" },
+      { input: "2\n100 -200", output: "100" },
+      { input: "4\n-10 2 -1 5", output: "6" },
+      { input: "7\n1 1 1 1 1 1 1", output: "7" }
     ],
     timeLimit: "1s",
     memoryLimit: "256MB",
-    languageSupport: ["python", "java", "javascript"]
+    languageSupport: ["python", "java", "cpp", "javascript", "c", "csharp", "go", "rust"]
   }
 ];
