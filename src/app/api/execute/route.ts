@@ -1,14 +1,14 @@
 import { NextResponse } from 'next/server';
 
 /**
- * @fileOverview JDoodle Neural Execution Gateway.
- * Provides a secure bridge for real-time code compilation and logic verification.
- * Replaces legacy Piston/Judge0 protocols.
+ * @fileOverview JDoodle Neural Execution Gateway v5.0.
+ * Securely proxies code execution requests to JDoodle high-performance nodes.
+ * Supports dual-mode: Single Run (Run Code) and Batch Audit (Submit Code).
  */
 
 const JDOODLE_URL = 'https://api.jdoodle.com/v1/execute';
 
-// Configuration Mapping for JDoodle Language Protocols
+// Protocol Configuration for JDoodle Nodes
 const LANGUAGE_MAP: Record<string, { language: string; versionIndex: string }> = {
   python: { language: 'python3', versionIndex: '4' },
   java: { language: 'java', versionIndex: '4' },
@@ -23,19 +23,23 @@ const LANGUAGE_MAP: Record<string, { language: string; versionIndex: string }> =
 export async function POST(req: Request) {
   try {
     const body = await req.json().catch(() => null);
-    if (!body) return NextResponse.json({ error: "Missing logic payload." }, { status: 400 });
+    if (!body) return NextResponse.json({ error: "Empty logic payload." }, { status: 400 });
 
     const { source_code, language, stdin, testCases } = body;
     const config = LANGUAGE_MAP[language];
 
-    // Placeholder credentials - In production, these should come from process.env.JDOODLE_CLIENT_ID / SECRET
-    const clientId = process.env.JDOODLE_CLIENT_ID || "";
-    const clientSecret = process.env.JDOODLE_CLIENT_SECRET || "";
+    // Environment Intelligence
+    const clientId = process.env.JDOODLE_CLIENT_ID;
+    const clientSecret = process.env.JDOODLE_CLIENT_SECRET;
 
-    if (!config) return NextResponse.json({ error: `Language protocol "${language}" not supported.` }, { status: 400 });
-    if (!source_code) return NextResponse.json({ error: "Implementation node empty." }, { status: 400 });
+    if (!clientId || !clientSecret) {
+      return NextResponse.json({ error: "JDoodle credentials missing in environment." }, { status: 500 });
+    }
 
-    // Node 1: Single Run Mode (Manual Debugging)
+    if (!config) return NextResponse.json({ error: `Language "${language}" not supported by JDoodle protocol.` }, { status: 400 });
+    if (!source_code) return NextResponse.json({ error: "Implementation buffer empty." }, { status: 400 });
+
+    // Mode A: Single Execution Node (Run Code)
     if (!testCases || !Array.isArray(testCases)) {
       const response = await fetch(JDOODLE_URL, {
         method: 'POST',
@@ -53,20 +57,18 @@ export async function POST(req: Request) {
       const data = await response.json();
       
       if (data.error) {
-        return NextResponse.json({ error: data.error, details: "JDoodle Node Error" }, { status: 500 });
+        return NextResponse.json({ error: data.error, details: "JDoodle execution node error" }, { status: 500 });
       }
 
       return NextResponse.json({
         stdout: data.output || "",
-        stderr: "", // JDoodle bundles stderr into output usually
-        compile_output: "",
-        status: { description: data.statusCode === 200 ? "Accepted" : "Execution Finished" },
+        status: { description: data.statusCode === 200 ? "Accepted" : "Finished" },
         time: data.cpuTime || "0.00",
         memory: data.memory || "N/A"
       });
     }
 
-    // Node 2: Batch Audit Mode (Hidden Test Case Verification)
+    // Mode B: Batch Neural Audit (Submit Code - Hidden Test Cases)
     const results = [];
     for (const tc of testCases) {
       try {
@@ -94,14 +96,14 @@ export async function POST(req: Request) {
           passed: actualOutput === expectedOutput
         });
       } catch (e: any) {
-        results.push({ status: { description: "Node Failure" }, passed: false });
+        results.push({ status: { description: "Node Connection Failed" }, passed: false, stdout: "" });
       }
     }
 
     return NextResponse.json({ results });
 
   } catch (error: any) {
-    console.error('[JDoodle API Proxy] Fault:', error);
-    return NextResponse.json({ error: "Neural execution node encountered a critical fault." }, { status: 500 });
+    console.error('[JDoodle Proxy] Fatal Fault:', error);
+    return NextResponse.json({ error: "Neural execution bridge encountered a critical failure." }, { status: 500 });
   }
 }
