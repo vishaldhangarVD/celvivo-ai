@@ -25,6 +25,14 @@ export interface CodingQuestion {
   timeLimit: string;
   memoryLimit: string;
   languageSupport: string[];
+  // Optional Matrix Overrides
+  nodeLabel?: string;
+  narrativeTitle?: string;
+  inputTitle?: string;
+  outputTitle?: string;
+  constraintTitle?: string;
+  sampleTitle?: string;
+  auditHint?: string;
 }
 
 export const MASTER_QUESTIONS: CodingQuestion[] = [
@@ -35,7 +43,7 @@ export const MASTER_QUESTIONS: CodingQuestion[] = [
     description: "You are creating a fun game for a children's literacy app to help them learn about patterns. The game asks kids to identify what we call 'Mirror Words.' A word is a Mirror Word if it reads exactly the same when you read it from left to right as it does from right to left. For example, 'level' is a mirror word because the letters are the same in both directions. Your program needs to take a word and decide if it fits this description correctly.",
     difficulty: "Easy",
     category: "Strings",
-    topic: "Strings",
+    topic: "STRING ENGINE",
     estimatedTime: "10 mins",
     company: "TCS",
     tags: ["Basic", "Logic", "Strings"],
@@ -81,7 +89,7 @@ export const MASTER_QUESTIONS: CodingQuestion[] = [
     description: "You are helping a teacher organize a school gaming competition. After the tournament ends, you have a list of all the points each student earned. You need to find out who came in second place, which we call the 'Runner-Up.' If multiple students tied for the very highest score, the runner-up is the student with the highest score that is strictly less than the top score. This ensures we find a clear second-place value regardless of how many people tied for first.",
     difficulty: "Easy",
     category: "Arrays",
-    topic: "Arrays",
+    topic: "DATA STRUCTURES",
     estimatedTime: "10 mins",
     company: "Accenture",
     tags: ["Arrays", "Logic"],
@@ -128,7 +136,7 @@ export const MASTER_QUESTIONS: CodingQuestion[] = [
     description: "You are building a helpful tool for a professional code editor that helps software engineers find mistakes while they type. One very common mistake is forgetting to close a bracket. Your tool needs to check if the brackets in a single line of code are 'balanced.' A string of brackets is balanced if every opening bracket '(', '{', or '[' has a matching closing bracket of the same type, and they are all closed in the exact correct order. If they are tangled or missing a pair, the code won't run!",
     difficulty: "Medium",
     category: "Stack",
-    topic: "Stack",
+    topic: "ALGORITHM CORE",
     estimatedTime: "20 mins",
     company: "Capgemini",
     tags: ["Stack", "Data Structures"],
@@ -173,7 +181,7 @@ export const MASTER_QUESTIONS: CodingQuestion[] = [
     description: "You are the manager of a popular tech blog and you want to reward the first person who visited your site today without returning again. You have a log of everyone who visited, represented by a string of lowercase letters where each letter represents a unique user ID. Your task is to find the very first user in the list who only appears exactly one time in the entire string. If everyone in the list visited the site at least twice, then nobody is eligible for the reward today.",
     difficulty: "Medium",
     category: "Hash Map",
-    topic: "Hash Map",
+    topic: "HASH ENGINE",
     estimatedTime: "20 mins",
     company: "Infosys",
     tags: ["Hashing", "Strings"],
@@ -220,7 +228,7 @@ export const MASTER_QUESTIONS: CodingQuestion[] = [
     description: "You are a financial advisor helping a client understand their stock market performance over a specific period of time. You have a list of daily results, where each number represents a profit (positive) or a loss (negative) for that day. Your client wants to know which consecutive period of days was the most successful. Your task is to find a group of one or more days next to each other that, when added together, give the highest possible total sum of money. This helps identify the client's peak performance window.",
     difficulty: "Hard",
     category: "Arrays",
-    topic: "Arrays",
+    topic: "ALGORITHM CORE",
     estimatedTime: "35 mins",
     company: "Wipro",
     tags: ["Optimization", "Arrays", "Kadane"],
