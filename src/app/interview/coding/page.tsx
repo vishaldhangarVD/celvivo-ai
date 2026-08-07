@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect, useMemo, useCallback } from 'react';
@@ -30,11 +31,12 @@ import {
   Check,
   AlertTriangle,
   RotateCcw,
-  Zap
+  Zap,
+  Mic,
+  ArrowRight
 } from 'lucide-react';
 import { useUser, useFirestore, useDoc } from '@/firebase';
-import { doc, updateDoc, serverTimestamp, getDoc, collection, addDoc } from 'firebase/firestore';
-import { generateCodingQuestions, type CodingProblem } from '@/ai/flows/ai-coding-generator';
+import { doc, updateDoc, serverTimestamp, getDoc, collection, addDoc, query, where, getDocs, limit } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 
@@ -55,7 +57,7 @@ export default function CodingEnginePage() {
   const db = useFirestore();
   const { toast } = useToast();
 
-  const [questions, setQuestions] = useState<CodingProblem[]>([]);
+  const [questions, setQuestions] = useState<any[]>([]);
   const [currentIdx, setCurrentIdx] = useState(0);
   const [selectedLang, setSelectedLang] = useState(LANGUAGES[0]);
   const [code, setCode] = useState("");
@@ -81,36 +83,74 @@ export default function CodingEnginePage() {
 
   useEffect(() => {
     async function initEnvironment() {
-      if (!journey || !journeyRef || questions.length > 0) return;
+      if (!db || !journey || questions.length > 0) return;
+      
       try {
-        const snap = await getDoc(journeyRef);
+        const snap = await getDoc(journeyRef!);
         const data = snap.data();
-        if (data?.codingQuestions && data.codingQuestions.length === 5) {
+        
+        if (data?.codingQuestions && data.codingQuestions.length > 0) {
           setQuestions(data.codingQuestions);
-        } else {
-          const response = await generateCodingQuestions({
-            role: journey.role,
-            company: journey.company,
-            experienceLevel: journey.experience,
-          });
-          if (!response || !response.questions) throw new Error("Synthesis node failure.");
-          await updateDoc(journeyRef, { codingQuestions: response.questions, updatedAt: serverTimestamp() });
-          setQuestions(response.questions);
+          setIsInitializing(false);
+          return;
         }
+
+        // Map experience to difficulty
+        let targetDiff = "Medium";
+        const exp = journey.experience?.toLowerCase() || "";
+        if (exp.includes("fresher") || exp.includes("0-1")) targetDiff = "Easy";
+        else if (exp.includes(" senior") || exp.includes("8+")) targetDiff = "Hard";
+
+        // Query Firestore for questions
+        const q = query(
+          collection(db, "codingQuestions"),
+          where("difficulty", "==", targetDiff)
+        );
+        
+        const querySnap = await getDocs(q);
+        let availableQuestions = querySnap.docs.map(d => ({ ...d.data(), id: d.id }));
+
+        // Fallback if no questions found for difficulty
+        if (availableQuestions.length === 0) {
+          const fallbackSnap = await getDocs(collection(db, "codingQuestions"));
+          availableQuestions = fallbackSnap.docs.map(d => ({ ...d.data(), id: d.id }));
+        }
+
+        // Shuffle and pick 5 (or less if not available)
+        const shuffled = availableQuestions.sort(() => 0.5 - Math.random());
+        const selected = shuffled.slice(0, 5);
+
+        if (selected.length === 0) {
+          throw new Error("No coding questions available in repository.");
+        }
+
+        await updateDoc(journeyRef!, {
+          codingQuestions: selected,
+          updatedAt: serverTimestamp()
+        });
+
+        setQuestions(selected);
       } catch (e: any) {
-        toast({ variant: "destructive", title: "Synthesis Error", description: "Could not architect coding challenges." });
+        console.error("Initialization Fault:", e);
+        toast({ 
+          variant: "destructive", 
+          title: "System Node Failure", 
+          description: e.message || "Could not retrieve coding challenges." 
+        });
       } finally {
         setIsInitializing(false);
       }
     }
     initEnvironment();
-  }, [journey, journeyRef, questions.length, toast]);
+  }, [db, journey, journeyRef, questions.length, toast]);
 
   useEffect(() => {
     if (questions[currentIdx]) {
       const q = questions[currentIdx];
       const saved = sessionResults[currentIdx]?.code;
-      setCode(saved || q.starterCode[selectedLang.id as keyof typeof q.starterCode] || "// Implementation required");
+      // starterCode is expected to be an object: { python: "...", java: "..." }
+      const starter = q.starterCode?.[selectedLang.id] || q.starterCode?.["javascript"] || "// Implementation required";
+      setCode(saved || starter);
       setCustomInput("");
       setTerminalOutput("Ready to execute your code.");
       setActiveTerminalTab("output");
@@ -122,23 +162,43 @@ export default function CodingEnginePage() {
     setIsSubmitting(true);
     setActiveTerminalTab("cases");
     setTerminalOutput("Initializing hidden verification matrix...");
+    
     try {
       const response = await fetch('/api/execute', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ source_code: code, language: selectedLang.id, testCases: questions[currentIdx].hiddenTestCases }),
+        body: JSON.stringify({ 
+          source_code: code, 
+          language: selectedLang.id, 
+          testCases: questions[currentIdx].hiddenTestCases || [] 
+        }),
       });
+
       if (!response.ok) throw new Error("Execution node timeout.");
       const data = await response.json();
       const results = data.results || [];
       const passed = results.filter((r: any) => r.passed).length;
-      const allPassed = passed === results.length;
-      const submissionReport = { code, results, allPassed, passedCount: passed, totalCount: results.length, language: selectedLang.label, status: allPassed ? 'Accepted' : 'Failed' };
+      const total = results.length || 1;
+      const allPassed = passed === total && total > 0;
+
+      const submissionReport = { 
+        code, 
+        results, 
+        allPassed, 
+        passedCount: passed, 
+        totalCount: total, 
+        language: selectedLang.label, 
+        status: allPassed ? 'Accepted' : 'Failed' 
+      };
+
       setSessionResults(prev => ({ ...prev, [currentIdx]: submissionReport }));
+      
       if (allPassed) toast({ title: "Node Verified", description: "All hidden test cases passed." });
-      else toast({ variant: "destructive", title: "Logic Failed", description: `Passed ${passed}/${results.length} nodes.` });
-      setTerminalOutput(allPassed ? "Accepted — All Test Cases Passed." : `Failed — Passed ${passed}/${results.length} nodes.`);
+      else toast({ variant: "destructive", title: "Logic Failed", description: `Passed ${passed}/${total} nodes.` });
+      
+      setTerminalOutput(allPassed ? "Accepted — All Test Cases Passed." : `Wrong Answer — Passed ${passed}/${total} nodes.`);
     } catch (error: any) {
+      console.error("Submission Error:", error);
       setTerminalOutput("[CRITICAL FAULT] Verification node connection lost.");
     } finally {
       setIsSubmitting(false);
@@ -174,7 +234,7 @@ export default function CodingEnginePage() {
       });
       const data = await response.json();
       if (data.error) setTerminalOutput(`[SYSTEM ERROR]\n${data.error}`);
-      else setTerminalOutput(`[STATUS: ${data.status.description}]\nTime: ${data.time}s | Memory: ${data.memory}\n\nOutput:\n${data.stdout}`);
+      else setTerminalOutput(`[STATUS: ${data.status?.description || 'Finished'}]\nTime: ${data.time}s | Memory: ${data.memory}\n\nOutput:\n${data.stdout}`);
     } catch (error) {
       setTerminalOutput("[NETWORK FAULT] Failed to connect to execution node.");
     } finally {
@@ -195,7 +255,7 @@ export default function CodingEnginePage() {
       const passedQuestionsCount = resultsArray.filter(([_, r]) => r.allPassed).length;
       const scorePercentage = Math.round((passedQuestionsCount / questions.length) * 100);
       
-      // Persist individual question results
+      // Persist results
       for (const [idxStr, res] of resultsArray) {
         const idx = parseInt(idxStr);
         const q = questions[idx];
@@ -215,17 +275,15 @@ export default function CodingEnginePage() {
         });
       }
 
-      const codingReport = { 
-        score: scorePercentage, 
-        status: scorePercentage >= 70 ? 'Pass' : 'Fail', 
-        totalQuestions: questions.length, 
-        passedQuestions: passedQuestionsCount, 
-        submissionTime: new Date().toLocaleTimeString(),
-        codingRoundCompleted: true
-      };
-
       await updateDoc(journeyRef!, {
-        codingReport,
+        codingReport: { 
+          score: scorePercentage, 
+          status: scorePercentage >= 70 ? 'Pass' : 'Fail', 
+          totalQuestions: questions.length, 
+          passedQuestions: passedQuestionsCount, 
+          submissionTime: new Date().toLocaleTimeString(),
+          codingRoundCompleted: true
+        },
         codingRoundCompleted: true,
         codingScore: scorePercentage,
         currentStage: 'HR Interview',
@@ -258,11 +316,20 @@ export default function CodingEnginePage() {
       <header className="h-20 border-b border-white/5 bg-[#0b0e1a]/80 backdrop-blur-xl flex items-center justify-between px-8 z-50">
         <div className="flex items-center gap-6">
           <Code2 className="w-6 h-6 text-accent" />
-          <div><h1 className="text-sm font-black uppercase tracking-widest text-premium">Syntax Matrix Engine</h1><p className="text-[9px] font-bold text-accent uppercase">Node {currentIdx + 1} of {questions.length}</p></div>
+          <div>
+            <h1 className="text-sm font-black uppercase tracking-widest text-premium">Syntax Matrix Engine</h1>
+            <p className="text-[9px] font-bold text-accent uppercase">Node {currentIdx + 1} of {questions.length}</p>
+          </div>
         </div>
         <div className="flex items-center gap-8">
-          <div className={cn("px-6 py-2 rounded-xl glass border-white/10 font-mono text-xl tabular-nums tracking-widest", timeLeft < 300 ? "text-red-500 animate-pulse" : "text-accent")}>{formatTime(timeLeft)}</div>
-          <select value={selectedLang.id} onChange={(e) => setSelectedLang(LANGUAGES.find(l => l.id === e.target.value) || LANGUAGES[0])} className="h-12 px-4 glass border-white/10 bg-[#0b0e1a] rounded-xl text-[10px] font-black uppercase tracking-widest outline-none">
+          <div className={cn("px-6 py-2 rounded-xl glass border-white/10 font-mono text-xl tabular-nums tracking-widest", timeLeft < 300 ? "text-red-500 animate-pulse" : "text-accent")}>
+            CODING TIME LEFT: {formatTime(timeLeft)}
+          </div>
+          <select 
+            value={selectedLang.id} 
+            onChange={(e) => setSelectedLang(LANGUAGES.find(l => l.id === e.target.value) || LANGUAGES[0])} 
+            className="h-12 px-4 glass border-white/10 bg-[#0b0e1a] rounded-xl text-[10px] font-black uppercase tracking-widest outline-none focus:border-accent transition-all"
+          >
             {LANGUAGES.map(l => <option key={l.id} value={l.id}>{l.label}</option>)}
           </select>
         </div>
@@ -274,39 +341,171 @@ export default function CodingEnginePage() {
             <div className="space-y-6">
               <Badge className="bg-purple-500/10 text-purple-400 border-none text-[9px] font-black uppercase">Challenge Matrix</Badge>
               <h2 className="text-2xl font-bold tracking-tight">{currentQ?.title}</h2>
-              <div className="flex gap-2"><Badge variant="outline" className="text-red-400 text-[8px] uppercase">{currentQ?.difficulty}</Badge></div>
-              <p className="text-sm text-white/70 leading-relaxed font-light">{currentQ?.problemStatement}</p>
-              <div className="p-5 glass border-white/5 rounded-2xl bg-black/40 space-y-3 font-mono text-[10px]"><p className="text-white/30 uppercase text-[8px]">Sample Input</p><pre className="text-accent">{currentQ?.sampleInput}</pre><p className="text-white/30 uppercase text-[8px]">Sample Output</p><pre className="text-green-400">{currentQ?.sampleOutput}</pre></div>
+              <div className="flex gap-2">
+                <Badge variant="outline" className="text-accent text-[8px] uppercase border-accent/20">{currentQ?.difficulty}</Badge>
+                <Badge variant="outline" className="text-white/40 text-[8px] uppercase border-white/10">{currentQ?.category}</Badge>
+              </div>
+              <p className="text-sm text-white/70 leading-relaxed font-light">{currentQ?.description}</p>
+              
+              {currentQ?.constraints && currentQ.constraints.length > 0 && (
+                <div className="space-y-3">
+                  <h4 className="text-[10px] font-black uppercase tracking-widest text-white/30">Constraints</h4>
+                  <ul className="space-y-2">
+                    {currentQ.constraints.map((c: string, i: number) => (
+                      <li key={i} className="text-xs text-white/50 flex items-start gap-2">
+                        <div className="w-1 h-1 rounded-full bg-accent mt-1.5" />
+                        {c}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              <div className="p-5 glass border-white/5 rounded-2xl bg-black/40 space-y-3 font-mono text-[10px]">
+                <p className="text-white/30 uppercase text-[8px]">Sample Input</p>
+                <pre className="text-accent whitespace-pre-wrap">{currentQ?.sampleInput}</pre>
+                <p className="text-white/30 uppercase text-[8px]">Sample Output</p>
+                <pre className="text-green-400 whitespace-pre-wrap">{currentQ?.sampleOutput}</pre>
+              </div>
             </div>
           </Card>
         </div>
 
         <div className="flex-1 flex flex-col gap-4">
           <Card className="flex-1 glass border-white/5 bg-[#0b0e1a] flex flex-col relative overflow-hidden">
-            <Editor height="100%" theme="vs-dark" language={selectedLang.monaco} value={code} onChange={(val) => setCode(val || "")} options={{ fontSize: 14, readOnly: isTimeExpired || isFinalizing, minimap: { enabled: false } }} />
+            <Editor 
+              height="100%" 
+              theme="vs-dark" 
+              language={selectedLang.monaco} 
+              value={code} 
+              onChange={(val) => setCode(val || "")} 
+              options={{ 
+                fontSize: 14, 
+                readOnly: isTimeExpired || isFinalizing, 
+                minimap: { enabled: false },
+                scrollBeyondLastLine: false,
+                padding: { top: 20 }
+              }} 
+            />
             <div className="h-20 border-t border-white/5 bg-white/[0.02] flex items-center justify-between px-8">
               <div className="flex items-center gap-4">
-                <Button onClick={runCode} disabled={isRunning || isSubmitting || isTimeExpired} className="h-12 px-8 bg-white/5 text-[10px] font-black uppercase tracking-widest rounded-xl border border-white/10">{isRunning ? <Loader2 className="w-4 animate-spin" /> : "RUN CODE"}</Button>
-                <Button onClick={performSubmission} disabled={isRunning || isSubmitting || isTimeExpired} className="h-12 px-8 btn-premium rounded-xl text-[10px] font-black uppercase tracking-widest">{isSubmitting ? <Loader2 className="w-4 animate-spin" /> : "SUBMIT CODE"}</Button>
+                <Button onClick={runCode} disabled={isRunning || isSubmitting || isTimeExpired} className="h-12 px-8 bg-white/5 text-[10px] font-black uppercase tracking-widest rounded-xl border border-white/10 hover:bg-white/10">
+                  {isRunning ? <Loader2 className="w-4 animate-spin" /> : "RUN CODE"}
+                </Button>
+                <Button onClick={performSubmission} disabled={isRunning || isSubmitting || isTimeExpired} className="h-12 px-8 btn-premium rounded-xl text-[10px] font-black uppercase tracking-widest">
+                  {isSubmitting ? <Loader2 className="w-4 animate-spin" /> : "SUBMIT CODE"}
+                </Button>
               </div>
-              {currentIdx < questions.length - 1 ? <Button onClick={() => setCurrentIdx(prev => prev + 1)} variant="ghost" className="h-12 px-6 text-[10px] font-black uppercase tracking-widest text-white/40">NEXT QUESTION</Button> : <Button onClick={finalizeAssessment} className="h-12 px-8 bg-accent/20 border border-accent/40 text-accent text-[10px] font-black uppercase tracking-widest rounded-xl hover:bg-accent/30 transition-all">VIEW RESULTS</Button>}
+              <div className="flex items-center gap-4">
+                {currentIdx < questions.length - 1 ? (
+                  <Button onClick={() => setCurrentIdx(prev => prev + 1)} variant="ghost" className="h-12 px-6 text-[10px] font-black uppercase tracking-widest text-white/40 hover:text-white hover:bg-white/5">
+                    NEXT QUESTION <ChevronRight className="ml-2 w-4 h-4" />
+                  </Button>
+                ) : (
+                  <Button onClick={finalizeAssessment} className="h-12 px-8 bg-accent/20 border border-accent/40 text-accent text-[10px] font-black uppercase tracking-widest rounded-xl hover:bg-accent/30 transition-all">
+                    VIEW CODING RESULTS
+                  </Button>
+                )}
+              </div>
             </div>
           </Card>
 
           <Card className="h-[35%] glass border-white/5 bg-[#0b0e1a] flex flex-col overflow-hidden">
             <Tabs value={activeTerminalTab} onValueChange={setActiveTerminalTab} className="h-full flex flex-col">
-              <TabsList className="bg-white/[0.02] px-4 h-10 border-b border-white/5"><TabsTrigger value="output" className="text-[9px] font-black">EXECUTION OUTPUT</TabsTrigger><TabsTrigger value="input" className="text-[9px] font-black">CUSTOM STDIN</TabsTrigger><TabsTrigger value="cases" className="text-[9px] font-black">TEST STATUS</TabsTrigger></TabsList>
+              <TabsList className="bg-white/[0.02] px-4 h-10 border-b border-white/5">
+                <TabsTrigger value="output" className="text-[9px] font-black uppercase tracking-widest">Execution Output</TabsTrigger>
+                <TabsTrigger value="input" className="text-[9px] font-black uppercase tracking-widest">Custom Stdin</TabsTrigger>
+                <TabsTrigger value="cases" className="text-[9px] font-black uppercase tracking-widest">Test Status</TabsTrigger>
+              </TabsList>
               <div className="flex-1 font-mono text-[11px] overflow-hidden">
-                <TabsContent value="output" className="p-6 text-white/60 h-full overflow-y-auto">{terminalOutput}</TabsContent>
-                <TabsContent value="input" className="h-full"><textarea value={customInput} onChange={(e) => setCustomInput(e.target.value)} className="w-full h-full bg-transparent outline-none p-6 text-white/60 resize-none" placeholder="Enter custom STDIN node..." /></TabsContent>
-                <TabsContent value="cases" className="p-6 space-y-4 h-full overflow-y-auto">{currentResult ? <div className="space-y-4"><div className="flex justify-between items-center"><span className="text-xs font-black uppercase">{currentResult.status}</span><span className="text-[9px] opacity-40">Passed {currentResult.passedCount}/{currentResult.totalCount}</span></div>{currentResult.results.map((r: any, i: number) => <div key={i} className="flex justify-between p-3 glass border-white/5 rounded-xl"><span className="text-[9px] opacity-40 uppercase">Node {i + 1}</span><Badge className={cn("text-[8px] border-none", r.passed ? "bg-green-500/20 text-green-400" : "bg-red-500/20 text-red-400")}>{r.passed ? "PASSED" : "FAILED"}</Badge></div>)}</div> : <p className="text-center text-white/20 uppercase tracking-widest pt-12">Awaiting verification</p>}</TabsContent>
+                <TabsContent value="output" className="p-6 text-white/60 h-full overflow-y-auto whitespace-pre-wrap">{terminalOutput}</TabsContent>
+                <TabsContent value="input" className="h-full">
+                  <textarea 
+                    value={customInput} 
+                    onChange={(e) => setCustomInput(e.target.value)} 
+                    className="w-full h-full bg-transparent outline-none p-6 text-white/60 resize-none font-mono" 
+                    placeholder="Enter manual parameter input for node debugging..." 
+                  />
+                </TabsContent>
+                <TabsContent value="cases" className="p-6 space-y-4 h-full overflow-y-auto">
+                  {currentResult ? (
+                    <div className="space-y-4">
+                      <div className="flex justify-between items-center mb-6">
+                        <div className="space-y-1">
+                          <span className={cn("text-xs font-black uppercase tracking-widest", currentResult.allPassed ? "text-green-400" : "text-red-400")}>{currentResult.status}</span>
+                          <p className="text-[10px] text-white/30 uppercase">Audit of {currentResult.totalCount} logical nodes</p>
+                        </div>
+                        <div className="text-right">
+                          <span className="text-[9px] font-black text-white/60 uppercase tracking-widest">Passed {currentResult.passedCount}/{currentResult.totalCount}</span>
+                        </div>
+                      </div>
+                      <div className="grid gap-3">
+                        {currentResult.results.map((r: any, i: number) => (
+                          <div key={i} className="flex justify-between items-center p-4 glass border-white/5 rounded-xl bg-white/[0.01]">
+                            <div className="flex items-center gap-3">
+                              <div className={cn("w-1.5 h-1.5 rounded-full", r.passed ? "bg-green-500 shadow-[0_0_10px_rgba(34,197,94,0.5)]" : "bg-red-500 shadow-[0_0_10px_rgba(239,68,68,0.5)]")} />
+                              <span className="text-[9px] font-black text-white/40 uppercase tracking-[0.2em]">Hidden Case Node {i + 1}</span>
+                            </div>
+                            <Badge className={cn("text-[8px] border-none font-black px-3 py-1", r.passed ? "bg-green-500/10 text-green-400" : "bg-red-500/10 text-red-400")}>
+                              {r.passed ? "PASSED" : "FAILED"}
+                            </Badge>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="h-full flex flex-col items-center justify-center text-center space-y-4">
+                      <ShieldCheck className="w-12 h-12 text-white/5" />
+                      <p className="text-xs font-black text-white/20 uppercase tracking-[0.3em]">Awaiting Neural Logic Verification</p>
+                    </div>
+                  )}
+                </TabsContent>
               </div>
             </Tabs>
           </Card>
         </div>
       </main>
 
-      <AnimatePresence>{isFinalizing && <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="fixed inset-0 z-[200] bg-[#050816]/95 backdrop-blur-3xl flex flex-col items-center justify-center p-12 text-center"><div className="relative mb-12"><div className="w-48 h-48 rounded-full border-2 border-accent/20 border-t-accent animate-spin" /><Cpu className="w-12 h-12 text-accent absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 animate-pulse" /></div><h2 className="text-4xl font-bold tracking-tighter text-premium uppercase">Synthesizing Audit Report</h2><div className="space-y-4 max-w-sm w-full">{["Compiling Node Data...", "Running Neural Audit...", "Validating Metrics...", "Finalizing Dossier..."].map((step, idx) => <div key={idx} className={cn("flex items-center gap-4 transition-opacity", submitStep >= idx ? "opacity-100" : "opacity-20")}><div className={cn("w-5 h-5 rounded-full border flex items-center justify-center text-[10px]", submitStep > idx ? "bg-green-500 border-green-500 text-black" : "border-white/20")}>{submitStep > idx ? "✓" : idx + 1}</div><span className="text-xs font-bold uppercase tracking-widest">{step}</span></div>)}</div></motion.div>}</AnimatePresence>
+      <AnimatePresence>
+        {isFinalizing && (
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="fixed inset-0 z-[200] bg-[#050816]/95 backdrop-blur-3xl flex flex-col items-center justify-center p-12 text-center">
+            <div className="relative mb-12">
+              <div className="w-48 h-48 rounded-full border-2 border-accent/20 border-t-accent animate-spin" />
+              <Cpu className="w-12 h-12 text-accent absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 animate-pulse" />
+            </div>
+            <h2 className="text-4xl font-bold tracking-tighter text-premium uppercase mb-12">Synthesizing Audit Report</h2>
+            <div className="space-y-4 max-w-sm w-full">
+              {["Compiling Node Data...", "Running Neural Audit...", "Validating Metrics...", "Finalizing Dossier..."].map((step, idx) => (
+                <div key={idx} className={cn("flex items-center gap-4 transition-opacity duration-500", submitStep >= idx ? "opacity-100" : "opacity-20")}>
+                  <div className={cn("w-6 h-6 rounded-full border flex items-center justify-center text-[10px] font-black", submitStep > idx ? "bg-green-500 border-green-500 text-black" : "border-white/20 text-white/20")}>
+                    {submitStep > idx ? <Check className="w-3 h-3" /> : idx + 1}
+                  </div>
+                  <span className="text-xs font-bold uppercase tracking-widest text-white/60">{step}</span>
+                </div>
+              ))}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {isTimeExpired && !isFinalizing && (
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="fixed inset-0 z-[150] bg-red-950/20 backdrop-blur-xl flex items-center justify-center p-6">
+            <Card className="max-w-md w-full premium-card border-red-500/50 bg-[#0b0e1a] p-12 text-center space-y-8">
+              <div className="w-20 h-20 rounded-full bg-red-500/20 border border-red-500/30 flex items-center justify-center mx-auto">
+                <Clock className="w-10 h-10 text-red-500 animate-pulse" />
+              </div>
+              <div className="space-y-2">
+                <h3 className="text-3xl font-bold tracking-tighter text-red-500 uppercase">Time Expired</h3>
+                <p className="text-sm text-white/60 font-light">The simulation window has closed. Your current implementation node has been automatically submitted for audit.</p>
+              </div>
+              <Button onClick={finalizeAssessment} className="w-full h-16 btn-premium bg-gradient-to-r from-red-600 to-red-400 uppercase tracking-widest text-xs font-black">
+                Proceed to Audit <ArrowRight className="ml-2 w-4 h-4" />
+              </Button>
+            </Card>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

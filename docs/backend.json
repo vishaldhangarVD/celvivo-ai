@@ -41,6 +41,26 @@
         "createdAt": { "type": "string", "format": "date-time" }
       }
     },
+    "CodingQuestion": {
+      "title": "Coding Question",
+      "description": "A technical algorithmic challenge node.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "title": { "type": "string" },
+        "description": { "type": "string" },
+        "difficulty": { "type": "string", "enum": ["Easy", "Medium", "Hard"] },
+        "category": { "type": "string" },
+        "company": { "type": "string" },
+        "languageSupport": { "type": "array", "items": { "type": "string" } },
+        "starterCode": { "type": "object" },
+        "sampleInput": { "type": "string" },
+        "sampleOutput": { "type": "string" },
+        "hiddenTestCases": { "type": "array" },
+        "constraints": { "type": "array", "items": { "type": "string" } },
+        "tags": { "type": "array", "items": { "type": "string" } }
+      }
+    },
     "ResumeAudit": {
       "title": "Resume Audit",
       "description": "Results of a neural resume intelligence scan.",
@@ -104,6 +124,10 @@
     "/users/{userId}/daily_challenges/{challengeId}": {
       "schema": "#/entities/DailyChallenge",
       "description": "Stores individual daily challenge records."
+    },
+    "/codingQuestions/{questionId}": {
+      "schema": "#/entities/CodingQuestion",
+      "description": "Master repository of technical coding challenges."
     }
   }
 }
