@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { 
   Code2, 
   ChevronRight, 
@@ -27,15 +28,17 @@ import {
   XCircle, 
   Check, 
   RotateCcw, 
-  Mic, 
   Sparkles,
-  ChevronLeft,
   Timer,
-  Lightbulb,
-  AlertCircle
+  AlertCircle,
+  HelpCircle,
+  ArrowDownCircle,
+  CheckCircle2,
+  FileCode,
+  Info
 } from 'lucide-react';
 import { useUser, useFirestore, useDoc } from '@/firebase';
-import { doc, updateDoc, serverTimestamp, getDoc, collection, addDoc } from 'firebase/firestore';
+import { doc, updateDoc, serverTimestamp, collection, addDoc } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { MASTER_QUESTIONS } from '@/lib/coding-questions-data';
@@ -61,7 +64,6 @@ export default function CodingEnginePage() {
   const [currentIdx, setCurrentIdx] = useState(0);
   const [selectedLang, setSelectedLang] = useState(LANGUAGES[0]);
   const [code, setCode] = useState("");
-  const [customInput, setCustomInput] = useState("");
   const [timeLeft, setTimeLeft] = useState(30 * 60); 
   const [isTimeExpired, setIsTimeExpired] = useState(false);
   
@@ -72,7 +74,7 @@ export default function CodingEnginePage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isFinalizing, setIsFinalizing] = useState(false);
   const [submitStep, setSubmitStep] = useState(0);
-  const [terminalOutput, setTerminalOutput] = useState("Ready to execute node implementation.");
+  const [terminalOutput, setTerminalOutput] = useState("Waiting for your implementation.");
   const [activeTerminalTab, setActiveTerminalTab] = useState("output");
 
   const journeyRef = useMemo(() => {
@@ -81,16 +83,6 @@ export default function CodingEnginePage() {
   }, [db, user?.uid]);
 
   const { data: journey, loading: journeyLoading } = useDoc(journeyRef);
-
-  // Difficulty Mapping
-  const getDifficultyLabel = (diff: string) => {
-    switch (diff) {
-      case 'Easy': return 'LEVEL α';
-      case 'Medium': return 'LEVEL β';
-      case 'Hard': return 'LEVEL Ω';
-      default: return 'LEVEL α';
-    }
-  };
 
   const getDifficultyColor = (diff: string) => {
     switch (diff) {
@@ -101,7 +93,6 @@ export default function CodingEnginePage() {
     }
   };
 
-  // Category Futuristic Mapper
   const getTopicLabel = (topic: string) => {
     const map: Record<string, string> = {
       'Strings': 'STRING ENGINE',
@@ -114,7 +105,6 @@ export default function CodingEnginePage() {
     return map[topic] || topic.toUpperCase();
   };
 
-  // Core Finalization Logic
   const finalizeAssessment = useCallback(async () => {
     if (isFinalizing || !user || !db || !journey) return;
     setIsFinalizing(true);
@@ -181,7 +171,7 @@ export default function CodingEnginePage() {
         body: JSON.stringify({ 
           source_code: code, 
           language: selectedLang.id, 
-          stdin: customInput || questions[currentIdx]?.sampleInput 
+          stdin: questions[currentIdx]?.sampleInput 
         }),
       });
       const data = await response.json();
@@ -250,12 +240,10 @@ export default function CodingEnginePage() {
       if (!db || !journey || questions.length > 0) return;
       
       try {
-        // ALWAYS regenerate from MASTER_QUESTIONS as requested to purge stale Firestore cache
         const easyPool = [...MASTER_QUESTIONS].filter(q => q.difficulty === 'Easy');
         const medPool = [...MASTER_QUESTIONS].filter(q => q.difficulty === 'Medium');
         const hardPool = [...MASTER_QUESTIONS].filter(q => q.difficulty === 'Hard');
 
-        // To ensure "The Mirror Word Test" is first as per protocol requirements
         const mirrorWordIdx = easyPool.findIndex(q => q.title === "The Mirror Word Test");
         let selectedEasy: any[] = [];
         
@@ -272,7 +260,6 @@ export default function CodingEnginePage() {
           ...hardPool.sort(() => 0.5 - Math.random()).slice(0, 1)
         ];
 
-        // Force update Firestore to stay in sync with latest local MASTER_QUESTIONS logic
         await updateDoc(journeyRef!, {
           codingQuestions: finalQuestions,
           updatedAt: serverTimestamp()
@@ -294,8 +281,7 @@ export default function CodingEnginePage() {
       const q = questions[currentIdx];
       const saved = sessionResults[currentIdx]?.code;
       setCode(saved || q.starterCode?.[selectedLang.id] || q.starterCode?.["python"] || "");
-      setCustomInput("");
-      setTerminalOutput(sessionResults[currentIdx] ? "Node submission archived in matrix." : "Ready to execute node implementation.");
+      setTerminalOutput(sessionResults[currentIdx] ? "Node submission archived in matrix." : "Waiting for your implementation.");
     }
   }, [currentIdx, selectedLang, questions, sessionResults]);
 
@@ -343,6 +329,18 @@ export default function CodingEnginePage() {
           </div>
         </div>
         
+        <div className="flex-1 max-w-md mx-12">
+          <div className="flex justify-between items-center mb-1.5 px-1">
+             <span className="text-[8px] font-black uppercase tracking-widest text-white/30">Progression Roadmap</span>
+             <span className="text-[8px] font-black uppercase tracking-widest text-accent">α → α → β → β → Ω</span>
+          </div>
+          <div className="h-1 bg-white/5 rounded-full overflow-hidden flex gap-0.5">
+            {[1, 2, 3, 4, 5].map((s) => (
+              <div key={s} className={cn("flex-1 h-full transition-all duration-500", (currentIdx + 1) >= s ? "bg-accent shadow-[0_0_8px_#22d3ee]" : "bg-white/5")} />
+            ))}
+          </div>
+        </div>
+
         <div className="flex items-center gap-8">
           <div className={cn(
             "px-6 py-2 rounded-xl glass border-white/10 font-mono text-xl tabular-nums tracking-widest flex items-center gap-3",
@@ -350,26 +348,45 @@ export default function CodingEnginePage() {
           )}>
             <Timer className="w-5 h-5" /> {formatTime(timeLeft)}
           </div>
-          <select 
-            value={selectedLang.id} 
-            onChange={(e) => setSelectedLang(LANGUAGES.find(l => l.id === e.target.value) || LANGUAGES[0])} 
-            className="h-11 px-4 glass border-white/10 bg-[#0b0e1a] rounded-xl text-[10px] font-black uppercase tracking-widest outline-none focus:border-accent transition-all cursor-pointer"
-          >
-            {LANGUAGES.map(l => <option key={l.id} value={l.id}>{l.label}</option>)}
-          </select>
         </div>
       </header>
 
       <main className="flex-1 flex overflow-hidden p-4 gap-4">
-        {/* Left: Problem Statement */}
-        <div className="w-[38%] flex flex-col gap-4">
+        {/* Left: Problem Statement & Instructions */}
+        <div className="w-[35%] flex flex-col gap-4">
           <Card className="flex-1 glass bg-white/[0.01] border-white/5 p-8 overflow-y-auto custom-scrollbar rounded-[2.5rem]">
             <div className="space-y-10">
+              {/* How to Solve Workflow */}
+              <div className="p-6 glass border-accent/20 bg-accent/[0.02] rounded-3xl space-y-4">
+                <h4 className="text-[10px] font-black uppercase tracking-[0.3em] text-accent flex items-center gap-2">
+                  <Activity className="w-4 h-4" /> HOW TO SOLVE
+                </h4>
+                <div className="flex flex-col gap-2">
+                  {[
+                    "Read Problem Narrative",
+                    "Understand Input & Output",
+                    "Complete the Function",
+                    "Run Sample",
+                    "Fix Errors",
+                    "Submit Node",
+                    "Unlock Next Node"
+                  ].map((step, i) => (
+                    <div key={i} className="flex items-center gap-3">
+                      <div className={cn("w-4 h-4 rounded-full border flex items-center justify-center text-[8px] font-black", (i+1) <= (isCurrentSubmitted ? 7 : 3) ? "bg-accent border-accent text-black" : "border-white/20 text-white/20")}>
+                        {(i+1) <= (isCurrentSubmitted ? 7 : 3) ? <Check className="w-2.5 h-2.5" /> : i + 1}
+                      </div>
+                      <span className={cn("text-[10px] font-bold uppercase tracking-widest", (i+1) <= (isCurrentSubmitted ? 7 : 3) ? "text-white" : "text-white/20")}>{step}</span>
+                      {i < 6 && <ArrowDownCircle className={cn("w-2.5 h-2.5 opacity-10", (i+1) < 3 ? "opacity-40 text-accent" : "")} />}
+                    </div>
+                  ))}
+                </div>
+              </div>
+
               <div className="flex items-center justify-between">
                 <Badge className="bg-purple-500/10 text-purple-400 border-none text-[9px] font-black uppercase tracking-widest">ACTIVE MATRIX NODE 0{currentIdx + 1}</Badge>
                 <div className="flex items-center gap-2">
                   <Clock className="w-3 h-3 text-white/40" />
-                  <span className="text-[9px] font-bold text-white/40 uppercase tracking-widest">NODE LIMIT: {currentQ?.estimatedTime}</span>
+                  <span className="text-[9px] font-bold text-white/40 uppercase tracking-widest">ESTIMATED: {currentQ?.estimatedTime}</span>
                 </div>
               </div>
 
@@ -377,7 +394,7 @@ export default function CodingEnginePage() {
                 <h2 className="text-3xl font-bold tracking-tight text-white">{currentQ?.title}</h2>
                 <div className="flex gap-3">
                   <Badge variant="outline" className={cn("text-[10px] uppercase px-4 py-1 font-black tracking-widest", getDifficultyColor(currentQ?.difficulty))}>
-                    {getDifficultyLabel(currentQ?.difficulty)}
+                    {currentQ?.difficulty === 'Easy' ? 'LEVEL α' : currentQ?.difficulty === 'Medium' ? 'LEVEL β' : 'LEVEL Ω'}
                   </Badge>
                   <Badge variant="outline" className="text-white/40 text-[10px] uppercase border-white/10 px-4 py-1 font-black tracking-widest flex items-center gap-1.5">
                     <Target className="w-3 h-3" /> {getTopicLabel(currentQ?.topic)}
@@ -391,15 +408,14 @@ export default function CodingEnginePage() {
                   <p className="text-base text-white/70 leading-relaxed font-light whitespace-pre-wrap">{currentQ?.description}</p>
                 </div>
                 
-                <div className="grid grid-cols-1 gap-8">
-                  <div className="space-y-3">
-                    <h4 className="text-[11px] font-black uppercase tracking-[0.3em] text-white/30">INPUT PROTOCOL</h4>
-                    <p className="text-sm text-white/50 leading-relaxed italic">{currentQ?.inputFormat}</p>
-                  </div>
-                  <div className="space-y-3">
-                    <h4 className="text-[11px] font-black uppercase tracking-[0.3em] text-white/30">OUTPUT PROTOCOL</h4>
-                    <p className="text-sm text-white/50 leading-relaxed italic">{currentQ?.outputFormat}</p>
-                  </div>
+                <div className="space-y-3">
+                  <h4 className="text-[11px] font-black uppercase tracking-[0.3em] text-white/30">INPUT PROTOCOL</h4>
+                  <p className="text-sm text-white/50 leading-relaxed italic">{currentQ?.inputFormat}</p>
+                </div>
+                
+                <div className="space-y-3">
+                  <h4 className="text-[11px] font-black uppercase tracking-[0.3em] text-white/30">OUTPUT PROTOCOL</h4>
+                  <p className="text-sm text-white/50 leading-relaxed italic">{currentQ?.outputFormat}</p>
                 </div>
 
                 <div className="space-y-4">
@@ -414,6 +430,7 @@ export default function CodingEnginePage() {
                   </ul>
                 </div>
 
+                {/* System Sample & Walkthrough */}
                 <div className="space-y-4 p-6 glass border-white/5 rounded-3xl bg-black/40">
                   <h4 className="text-[11px] font-black uppercase tracking-[0.3em] text-accent">SYSTEM SAMPLE</h4>
                   <div className="space-y-5 font-mono text-[11px]">
@@ -426,6 +443,33 @@ export default function CodingEnginePage() {
                       <pre className="text-green-400 whitespace-pre-wrap p-4 glass rounded-xl bg-white/5 border border-white/5">{currentQ?.sampleOutput}</pre>
                     </div>
                   </div>
+
+                  {currentQ?.walkthrough && (
+                    <div className="mt-8 pt-6 border-t border-white/5 space-y-4">
+                      <h5 className="text-[9px] font-black uppercase tracking-widest text-accent/60">EXAMPLE WALKTHROUGH</h5>
+                      <div className="space-y-3 font-mono text-[10px]">
+                        <div className="flex items-center gap-3">
+                          <span className="text-white/30 w-16">Input</span>
+                          <span className="text-white/80">{currentQ.walkthrough.input}</span>
+                        </div>
+                        <ChevronRight className="w-3 h-3 text-white/10 mx-auto" />
+                        <div className="flex items-center gap-3">
+                          <span className="text-white/30 w-16">Function</span>
+                          <span className="text-accent">{currentQ.walkthrough.receive}</span>
+                        </div>
+                        <ChevronRight className="w-3 h-3 text-white/10 mx-auto" />
+                        <div className="flex items-center gap-3">
+                          <span className="text-white/30 w-16">Return</span>
+                          <span className="text-green-400">{currentQ.walkthrough.return}</span>
+                        </div>
+                        <ChevronRight className="w-3 h-3 text-white/10 mx-auto" />
+                        <div className="flex items-center gap-3">
+                          <span className="text-white/30 w-16">Output</span>
+                          <span className="text-white font-bold">{currentQ.walkthrough.output}</span>
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 <Card className="p-6 glass border-purple-500/20 bg-purple-500/[0.02] space-y-3">
@@ -441,12 +485,51 @@ export default function CodingEnginePage() {
           </Card>
         </div>
 
-        {/* Right: Code Editor & Terminal */}
+        {/* Right: Code Editor & Mission Guidance */}
         <div className="flex-1 flex flex-col gap-4">
-          <Card className="flex-1 glass border-white/5 bg-[#0b0e1a] flex flex-col relative overflow-hidden rounded-[2.5rem] shadow-2xl">
-            <div className="absolute top-0 right-0 p-4 z-10 opacity-30">
-              <span className="text-[9px] font-black tracking-widest uppercase">Matrix IDE v4.2</span>
+          {/* Mission Card */}
+          <Card className="p-6 glass border-accent/20 bg-accent/[0.03] rounded-[2rem] flex items-center justify-between">
+            <div className="flex items-center gap-6">
+              <div className="w-12 h-12 rounded-2xl bg-accent/20 flex items-center justify-center text-accent">
+                 <Rocket className="w-6 h-6 animate-pulse" />
+              </div>
+              <div>
+                <h3 className="text-sm font-black uppercase tracking-widest text-white">MISSION PROTOCOL</h3>
+                <p className="text-[10px] text-white/40 uppercase tracking-widest mt-1">Complete the provided function using standard logic. Do not rename variables.</p>
+              </div>
             </div>
+            <div className="flex items-center gap-3 bg-black/40 px-4 py-2 rounded-xl border border-white/5">
+               <Info className="w-4 h-4 text-accent" />
+               <span className="text-[9px] font-bold text-white/60 uppercase tracking-widest">Replenish the TODO section</span>
+            </div>
+          </Card>
+
+          <Card className="flex-1 glass border-white/5 bg-[#0b0e1a] flex flex-col relative overflow-hidden rounded-[2.5rem] shadow-2xl">
+            {/* Function Information Bar */}
+            <div className="h-14 border-b border-white/5 bg-white/[0.02] flex items-center px-10 gap-12 overflow-x-auto custom-scrollbar">
+               <div className="flex items-center gap-3 shrink-0">
+                  <span className="text-[9px] font-black text-white/30 uppercase tracking-widest">Function:</span>
+                  <Badge variant="outline" className="border-accent/30 text-accent text-[10px] font-mono px-3">{currentQ?.functionInfo?.name || 'solve()'}</Badge>
+               </div>
+               <div className="flex items-center gap-3 shrink-0">
+                  <span className="text-[9px] font-black text-white/30 uppercase tracking-widest">Return:</span>
+                  <span className="text-[10px] font-mono text-purple-400">{currentQ?.functionInfo?.returnType || 'void'}</span>
+               </div>
+               <div className="flex items-center gap-3 shrink-0">
+                  <span className="text-[9px] font-black text-white/30 uppercase tracking-widest">Goal:</span>
+                  <span className="text-[10px] font-medium text-white/70 max-w-xs truncate">{currentQ?.functionInfo?.goal || 'Solve the logic node.'}</span>
+               </div>
+            </div>
+
+            <div className="absolute top-16 right-8 z-10 opacity-20 pointer-events-none">
+              <span className="text-[9px] font-black tracking-widest uppercase flex items-center gap-2"><FileCode className="w-3 h-3" /> Matrix IDE v4.2</span>
+            </div>
+
+            <div className="p-4 px-10 bg-accent/5 border-b border-white/5 flex items-center justify-between">
+               <p className="text-[10px] font-bold text-accent/60 uppercase tracking-widest">Where should I write code?</p>
+               <p className="text-[9px] text-white/20 uppercase tracking-widest">Logic must be scoped within the function body.</p>
+            </div>
+
             <Editor 
               height="100%" 
               theme="vs-dark" 
@@ -458,35 +541,72 @@ export default function CodingEnginePage() {
                 readOnly: isTimeExpired || isFinalizing, 
                 minimap: { enabled: false },
                 scrollBeyondLastLine: false,
-                padding: { top: 30, bottom: 30 },
+                padding: { top: 20, bottom: 20 },
                 fontFamily: 'JetBrains Mono, monospace',
                 lineHeight: 1.6
               }} 
             />
-            <div className="h-24 border-t border-white/5 bg-white/[0.02] flex items-center justify-between px-10">
-              <div className="flex items-center gap-4">
-                <Button onClick={handleRunCode} disabled={isRunning || isSubmitting || isTimeExpired} className="h-13 px-8 glass border-white/10 bg-white/5 text-[10px] font-black uppercase tracking-widest rounded-xl hover:bg-white/10 transition-all">
-                  {isRunning ? <Loader2 className="w-4 animate-spin mr-2" /> : <Activity className="w-4 h-4 mr-2" />} RUN SAMPLE
-                </Button>
-                <Button onClick={handleSubmitCode} disabled={isRunning || isSubmitting || isTimeExpired} className="h-13 px-8 btn-premium rounded-xl text-[10px] font-black uppercase tracking-widest shadow-2xl">
-                  {isSubmitting ? <Loader2 className="w-4 animate-spin mr-2" /> : <ShieldCheck className="w-4 h-4 mr-2" />} SUBMIT NODE
-                </Button>
+
+            <div className="h-32 border-t border-white/5 bg-white/[0.02] flex items-center justify-between px-10">
+              <div className="flex items-center gap-12">
+                <div className="flex flex-col gap-3">
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button onClick={handleRunCode} disabled={isRunning || isSubmitting || isTimeExpired} className="h-12 px-8 glass border-white/10 bg-white/5 text-[10px] font-black uppercase tracking-widest rounded-xl hover:bg-white/10 transition-all">
+                          {isRunning ? <Loader2 className="w-4 animate-spin mr-2" /> : <Activity className="w-4 h-4 mr-2" />} RUN SAMPLE
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent className="glass border-white/10 text-white text-[10px] uppercase font-bold tracking-widest">Run against visible sample only.</TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                  <p className="text-[8px] text-white/20 uppercase tracking-widest ml-1">Test with Sample I/O</p>
+                </div>
+
+                <div className="flex flex-col gap-3">
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button onClick={handleSubmitCode} disabled={isRunning || isSubmitting || isTimeExpired} className="h-12 px-8 btn-premium rounded-xl text-[10px] font-black uppercase tracking-widest shadow-2xl">
+                          {isSubmitting ? <Loader2 className="w-4 animate-spin mr-2" /> : <ShieldCheck className="w-4 h-4 mr-2" />} SUBMIT NODE
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent className="glass border-white/10 text-white text-[10px] uppercase font-bold tracking-widest">Evaluate against all hidden test cases.</TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                  <p className="text-[8px] text-accent/40 uppercase tracking-widest ml-1">Audit Hidden Matrix</p>
+                </div>
               </div>
 
               <div className="flex items-center gap-4">
+                <select 
+                  value={selectedLang.id} 
+                  onChange={(e) => setSelectedLang(LANGUAGES.find(l => l.id === e.target.value) || LANGUAGES[0])} 
+                  className="h-11 px-4 glass border-white/10 bg-[#0b0e1a] rounded-xl text-[10px] font-black uppercase tracking-widest outline-none focus:border-accent transition-all cursor-pointer"
+                >
+                  {LANGUAGES.map(l => <option key={l.id} value={l.id}>{l.label}</option>)}
+                </select>
+
                 {currentIdx < questions.length - 1 ? (
-                  <Button 
-                    onClick={() => setCurrentIdx(prev => prev + 1)} 
-                    disabled={!isCurrentSubmitted} 
-                    className="h-13 px-8 btn-premium rounded-xl text-[10px] font-black uppercase tracking-widest disabled:opacity-20 disabled:grayscale transition-all"
-                  >
-                    NEXT NODE <ChevronRight className="ml-2 w-4 h-4" />
-                  </Button>
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button 
+                          onClick={() => setCurrentIdx(prev => prev + 1)} 
+                          disabled={!isCurrentSubmitted} 
+                          className="h-12 px-8 btn-premium rounded-xl text-[10px] font-black uppercase tracking-widest disabled:opacity-20 disabled:grayscale transition-all"
+                        >
+                          NEXT NODE <ChevronRight className="ml-2 w-4 h-4" />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent className="glass border-white/10 text-white text-[10px] uppercase font-bold tracking-widest">Available after successful submission.</TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
                 ) : (
                   <Button 
                     onClick={finalizeAssessment} 
                     disabled={!allNodesSubmitted} 
-                    className="h-13 px-10 bg-accent/20 border border-accent/40 text-accent text-[10px] font-black uppercase tracking-widest rounded-xl hover:bg-accent/30 disabled:opacity-20 transition-all shadow-[0_0_30px_rgba(34,211,238,0.2)]"
+                    className="h-12 px-10 bg-accent/20 border border-accent/40 text-accent text-[10px] font-black uppercase tracking-widest rounded-xl hover:bg-accent/30 disabled:opacity-20 transition-all shadow-[0_0_30px_rgba(34,211,238,0.2)]"
                   >
                     FINISH SESSION
                   </Button>
@@ -495,7 +615,7 @@ export default function CodingEnginePage() {
             </div>
           </Card>
 
-          <Card className="h-[38%] glass border-white/5 bg-[#0b0e1a] flex flex-col overflow-hidden rounded-[2.5rem]">
+          <Card className="h-[35%] glass border-white/5 bg-[#0b0e1a] flex flex-col overflow-hidden rounded-[2.5rem]">
             <Tabs value={activeTerminalTab} onValueChange={setActiveTerminalTab} className="h-full flex flex-col">
               <TabsList className="bg-white/[0.03] px-10 h-14 border-b border-white/5 gap-8">
                 <TabsTrigger value="output" className="text-[10px] font-black uppercase tracking-[0.2em] data-[state=active]:text-accent data-[state=active]:bg-transparent border-b-2 border-transparent data-[state=active]:border-accent rounded-none h-full transition-all">Execution Output</TabsTrigger>
@@ -503,28 +623,51 @@ export default function CodingEnginePage() {
               </TabsList>
               <div className="flex-1 font-mono text-[12px] overflow-hidden bg-black/20">
                 <TabsContent value="output" className="p-10 text-white/60 h-full overflow-y-auto whitespace-pre-wrap leading-relaxed">
-                  <div className="flex items-center gap-3 text-accent/40 mb-4">
-                    <div className="w-2 h-2 rounded-full bg-accent animate-pulse" />
-                    <span className="text-[9px] uppercase font-black">Ready for instructions...</span>
-                  </div>
-                  {terminalOutput}
+                  {terminalOutput === "Waiting for your implementation." ? (
+                    <div className="h-full flex flex-col items-center justify-center text-center space-y-6 opacity-30">
+                       <HelpCircle className="w-10 h-10 text-white/40" />
+                       <p className="text-[11px] font-black text-white uppercase tracking-[0.3em]">Waiting for implementation.<br/>Click "Run Sample" to verify your code.</p>
+                    </div>
+                  ) : (
+                    <>
+                      <div className="flex items-center gap-3 text-accent/40 mb-4">
+                        <div className="w-2 h-2 rounded-full bg-accent animate-pulse" />
+                        <span className="text-[9px] uppercase font-black">Execution Telemetry Active</span>
+                      </div>
+                      {terminalOutput}
+                    </>
+                  )}
                 </TabsContent>
                 <TabsContent value="cases" className="p-10 h-full overflow-y-auto">
                   {currentResult ? (
                     <div className="space-y-8">
-                      <div className="flex justify-between items-center bg-white/5 p-6 rounded-2xl border border-white/5">
-                        <div className="space-y-1">
-                          <span className={cn("text-sm font-black uppercase tracking-[0.2em]", currentResult.status === 'Solved' ? "text-green-400" : "text-red-400")}>
-                            NODE STATUS: {currentResult.status}
-                          </span>
-                          <p className="text-[10px] text-white/30 uppercase tracking-widest">Audit Trace of {currentResult.totalCount} Hidden Matrix Nodes</p>
-                        </div>
-                        <div className="text-right">
-                          <Badge variant="outline" className={cn("text-[11px] font-black uppercase px-6 py-2 rounded-xl border-2", currentResult.status === 'Solved' ? "border-green-500/30 text-green-400 bg-green-500/5" : "border-red-500/30 text-red-400 bg-red-500/5")}>
-                            PASSED {currentResult.passedCount} / {currentResult.totalCount}
-                          </Badge>
-                        </div>
-                      </div>
+                      {/* Node Cleared Success Header */}
+                      <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className={cn("p-6 rounded-[2rem] border flex items-center justify-between mb-8", currentResult.status === 'Solved' ? "bg-green-500/10 border-green-500/20" : "bg-red-500/10 border-red-500/20")}>
+                         <div className="flex items-center gap-5">
+                            <div className={cn("w-12 h-12 rounded-2xl flex items-center justify-center", currentResult.status === 'Solved' ? "bg-green-500/20 text-green-400" : "bg-red-500/20 text-red-400")}>
+                               {currentResult.status === 'Solved' ? <Trophy className="w-6 h-6" /> : <XCircle className="w-6 h-6" />}
+                            </div>
+                            <div>
+                               <h4 className={cn("text-xl font-bold tracking-tight", currentResult.status === 'Solved' ? "text-green-400" : "text-red-400")}>{currentResult.status === 'Solved' ? "NODE CLEARED" : "NODE FAILED"}</h4>
+                               <p className="text-[9px] font-black text-white/30 uppercase tracking-widest">Audit Trace Summary</p>
+                            </div>
+                         </div>
+                         <div className="grid grid-cols-3 gap-8">
+                            <div className="text-center">
+                               <p className="text-[8px] font-black text-white/20 uppercase tracking-widest">PASSED</p>
+                               <p className="text-lg font-bold text-white tabular-nums">{currentResult.passedCount}/{currentResult.totalCount}</p>
+                            </div>
+                            <div className="text-center">
+                               <p className="text-[8px] font-black text-white/20 uppercase tracking-widest">SCORE</p>
+                               <p className="text-lg font-bold text-accent tabular-nums">{Math.round((currentResult.passedCount/currentResult.totalCount)*100)}%</p>
+                            </div>
+                            <div className="text-center">
+                               <p className="text-[8px] font-black text-white/20 uppercase tracking-widest">TIME</p>
+                               <p className="text-lg font-bold text-purple-400 tabular-nums">0.02s</p>
+                            </div>
+                         </div>
+                      </motion.div>
+
                       <div className="grid gap-4">
                         {currentResult.results.map((r: any, i: number) => (
                           <div key={i} className="flex justify-between items-center p-5 glass border-white/5 rounded-2xl bg-white/[0.01] group hover:border-white/20 transition-all">
@@ -539,8 +682,8 @@ export default function CodingEnginePage() {
                     </div>
                   ) : (
                     <div className="h-full flex flex-col items-center justify-center text-center space-y-6 opacity-20">
-                      <AlertCircle className="w-12 h-12" />
-                      <p className="text-[11px] font-black text-white uppercase tracking-[0.5em]">Awaiting Submission Audit</p>
+                      <ShieldCheck className="w-12 h-12" />
+                      <p className="text-[11px] font-black text-white uppercase tracking-[0.5em]">Waiting for submission...<br/>Run node to initiate audit.</p>
                     </div>
                   )}
                 </TabsContent>

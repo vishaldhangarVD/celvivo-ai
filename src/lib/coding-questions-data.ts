@@ -25,6 +25,19 @@ export interface CodingQuestion {
   timeLimit: string;
   memoryLimit: string;
   languageSupport: string[];
+  // UX Metadata
+  functionInfo?: {
+    name: string;
+    params: string;
+    returnType: string;
+    goal: string;
+  };
+  walkthrough?: {
+    input: string;
+    receive: string;
+    return: string;
+    output: string;
+  };
   // Optional Matrix Overrides
   nodeLabel?: string;
   narrativeTitle?: string;
@@ -57,6 +70,18 @@ export const MASTER_QUESTIONS: CodingQuestion[] = [
     sampleInput: "racecar",
     sampleOutput: "YES",
     explanation: "If we look at the word 'racecar', the first letter 'r' matches the last letter 'r'. The second letter 'a' matches the second-to-last letter 'a', and the third letter 'c' matches the third-to-last 'c'. The middle letter 'e' stands alone. Since every matching pair is the same, the word reads the same forward and backward.",
+    functionInfo: {
+      name: "isMirrorWord(s)",
+      params: "s : string",
+      returnType: "boolean",
+      goal: "Return True if the word is a palindrome."
+    },
+    walkthrough: {
+      input: "racecar",
+      receive: "s = \"racecar\"",
+      return: "True",
+      output: "YES"
+    },
     starterCode: {
       python: "import sys\n\ndef is_mirror_word(s):\n    # TODO: Implement logic here\n    pass\n\nif __name__ == '__main__':\n    line = sys.stdin.read().strip()\n    if is_mirror_word(line):\n        print('YES')\n    else:\n        print('NO')",
       java: "import java.util.Scanner;\n\npublic class Main {\n    public static boolean isMirrorWord(String s) {\n        // TODO: Implement logic here\n        return false;\n    }\n\n    public static void main(String[] args) {\n        Scanner sc = new Scanner(System.in);\n        if (sc.hasNext()) {\n            String s = sc.next();\n            System.out.println(isMirrorWord(s) ? \"YES\" : \"NO\");\n        }\n    }\n}",
@@ -86,7 +111,7 @@ export const MASTER_QUESTIONS: CodingQuestion[] = [
   {
     id: "fresher-easy-02",
     title: "Tournament Runner-Up Finder",
-    description: "You are helping a teacher organize a school gaming competition. After the tournament ends, you have a list of all the points each student earned. You need to find out who came in second place, which we call the 'Runner-Up.' If multiple students tied for the very highest score, the runner-up is the student with the highest score that is strictly less than the top score. This ensures we find a clear second-place value regardless of how many people tied for first.",
+    description: "You are helping a teacher organize a school gaming competition. After the tournament ends, you have a list of all the points each student earned. You need to find out who came in second place, which we call the 'Runner-Up.' If multiple students tied for the very highest score, the runner-up is the student with the highest score that is strictly less than the top score.",
     difficulty: "Easy",
     category: "Arrays",
     topic: "DATA STRUCTURES",
@@ -102,6 +127,12 @@ export const MASTER_QUESTIONS: CodingQuestion[] = [
     sampleInput: "5\n10 20 20 15 5",
     sampleOutput: "15",
     explanation: "In this list, the highest score is 20. Two students achieved this. The next highest score that isn't 20 is 15. Therefore, 15 is the score of the runner-up.",
+    functionInfo: {
+      name: "getRunnerUp(n, scores)",
+      params: "n: int, scores: int[]",
+      returnType: "int",
+      goal: "Find the strictly second largest number in the array."
+    },
     starterCode: {
       python: "import sys\n\ndef get_runner_up(n, scores):\n    # TODO: Implement logic here\n    pass\n\nif __name__ == '__main__':\n    input_data = sys.stdin.read().split()\n    if len(input_data) >= 2:\n        n = int(input_data[0])\n        scores = [int(x) for x in input_data[1:n+1]]\n        print(get_runner_up(n, scores))",
       java: "import java.util.Scanner;\n\npublic class Main {\n    public static int getRunnerUp(int n, int[] scores) {\n        // TODO: Implement logic here\n        return -1;\n    }\n\n    public static void main(String[] args) {\n        Scanner sc = new Scanner(System.in);\n        if (sc.hasNextInt()) {\n            int n = sc.nextInt();\n            int[] scores = new int[n];\n            for (int i = 0; i < n; i++) scores[i] = sc.nextInt();\n            System.out.println(getRunnerUp(n, scores));\n        }\n    }\n}",
@@ -133,7 +164,7 @@ export const MASTER_QUESTIONS: CodingQuestion[] = [
   {
     id: "fresher-medium-01",
     title: "Code Syntax Auditor",
-    description: "You are building a helpful tool for a professional code editor that helps software engineers find mistakes while they type. One very common mistake is forgetting to close a bracket. Your tool needs to check if the brackets in a single line of code are 'balanced.' A string of brackets is balanced if every opening bracket '(', '{', or '[' has a matching closing bracket of the same type, and they are all closed in the exact correct order. If they are tangled or missing a pair, the code won't run!",
+    description: "You are building a tool for a code editor that helps engineers find mistakes. One common mistake is forgetting to close a bracket. Your tool needs to check if the brackets are 'balanced.' A string of brackets is balanced if every opening bracket '(', '{', or '[' has a matching closing bracket of the same type in the correct order.",
     difficulty: "Medium",
     category: "Stack",
     topic: "ALGORITHM CORE",
@@ -148,7 +179,13 @@ export const MASTER_QUESTIONS: CodingQuestion[] = [
     ],
     sampleInput: "{[()]}",
     sampleOutput: "true",
-    explanation: "To solve this, we imagine a stack of plates. When we see an opening bracket, we put it on top. When we see a closing bracket, we check if the plate on top of the stack matches it. For '{[()]}', we first put '{', '[', and '(' on the stack. Then we see ')', which matches the top '(', so we remove it. We continue until the stack is empty, meaning everything was perfectly paired.",
+    explanation: "To solve this, we imagine a stack of plates. When we see an opening bracket, we put it on top. When we see a closing bracket, we check if it matches the top plate.",
+    functionInfo: {
+      name: "isBalanced(s)",
+      params: "s : string",
+      returnType: "boolean",
+      goal: "Validate matching pairs of brackets using a stack logic."
+    },
     starterCode: {
       python: "import sys\n\ndef is_balanced(s):\n    # TODO: Implement logic using a stack pattern\n    pass\n\nif __name__ == '__main__':\n    line = sys.stdin.read().strip()\n    if is_balanced(line):\n        print('true')\n    else:\n        print('false')",
       java: "import java.util.Scanner;\nimport java.util.Stack;\n\npublic class Main {\n    public static boolean isBalanced(String s) {\n        // TODO: Implement logic using a stack pattern\n        return false;\n    }\n\n    public static void main(String[] args) {\n        Scanner sc = new Scanner(System.in);\n        if (sc.hasNext()) {\n            System.out.println(isBalanced(sc.next()) ? \"true\" : \"false\");\n        }\n    }\n}",
@@ -178,7 +215,7 @@ export const MASTER_QUESTIONS: CodingQuestion[] = [
   {
     id: "fresher-medium-02",
     title: "First Unique Visitor",
-    description: "You are the manager of a popular tech blog and you want to reward the first person who visited your site today without returning again. You have a log of everyone who visited, represented by a string of lowercase letters where each letter represents a unique user ID. Your task is to find the very first user in the list who only appears exactly one time in the entire string. If everyone in the list visited the site at least twice, then nobody is eligible for the reward today.",
+    description: "You have a log of everyone who visited a blog, represented by a string where each letter represents a user ID. Find the very first user who only appears exactly one time in the entire string.",
     difficulty: "Medium",
     category: "Hash Map",
     topic: "HASH ENGINE",
@@ -193,7 +230,13 @@ export const MASTER_QUESTIONS: CodingQuestion[] = [
     ],
     sampleInput: "nexvoroai",
     sampleOutput: "0",
-    explanation: "To solve this, we first need to count how many times each letter appears in the whole string. Once we have the counts, we go back to the beginning of the string and look at each letter again. The very first letter we find that has a total count of 1 is our winner. In 'nexvoroai', 'n' is at index 0 and it never appears again, so 0 is our answer.",
+    explanation: "We count letter frequencies and find the first index where the count is 1.",
+    functionInfo: {
+      name: "firstUnique(s)",
+      params: "s : string",
+      returnType: "int",
+      goal: "Find the index of the first character that doesn't repeat."
+    },
     starterCode: {
       python: "import sys\n\ndef first_unique(s):\n    # TODO: Count letter frequencies and find the first unique index\n    pass\n\nif __name__ == '__main__':\n    line = sys.stdin.read().strip()\n    print(first_unique(line))",
       java: "import java.util.Scanner;\nimport java.util.HashMap;\n\npublic class Main {\n    public static int firstUnique(String s) {\n        // TODO: Count letter frequencies and find the first unique index\n        return -1;\n    }\n\n    public static void main(String[] args) {\n        Scanner sc = new Scanner(System.in);\n        if (sc.hasNext()) {\n            System.out.println(firstUnique(sc.next()));\n        }\n    }\n}",
@@ -225,14 +268,14 @@ export const MASTER_QUESTIONS: CodingQuestion[] = [
   {
     id: "fresher-hard-01",
     title: "Maximum Profit Window",
-    description: "You are a financial advisor helping a client understand their stock market performance over a specific period of time. You have a list of daily results, where each number represents a profit (positive) or a loss (negative) for that day. Your client wants to know which consecutive period of days was the most successful. Your task is to find a group of one or more days next to each other that, when added together, give the highest possible total sum of money. This helps identify the client's peak performance window.",
+    description: "Identify the highest possible total profit from a consecutive group of days in a stock log. Each number represents daily profit (positive) or loss (negative).",
     difficulty: "Hard",
     category: "Arrays",
     topic: "ALGORITHM CORE",
     estimatedTime: "35 mins",
     company: "Wipro",
     tags: ["Optimization", "Arrays", "Kadane"],
-    inputFormat: "First line contains an integer N, the number of days. Second line contains N space-separated integers representing the profit or loss for each day.",
+    inputFormat: "First line contains an integer N. Second line contains N space-separated integers.",
     outputFormat: "Print one integer representing the highest possible sum from any consecutive group of days.",
     constraints: [
       "- 1 <= N <= 100,000",
@@ -240,7 +283,13 @@ export const MASTER_QUESTIONS: CodingQuestion[] = [
     ],
     sampleInput: "8\n-2 1 -3 4 -1 2 1 -5",
     sampleOutput: "6",
-    explanation: "To find the best window, we start adding up the numbers. If our current total becomes a negative number, it means this group is dragging us down, so we start over from zero. We always remember the best total we've ever seen. In our example, the group [4, -1, 2, 1] gives a total of 6, which is higher than any other group you can find in the list.",
+    explanation: "The group [4, -1, 2, 1] gives the maximum total of 6.",
+    functionInfo: {
+      name: "maxSubarraySum(n, arr)",
+      params: "n: int, arr: int[]",
+      returnType: "long",
+      goal: "Calculate the maximum sum of a contiguous subarray."
+    },
     starterCode: {
       python: "import sys\n\ndef max_subarray_sum(n, arr):\n    # TODO: Find the largest sum of a consecutive period\n    pass\n\nif __name__ == '__main__':\n    data = sys.stdin.read().split()\n    if len(data) >= 1:\n        n = int(data[0])\n        arr = [int(x) for x in data[1:n+1]]\n        print(max_subarray_sum(n, arr))",
       java: "import java.util.Scanner;\n\npublic class Main {\n    public static long maxSubarraySum(int n, int[] arr) {\n        // TODO: Find the largest sum of a consecutive period\n        return 0;\n    }\n\n    public static void main(String[] args) {\n        Scanner sc = new Scanner(System.in);\n        if (sc.hasNextInt()) {\n            int n = sc.nextInt();\n            int[] arr = new int[n];\n            for (int i = 0; i < n; i++) arr[i] = sc.nextInt();\n            System.out.println(maxSubarraySum(n, arr));\n        }\n    }\n}",
