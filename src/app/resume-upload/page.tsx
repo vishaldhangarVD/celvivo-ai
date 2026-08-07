@@ -154,8 +154,12 @@ export default function ResumeUploadPage() {
                     <Upload className="w-10 h-10 text-accent" />
                   </div>
                   <div className="space-y-2">
-                    h3 className="text-2xl font-bold">Select PDF Blueprint</h3>
-                    <p className="text-[10px] text-muted-foreground uppercase tracking-widest font-black">Drag & Drop • PDF Only • Max 10MB</p>
+                    <h3 className="text-2xl font-bold">
+                      Select PDF Blueprint
+                    </h3>
+                    <p className="text-[10px] text-muted-foreground uppercase tracking-widest font-black">
+                      Drag & Drop • PDF Only • Max 10MB
+                    </p>
                   </div>
                 </div>
               ) : (
