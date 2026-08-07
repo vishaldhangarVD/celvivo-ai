@@ -36,6 +36,7 @@ import { doc, updateDoc, serverTimestamp, getDoc, collection, query, where, getD
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { generateCodingQuestion } from '@/ai/flows/ai-coding-generator';
+import { MASTER_QUESTIONS } from '@/lib/coding-questions-data';
 
 const LANGUAGES = [
   { id: 'python', label: 'Python 3', monaco: 'python' },
@@ -185,7 +186,7 @@ export default function CodingEnginePage() {
     }
   }, [code, selectedLang, currentIdx, questions, isSubmitting, isRunning, toast]);
 
-  // Environment Setup (5 Questions)
+  // Environment Setup (5 Questions with progression: Easy -> Easy -> Med -> Med -> Med)
   useEffect(() => {
     async function initEnvironment() {
       if (!db || !journey || questions.length > 0) return;
@@ -200,55 +201,14 @@ export default function CodingEnginePage() {
           return;
         }
 
-        // Map experience to difficulty
-        let targetDiff: 'Easy' | 'Medium' | 'Hard' = "Medium";
-        const exp = journey.experience?.toLowerCase() || "";
-        if (exp.includes("fresher") || exp.includes("0-1")) targetDiff = "Easy";
-        else if (exp.includes("senior") || exp.includes("8+")) targetDiff = "Hard";
+        // Logic for specialized Fresher Progression: [E, E, M, M, M]
+        const easyPool = MASTER_QUESTIONS.filter(q => q.difficulty === 'Easy');
+        const medPool = MASTER_QUESTIONS.filter(q => q.difficulty === 'Medium');
 
-        const questionPool: any[] = [];
-        
-        // 1. Try to fetch from curated repository (Fetch 5 random from specific difficulty)
-        const q = query(
-          collection(db, "codingQuestions"),
-          where("difficulty", "==", targetDiff)
-        );
-        const querySnap = await getDocs(q);
-        const available = querySnap.docs.map(d => ({ ...d.data(), id: d.id }));
-        
-        if (available.length >= 5) {
-          // Shuffle and take 5
-          const shuffled = available.sort(() => 0.5 - Math.random()).slice(0, 5);
-          questionPool.push(...shuffled);
-        } else {
-          // Fallback mix with AI if repo is small
-          questionPool.push(...available);
-          try {
-            const aiResponse = await generateCodingQuestion({
-              role: journey.role,
-              company: journey.company,
-              experienceLevel: journey.experience,
-              difficulty: targetDiff
-            });
-            if (aiResponse?.question) questionPool.push(aiResponse.question);
-          } catch (e) {
-            console.warn("AI Synthesis failed during batch prep.");
-          }
-        }
+        const selectedEasy = easyPool.sort(() => 0.5 - Math.random()).slice(0, 2);
+        const selectedMed = medPool.sort(() => 0.5 - Math.random()).slice(0, 3);
 
-        // Fill remaining with duplicates or placeholders if necessary, but we aim for 5
-        while (questionPool.length < 5) {
-          questionPool.push({
-            id: `placeholder-${questionPool.length}`,
-            title: "Algorithm Node Pending",
-            description: "Synchronizing system logic. Please proceed with available nodes.",
-            difficulty: targetDiff,
-            starterCode: { python: "print('Node under maintenance')" },
-            hiddenTestCases: []
-          });
-        }
-
-        const finalQuestions = questionPool.slice(0, 5);
+        const finalQuestions = [...selectedEasy, ...selectedMed];
 
         await updateDoc(journeyRef!, {
           codingQuestions: finalQuestions,
@@ -361,16 +321,17 @@ export default function CodingEnginePage() {
             <div className="space-y-6">
               <div className="flex items-center justify-between">
                 <Badge className="bg-purple-500/10 text-purple-400 border-none text-[9px] font-black uppercase">Challenge Matrix</Badge>
-                {journey?.aiGenerated && (
-                  <Badge className="bg-accent/10 text-accent border-none text-[8px] font-black uppercase flex items-center gap-1.5"><Sparkles className="w-3 h-3" /> AI Generated</Badge>
-                )}
+                <Badge className="bg-accent/10 text-accent border-none text-[8px] font-black uppercase flex items-center gap-1.5">Fresher Track</Badge>
               </div>
               <h2 className="text-2xl font-bold tracking-tight">{currentQ?.title}</h2>
               <div className="flex gap-2">
                 <Badge variant="outline" className="text-accent text-[8px] uppercase border-accent/20">{currentQ?.difficulty}</Badge>
-                <Badge variant="outline" className="text-white/40 text-[8px] uppercase border-white/10">{currentQ?.topic || currentQ?.category}</Badge>
+                <Badge variant="outline" className="text-white/40 text-[8px] uppercase border-white/10">{currentQ?.category}</Badge>
               </div>
-              <p className="text-sm text-white/70 leading-relaxed font-light whitespace-pre-wrap">{currentQ?.problemStatement || currentQ?.description}</p>
+              <div className="space-y-4">
+                <h4 className="text-[10px] font-black uppercase tracking-widest text-white/30">Problem Statement</h4>
+                <p className="text-sm text-white/70 leading-relaxed font-light whitespace-pre-wrap">{currentQ?.description}</p>
+              </div>
               
               {currentQ?.constraints && currentQ.constraints.length > 0 && (
                 <div className="space-y-3">
