@@ -29,13 +29,13 @@ import {
   RotateCcw, 
   Mic, 
   Sparkles,
-  ChevronLeft
+  ChevronLeft,
+  Timer
 } from 'lucide-react';
 import { useUser, useFirestore, useDoc } from '@/firebase';
-import { doc, updateDoc, serverTimestamp, getDoc, collection, query, where, getDocs, addDoc } from 'firebase/firestore';
+import { doc, updateDoc, serverTimestamp, getDoc, collection, addDoc } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
-import { generateCodingQuestion } from '@/ai/flows/ai-coding-generator';
 import { MASTER_QUESTIONS } from '@/lib/coding-questions-data';
 
 const LANGUAGES = [
@@ -117,7 +117,7 @@ export default function CodingEnginePage() {
       await updateDoc(journeyRef!, {
         codingReport: { 
           score: scorePercentage, 
-          status: scorePercentage >= 70 ? 'Pass' : 'Fail', 
+          status: scorePercentage >= 60 ? 'Pass' : 'Fail', 
           totalQuestions: questions.length, 
           passedQuestions: passedQuestionsCount, 
           submissionTime: new Date().toLocaleTimeString(),
@@ -132,7 +132,7 @@ export default function CodingEnginePage() {
 
       router.push('/interview/coding-result');
     } catch (error) {
-      console.error("Finalize Assessment Error:", error instanceof Error ? error.message : String(error));
+      console.error("Finalize Assessment Error:", error);
       setIsFinalizing(false);
     }
   }, [isFinalizing, user, db, journey, sessionResults, questions, journeyRef, router]);
@@ -179,14 +179,14 @@ export default function CodingEnginePage() {
       
       setTerminalOutput(allPassed ? "Accepted — All Test Cases Passed." : `Wrong Answer — Passed ${passed}/${total} nodes.`);
     } catch (error: any) {
-      console.error("Submission Error:", error instanceof Error ? error.message : String(error));
+      console.error("Submission Error:", error);
       setTerminalOutput("[CRITICAL FAULT] Verification node connection lost.");
     } finally {
       setIsSubmitting(false);
     }
   }, [code, selectedLang, currentIdx, questions, isSubmitting, isRunning, toast]);
 
-  // Environment Setup (5 Questions with progression: Easy -> Easy -> Med -> Med -> Med)
+  // Environment Setup with [E, E, M, M, H] progression
   useEffect(() => {
     async function initEnvironment() {
       if (!db || !journey || questions.length > 0) return;
@@ -201,14 +201,16 @@ export default function CodingEnginePage() {
           return;
         }
 
-        // Logic for specialized Fresher Progression: [E, E, M, M, M]
+        // Logic for specialized Progression: [E, E, M, M, H]
         const easyPool = MASTER_QUESTIONS.filter(q => q.difficulty === 'Easy');
         const medPool = MASTER_QUESTIONS.filter(q => q.difficulty === 'Medium');
+        const hardPool = MASTER_QUESTIONS.filter(q => q.difficulty === 'Hard');
 
         const selectedEasy = easyPool.sort(() => 0.5 - Math.random()).slice(0, 2);
-        const selectedMed = medPool.sort(() => 0.5 - Math.random()).slice(0, 3);
+        const selectedMed = medPool.sort(() => 0.5 - Math.random()).slice(0, 2);
+        const selectedHard = hardPool.sort(() => 0.5 - Math.random()).slice(0, 1);
 
-        const finalQuestions = [...selectedEasy, ...selectedMed];
+        const finalQuestions = [...selectedEasy, ...selectedMed, ...selectedHard];
 
         await updateDoc(journeyRef!, {
           codingQuestions: finalQuestions,
@@ -217,14 +219,14 @@ export default function CodingEnginePage() {
 
         setQuestions(finalQuestions);
       } catch (e: any) {
-        console.error("Initialization Fault:", e instanceof Error ? e.message : String(e));
+        console.error("Initialization Fault:", e);
         toast({ variant: "destructive", title: "Protocol Node Failure", description: "Could not establish logic matrix." });
       } finally {
         setIsInitializing(false);
       }
     }
     initEnvironment();
-  }, [db, journey, journeyRef, questions.length, toast, user]);
+  }, [db, journey, journeyRef, questions.length, toast]);
 
   // Monaco and State Sync
   useEffect(() => {
@@ -247,7 +249,6 @@ export default function CodingEnginePage() {
         if (prev <= 1) {
           clearInterval(timer);
           setIsTimeExpired(true);
-          // Auto-finalize assessment when time is up
           finalizeAssessment().catch(err => console.error("Auto-finalize fault:", err));
           return 0;
         }
@@ -284,6 +285,15 @@ export default function CodingEnginePage() {
     return `${m}:${s.toString().padStart(2, '0')}`;
   };
 
+  const getDifficultyColor = (diff: string) => {
+    switch (diff) {
+      case 'Easy': return 'text-green-400 border-green-500/20 bg-green-500/5';
+      case 'Medium': return 'text-yellow-400 border-yellow-500/20 bg-yellow-500/5';
+      case 'Hard': return 'text-red-400 border-red-500/20 bg-red-500/5';
+      default: return 'text-accent border-accent/20 bg-accent/5';
+    }
+  };
+
   if (isInitializing || journeyLoading) return <div className="h-screen bg-[#050816] flex flex-col items-center justify-center space-y-12"><Brain className="w-12 h-12 text-accent animate-pulse" /><p className="text-[10px] font-black uppercase tracking-[0.5em] text-accent">Neural Environment Calibrating...</p></div>;
 
   const currentQ = questions[currentIdx];
@@ -302,8 +312,8 @@ export default function CodingEnginePage() {
           </div>
         </div>
         <div className="flex items-center gap-8">
-          <div className={cn("px-6 py-2 rounded-xl glass border-white/10 font-mono text-xl tabular-nums tracking-widest", timeLeft < 300 ? "text-red-500 animate-pulse" : "text-accent")}>
-            CODING TIME LEFT: {formatTime(timeLeft)}
+          <div className={cn("px-6 py-2 rounded-xl glass border-white/10 font-mono text-xl tabular-nums tracking-widest flex items-center gap-3", timeLeft < 300 ? "text-red-500 animate-pulse" : "text-accent")}>
+            <Timer className="w-5 h-5" /> {formatTime(timeLeft)}
           </div>
           <select 
             value={selectedLang.id} 
@@ -317,41 +327,80 @@ export default function CodingEnginePage() {
 
       <main className="flex-1 flex overflow-hidden p-4 gap-4">
         <div className="w-[35%] flex flex-col gap-4">
-          <Card className="flex-1 premium-card bg-white/[0.01] border-white/5 p-8 overflow-y-auto custom-scrollbar">
-            <div className="space-y-6">
+          <Card className="flex-1 glass bg-white/[0.01] border-white/5 p-8 overflow-y-auto custom-scrollbar">
+            <div className="space-y-8">
               <div className="flex items-center justify-between">
-                <Badge className="bg-purple-500/10 text-purple-400 border-none text-[9px] font-black uppercase">Challenge Matrix</Badge>
-                <Badge className="bg-accent/10 text-accent border-none text-[8px] font-black uppercase flex items-center gap-1.5">Fresher Track</Badge>
-              </div>
-              <h2 className="text-2xl font-bold tracking-tight">{currentQ?.title}</h2>
-              <div className="flex gap-2">
-                <Badge variant="outline" className="text-accent text-[8px] uppercase border-accent/20">{currentQ?.difficulty}</Badge>
-                <Badge variant="outline" className="text-white/40 text-[8px] uppercase border-white/10">{currentQ?.category}</Badge>
-              </div>
-              <div className="space-y-4">
-                <h4 className="text-[10px] font-black uppercase tracking-widest text-white/30">Problem Statement</h4>
-                <p className="text-sm text-white/70 leading-relaxed font-light whitespace-pre-wrap">{currentQ?.description}</p>
-              </div>
-              
-              {currentQ?.constraints && currentQ.constraints.length > 0 && (
-                <div className="space-y-3">
-                  <h4 className="text-[10px] font-black uppercase tracking-widest text-white/30">Constraints</h4>
-                  <ul className="space-y-2">
-                    {currentQ.constraints.map((c: string, i: number) => (
-                      <li key={i} className="text-xs text-white/50 flex items-start gap-2">
-                        <div className="w-1 h-1 rounded-full bg-accent mt-1.5" />
-                        {c}
-                      </li>
-                    ))}
-                  </ul>
+                <Badge className="bg-purple-500/10 text-purple-400 border-none text-[9px] font-black uppercase">Simulation Node 0{currentIdx + 1}</Badge>
+                <div className="flex items-center gap-2">
+                  <Clock className="w-3 h-3 text-white/40" />
+                  <span className="text-[9px] font-bold text-white/40 uppercase">Est: {currentQ?.estimatedTime}</span>
                 </div>
-              )}
+              </div>
 
-              <div className="p-5 glass border-white/5 rounded-2xl bg-black/40 space-y-3 font-mono text-[10px]">
-                <p className="text-white/30 uppercase text-[8px]">Sample Input</p>
-                <pre className="text-accent whitespace-pre-wrap">{currentQ?.sampleInput}</pre>
-                <p className="text-white/30 uppercase text-[8px]">Sample Output</p>
-                <pre className="text-green-400 whitespace-pre-wrap">{currentQ?.sampleOutput}</pre>
+              <div className="space-y-4">
+                <h2 className="text-2xl font-bold tracking-tight text-white">{currentQ?.title}</h2>
+                <div className="flex gap-3">
+                  <Badge variant="outline" className={cn("text-[9px] uppercase px-3 py-1 font-black", getDifficultyColor(currentQ?.difficulty))}>
+                    {currentQ?.difficulty}
+                  </Badge>
+                  <Badge variant="outline" className="text-white/40 text-[9px] uppercase border-white/10 px-3 py-1 font-black flex items-center gap-1.5">
+                    <Target className="w-3 h-3" /> {currentQ?.topic}
+                  </Badge>
+                </div>
+              </div>
+
+              <div className="space-y-6">
+                <div className="space-y-2">
+                  <h4 className="text-[10px] font-black uppercase tracking-widest text-accent">Problem Statement</h4>
+                  <p className="text-sm text-white/70 leading-relaxed font-light whitespace-pre-wrap">{currentQ?.description}</p>
+                </div>
+                
+                <div className="grid grid-cols-1 gap-6">
+                  <div className="space-y-2">
+                    <h4 className="text-[10px] font-black uppercase tracking-widest text-white/30">Input Format</h4>
+                    <p className="text-xs text-white/50 leading-relaxed italic">{currentQ?.inputFormat}</p>
+                  </div>
+                  <div className="space-y-2">
+                    <h4 className="text-[10px] font-black uppercase tracking-widest text-white/30">Output Format</h4>
+                    <p className="text-xs text-white/50 leading-relaxed italic">{currentQ?.outputFormat}</p>
+                  </div>
+                </div>
+
+                {currentQ?.constraints && currentQ.constraints.length > 0 && (
+                  <div className="space-y-3">
+                    <h4 className="text-[10px] font-black uppercase tracking-widest text-white/30">Constraints</h4>
+                    <ul className="space-y-2">
+                      {currentQ.constraints.map((c: string, i: number) => (
+                        <li key={i} className="text-xs text-white/50 flex items-start gap-2">
+                          <div className="w-1 h-1 rounded-full bg-accent mt-1.5" />
+                          {c}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+
+                <div className="space-y-4">
+                   <div className="p-5 glass border-white/5 rounded-2xl bg-black/40 space-y-4 font-mono text-[10px]">
+                    <div className="space-y-1">
+                      <p className="text-white/30 uppercase text-[8px]">Sample Input</p>
+                      <pre className="text-accent whitespace-pre-wrap p-3 glass rounded-lg bg-white/5">{currentQ?.sampleInput}</pre>
+                    </div>
+                    <div className="space-y-1">
+                      <p className="text-white/30 uppercase text-[8px]">Sample Output</p>
+                      <pre className="text-green-400 whitespace-pre-wrap p-3 glass rounded-lg bg-white/5">{currentQ?.sampleOutput}</pre>
+                    </div>
+                  </div>
+                  
+                  {currentQ?.explanation && (
+                    <div className="p-5 glass border-white/5 rounded-2xl bg-accent/[0.02] space-y-2">
+                      <h4 className="text-[10px] font-black uppercase tracking-widest text-accent flex items-center gap-2">
+                        <Lightbulb className="w-3 h-3" /> Logic Explanation
+                      </h4>
+                      <p className="text-xs text-white/60 leading-relaxed font-light">{currentQ.explanation}</p>
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
           </Card>
@@ -376,10 +425,10 @@ export default function CodingEnginePage() {
             <div className="h-20 border-t border-white/5 bg-white/[0.02] flex items-center justify-between px-8">
               <div className="flex items-center gap-4">
                 <Button onClick={runCode} disabled={isRunning || isSubmitting || isTimeExpired} className="h-12 px-8 bg-white/5 text-[10px] font-black uppercase tracking-widest rounded-xl border border-white/10 hover:bg-white/10">
-                  {isRunning ? <Loader2 className="w-4 animate-spin" /> : "RUN CODE"}
+                  {isRunning ? <Loader2 className="w-4 animate-spin mr-2" /> : <Activity className="w-4 h-4 mr-2" />} RUN CODE
                 </Button>
                 <Button onClick={performSubmission} disabled={isRunning || isSubmitting || isTimeExpired} className="h-12 px-8 btn-premium rounded-xl text-[10px] font-black uppercase tracking-widest">
-                  {isSubmitting ? <Loader2 className="w-4 animate-spin" /> : "SUBMIT CODE"}
+                  {isSubmitting ? <Loader2 className="w-4 animate-spin mr-2" /> : <ShieldCheck className="w-4 h-4 mr-2" />} SUBMIT CODE
                 </Button>
               </div>
               <div className="flex items-center gap-4">
@@ -397,7 +446,7 @@ export default function CodingEnginePage() {
                   </Button>
                 ) : (
                   <Button onClick={finalizeAssessment} className="h-12 px-8 bg-accent/20 border border-accent/40 text-accent text-[10px] font-black uppercase tracking-widest rounded-xl hover:bg-accent/30 transition-all">
-                    VIEW CODING RESULTS
+                    VIEW RESULTS
                   </Button>
                 )}
               </div>
