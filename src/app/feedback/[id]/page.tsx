@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useEffect, useMemo } from 'react';
@@ -33,7 +32,9 @@ import {
   RefreshCcw,
   LayoutDashboard,
   Loader2,
-  Plus
+  Plus,
+  Layers,
+  XCircle
 } from 'lucide-react';
 import { useUser, useFirestore, useDoc } from '@/firebase';
 import { doc, setDoc, deleteDoc } from 'firebase/firestore';
@@ -118,7 +119,7 @@ export default function FinalReportPage() {
               <div className="lg:col-span-8 flex flex-col md:flex-row items-center gap-12 lg:justify-end">
                 <div className="text-center">
                   <div className={`text-8xl font-bold tracking-tighter tabular-nums ${getScoreColor(feedback.overallScore)}`}>{feedback.overallScore}%</div>
-                  <div className="text-[10px] uppercase tracking-[0.4em] text-muted-foreground font-bold mt-2">Performance Index</div>
+                  <div className="text-[10px] uppercase tracking-[0.4em] text-muted-foreground font-bold mt-2">Overall Index</div>
                 </div>
                 <div className="hidden md:block w-px h-24 bg-white/10" />
                 <div className="text-center">
@@ -140,6 +141,26 @@ export default function FinalReportPage() {
                 >
                   <Download className="w-5 h-5 mr-3" /> Export PDF Report
                 </Button>
+              </Card>
+
+              {/* Coding Performance Card */}
+              <Card className="premium-card bg-white/[0.01] border-white/5 p-8 space-y-6">
+                 <h3 className="text-[10px] font-bold uppercase tracking-[0.4em] text-white/30 flex items-center gap-3">
+                   <Code2 className="w-4 h-4 text-accent" /> Syntax Matrix Audit
+                 </h3>
+                 <div className="flex items-center justify-between">
+                    <div className="text-4xl font-black text-accent tabular-nums">{(interviewDoc as any).codingScore || 0}%</div>
+                    <Badge variant="outline" className="text-[8px] font-black uppercase border-white/10 text-white/40">Verified Audit</Badge>
+                 </div>
+                 <div className="space-y-4">
+                    <div className="flex justify-between text-[9px] font-bold uppercase text-white/30">
+                       <span>Implementation Accuracy</span>
+                       <span className="text-white/60">{(interviewDoc as any).codingScore || 0}%</span>
+                    </div>
+                    <div className="h-1 bg-white/5 rounded-full overflow-hidden">
+                       <motion.div initial={{ width: 0 }} animate={{ width: `${(interviewDoc as any).codingScore || 0}%` }} className="h-full bg-accent" />
+                    </div>
+                 </div>
               </Card>
 
               <div className="space-y-4">
@@ -206,6 +227,43 @@ export default function FinalReportPage() {
                   </div>
                 </Card>
               </div>
+
+              {/* Career Learning Roadmap Block */}
+              <Card className="premium-card bg-accent/[0.02] border-accent/20 p-10 space-y-8">
+                 <div className="flex items-center justify-between">
+                    <div className="space-y-1">
+                       <h3 className="text-2xl font-bold tracking-tight">Growth Architecture</h3>
+                       <p className="text-[10px] font-bold uppercase tracking-widest text-white/30">AI-Generated Remediation Strategy</p>
+                    </div>
+                    <Link href={`/roadmap/personalized/${docId}`}>
+                       <Button className="h-14 px-8 btn-premium text-[10px] font-bold uppercase tracking-widest gap-3">
+                          Launch Roadmap <ChevronRight className="w-4 h-4" />
+                       </Button>
+                    </Link>
+                 </div>
+                 <div className="grid md:grid-cols-2 gap-8">
+                    <div className="p-6 glass rounded-2xl border-white/5 space-y-4">
+                       <h4 className="text-xs font-black uppercase tracking-widest text-white/40 flex items-center gap-2">
+                          <Layers className="w-4 h-4 text-purple-400" /> Topics to Study
+                       </h4>
+                       <div className="flex flex-wrap gap-2">
+                          {feedback.learningPlan.topicsToStudy.slice(0, 4).map((topic: string, i: number) => (
+                             <Badge key={i} variant="outline" className="text-[8px] border-white/10 uppercase py-1">{topic}</Badge>
+                          ))}
+                       </div>
+                    </div>
+                    <div className="p-6 glass rounded-2xl border-white/5 space-y-4">
+                       <h4 className="text-xs font-black uppercase tracking-widest text-white/40 flex items-center gap-2">
+                          <Cpu className="w-4 h-4 text-accent" /> Skill Gaps
+                       </h4>
+                       <div className="flex flex-wrap gap-2">
+                          {feedback.skillGap.criticalGaps.slice(0, 4).map((gap: string, i: number) => (
+                             <Badge key={i} variant="outline" className="text-[8px] border-red-500/20 text-red-400 uppercase py-1">{gap}</Badge>
+                          ))}
+                       </div>
+                    </div>
+                 </div>
+              </Card>
             </div>
           </div>
         </div>

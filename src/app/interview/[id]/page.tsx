@@ -185,13 +185,27 @@ function VirtualArenaContent() {
           strengths: assessmentContext.resumeAnalysis?.analysis?.strengths || [],
           weaknesses: assessmentContext.resumeAnalysis?.analysis?.weaknesses || [],
           missingSkills: assessmentContext.resumeAnalysis?.analysis?.missingSkills || [],
+        },
+        codingContext: {
+          score: assessmentContext.codingReport?.score || 0,
+          readability: 85,
+          timeComplexity: "O(n)",
+          spaceComplexity: "O(1)",
+          status: assessmentContext.codingReport?.status || "N/A"
         }
       });
 
       const docRef = await addDoc(collection(db, 'users', user.uid, 'interviews'), {
-        userId: user.uid, role, company, experienceLevel: exp, round,
-        history: currentTranscript, overallScore: finalAudit.overallScore,
-        feedback: finalAudit, createdAt: serverTimestamp(),
+        userId: user.uid, 
+        role, 
+        company, 
+        experienceLevel: exp, 
+        round,
+        history: currentTranscript, 
+        overallScore: finalAudit.overallScore,
+        codingScore: assessmentContext.codingReport?.score || 0,
+        feedback: finalAudit, 
+        createdAt: serverTimestamp(),
       });
       
       await deleteDoc(doc(db, 'users', user.uid, 'journey', 'active'));

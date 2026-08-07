@@ -33,7 +33,7 @@ import {
   Zap
 } from 'lucide-react';
 import { useUser, useFirestore, useDoc } from '@/firebase';
-import { doc, updateDoc, serverTimestamp, getDoc } from 'firebase/firestore';
+import { doc, updateDoc, serverTimestamp, getDoc, collection, addDoc } from 'firebase/firestore';
 import { generateCodingQuestions, type CodingProblem } from '@/ai/flows/ai-coding-generator';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
@@ -152,7 +152,7 @@ export default function CodingEnginePage() {
         if (prev <= 1) {
           clearInterval(timer);
           setIsTimeExpired(true);
-          performSubmission();
+          performSubmission().catch(console.error);
           return 0;
         }
         return prev - 1;
@@ -183,22 +183,59 @@ export default function CodingEnginePage() {
   };
 
   const finalizeAssessment = async () => {
-    if (isFinalizing) return;
+    if (isFinalizing || !user || !db || !journey) return;
     setIsFinalizing(true);
     try {
       for (let i = 0; i < 4; i++) {
         setSubmitStep(i);
         await new Promise(r => setTimeout(r, 800));
       }
-      const resultsArray = Object.values(sessionResults);
-      const passedCount = resultsArray.filter(r => r.allPassed).length;
+      
+      const resultsArray = Object.entries(sessionResults);
+      const passedQuestionsCount = resultsArray.filter(([_, r]) => r.allPassed).length;
+      const scorePercentage = Math.round((passedQuestionsCount / questions.length) * 100);
+      
+      // Persist individual question results
+      for (const [idxStr, res] of resultsArray) {
+        const idx = parseInt(idxStr);
+        const q = questions[idx];
+        await addDoc(collection(db, 'users', user.uid, 'coding_results'), {
+          interviewId: journey.sessionId || "unknown",
+          userId: user.uid,
+          questionId: q.id,
+          language: res.language,
+          score: res.allPassed ? 100 : Math.round((res.passedCount / res.totalCount) * 100),
+          passedTestCases: res.passedCount,
+          failedTestCases: res.totalCount - res.passedCount,
+          totalTestCases: res.totalCount,
+          executionTime: res.results?.[0]?.time || "0.00",
+          submittedCode: res.code,
+          completedAt: serverTimestamp(),
+          status: res.allPassed ? "Passed" : "Failed"
+        });
+      }
+
+      const codingReport = { 
+        score: scorePercentage, 
+        status: scorePercentage >= 70 ? 'Pass' : 'Fail', 
+        totalQuestions: questions.length, 
+        passedQuestions: passedQuestionsCount, 
+        submissionTime: new Date().toLocaleTimeString(),
+        codingRoundCompleted: true
+      };
+
       await updateDoc(journeyRef!, {
-        codingReport: { score: Math.round((passedCount / 5) * 100), status: passedCount >= 3 ? 'Pass' : 'Fail', totalQuestions: 5, passedQuestions: passedCount, submissionTime: new Date().toLocaleTimeString() },
+        codingReport,
+        codingRoundCompleted: true,
+        codingScore: scorePercentage,
         currentStage: 'HR Interview',
-        step: 6
+        step: 6,
+        updatedAt: serverTimestamp()
       });
+
       router.push('/interview/coding-result');
     } catch (error) {
+      console.error("Finalize Assessment Error:", error);
       setIsFinalizing(false);
     }
   };
@@ -221,7 +258,7 @@ export default function CodingEnginePage() {
       <header className="h-20 border-b border-white/5 bg-[#0b0e1a]/80 backdrop-blur-xl flex items-center justify-between px-8 z-50">
         <div className="flex items-center gap-6">
           <Code2 className="w-6 h-6 text-accent" />
-          <div><h1 className="text-sm font-black uppercase tracking-widest text-premium">Syntax Matrix Engine</h1><p className="text-[9px] font-bold text-accent uppercase">Node {currentIdx + 1} of 5</p></div>
+          <div><h1 className="text-sm font-black uppercase tracking-widest text-premium">Syntax Matrix Engine</h1><p className="text-[9px] font-bold text-accent uppercase">Node {currentIdx + 1} of {questions.length}</p></div>
         </div>
         <div className="flex items-center gap-8">
           <div className={cn("px-6 py-2 rounded-xl glass border-white/10 font-mono text-xl tabular-nums tracking-widest", timeLeft < 300 ? "text-red-500 animate-pulse" : "text-accent")}>{formatTime(timeLeft)}</div>
@@ -252,7 +289,7 @@ export default function CodingEnginePage() {
                 <Button onClick={runCode} disabled={isRunning || isSubmitting || isTimeExpired} className="h-12 px-8 bg-white/5 text-[10px] font-black uppercase tracking-widest rounded-xl border border-white/10">{isRunning ? <Loader2 className="w-4 animate-spin" /> : "RUN CODE"}</Button>
                 <Button onClick={performSubmission} disabled={isRunning || isSubmitting || isTimeExpired} className="h-12 px-8 btn-premium rounded-xl text-[10px] font-black uppercase tracking-widest">{isSubmitting ? <Loader2 className="w-4 animate-spin" /> : "SUBMIT CODE"}</Button>
               </div>
-              {currentIdx < 4 ? <Button onClick={() => setCurrentIdx(prev => prev + 1)} variant="ghost" className="h-12 px-6 text-[10px] font-black uppercase tracking-widest text-white/40">NEXT QUESTION</Button> : <Button onClick={finalizeAssessment} className="h-12 px-8 bg-accent/20 border border-accent/40 text-accent text-[10px] font-black uppercase tracking-widest rounded-xl hover:bg-accent/30 transition-all">VIEW RESULTS</Button>}
+              {currentIdx < questions.length - 1 ? <Button onClick={() => setCurrentIdx(prev => prev + 1)} variant="ghost" className="h-12 px-6 text-[10px] font-black uppercase tracking-widest text-white/40">NEXT QUESTION</Button> : <Button onClick={finalizeAssessment} className="h-12 px-8 bg-accent/20 border border-accent/40 text-accent text-[10px] font-black uppercase tracking-widest rounded-xl hover:bg-accent/30 transition-all">VIEW RESULTS</Button>}
             </div>
           </Card>
 
@@ -262,7 +299,7 @@ export default function CodingEnginePage() {
               <div className="flex-1 font-mono text-[11px] overflow-hidden">
                 <TabsContent value="output" className="p-6 text-white/60 h-full overflow-y-auto">{terminalOutput}</TabsContent>
                 <TabsContent value="input" className="h-full"><textarea value={customInput} onChange={(e) => setCustomInput(e.target.value)} className="w-full h-full bg-transparent outline-none p-6 text-white/60 resize-none" placeholder="Enter custom STDIN node..." /></TabsContent>
-                <TabsContent value="cases" className="p-6 space-y-4 h-full overflow-y-auto">{currentResult ? <div className="space-y-4"><div className="flex justify-between items-center"><span className="text-xs font-black uppercase">{currentResult.status}</span><span className="text-[9px] opacity-40">Passed {currentResult.passedCount}/{currentResult.results.length}</span></div>{currentResult.results.map((r: any, i: number) => <div key={i} className="flex justify-between p-3 glass border-white/5 rounded-xl"><span className="text-[9px] opacity-40 uppercase">Node {i + 1}</span><Badge className={cn("text-[8px] border-none", r.passed ? "bg-green-500/20 text-green-400" : "bg-red-500/20 text-red-400")}>{r.passed ? "PASSED" : "FAILED"}</Badge></div>)}</div> : <p className="text-center text-white/20 uppercase tracking-widest pt-12">Awaiting verification</p>}</TabsContent>
+                <TabsContent value="cases" className="p-6 space-y-4 h-full overflow-y-auto">{currentResult ? <div className="space-y-4"><div className="flex justify-between items-center"><span className="text-xs font-black uppercase">{currentResult.status}</span><span className="text-[9px] opacity-40">Passed {currentResult.passedCount}/{currentResult.totalCount}</span></div>{currentResult.results.map((r: any, i: number) => <div key={i} className="flex justify-between p-3 glass border-white/5 rounded-xl"><span className="text-[9px] opacity-40 uppercase">Node {i + 1}</span><Badge className={cn("text-[8px] border-none", r.passed ? "bg-green-500/20 text-green-400" : "bg-red-500/20 text-red-400")}>{r.passed ? "PASSED" : "FAILED"}</Badge></div>)}</div> : <p className="text-center text-white/20 uppercase tracking-widest pt-12">Awaiting verification</p>}</TabsContent>
               </div>
             </Tabs>
           </Card>
