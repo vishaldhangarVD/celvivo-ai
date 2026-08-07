@@ -28,7 +28,8 @@ import {
   Check, 
   RotateCcw, 
   Mic, 
-  Sparkles 
+  Sparkles,
+  ChevronLeft
 } from 'lucide-react';
 import { useUser, useFirestore, useDoc } from '@/firebase';
 import { doc, updateDoc, serverTimestamp, getDoc, collection, query, where, getDocs, addDoc } from 'firebase/firestore';
@@ -77,103 +78,65 @@ export default function CodingEnginePage() {
 
   const { data: journey, loading: journeyLoading } = useDoc(journeyRef);
 
-  useEffect(() => {
-    async function initEnvironment() {
-      if (!db || !journey || questions.length > 0) return;
-      
-      try {
-        const snap = await getDoc(journeyRef!);
-        const data = snap.data();
-        
-        if (data?.codingQuestions && data.codingQuestions.length > 0) {
-          setQuestions(data.codingQuestions);
-          setIsInitializing(false);
-          return;
-        }
-
-        // Map experience to difficulty
-        let targetDiff: 'Easy' | 'Medium' | 'Hard' = "Medium";
-        const exp = journey.experience?.toLowerCase() || "";
-        if (exp.includes("fresher") || exp.includes("0-1")) targetDiff = "Easy";
-        else if (exp.includes("senior") || exp.includes("8+")) targetDiff = "Hard";
-
-        let selectedQuestion: any = null;
-        let aiSuccess = false;
-
-        // 1. Try AI Generation
-        try {
-          const aiResponse = await generateCodingQuestion({
-            role: journey.role,
-            company: journey.company,
-            experienceLevel: journey.experience,
-            difficulty: targetDiff
-          });
-          
-          if (aiResponse?.question) {
-            const docRef = await addDoc(collection(db, 'generatedCodingQuestions'), {
-              ...aiResponse.question,
-              userId: user!.uid,
-              source: 'Gemini 2.0 Flash',
-              createdAt: serverTimestamp(),
-              context: { role: journey.role, company: journey.company }
-            });
-            
-            selectedQuestion = { ...aiResponse.question, id: docRef.id };
-            aiSuccess = true;
-          }
-        } catch (e) {
-          console.warn("AI Generation Failed, using Fallback Repository.");
-        }
-
-        // 2. Fallback to Static Repository
-        if (!selectedQuestion) {
-          const q = query(
-            collection(db, "codingQuestions"),
-            where("difficulty", "==", targetDiff)
-          );
-          const querySnap = await getDocs(q);
-          const available = querySnap.docs.map(d => ({ ...d.data(), id: d.id }));
-          
-          if (available.length > 0) {
-            const shuffled = available.sort(() => 0.5 - Math.random());
-            selectedQuestion = shuffled[0];
-          }
-        }
-
-        if (!selectedQuestion) {
-          throw new Error("No intelligence nodes available in system.");
-        }
-
-        await updateDoc(journeyRef!, {
-          codingQuestions: [selectedQuestion],
-          aiGenerated: aiSuccess,
-          updatedAt: serverTimestamp()
-        });
-
-        setQuestions([selectedQuestion]);
-        toast({ title: aiSuccess ? "AI Challenge Synthesized" : "Static Repository Synced" });
-      } catch (e: any) {
-        console.error("Initialization Fault:", e);
-        toast({ variant: "destructive", title: "Protocol Node Failure", description: e.message });
-      } finally {
-        setIsInitializing(false);
+  // Core Finalization Logic
+  const finalizeAssessment = useCallback(async () => {
+    if (isFinalizing || !user || !db || !journey) return;
+    setIsFinalizing(true);
+    try {
+      for (let i = 0; i < 4; i++) {
+        setSubmitStep(i);
+        await new Promise(r => setTimeout(r, 800));
       }
-    }
-    initEnvironment();
-  }, [db, journey, journeyRef, questions.length, toast, user]);
+      
+      const resultsArray = Object.entries(sessionResults);
+      const passedQuestionsCount = resultsArray.filter(([_, r]) => r.allPassed).length;
+      const scorePercentage = questions.length > 0 ? Math.round((passedQuestionsCount / questions.length) * 100) : 0;
+      
+      // Store individual question results
+      for (const [idxStr, res] of resultsArray) {
+        const idx = parseInt(idxStr);
+        const q = questions[idx];
+        await addDoc(collection(db, 'users', user.uid, 'coding_results'), {
+          interviewId: journey.sessionId || "unknown",
+          userId: user.uid,
+          questionId: q.id,
+          language: res.language,
+          score: res.allPassed ? 100 : Math.round((res.passedCount / res.totalCount) * 100),
+          passedTestCases: res.passedCount,
+          failedTestCases: res.totalCount - res.passedCount,
+          totalTestCases: res.totalCount,
+          executionTime: res.results?.[0]?.time || "0.00",
+          submittedCode: res.code,
+          completedAt: serverTimestamp(),
+          status: res.allPassed ? "Passed" : "Failed"
+        });
+      }
 
-  useEffect(() => {
-    if (questions[currentIdx]) {
-      const q = questions[currentIdx];
-      const saved = sessionResults[currentIdx]?.code;
-      const starter = q.starterCode?.[selectedLang.id] || q.starterCode?.["python"] || "// Implementation required";
-      setCode(saved || starter);
-      setCustomInput("");
-      setTerminalOutput("Ready to execute your code.");
-      setActiveTerminalTab("output");
-    }
-  }, [currentIdx, selectedLang, questions, sessionResults]);
+      // Update journey status
+      await updateDoc(journeyRef!, {
+        codingReport: { 
+          score: scorePercentage, 
+          status: scorePercentage >= 70 ? 'Pass' : 'Fail', 
+          totalQuestions: questions.length, 
+          passedQuestions: passedQuestionsCount, 
+          submissionTime: new Date().toLocaleTimeString(),
+          codingRoundCompleted: true
+        },
+        codingRoundCompleted: true,
+        codingScore: scorePercentage,
+        currentStage: 'HR Interview',
+        step: 6,
+        updatedAt: serverTimestamp()
+      });
 
+      router.push('/interview/coding-result');
+    } catch (error) {
+      console.error("Finalize Assessment Error:", error instanceof Error ? error.message : String(error));
+      setIsFinalizing(false);
+    }
+  }, [isFinalizing, user, db, journey, sessionResults, questions, journeyRef, router]);
+
+  // Handle individual question submission
   const performSubmission = useCallback(async () => {
     if (isSubmitting || isRunning || !questions[currentIdx]) return;
     setIsSubmitting(true);
@@ -215,13 +178,108 @@ export default function CodingEnginePage() {
       
       setTerminalOutput(allPassed ? "Accepted — All Test Cases Passed." : `Wrong Answer — Passed ${passed}/${total} nodes.`);
     } catch (error: any) {
-      console.error("Submission Error:", error);
+      console.error("Submission Error:", error instanceof Error ? error.message : String(error));
       setTerminalOutput("[CRITICAL FAULT] Verification node connection lost.");
     } finally {
       setIsSubmitting(false);
     }
   }, [code, selectedLang, currentIdx, questions, isSubmitting, isRunning, toast]);
 
+  // Environment Setup (5 Questions)
+  useEffect(() => {
+    async function initEnvironment() {
+      if (!db || !journey || questions.length > 0) return;
+      
+      try {
+        const snap = await getDoc(journeyRef!);
+        const data = snap.data();
+        
+        if (data?.codingQuestions && data.codingQuestions.length >= 5) {
+          setQuestions(data.codingQuestions);
+          setIsInitializing(false);
+          return;
+        }
+
+        // Map experience to difficulty
+        let targetDiff: 'Easy' | 'Medium' | 'Hard' = "Medium";
+        const exp = journey.experience?.toLowerCase() || "";
+        if (exp.includes("fresher") || exp.includes("0-1")) targetDiff = "Easy";
+        else if (exp.includes("senior") || exp.includes("8+")) targetDiff = "Hard";
+
+        const questionPool: any[] = [];
+        
+        // 1. Try to fetch from curated repository (Fetch 5 random from specific difficulty)
+        const q = query(
+          collection(db, "codingQuestions"),
+          where("difficulty", "==", targetDiff)
+        );
+        const querySnap = await getDocs(q);
+        const available = querySnap.docs.map(d => ({ ...d.data(), id: d.id }));
+        
+        if (available.length >= 5) {
+          // Shuffle and take 5
+          const shuffled = available.sort(() => 0.5 - Math.random()).slice(0, 5);
+          questionPool.push(...shuffled);
+        } else {
+          // Fallback mix with AI if repo is small
+          questionPool.push(...available);
+          try {
+            const aiResponse = await generateCodingQuestion({
+              role: journey.role,
+              company: journey.company,
+              experienceLevel: journey.experience,
+              difficulty: targetDiff
+            });
+            if (aiResponse?.question) questionPool.push(aiResponse.question);
+          } catch (e) {
+            console.warn("AI Synthesis failed during batch prep.");
+          }
+        }
+
+        // Fill remaining with duplicates or placeholders if necessary, but we aim for 5
+        while (questionPool.length < 5) {
+          questionPool.push({
+            id: `placeholder-${questionPool.length}`,
+            title: "Algorithm Node Pending",
+            description: "Synchronizing system logic. Please proceed with available nodes.",
+            difficulty: targetDiff,
+            starterCode: { python: "print('Node under maintenance')" },
+            hiddenTestCases: []
+          });
+        }
+
+        const finalQuestions = questionPool.slice(0, 5);
+
+        await updateDoc(journeyRef!, {
+          codingQuestions: finalQuestions,
+          updatedAt: serverTimestamp()
+        });
+
+        setQuestions(finalQuestions);
+      } catch (e: any) {
+        console.error("Initialization Fault:", e instanceof Error ? e.message : String(e));
+        toast({ variant: "destructive", title: "Protocol Node Failure", description: "Could not establish logic matrix." });
+      } finally {
+        setIsInitializing(false);
+      }
+    }
+    initEnvironment();
+  }, [db, journey, journeyRef, questions.length, toast, user]);
+
+  // Monaco and State Sync
+  useEffect(() => {
+    if (questions[currentIdx]) {
+      const q = questions[currentIdx];
+      const saved = sessionResults[currentIdx]?.code;
+      const starter = q.starterCode?.[selectedLang.id] || q.starterCode?.["python"] || "// Implementation required";
+      setCode(saved || starter);
+      setCustomInput("");
+      setTerminalOutput(sessionResults[currentIdx]?.results ? "Verification cached." : "Ready to execute your code.");
+      setActiveTerminalTab(sessionResults[currentIdx]?.results ? "cases" : "output");
+    }
+  }, [currentIdx, selectedLang, questions, sessionResults]);
+
+  // Timer Lifecycle
   useEffect(() => {
     if (isInitializing || isFinalizing || isTimeExpired) return;
     const timer = setInterval(() => {
@@ -229,14 +287,15 @@ export default function CodingEnginePage() {
         if (prev <= 1) {
           clearInterval(timer);
           setIsTimeExpired(true);
-          performSubmission().catch(console.error);
+          // Auto-finalize assessment when time is up
+          finalizeAssessment().catch(err => console.error("Auto-finalize fault:", err));
           return 0;
         }
         return prev - 1;
       });
     }, 1000);
     return () => clearInterval(timer);
-  }, [isInitializing, isFinalizing, isTimeExpired, performSubmission]);
+  }, [isInitializing, isFinalizing, isTimeExpired, finalizeAssessment]);
 
   const runCode = async () => {
     if (isRunning || isSubmitting || isTimeExpired) return;
@@ -256,61 +315,6 @@ export default function CodingEnginePage() {
       setTerminalOutput("[NETWORK FAULT] Failed to connect to execution node.");
     } finally {
       setIsRunning(false);
-    }
-  };
-
-  const finalizeAssessment = async () => {
-    if (isFinalizing || !user || !db || !journey) return;
-    setIsFinalizing(true);
-    try {
-      for (let i = 0; i < 4; i++) {
-        setSubmitStep(i);
-        await new Promise(r => setTimeout(r, 800));
-      }
-      
-      const resultsArray = Object.entries(sessionResults);
-      const passedQuestionsCount = resultsArray.filter(([_, r]) => r.allPassed).length;
-      const scorePercentage = Math.round((passedQuestionsCount / questions.length) * 100);
-      
-      for (const [idxStr, res] of resultsArray) {
-        const idx = parseInt(idxStr);
-        const q = questions[idx];
-        await addDoc(collection(db, 'users', user.uid, 'coding_results'), {
-          interviewId: journey.sessionId || "unknown",
-          userId: user.uid,
-          questionId: q.id,
-          language: res.language,
-          score: res.allPassed ? 100 : Math.round((res.passedCount / res.totalCount) * 100),
-          passedTestCases: res.passedCount,
-          failedTestCases: res.totalCount - res.passedCount,
-          totalTestCases: res.totalCount,
-          executionTime: res.results?.[0]?.time || "0.00",
-          submittedCode: res.code,
-          completedAt: serverTimestamp(),
-          status: res.allPassed ? "Passed" : "Failed"
-        });
-      }
-
-      await updateDoc(journeyRef!, {
-        codingReport: { 
-          score: scorePercentage, 
-          status: scorePercentage >= 70 ? 'Pass' : 'Fail', 
-          totalQuestions: questions.length, 
-          passedQuestions: passedQuestionsCount, 
-          submissionTime: new Date().toLocaleTimeString(),
-          codingRoundCompleted: true
-        },
-        codingRoundCompleted: true,
-        codingScore: scorePercentage,
-        currentStage: 'HR Interview',
-        step: 6,
-        updatedAt: serverTimestamp()
-      });
-
-      router.push('/interview/coding-result');
-    } catch (error) {
-      console.error("Finalize Assessment Error:", error);
-      setIsFinalizing(false);
     }
   };
 
@@ -418,9 +422,17 @@ export default function CodingEnginePage() {
                 </Button>
               </div>
               <div className="flex items-center gap-4">
+                <Button 
+                  onClick={() => setCurrentIdx(prev => Math.max(0, prev - 1))}
+                  disabled={currentIdx === 0}
+                  variant="ghost" 
+                  className="h-12 w-12 flex items-center justify-center glass border-white/10 text-white/40 hover:text-white hover:bg-white/5 rounded-xl"
+                >
+                  <ChevronLeft className="w-4 h-4" />
+                </Button>
                 {currentIdx < questions.length - 1 ? (
-                  <Button onClick={() => setCurrentIdx(prev => Math.min(questions.length - 1, prev + 1))} variant="ghost" className="h-12 px-6 text-[10px] font-black uppercase tracking-widest text-white/40 hover:text-white hover:bg-white/5">
-                    NEXT QUESTION <ChevronRight className="ml-2 w-4 h-4" />
+                  <Button onClick={() => setCurrentIdx(prev => Math.min(questions.length - 1, prev + 1))} className="h-12 px-6 btn-premium rounded-xl text-[10px] font-black uppercase tracking-widest shadow-2xl">
+                    NEXT NODE <ChevronRight className="ml-2 w-4 h-4" />
                   </Button>
                 ) : (
                   <Button onClick={finalizeAssessment} className="h-12 px-8 bg-accent/20 border border-accent/40 text-accent text-[10px] font-black uppercase tracking-widest rounded-xl hover:bg-accent/30 transition-all">
