@@ -1,7 +1,7 @@
 'use server';
 /**
  * @fileOverview Nexvoro AI Coding Challenge Architect.
- * Dynamically synthesizes 5 unique, high-fidelity algorithmic challenges based on 
+ * Dynamically synthesizes unique, high-fidelity algorithmic challenges based on 
  * candidate profile and target company using Google Gemini.
  */
 
@@ -9,7 +9,6 @@ import { ai, runWithResilience } from '@/ai/genkit';
 import { z } from 'genkit';
 
 const CodingProblemSchema = z.object({
-  id: z.string(),
   title: z.string(),
   difficulty: z.enum(['Easy', 'Medium', 'Hard']),
   topic: z.string(),
@@ -32,8 +31,6 @@ const CodingProblemSchema = z.object({
     input: z.string(),
     output: z.string(),
   })),
-  timeLimit: z.string(),
-  memoryLimit: z.string(),
 });
 
 export type CodingProblem = z.infer<typeof CodingProblemSchema>;
@@ -42,13 +39,14 @@ const CodingGenerationInputSchema = z.object({
   role: z.string(),
   company: z.string(),
   experienceLevel: z.string(),
+  difficulty: z.enum(['Easy', 'Medium', 'Hard']),
 });
 
 const CodingGenerationOutputSchema = z.object({
-  questions: z.array(CodingProblemSchema).length(5),
+  question: CodingProblemSchema,
 });
 
-export async function generateCodingQuestions(input: z.infer<typeof CodingGenerationInputSchema>) {
+export async function generateCodingQuestion(input: z.infer<typeof CodingGenerationInputSchema>) {
   return codingGenerationFlow(input);
 }
 
@@ -57,16 +55,15 @@ const prompt = ai.definePrompt({
   input: { schema: CodingGenerationInputSchema },
   output: { schema: CodingGenerationOutputSchema },
   prompt: `You are an elite Senior Staff Software Engineer at {{{company}}}.
-Your objective is to architect EXACTLY 5 unique, HARD algorithmic coding challenges for a {{{role}}} candidate at the {{{experienceLevel}}} level.
+Your objective is to architect a UNIQUE, high-fidelity algorithmic coding challenge for a {{{role}}} candidate at the {{{experienceLevel}}} level.
 
-Simulation Protocol:
-1. FIRM CALIBRATION: If the company is Google, focus on complex trees/graphs and O(n) efficiency. If Amazon, focus on data structures, scale, and multi-variable constraints. If a startup, focus on practical logic and edge-case resilience.
-2. DIFFICULTY: All 5 questions MUST be "Hard" (LeetCode Hard style).
-3. VARIETY: Ensure questions cover different topics (e.g., Dynamic Programming, Graph Theory, Advanced Heaps, Sliding Window, Matrix Math).
-4. STARTER CODE: Provide clean, industry-standard starter templates for Java, Python, JavaScript, C++, C, C#, Go, and Rust.
-5. HIDDEN TEST CASES: Provide at least 3 hidden test cases per question to validate implementation logic.
+CHALLENGE CALIBRATION:
+1. DIFFICULTY: The question MUST be "{{{difficulty}}}" level.
+2. FIRM PERSONA: Calibrate the problem style to {{{company}}}. (e.g., Google: Graphs/Trees, Amazon: Scale/Optimization).
+3. STARTER CODE: Provide idiomatic starter templates for ALL 8 languages (Java, Python, JavaScript, C++, C, C#, Go, Rust).
+4. HIDDEN VERIFICATION: Provide exactly 5 hidden test cases with expected outputs. Ensure the outputs are string-comparable.
 
-Format: Return a strictly structured JSON matching the output schema. No conversational text.`,
+Return a strictly structured JSON matching the output schema. No conversational text.`,
 });
 
 const codingGenerationFlow = ai.defineFlow(
@@ -78,10 +75,10 @@ const codingGenerationFlow = ai.defineFlow(
   async (input) => {
     try {
       const { output } = await runWithResilience(prompt, input);
-      if (!output || !output.questions) throw new Error("Coding synthesis failed.");
+      if (!output || !output.question) throw new Error("Coding synthesis failed.");
       return output;
     } catch (error) {
-      console.error("[Coding Generator] Neural Failure. Fallback mechanism required.", error);
+      console.error("[Coding Generator] Neural Failure:", error);
       throw error;
     }
   }

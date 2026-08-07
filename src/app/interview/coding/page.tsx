@@ -12,32 +12,29 @@ import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { 
   Code2, 
-  Play, 
-  Send, 
-  Clock, 
-  CheckCircle2, 
-  Cpu, 
-  ShieldCheck, 
   ChevronRight, 
   Loader2, 
   Brain, 
-  XCircle,
-  Command,
-  Activity,
-  Target,
-  Layers,
-  Sparkles,
-  Check,
-  AlertTriangle,
-  RotateCcw,
-  Zap,
-  Mic,
-  ArrowRight
+  Command, 
+  Activity, 
+  Cpu, 
+  ShieldCheck, 
+  Zap, 
+  Trophy, 
+  Layers, 
+  Clock, 
+  Target, 
+  XCircle, 
+  Check, 
+  RotateCcw, 
+  Mic, 
+  Sparkles 
 } from 'lucide-react';
 import { useUser, useFirestore, useDoc } from '@/firebase';
-import { doc, updateDoc, serverTimestamp, getDoc, collection, query, where, getDocs, limit } from 'firebase/firestore';
+import { doc, updateDoc, serverTimestamp, getDoc, collection, query, where, getDocs, addDoc } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
+import { generateCodingQuestion } from '@/ai/flows/ai-coding-generator';
 
 const LANGUAGES = [
   { id: 'python', label: 'Python 3', monaco: 'python' },
@@ -95,52 +92,75 @@ export default function CodingEnginePage() {
         }
 
         // Map experience to difficulty
-        let targetDiff = "Medium";
+        let targetDiff: 'Easy' | 'Medium' | 'Hard' = "Medium";
         const exp = journey.experience?.toLowerCase() || "";
         if (exp.includes("fresher") || exp.includes("0-1")) targetDiff = "Easy";
         else if (exp.includes("senior") || exp.includes("8+")) targetDiff = "Hard";
 
-        // Query Firestore for questions matching difficulty
-        const q = query(
-          collection(db, "codingQuestions"),
-          where("difficulty", "==", targetDiff)
-        );
-        
-        const querySnap = await getDocs(q);
-        let availableQuestions = querySnap.docs.map(d => ({ ...d.data(), id: d.id }));
+        let selectedQuestion: any = null;
+        let aiSuccess = false;
 
-        if (availableQuestions.length === 0) {
-          const fallbackSnap = await getDocs(collection(db, "codingQuestions"));
-          availableQuestions = fallbackSnap.docs.map(d => ({ ...d.data(), id: d.id }));
+        // 1. Try AI Generation
+        try {
+          const aiResponse = await generateCodingQuestion({
+            role: journey.role,
+            company: journey.company,
+            experienceLevel: journey.experience,
+            difficulty: targetDiff
+          });
+          
+          if (aiResponse?.question) {
+            const docRef = await addDoc(collection(db, 'generatedCodingQuestions'), {
+              ...aiResponse.question,
+              userId: user!.uid,
+              source: 'Gemini 2.0 Flash',
+              createdAt: serverTimestamp(),
+              context: { role: journey.role, company: journey.company }
+            });
+            
+            selectedQuestion = { ...aiResponse.question, id: docRef.id };
+            aiSuccess = true;
+          }
+        } catch (e) {
+          console.warn("AI Generation Failed, using Fallback Repository.");
         }
 
-        // Select exactly ONE random question as per specific request
-        const shuffled = availableQuestions.sort(() => 0.5 - Math.random());
-        const selected = shuffled.slice(0, 1);
+        // 2. Fallback to Static Repository
+        if (!selectedQuestion) {
+          const q = query(
+            collection(db, "codingQuestions"),
+            where("difficulty", "==", targetDiff)
+          );
+          const querySnap = await getDocs(q);
+          const available = querySnap.docs.map(d => ({ ...d.data(), id: d.id }));
+          
+          if (available.length > 0) {
+            const shuffled = available.sort(() => 0.5 - Math.random());
+            selectedQuestion = shuffled[0];
+          }
+        }
 
-        if (selected.length === 0) {
-          throw new Error("Neural question repository is empty. Please seed database.");
+        if (!selectedQuestion) {
+          throw new Error("No intelligence nodes available in system.");
         }
 
         await updateDoc(journeyRef!, {
-          codingQuestions: selected,
+          codingQuestions: [selectedQuestion],
+          aiGenerated: aiSuccess,
           updatedAt: serverTimestamp()
         });
 
-        setQuestions(selected);
+        setQuestions([selectedQuestion]);
+        toast({ title: aiSuccess ? "AI Challenge Synthesized" : "Static Repository Synced" });
       } catch (e: any) {
         console.error("Initialization Fault:", e);
-        toast({ 
-          variant: "destructive", 
-          title: "System Node Failure", 
-          description: e.message || "Could not retrieve coding challenges." 
-        });
+        toast({ variant: "destructive", title: "Protocol Node Failure", description: e.message });
       } finally {
         setIsInitializing(false);
       }
     }
     initEnvironment();
-  }, [db, journey, journeyRef, questions.length, toast]);
+  }, [db, journey, journeyRef, questions.length, toast, user]);
 
   useEffect(() => {
     if (questions[currentIdx]) {
@@ -262,7 +282,7 @@ export default function CodingEnginePage() {
           language: res.language,
           score: res.allPassed ? 100 : Math.round((res.passedCount / res.totalCount) * 100),
           passedTestCases: res.passedCount,
-          failedTestCases: res.totalTestCases - res.passedCount,
+          failedTestCases: res.totalCount - res.passedCount,
           totalTestCases: res.totalCount,
           executionTime: res.results?.[0]?.time || "0.00",
           submittedCode: res.code,
@@ -335,13 +355,18 @@ export default function CodingEnginePage() {
         <div className="w-[35%] flex flex-col gap-4">
           <Card className="flex-1 premium-card bg-white/[0.01] border-white/5 p-8 overflow-y-auto custom-scrollbar">
             <div className="space-y-6">
-              <Badge className="bg-purple-500/10 text-purple-400 border-none text-[9px] font-black uppercase">Challenge Matrix</Badge>
+              <div className="flex items-center justify-between">
+                <Badge className="bg-purple-500/10 text-purple-400 border-none text-[9px] font-black uppercase">Challenge Matrix</Badge>
+                {journey?.aiGenerated && (
+                  <Badge className="bg-accent/10 text-accent border-none text-[8px] font-black uppercase flex items-center gap-1.5"><Sparkles className="w-3 h-3" /> AI Generated</Badge>
+                )}
+              </div>
               <h2 className="text-2xl font-bold tracking-tight">{currentQ?.title}</h2>
               <div className="flex gap-2">
                 <Badge variant="outline" className="text-accent text-[8px] uppercase border-accent/20">{currentQ?.difficulty}</Badge>
-                <Badge variant="outline" className="text-white/40 text-[8px] uppercase border-white/10">{currentQ?.category}</Badge>
+                <Badge variant="outline" className="text-white/40 text-[8px] uppercase border-white/10">{currentQ?.topic || currentQ?.category}</Badge>
               </div>
-              <p className="text-sm text-white/70 leading-relaxed font-light">{currentQ?.description}</p>
+              <p className="text-sm text-white/70 leading-relaxed font-light whitespace-pre-wrap">{currentQ?.problemStatement || currentQ?.description}</p>
               
               {currentQ?.constraints && currentQ.constraints.length > 0 && (
                 <div className="space-y-3">
@@ -394,7 +419,7 @@ export default function CodingEnginePage() {
               </div>
               <div className="flex items-center gap-4">
                 {currentIdx < questions.length - 1 ? (
-                  <Button onClick={() => setCurrentIdx(prev => prev + 1)} variant="ghost" className="h-12 px-6 text-[10px] font-black uppercase tracking-widest text-white/40 hover:text-white hover:bg-white/5">
+                  <Button onClick={() => setCurrentIdx(prev => Math.min(questions.length - 1, prev + 1))} variant="ghost" className="h-12 px-6 text-[10px] font-black uppercase tracking-widest text-white/40 hover:text-white hover:bg-white/5">
                     NEXT QUESTION <ChevronRight className="ml-2 w-4 h-4" />
                   </Button>
                 ) : (
