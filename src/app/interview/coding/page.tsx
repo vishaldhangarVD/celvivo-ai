@@ -250,25 +250,29 @@ export default function CodingEnginePage() {
       if (!db || !journey || questions.length > 0) return;
       
       try {
-        const snap = await getDoc(journeyRef!);
-        const data = snap.data();
+        // ALWAYS regenerate from MASTER_QUESTIONS as requested to purge stale Firestore cache
+        const easyPool = [...MASTER_QUESTIONS].filter(q => q.difficulty === 'Easy');
+        const medPool = [...MASTER_QUESTIONS].filter(q => q.difficulty === 'Medium');
+        const hardPool = [...MASTER_QUESTIONS].filter(q => q.difficulty === 'Hard');
+
+        // To ensure "The Mirror Word Test" is first as per protocol requirements
+        const mirrorWordIdx = easyPool.findIndex(q => q.title === "The Mirror Word Test");
+        let selectedEasy: any[] = [];
         
-        if (data?.codingQuestions && data.codingQuestions.length >= 5) {
-          setQuestions(data.codingQuestions);
-          setIsInitializing(false);
-          return;
+        if (mirrorWordIdx !== -1) {
+          const mirrorWord = easyPool.splice(mirrorWordIdx, 1)[0];
+          selectedEasy = [mirrorWord, ...easyPool.sort(() => 0.5 - Math.random()).slice(0, 1)];
+        } else {
+          selectedEasy = easyPool.sort(() => 0.5 - Math.random()).slice(0, 2);
         }
 
-        const easyPool = MASTER_QUESTIONS.filter(q => q.difficulty === 'Easy');
-        const medPool = MASTER_QUESTIONS.filter(q => q.difficulty === 'Medium');
-        const hardPool = MASTER_QUESTIONS.filter(q => q.difficulty === 'Hard');
-
         const finalQuestions = [
-          ...easyPool.sort(() => 0.5 - Math.random()).slice(0, 2),
+          ...selectedEasy,
           ...medPool.sort(() => 0.5 - Math.random()).slice(0, 2),
           ...hardPool.sort(() => 0.5 - Math.random()).slice(0, 1)
         ];
 
+        // Force update Firestore to stay in sync with latest local MASTER_QUESTIONS logic
         await updateDoc(journeyRef!, {
           codingQuestions: finalQuestions,
           updatedAt: serverTimestamp()
@@ -276,7 +280,8 @@ export default function CodingEnginePage() {
 
         setQuestions(finalQuestions);
       } catch (e: any) {
-        toast({ variant: "destructive", title: "Matrix Boot Error" });
+        console.error("Environment Sync Fault:", e);
+        toast({ variant: "destructive", title: "Matrix Sync Fault", description: "Failed to calibrate logic nodes." });
       } finally {
         setIsInitializing(false);
       }
