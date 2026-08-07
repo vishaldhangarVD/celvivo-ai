@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useEffect, useMemo, useCallback } from 'react';
@@ -36,7 +35,7 @@ import {
   ArrowRight
 } from 'lucide-react';
 import { useUser, useFirestore, useDoc } from '@/firebase';
-import { doc, updateDoc, serverTimestamp, getDoc, collection, addDoc, query, where, getDocs, limit } from 'firebase/firestore';
+import { doc, updateDoc, serverTimestamp, getDoc, collection, query, where, getDocs, limit } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 
@@ -99,9 +98,9 @@ export default function CodingEnginePage() {
         let targetDiff = "Medium";
         const exp = journey.experience?.toLowerCase() || "";
         if (exp.includes("fresher") || exp.includes("0-1")) targetDiff = "Easy";
-        else if (exp.includes(" senior") || exp.includes("8+")) targetDiff = "Hard";
+        else if (exp.includes("senior") || exp.includes("8+")) targetDiff = "Hard";
 
-        // Query Firestore for questions
+        // Query Firestore for questions matching difficulty
         const q = query(
           collection(db, "codingQuestions"),
           where("difficulty", "==", targetDiff)
@@ -110,18 +109,17 @@ export default function CodingEnginePage() {
         const querySnap = await getDocs(q);
         let availableQuestions = querySnap.docs.map(d => ({ ...d.data(), id: d.id }));
 
-        // Fallback if no questions found for difficulty
         if (availableQuestions.length === 0) {
           const fallbackSnap = await getDocs(collection(db, "codingQuestions"));
           availableQuestions = fallbackSnap.docs.map(d => ({ ...d.data(), id: d.id }));
         }
 
-        // Shuffle and pick 5 (or less if not available)
+        // Select exactly ONE random question as per specific request
         const shuffled = availableQuestions.sort(() => 0.5 - Math.random());
-        const selected = shuffled.slice(0, 5);
+        const selected = shuffled.slice(0, 1);
 
         if (selected.length === 0) {
-          throw new Error("No coding questions available in repository.");
+          throw new Error("Neural question repository is empty. Please seed database.");
         }
 
         await updateDoc(journeyRef!, {
@@ -148,8 +146,7 @@ export default function CodingEnginePage() {
     if (questions[currentIdx]) {
       const q = questions[currentIdx];
       const saved = sessionResults[currentIdx]?.code;
-      // starterCode is expected to be an object: { python: "...", java: "..." }
-      const starter = q.starterCode?.[selectedLang.id] || q.starterCode?.["javascript"] || "// Implementation required";
+      const starter = q.starterCode?.[selectedLang.id] || q.starterCode?.["python"] || "// Implementation required";
       setCode(saved || starter);
       setCustomInput("");
       setTerminalOutput("Ready to execute your code.");
@@ -255,7 +252,6 @@ export default function CodingEnginePage() {
       const passedQuestionsCount = resultsArray.filter(([_, r]) => r.allPassed).length;
       const scorePercentage = Math.round((passedQuestionsCount / questions.length) * 100);
       
-      // Persist results
       for (const [idxStr, res] of resultsArray) {
         const idx = parseInt(idxStr);
         const q = questions[idx];
@@ -266,7 +262,7 @@ export default function CodingEnginePage() {
           language: res.language,
           score: res.allPassed ? 100 : Math.round((res.passedCount / res.totalCount) * 100),
           passedTestCases: res.passedCount,
-          failedTestCases: res.totalCount - res.passedCount,
+          failedTestCases: res.totalTestCases - res.passedCount,
           totalTestCases: res.totalCount,
           executionTime: res.results?.[0]?.time || "0.00",
           submittedCode: res.code,
@@ -484,25 +480,6 @@ export default function CodingEnginePage() {
                 </div>
               ))}
             </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      <AnimatePresence>
-        {isTimeExpired && !isFinalizing && (
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="fixed inset-0 z-[150] bg-red-950/20 backdrop-blur-xl flex items-center justify-center p-6">
-            <Card className="max-w-md w-full premium-card border-red-500/50 bg-[#0b0e1a] p-12 text-center space-y-8">
-              <div className="w-20 h-20 rounded-full bg-red-500/20 border border-red-500/30 flex items-center justify-center mx-auto">
-                <Clock className="w-10 h-10 text-red-500 animate-pulse" />
-              </div>
-              <div className="space-y-2">
-                <h3 className="text-3xl font-bold tracking-tighter text-red-500 uppercase">Time Expired</h3>
-                <p className="text-sm text-white/60 font-light">The simulation window has closed. Your current implementation node has been automatically submitted for audit.</p>
-              </div>
-              <Button onClick={finalizeAssessment} className="w-full h-16 btn-premium bg-gradient-to-r from-red-600 to-red-400 uppercase tracking-widest text-xs font-black">
-                Proceed to Audit <ArrowRight className="ml-2 w-4 h-4" />
-              </Button>
-            </Card>
           </motion.div>
         )}
       </AnimatePresence>
