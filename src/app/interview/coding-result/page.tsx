@@ -32,7 +32,9 @@ import {
   AlertTriangle,
   Flame,
   Check,
-  Timer
+  Timer,
+  Terminal,
+  ChevronDown
 } from 'lucide-react';
 import { useUser, useFirestore, useDoc, useCollection } from '@/firebase';
 import { doc, collection, query, where, orderBy } from 'firebase/firestore';
@@ -44,7 +46,8 @@ export default function CodingResultTerminal() {
   const { user } = useUser();
   const db = useFirestore();
 
-  // Fetch active journey context for real session data
+  const [expandedNode, setExpandedNode] = useState<string | null>(null);
+
   const journeyRef = useMemo(() => {
     if (!db || !user?.uid) return null;
     return doc(db, 'users', user.uid, 'journey', 'active');
@@ -52,7 +55,6 @@ export default function CodingResultTerminal() {
 
   const { data: journey, loading: journeyLoading } = useDoc(journeyRef);
 
-  // Fetch specific question results for this session
   const resultsQuery = useMemo(() => {
     if (!db || !user?.uid || !journey?.sessionId) return null;
     return query(
@@ -64,7 +66,6 @@ export default function CodingResultTerminal() {
 
   const { data: questionResults, loading: resultsLoading } = useCollection(resultsQuery);
 
-  // High-fidelity evaluation data (Integrated with real logic nodes)
   const result = useMemo(() => {
     if (journey?.codingReport) return journey.codingReport;
     
@@ -97,7 +98,6 @@ export default function CodingResultTerminal() {
       
       <main className="flex-1 container mx-auto px-6 pt-24 pb-8 flex flex-col gap-6 overflow-hidden">
         
-        {/* Header Protocol */}
         <header className="flex flex-col md:flex-row justify-between items-end gap-4 shrink-0">
           <div className="space-y-1">
             <Badge className="bg-accent/20 text-accent border-none px-4 py-1 text-[10px] tracking-[0.4em] font-black uppercase">Simulation Node 03 Audit</Badge>
@@ -110,10 +110,8 @@ export default function CodingResultTerminal() {
           </div>
         </header>
 
-        {/* Master Content Matrix */}
         <div className="flex-1 grid lg:grid-cols-12 gap-6 overflow-hidden">
           
-          {/* Left Column: Master Score & Decision */}
           <div className="lg:col-span-4 flex flex-col gap-6 overflow-hidden">
             <Card className="premium-card bg-white/[0.01] border-white/5 p-8 flex flex-col items-center text-center justify-center relative overflow-hidden">
               <div className="absolute top-0 inset-x-0 h-1 bg-gradient-to-r from-transparent via-accent/30 to-transparent" />
@@ -180,7 +178,6 @@ export default function CodingResultTerminal() {
             </Card>
           </div>
 
-          {/* Right Column: Performance Summary & Question List */}
           <div className="lg:col-span-8 flex flex-col gap-6 overflow-hidden">
             <Card className="flex-1 premium-card bg-white/[0.01] border-white/5 p-10 overflow-hidden flex flex-col">
               <div className="flex items-center justify-between mb-10 shrink-0">
@@ -218,36 +215,104 @@ export default function CodingResultTerminal() {
                   <div className="py-12 flex justify-center"><Loader2 className="w-8 h-8 animate-spin text-accent" /></div>
                 ) : questionResults && questionResults.length > 0 ? (
                   questionResults.map((res: any, idx: number) => (
-                    <Card key={idx} className="glass p-6 rounded-[2rem] border-white/5 hover:border-white/20 transition-all flex items-center justify-between group">
-                      <div className="flex items-center gap-6">
-                        <div className="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center text-[10px] font-black group-hover:text-accent transition-colors">0{idx + 1}</div>
-                        <div className="space-y-1">
-                          <p className="text-base font-bold text-white/90">{getQuestionTitle(res.questionId)}</p>
-                          <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
-                            <span className="text-[9px] text-white/30 uppercase tracking-widest">{res.language}</span>
-                            <span className="text-[9px] text-accent font-bold uppercase tracking-widest">{res.passedTestCases}/{res.totalTestCases} Nodes Passed</span>
-                            {res.executionTime !== undefined && (
-                              <span className="text-[9px] text-purple-400 font-bold uppercase tracking-widest">Time: {res.executionTime}s</span>
-                            )}
-                            {res.memory !== undefined && (
-                              <span className="text-[9px] text-blue-400 font-bold uppercase tracking-widest">Mem: {res.memory}KB</span>
-                            )}
+                    <div key={idx} className="space-y-4">
+                      <Card 
+                        onClick={() => setExpandedNode(expandedNode === res.id ? null : res.id)}
+                        className="glass p-6 rounded-[2rem] border-white/5 hover:border-white/20 transition-all flex items-center justify-between group cursor-pointer"
+                      >
+                        <div className="flex items-center gap-6">
+                          <div className="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center text-[10px] font-black group-hover:text-accent transition-colors">0{idx + 1}</div>
+                          <div className="space-y-1">
+                            <p className="text-base font-bold text-white/90">{getQuestionTitle(res.questionId)}</p>
+                            <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
+                              <span className="text-[9px] text-white/30 uppercase tracking-widest">{res.language}</span>
+                              <span className="text-[9px] text-accent font-bold uppercase tracking-widest">{res.passedTestCases}/{res.totalTestCases} Nodes Passed</span>
+                            </div>
                           </div>
                         </div>
-                      </div>
-                      <div className="flex items-center gap-6">
-                        <div className="text-right">
-                          <p className={cn("text-xs font-black uppercase tracking-widest", res.status === 'Solved' ? "text-green-400" : "text-red-400")}>
-                            {res.status === 'Solved' ? 'PASSED' : 'FAILED'}
-                          </p>
-                          <p className="text-[8px] text-white/20 uppercase tracking-tighter">Audit Status</p>
+                        <div className="flex items-center gap-6">
+                          <div className="text-right">
+                            <p className={cn("text-xs font-black uppercase tracking-widest", res.status === 'Solved' ? "text-green-400" : "text-red-400")}>
+                              {res.status === 'Solved' ? 'PASSED' : 'FAILED'}
+                            </p>
+                            <p className="text-[8px] text-white/20 uppercase tracking-tighter">Audit Status</p>
+                          </div>
+                          <ChevronDown className={cn("w-4 h-4 text-white/20 transition-transform", expandedNode === res.id && "rotate-180")} />
                         </div>
-                        <div className={cn(
-                          "w-2 h-2 rounded-full", 
-                          res.status === 'Solved' ? "bg-green-400 shadow-[0_0_10px_rgba(74,222,128,0.5)]" : "bg-red-400 shadow-[0_0_10px_rgba(248,113,113,0.5)]"
-                        )} />
-                      </div>
-                    </Card>
+                      </Card>
+
+                      <AnimatePresence>
+                        {expandedNode === res.id && (
+                          <motion.div
+                            initial={{ height: 0, opacity: 0 }}
+                            animate={{ height: 'auto', opacity: 1 }}
+                            exit={{ height: 0, opacity: 0 }}
+                            className="overflow-hidden"
+                          >
+                            <div className="p-8 glass rounded-[2rem] border-accent/10 bg-accent/[0.01] space-y-8 mt-2">
+                               <div className="grid md:grid-cols-2 gap-8">
+                                 <div className="space-y-4">
+                                   <h5 className="text-[10px] font-black uppercase tracking-widest text-accent flex items-center gap-2">
+                                     <Terminal className="w-3 h-3" /> Execution Details
+                                   </h5>
+                                   <div className="grid grid-cols-2 gap-4">
+                                      <div className="p-4 glass rounded-xl border-white/5 space-y-1">
+                                        <p className="text-[8px] uppercase font-bold text-white/30">Language</p>
+                                        <p className="text-xs font-bold text-white">{res.language}</p>
+                                      </div>
+                                      <div className="p-4 glass rounded-xl border-white/5 space-y-1">
+                                        <p className="text-[8px] uppercase font-bold text-white/30">Status</p>
+                                        <p className={cn("text-xs font-bold", res.status === 'Solved' ? "text-green-400" : "text-red-400")}>{res.status}</p>
+                                      </div>
+                                      <div className="p-4 glass rounded-xl border-white/5 space-y-1">
+                                        <p className="text-[8px] uppercase font-bold text-white/30">Execution Time</p>
+                                        <p className="text-xs font-bold text-white tabular-nums">{res.executionTime || '0.00'}s</p>
+                                      </div>
+                                      <div className="p-4 glass rounded-xl border-white/5 space-y-1">
+                                        <p className="text-[8px] uppercase font-bold text-white/30">Memory usage</p>
+                                        <p className="text-xs font-bold text-white tabular-nums">{res.memory || 'N/A'} KB</p>
+                                      </div>
+                                   </div>
+                                 </div>
+
+                                 <div className="space-y-4">
+                                   <h5 className="text-[10px] font-black uppercase tracking-widest text-purple-400 flex items-center gap-2">
+                                     <Activity className="w-3 h-3" /> Audit Trace Summary
+                                   </h5>
+                                   <div className="p-4 glass rounded-xl border-white/5 h-full max-h-[160px] overflow-y-auto custom-scrollbar">
+                                      {res.auditTrace && res.auditTrace.length > 0 ? (
+                                        <div className="space-y-3">
+                                          {res.auditTrace.map((tr: any, tIdx: number) => (
+                                            <div key={tIdx} className="flex items-center justify-between text-[10px]">
+                                              <span className="text-white/40">Test Case #{tIdx + 1}</span>
+                                              <Badge variant="outline" className={cn("text-[8px] uppercase py-0", tr.passed ? "text-green-400 border-green-500/20" : "text-red-400 border-red-500/20")}>
+                                                {tr.status}
+                                              </Badge>
+                                            </div>
+                                          ))}
+                                        </div>
+                                      ) : (
+                                        <p className="text-[10px] text-white/20 italic">No diagnostic trace available.</p>
+                                      )}
+                                   </div>
+                                 </div>
+                               </div>
+
+                               {res.auditTrace?.some((tr: any) => tr.status.includes('Error')) && (
+                                 <div className="p-6 glass rounded-2xl border-red-500/20 bg-red-500/[0.02] space-y-3">
+                                    <h5 className="text-[10px] font-black uppercase tracking-widest text-red-400 flex items-center gap-2">
+                                      <AlertTriangle className="w-3 h-3" /> Diagnostic Logs
+                                    </h5>
+                                    <pre className="text-[10px] font-mono text-red-300/80 whitespace-pre-wrap leading-relaxed max-h-[120px] overflow-y-auto custom-scrollbar">
+                                      {res.auditTrace.find((tr: any) => tr.status.includes('Error'))?.rawOutput || "Fatal execution exception captured."}
+                                    </pre>
+                                 </div>
+                               )}
+                            </div>
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
+                    </div>
                   ))
                 ) : (
                   <div className="py-12 text-center glass rounded-2xl border-white/5 border-dashed">
@@ -256,7 +321,6 @@ export default function CodingResultTerminal() {
                 )}
               </div>
 
-              {/* Bottom Real Data Summary Panel */}
               <div className="mt-6 pt-6 border-t border-white/5 shrink-0 grid grid-cols-2 md:grid-cols-4 gap-4">
                  {[
                    { label: "Correct Answers", val: `0${result?.passedQuestions || 0}`, color: "text-green-400" },
@@ -284,4 +348,3 @@ export default function CodingResultTerminal() {
     </div>
   );
 }
-

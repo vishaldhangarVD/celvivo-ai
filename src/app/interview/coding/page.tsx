@@ -124,7 +124,6 @@ export default function CodingEnginePage() {
         const idx = parseInt(idxStr);
         const q = questions[idx];
         
-        // Calculate performance metrics (Max execution time and memory among test cases)
         const executionTime = res.results?.length > 0 
           ? Math.max(...res.results.map((r: any) => parseFloat(r.executionTime || 0))) 
           : 0;
@@ -147,6 +146,7 @@ export default function CodingEnginePage() {
           submittedCode: res.code,
           executionTime,
           memory,
+          auditTrace: res.results || [],
           completedAt: serverTimestamp(),
         });
       }
@@ -338,7 +338,6 @@ export default function CodingEnginePage() {
       <div className="particles-bg" />
       <Navbar />
       
-      {/* DEV ONLY BUTTON */}
       <div className="fixed top-2 right-2 z-[200]">
         <Button 
           onClick={finalizeAssessment}
@@ -383,7 +382,6 @@ export default function CodingEnginePage() {
       </header>
 
       <main className="flex-1 container-fluid flex overflow-hidden p-4 gap-4">
-        {/* Left: Problem Statement */}
         <div className="w-[35%] flex flex-col gap-4">
           <Card className="flex-1 glass bg-white/[0.01] border-white/5 p-8 overflow-y-auto custom-scrollbar rounded-[2.5rem]">
             <div className="space-y-10">
@@ -499,7 +497,6 @@ export default function CodingEnginePage() {
           </Card>
         </div>
 
-        {/* Right: Code Editor & Results */}
         <div className="flex-1 flex flex-col gap-4">
           <Card className="p-6 glass border-accent/20 bg-accent/[0.03] rounded-[2rem] flex items-center justify-between">
             <div className="flex items-center gap-6">
@@ -606,7 +603,6 @@ export default function CodingEnginePage() {
             </div>
           </Card>
 
-          {/* Terminal Console */}
           <Card className="h-[35%] glass border-white/5 bg-[#0b0e1a] flex flex-col overflow-hidden rounded-[2.5rem]">
             <Tabs value={activeTerminalTab} onValueChange={setActiveTerminalTab} className="h-full flex flex-col">
               <TabsList className="bg-white/[0.03] px-10 h-14 border-b border-white/5 gap-8">
@@ -706,4 +702,3 @@ export default function CodingEnginePage() {
     </div>
   );
 }
-
