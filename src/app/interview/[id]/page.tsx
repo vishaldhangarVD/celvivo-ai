@@ -1,4 +1,3 @@
-
 "use client";
 import { Suspense, useEffect, useState, useRef } from "react";
 import { useRouter, useParams, useSearchParams } from "next/navigation";
@@ -9,7 +8,6 @@ import {
   Send, 
   Mic, 
   Command, 
-  User, 
   ShieldCheck,
 } from "lucide-react";
 import Navbar from "@/components/layout/Navbar";
@@ -19,7 +17,7 @@ import { generateInterviewFeedback } from "@/ai/flows/ai-interview-feedback";
 import { useUser, useFirestore } from "@/firebase";
 import { doc, serverTimestamp, collection, addDoc, getDoc, deleteDoc } from "firebase/firestore";
 import { useToast } from "@/hooks/use-toast";
-import { useDIDAgent } from "@/components/DIDAgent";
+import { Badge } from "@/components/ui/badge";
 
 function VirtualArenaContent() {
   const router = useRouter();
@@ -27,7 +25,6 @@ function VirtualArenaContent() {
   const { user } = useUser();
   const db = useFirestore();
   const { toast } = useToast();
-  const { isReady: agentReady, speak } = useDIDAgent();
 
   const role = searchParams.get("role") || "Software Engineer";
   const company = searchParams.get("company") || "Standard Tech";
@@ -48,6 +45,7 @@ function VirtualArenaContent() {
   const [askedQuestions, setAskedQuestions] = useState<string[]>([]);
   const recognitionRef = useRef<any>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
+  const aiVideoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
 
   // User Webcam Setup
@@ -151,9 +149,9 @@ function VirtualArenaContent() {
             setTranscript([{ role: 'interviewer', text: response.nextQuestion }]);
             setAskedQuestions([response.nextQuestion]);
             
-            // AI Interviewer speaks the first question
-            if (agentReady) {
-              speak(response.nextQuestion);
+            // AI Interviewer visual feedback - Loop generic "thinking" or start "speaking" video
+            if (aiVideoRef.current) {
+              aiVideoRef.current.play().catch(e => console.warn("Video playback blocked", e));
             }
           }
         } catch (e) {
@@ -166,7 +164,7 @@ function VirtualArenaContent() {
       }
     }
     init();
-  }, [user, db, role, company, exp, round, router, transcript.length, agentReady, speak]);
+  }, [user, db, role, company, exp, round, router, transcript.length]);
 
   const handleSend = async () => {
     if (!userAnswer.trim() || isProcessing || isSimulationComplete) return;
@@ -205,9 +203,10 @@ function VirtualArenaContent() {
       setAskedQuestions(prev => [...prev, response.nextQuestion]);
       setCurrentIdx(prev => prev + 1);
 
-      // AI Interviewer speaks the next question
-      if (agentReady) {
-        speak(response.nextQuestion);
+      // AI Interviewer visual feedback - Reset and play
+      if (aiVideoRef.current) {
+        aiVideoRef.current.currentTime = 0;
+        aiVideoRef.current.play().catch(e => console.warn("Video playback blocked", e));
       }
 
       if (response.isInterviewComplete) {
@@ -306,7 +305,7 @@ function VirtualArenaContent() {
       <main className="flex-1 flex flex-col relative">
         <div className="flex-1 flex items-center justify-center p-6 relative">
           <div className="w-full h-full max-w-7xl mx-auto relative rounded-[3rem] overflow-hidden bg-black shadow-[0_0_100px_rgba(0,0,0,0.5)] border border-white/5">
-            {/* User Live Camera Feed */}
+            {/* User Live Camera Feed (Large Area) */}
             <video
               ref={videoRef}
               autoPlay
@@ -315,6 +314,21 @@ function VirtualArenaContent() {
               className="w-full h-full object-cover"
               style={{ transform: 'scaleX(-1)' }}
             />
+
+            {/* AI Interviewer (Small Floating Box) */}
+            <div className="absolute bottom-10 right-10 w-80 aspect-video rounded-[2rem] overflow-hidden border border-white/10 shadow-2xl z-20 bg-[#0b0e1a]">
+               <video 
+                 ref={aiVideoRef}
+                 src="/interviewer-female.mp4"
+                 poster="/hr.png.png"
+                 className="w-full h-full object-cover"
+                 loop
+                 playsInline
+               />
+               <div className="absolute bottom-4 left-4">
+                 <Badge className="bg-accent/20 text-accent border-none text-[8px] font-black tracking-widest uppercase">AI Interviewer</Badge>
+               </div>
+            </div>
           </div>
         </div>
 
