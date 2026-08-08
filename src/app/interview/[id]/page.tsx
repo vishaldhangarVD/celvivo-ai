@@ -146,12 +146,12 @@ function VirtualArenaContent() {
 
   // Timer Logic
   useEffect(() => {
-    if (isInitializing || isSimulationComplete) return;
+    if (isSimulationComplete) return;
     const timer = setInterval(() => {
       setTimeLeft(prev => Math.max(0, prev - 1));
     }, 1000);
     return () => clearInterval(timer);
-  }, [isInitializing, isSimulationComplete]);
+  }, [isSimulationComplete]);
 
   // Bootstrap Simulation Journey
   useEffect(() => {
