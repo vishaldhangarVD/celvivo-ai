@@ -35,7 +35,8 @@ import {
   Terminal,
   ChevronDown,
   PieChart,
-  Gavel
+  Gavel,
+  ArrowRight
 } from 'lucide-react';
 import { useUser, useFirestore, useDoc, useCollection } from '@/firebase';
 import { doc, collection, query, where, orderBy } from 'firebase/firestore';
@@ -219,10 +220,10 @@ export default function CodingResultTerminal() {
               <div className="relative z-10 pt-6">
                 {isPassed ? (
                   <Button 
-                    onClick={() => router.push(`/interview/hr?role=${encodeURIComponent(journey?.role || '')}&company=${encodeURIComponent(journey?.company || '')}&exp=${encodeURIComponent(journey?.experience || '')}&round=HR%20Round`)}
+                    onClick={() => router.push(`/interview/${journey?.sessionId || 'session'}?role=${encodeURIComponent(journey?.role || '')}&company=${encodeURIComponent(journey?.company || '')}&exp=${encodeURIComponent(journey?.experience || '')}&round=HR%20Round`)}
                     className="w-full h-16 btn-premium rounded-2xl text-xs font-black uppercase tracking-[0.3em] shadow-[0_20px_60px_rgba(147,51,234,0.3)] group"
                   >
-                    Enter HR Arena <Mic className="ml-3 w-5 h-5 transition-transform group-hover:scale-110" />
+                    CONTINUE TO INTERVIEW <ArrowRight className="ml-3 w-5 h-5 transition-transform group-hover:scale-110" />
                   </Button>
                 ) : (
                   <Button 
