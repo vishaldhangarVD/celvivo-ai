@@ -8,7 +8,6 @@ import NavigationControls from '@/components/NavigationControls';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Progress } from '@/components/ui/progress';
 import { 
   CheckCircle2, 
   XCircle, 
@@ -33,9 +32,10 @@ import {
   Flame,
   Check
 } from 'lucide-react';
-import { useUser, useFirestore, useDoc } from '@/firebase';
-import { doc } from 'firebase/firestore';
+import { useUser, useFirestore, useDoc, useCollection } from '@/firebase';
+import { doc, collection, query, where, orderBy } from 'firebase/firestore';
 import { cn } from '@/lib/utils';
+import { MASTER_QUESTIONS } from '@/lib/coding-questions-data';
 
 export default function CodingResultTerminal() {
   const router = useRouter();
@@ -49,6 +49,18 @@ export default function CodingResultTerminal() {
   }, [db, user?.uid]);
 
   const { data: journey, loading: journeyLoading } = useDoc(journeyRef);
+
+  // Fetch specific question results for this session
+  const resultsQuery = useMemo(() => {
+    if (!db || !user?.uid || !journey?.sessionId) return null;
+    return query(
+      collection(db, 'users', user.uid, 'coding_results'),
+      where('interviewId', '==', journey.sessionId),
+      orderBy('completedAt', 'asc')
+    );
+  }, [db, user?.uid, journey?.sessionId]);
+
+  const { data: questionResults, loading: resultsLoading } = useCollection(resultsQuery);
 
   // High-fidelity evaluation data (Integrated with real logic nodes)
   const result = useMemo(() => {
@@ -64,6 +76,10 @@ export default function CodingResultTerminal() {
   }, [journey]);
 
   const isPassed = (result?.score || 0) >= 70;
+
+  const getQuestionTitle = (questionId: string) => {
+    return MASTER_QUESTIONS.find(q => q.id === questionId)?.title || "Protocol Node";
+  };
 
   if (journeyLoading) return (
     <div className="h-screen flex items-center justify-center bg-[#050816]">
@@ -162,58 +178,79 @@ export default function CodingResultTerminal() {
             </Card>
           </div>
 
-          {/* Right Column: Performance Summary */}
+          {/* Right Column: Performance Summary & Question List */}
           <div className="lg:col-span-8 flex flex-col gap-6 overflow-hidden">
             <Card className="flex-1 premium-card bg-white/[0.01] border-white/5 p-10 overflow-hidden flex flex-col">
-              <div className="flex items-center justify-between mb-10">
+              <div className="flex items-center justify-between mb-10 shrink-0">
                 <h3 className="text-xs font-black uppercase tracking-[0.3em] text-accent flex items-center gap-3">
                   <Activity className="w-4 h-4" /> Telemetry Summary
                 </h3>
                 <span className="text-[9px] font-bold uppercase tracking-widest text-white/20">Archived Node Results</span>
               </div>
 
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-6">
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-4 shrink-0 mb-8">
                 {[
-                  { label: "Total Challenges", val: result?.totalQuestions || 5, icon: Layers, color: "text-blue-400" },
-                  { label: "Passed Nodes", val: result?.passedQuestions || 0, icon: CheckCircle2, color: "text-green-400" },
+                  { label: "Nodes Solved", val: result?.passedQuestions || 0, icon: CheckCircle2, color: "text-green-400" },
                   { label: "Failed Probes", val: (result?.totalQuestions || 5) - (result?.passedQuestions || 0), icon: XCircle, color: "text-red-400" },
                   { label: "Accuracy Rate", val: `${result?.score}%`, icon: Target, color: "text-accent" },
-                  { label: "Submission Node", val: result?.submissionTime, icon: Clock, color: "text-purple-400" },
-                  { label: "Audit Protocol", val: "Verified", icon: ShieldCheck, color: "text-orange-400" }
                 ].map((stat, i) => (
-                  <div key={i} className="p-6 glass rounded-2xl border-white/5 flex flex-col items-center text-center group hover:bg-white/[0.03] transition-all">
-                    <div className={cn("w-10 h-10 rounded-xl flex items-center justify-center mb-4 bg-white/5", stat.color)}>
-                      <stat.icon className="w-5 h-5" />
+                  <div key={i} className="p-4 glass rounded-2xl border-white/5 flex flex-col items-center text-center group hover:bg-white/[0.03] transition-all">
+                    <div className={cn("w-8 h-8 rounded-lg flex items-center justify-center mb-3 bg-white/5", stat.color)}>
+                      <stat.icon className="w-4 h-4" />
                     </div>
-                    <div className="text-xl font-bold tabular-nums text-white/90">{stat.val}</div>
+                    <div className="text-lg font-bold tabular-nums text-white/90">{stat.val}</div>
                     <div className="text-[8px] uppercase font-bold tracking-widest text-white/30">{stat.label}</div>
                   </div>
                 ))}
               </div>
 
-              <div className="mt-auto space-y-6">
-                 <h4 className="text-[10px] font-black uppercase tracking-[0.3em] text-white/20 flex items-center gap-3">
-                   <Sparkles className="w-4 h-4 text-accent" /> Neural Performance Matrix
-                 </h4>
-                 <div className="grid gap-4">
-                   <div className="space-y-2">
-                     <div className="flex justify-between text-[9px] font-bold uppercase text-white/40">
-                       <span>Implementation Accuracy</span>
-                       <span>{result?.score}%</span>
-                     </div>
-                     <div className="h-1 bg-white/5 rounded-full overflow-hidden">
-                       <motion.div initial={{ width: 0 }} animate={{ width: `${result?.score}%` }} className="h-full bg-accent" />
-                     </div>
-                   </div>
-                   <div className="space-y-2">
-                     <div className="flex justify-between text-[9px] font-bold uppercase text-white/40">
-                       <span>Logic Persistence</span>
-                       <span>{Math.round((result?.passedQuestions / result?.totalQuestions) * 100)}%</span>
-                     </div>
-                     <div className="h-1 bg-white/5 rounded-full overflow-hidden">
-                       <motion.div initial={{ width: 0 }} animate={{ width: `${(result?.passedQuestions / result?.totalQuestions) * 100}%` }} className="h-full bg-purple-500" />
-                     </div>
-                   </div>
+              <div className="flex-1 overflow-y-auto custom-scrollbar space-y-4 pr-2">
+                <h4 className="text-[10px] font-black uppercase tracking-[0.3em] text-white/20 flex items-center gap-3 ml-2 sticky top-0 bg-[#050816] py-2 z-10">
+                   <Code2 className="w-4 h-4 text-accent" /> Logic Review Matrix
+                </h4>
+                
+                {resultsLoading ? (
+                  <div className="py-12 flex justify-center"><Loader2 className="w-8 h-8 animate-spin text-accent" /></div>
+                ) : questionResults && questionResults.length > 0 ? (
+                  questionResults.map((res: any, idx: number) => (
+                    <Card key={idx} className="glass p-6 rounded-[2rem] border-white/5 hover:bg-white/[0.02] transition-all flex items-center justify-between group">
+                      <div className="flex items-center gap-6">
+                        <div className="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center text-[10px] font-black group-hover:text-accent transition-colors">0{idx + 1}</div>
+                        <div>
+                          <p className="text-base font-bold text-white/90">{getQuestionTitle(res.questionId)}</p>
+                          <p className="text-[9px] text-white/30 uppercase tracking-widest mt-1">
+                            {res.language} • {res.passedTestCases}/{res.totalTestCases} Test Cases
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-6">
+                        <div className="text-right">
+                          <p className={cn("text-xs font-black uppercase tracking-widest", res.status === 'Solved' ? "text-green-400" : "text-red-400")}>
+                            {res.status.toUpperCase()}
+                          </p>
+                          <p className="text-[8px] text-white/20 uppercase tracking-tighter">Audit Status</p>
+                        </div>
+                        <div className={cn(
+                          "w-2 h-2 rounded-full", 
+                          res.status === 'Solved' ? "bg-green-400 shadow-[0_0_10px_rgba(74,222,128,0.5)]" : "bg-red-400 shadow-[0_0_10px_rgba(248,113,113,0.5)]"
+                        )} />
+                      </div>
+                    </Card>
+                  ))
+                ) : (
+                  <div className="py-12 text-center glass rounded-2xl border-white/5 border-dashed">
+                    <p className="text-xs font-light text-white/20 uppercase tracking-widest">No implemention archives found.</p>
+                  </div>
+                )}
+              </div>
+
+              <div className="mt-6 pt-6 border-t border-white/5 shrink-0">
+                 <div className="flex justify-between items-center text-[9px] font-bold uppercase text-white/40 mb-3">
+                   <span>Node Logic Precision</span>
+                   <span className="text-accent">{result?.score}%</span>
+                 </div>
+                 <div className="h-1 bg-white/5 rounded-full overflow-hidden">
+                   <motion.div initial={{ width: 0 }} animate={{ width: `${result?.score}%` }} className="h-full bg-accent" />
                  </div>
               </div>
             </Card>
