@@ -23,7 +23,7 @@ import {
   Target, 
   Code2, 
   Layers,
-  Sparkles,
+  Sparkles, 
   Command,
   Mic,
   MessageSquare,
@@ -35,7 +35,6 @@ import {
   Terminal,
   ChevronDown,
   PieChart,
-  Gavel,
   ArrowRight
 } from 'lucide-react';
 import { useUser, useFirestore, useDoc, useCollection } from '@/firebase';
