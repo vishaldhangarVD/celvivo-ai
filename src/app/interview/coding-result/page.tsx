@@ -122,6 +122,11 @@ export default function CodingResultTerminal() {
     return "text-red-400";
   };
 
+  const handleContinueToInterview = () => {
+    if (!journey) return;
+    router.push(`/interview/${journey.sessionId}?role=${encodeURIComponent(journey.role || '')}&company=${encodeURIComponent(journey.company || '')}&exp=${encodeURIComponent(journey.experience || '')}&round=HR%20Round`);
+  };
+
   if (journeyLoading) return (
     <div className="h-screen flex items-center justify-center bg-[#050816]">
       <Loader2 className="w-12 h-12 text-accent animate-spin" />
@@ -220,7 +225,7 @@ export default function CodingResultTerminal() {
               <div className="relative z-10 pt-6">
                 {isPassed ? (
                   <Button 
-                    onClick={() => router.push(`/interview/${journey?.sessionId || 'session'}?role=${encodeURIComponent(journey?.role || '')}&company=${encodeURIComponent(journey?.company || '')}&exp=${encodeURIComponent(journey?.experience || '')}&round=HR%20Round`)}
+                    onClick={handleContinueToInterview}
                     className="w-full h-16 btn-premium rounded-2xl text-xs font-black uppercase tracking-[0.3em] shadow-[0_20px_60px_rgba(147,51,234,0.3)] group"
                   >
                     CONTINUE TO INTERVIEW <ArrowRight className="ml-3 w-5 h-5 transition-transform group-hover:scale-110" />
@@ -412,6 +417,12 @@ export default function CodingResultTerminal() {
             </div>
 
             <div className="flex justify-end gap-4 shrink-0 pt-4 border-t border-white/5">
+              <Button 
+                onClick={handleContinueToInterview}
+                className="h-12 px-10 btn-premium rounded-xl text-[10px] font-black uppercase tracking-widest shadow-2xl flex items-center gap-2"
+              >
+                CONTINUE TO INTERVIEW <ArrowRight className="w-4 h-4" />
+              </Button>
               <Button onClick={() => router.push('/dashboard')} variant="ghost" className="h-12 px-8 rounded-xl glass border-white/10 text-[9px] font-black uppercase tracking-widest text-white/30 hover:text-white">
                 Exit to Control Panel
               </Button>
@@ -421,5 +432,26 @@ export default function CodingResultTerminal() {
         </div>
       </main>
     </div>
+  );
+}
+
+function Gavel({ className }: { className?: string }) {
+  return (
+    <svg 
+      className={className}
+      viewBox="0 0 24 24" 
+      fill="none" 
+      stroke="currentColor" 
+      strokeWidth="2" 
+      strokeLinecap="round" 
+      strokeLinejoin="round"
+    >
+      <path d="m14.5 12.5-8 8a2.11 2.11 0 1 1-3-3l8-8" />
+      <path d="m16 16 2 2" />
+      <path d="m2 2 16 16" />
+      <path d="m15 2 6 6" />
+      <path d="m9 2 8 8" />
+      <path d="m17 2 5 5" />
+    </svg>
   );
 }
