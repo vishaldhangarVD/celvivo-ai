@@ -1,3 +1,4 @@
+
 "use client";
 import { Suspense, useEffect, useState, useRef } from "react";
 import { useRouter, useParams, useSearchParams } from "next/navigation";
@@ -18,6 +19,7 @@ import { generateInterviewFeedback } from "@/ai/flows/ai-interview-feedback";
 import { useUser, useFirestore } from "@/firebase";
 import { doc, serverTimestamp, collection, addDoc, getDoc, deleteDoc } from "firebase/firestore";
 import { useToast } from "@/hooks/use-toast";
+import { useDIDAgent } from "@/components/DIDAgent";
 
 function VirtualArenaContent() {
   const router = useRouter();
@@ -25,6 +27,7 @@ function VirtualArenaContent() {
   const { user } = useUser();
   const db = useFirestore();
   const { toast } = useToast();
+  const { isReady: agentReady, speak } = useDIDAgent();
 
   const role = searchParams.get("role") || "Software Engineer";
   const company = searchParams.get("company") || "Standard Tech";
@@ -44,6 +47,43 @@ function VirtualArenaContent() {
 
   const [askedQuestions, setAskedQuestions] = useState<string[]>([]);
   const recognitionRef = useRef<any>(null);
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const streamRef = useRef<MediaStream | null>(null);
+
+  // User Webcam Setup
+  useEffect(() => {
+    async function startCamera() {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({
+          video: {
+            width: { ideal: 1280 },
+            height: { ideal: 720 },
+            facingMode: "user"
+          },
+          audio: true
+        });
+        if (videoRef.current) {
+          videoRef.current.srcObject = stream;
+        }
+        streamRef.current = stream;
+      } catch (err) {
+        console.error("Camera Access Denied:", err);
+        toast({
+          variant: "destructive",
+          title: "Hardware Node Fault",
+          description: "Camera and Microphone permissions are required for the Neural Arena."
+        });
+      }
+    }
+
+    startCamera();
+
+    return () => {
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach(track => track.stop());
+      }
+    };
+  }, [toast]);
 
   // Speech Recognition Setup
   useEffect(() => {
@@ -110,6 +150,11 @@ function VirtualArenaContent() {
 
             setTranscript([{ role: 'interviewer', text: response.nextQuestion }]);
             setAskedQuestions([response.nextQuestion]);
+            
+            // AI Interviewer speaks the first question
+            if (agentReady) {
+              speak(response.nextQuestion);
+            }
           }
         } catch (e) {
           console.error("Bootstrap Fault:", e);
@@ -121,7 +166,7 @@ function VirtualArenaContent() {
       }
     }
     init();
-  }, [user, db, role, company, exp, round, router, transcript.length]);
+  }, [user, db, role, company, exp, round, router, transcript.length, agentReady, speak]);
 
   const handleSend = async () => {
     if (!userAnswer.trim() || isProcessing || isSimulationComplete) return;
@@ -159,6 +204,11 @@ function VirtualArenaContent() {
       setTranscript(updatedTranscript);
       setAskedQuestions(prev => [...prev, response.nextQuestion]);
       setCurrentIdx(prev => prev + 1);
+
+      // AI Interviewer speaks the next question
+      if (agentReady) {
+        speak(response.nextQuestion);
+      }
 
       if (response.isInterviewComplete) {
         finalizeSession(updatedTranscript);
@@ -256,7 +306,15 @@ function VirtualArenaContent() {
       <main className="flex-1 flex flex-col relative">
         <div className="flex-1 flex items-center justify-center p-6 relative">
           <div className="w-full h-full max-w-7xl mx-auto relative rounded-[3rem] overflow-hidden bg-black shadow-[0_0_100px_rgba(0,0,0,0.5)] border border-white/5">
-            <div id="avatar-placeholder" className="w-full h-full" />
+            {/* User Live Camera Feed */}
+            <video
+              ref={videoRef}
+              autoPlay
+              playsInline
+              muted
+              className="w-full h-full object-cover"
+              style={{ transform: 'scaleX(-1)' }}
+            />
           </div>
         </div>
 
