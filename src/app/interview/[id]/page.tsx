@@ -9,6 +9,8 @@ import {
   Mic, 
   Command, 
   ShieldCheck,
+  VideoOff,
+  AlertCircle
 } from "lucide-react";
 import Navbar from "@/components/layout/Navbar";
 import NavigationControls from "@/components/NavigationControls";
@@ -41,6 +43,7 @@ function VirtualArenaContent() {
   const [isInitializing, setIsInitializing] = useState(true);
   const [isGeneratingReport, setIsGeneratingReport] = useState(false);
   const [assessmentContext, setAssessmentContext] = useState<any>(null);
+  const [cameraError, setCameraError] = useState<string | null>(null);
 
   const [askedQuestions, setAskedQuestions] = useState<string[]>([]);
   const recognitionRef = useRef<any>(null);
@@ -52,6 +55,7 @@ function VirtualArenaContent() {
   useEffect(() => {
     async function startCamera() {
       try {
+        setCameraError(null);
         const stream = await navigator.mediaDevices.getUserMedia({
           video: {
             width: { ideal: 1280 },
@@ -64,8 +68,9 @@ function VirtualArenaContent() {
           videoRef.current.srcObject = stream;
         }
         streamRef.current = stream;
-      } catch (err) {
+      } catch (err: any) {
         console.error("Camera Access Denied:", err);
+        setCameraError(err.message || "Camera access denied");
         toast({
           variant: "destructive",
           title: "Hardware Node Fault",
@@ -149,9 +154,8 @@ function VirtualArenaContent() {
             setTranscript([{ role: 'interviewer', text: response.nextQuestion }]);
             setAskedQuestions([response.nextQuestion]);
             
-            // AI Interviewer visual feedback - Loop generic "thinking" or start "speaking" video
             if (aiVideoRef.current) {
-              aiVideoRef.current.play().catch(e => console.warn("Video playback blocked", e));
+              aiVideoRef.current.play().catch(e => console.warn("AI Video playback blocked", e));
             }
           }
         } catch (e) {
@@ -203,10 +207,9 @@ function VirtualArenaContent() {
       setAskedQuestions(prev => [...prev, response.nextQuestion]);
       setCurrentIdx(prev => prev + 1);
 
-      // AI Interviewer visual feedback - Reset and play
       if (aiVideoRef.current) {
         aiVideoRef.current.currentTime = 0;
-        aiVideoRef.current.play().catch(e => console.warn("Video playback blocked", e));
+        aiVideoRef.current.play().catch(e => console.warn("AI Video playback blocked", e));
       }
 
       if (response.isInterviewComplete) {
@@ -306,14 +309,27 @@ function VirtualArenaContent() {
         <div className="flex-1 flex items-center justify-center p-6 relative">
           <div className="w-full h-full max-w-7xl mx-auto relative rounded-[3rem] overflow-hidden bg-black shadow-[0_0_100px_rgba(0,0,0,0.5)] border border-white/5">
             {/* User Live Camera Feed (Large Area) */}
-            <video
-              ref={videoRef}
-              autoPlay
-              playsInline
-              muted
-              className="w-full h-full object-cover"
-              style={{ transform: 'scaleX(-1)' }}
-            />
+            {cameraError ? (
+              <div className="w-full h-full flex flex-col items-center justify-center bg-[#0b0e1a] text-center p-12 space-y-6">
+                <div className="w-20 h-20 rounded-full bg-red-500/10 flex items-center justify-center border border-red-500/20">
+                  <VideoOff className="w-10 h-10 text-red-400" />
+                </div>
+                <div className="space-y-2">
+                  <h3 className="text-2xl font-bold text-white">Camera Access Required</h3>
+                  <p className="text-muted-foreground font-light max-w-md">Please enable camera and microphone permissions in your browser to proceed with the neural interview simulation.</p>
+                </div>
+                <Button onClick={() => window.location.reload()} className="btn-premium px-8">Retry Neural Link</Button>
+              </div>
+            ) : (
+              <video
+                ref={videoRef}
+                autoPlay
+                playsInline
+                muted
+                className="w-full h-full object-cover"
+                style={{ transform: 'scaleX(-1)' }}
+              />
+            )}
 
             {/* AI Interviewer (Small Floating Box) */}
             <div className="absolute bottom-10 right-10 w-80 aspect-video rounded-[2rem] overflow-hidden border border-white/10 shadow-2xl z-20 bg-[#0b0e1a]">
