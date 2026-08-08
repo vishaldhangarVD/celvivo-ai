@@ -35,7 +35,8 @@ import {
   Timer,
   Terminal,
   ChevronDown,
-  PieChart
+  PieChart,
+  Gavel
 } from 'lucide-react';
 import { useUser, useFirestore, useDoc, useCollection } from '@/firebase';
 import { doc, collection, query, where, orderBy } from 'firebase/firestore';
@@ -96,7 +97,20 @@ export default function CodingResultTerminal() {
     };
   }, [questionResults]);
 
-  const isPassed = (result?.score || 0) >= 70;
+  const recommendation = useMemo(() => {
+    if (!result || result.status === 'Awaiting') return "Evaluation unavailable";
+    const score = result.score || 0;
+    
+    if (result.status === 'Pass') {
+      if (score >= 85) return "PASS (OPTIMAL)";
+      return "PASS";
+    }
+    
+    if (score >= 60 && score < 70) return "NEEDS IMPROVEMENT";
+    return "FAIL";
+  }, [result]);
+
+  const isPassed = result?.status === 'Pass' || (result?.score || 0) >= 70;
 
   const getQuestionTitle = (questionId: string) => {
     return MASTER_QUESTIONS.find(q => q.id === questionId)?.title || "Protocol Node";
@@ -157,6 +171,28 @@ export default function CodingResultTerminal() {
                    STATUS: {result?.status.toUpperCase()}
                  </Badge>
               </div>
+            </Card>
+
+            {/* Final Recommendation Section */}
+            <Card className="premium-card bg-white/[0.01] border-white/5 p-8 space-y-6 relative overflow-hidden group">
+               <div className="absolute top-0 right-0 p-8 opacity-5 group-hover:opacity-10 transition-opacity">
+                 <Gavel className="w-24 h-24 text-accent" />
+               </div>
+               <div className="space-y-2 relative z-10">
+                 <h3 className="text-[10px] font-black uppercase tracking-[0.3em] text-accent flex items-center gap-3">
+                   <ShieldCheck className="w-4 h-4" /> Final Recommendation
+                 </h3>
+                 <div className="pt-4">
+                   <p className={cn(
+                     "text-3xl font-black tracking-tighter",
+                     recommendation.includes("PASS") ? "text-green-400" : 
+                     recommendation === "NEEDS IMPROVEMENT" ? "text-orange-400" : "text-red-400"
+                   )}>
+                     {recommendation}
+                   </p>
+                   <p className="text-[9px] font-bold text-white/30 uppercase tracking-widest mt-1">Based on algorithmic performance</p>
+                 </div>
+               </div>
             </Card>
 
             <Card className={cn(
