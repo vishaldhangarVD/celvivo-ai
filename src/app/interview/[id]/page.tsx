@@ -10,7 +10,8 @@ import {
   Command, 
   ShieldCheck,
   VideoOff,
-  AlertCircle
+  AlertCircle,
+  Brain
 } from "lucide-react";
 import Navbar from "@/components/layout/Navbar";
 import NavigationControls from "@/components/NavigationControls";
@@ -68,7 +69,6 @@ function VirtualArenaContent() {
 
         if (userVideoRef.current) {
           userVideoRef.current.srcObject = stream;
-          // Ensuring play occurs after srcObject is assigned
           try {
             await userVideoRef.current.play();
           } catch (playError) {
@@ -283,8 +283,6 @@ function VirtualArenaContent() {
     else { setUserAnswer(""); recognitionRef.current.start(); }
   };
 
-  if (isInitializing) return <div className="h-screen flex items-center justify-center bg-[#050816]"><Loader2 className="w-12 h-12 text-accent animate-spin" /></div>;
-
   return (
     <div className="h-screen bg-[#050816] flex flex-col relative overflow-hidden">
       <div className="particles-bg" />
@@ -381,6 +379,22 @@ function VirtualArenaContent() {
       <NavigationControls className="top-24" onHome={() => router.push('/')} onBack={() => router.push('/interview')} />
 
       <AnimatePresence>
+        {isInitializing && (
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-[#050816]/95 backdrop-blur-2xl">
+            <div className="max-w-md w-full text-center space-y-8">
+              <div className="relative">
+                <motion.div animate={{ rotate: 360 }} transition={{ duration: 4, repeat: Infinity, ease: "linear" }} className="w-32 h-32 rounded-full border-b-2 border-accent mx-auto" />
+                <Brain className="w-12 h-12 text-accent absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 animate-pulse" />
+              </div>
+              <h2 className="text-4xl font-bold uppercase tracking-tighter">Calibrating Arena</h2>
+              <div className="flex items-center justify-center gap-2 text-accent">
+                <Loader2 className="w-4 h-4 animate-spin" />
+                <span className="text-[10px] font-bold uppercase tracking-[0.4em] text-accent">Synthesizing First Node...</span>
+              </div>
+            </div>
+          </motion.div>
+        )}
+
         {isSimulationComplete && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-[#050816]/95 backdrop-blur-2xl">
             <div className="max-w-md w-full text-center space-y-8">
