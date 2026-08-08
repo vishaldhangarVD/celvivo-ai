@@ -54,11 +54,17 @@ function VirtualArenaContent() {
   // User Live Webcam Protocol
   useEffect(() => {
     let stream: MediaStream | null = null;
+    let cancelled = false;
 
     const startCamera = async () => {
       try {
         setCameraError(null);
-        stream = await navigator.mediaDevices.getUserMedia({
+
+        if (!navigator.mediaDevices?.getUserMedia) {
+          throw new Error("Camera API is not available in this browser environment.");
+        }
+
+        const mediaStream = await navigator.mediaDevices.getUserMedia({
           video: {
             width: { ideal: 1280 },
             height: { ideal: 720 },
@@ -67,28 +73,43 @@ function VirtualArenaContent() {
           audio: true
         });
 
+        if (cancelled) {
+          mediaStream.getTracks().forEach(track => track.stop());
+          return;
+        }
+
+        stream = mediaStream;
+
         if (userVideoRef.current) {
-          userVideoRef.current.srcObject = stream;
+          userVideoRef.current.srcObject = mediaStream;
+          userVideoRef.current.muted = true; // Local mute for feedback prevention
+
           try {
             await userVideoRef.current.play();
-          } catch (playError) {
-            console.warn("Autoplay blocked by browser policy, waiting for interaction.");
+          } catch (error) {
+            console.warn("Camera video play failed:", error);
           }
         }
-      } catch (err: any) {
-        console.error("Camera Access Denied:", err);
-        setCameraError(err.message || "Camera access denied");
-        toast({
-          variant: "destructive",
-          title: "Hardware Node Fault",
-          description: "Camera and Microphone permissions are required for the Neural Arena."
-        });
+      } catch (error: any) {
+        console.error("Camera initialization failed:", error);
+
+        if (!cancelled) {
+          setCameraError(
+            error?.message || "Unable to access camera and microphone nodes."
+          );
+          toast({
+            variant: "destructive",
+            title: "Hardware Node Fault",
+            description: "Camera and Microphone permissions are required for the Neural Arena."
+          });
+        }
       }
     };
 
     startCamera();
 
     return () => {
+      cancelled = true;
       if (stream) {
         stream.getTracks().forEach(track => track.stop());
       }
@@ -295,15 +316,6 @@ function VirtualArenaContent() {
            </div>
         </div>
         <div className="flex items-center gap-4">
-          {process.env.NODE_ENV === 'development' && (
-            <Button 
-              onClick={() => router.push('/interview/coding')}
-              variant="ghost" 
-              className="h-9 px-4 rounded-xl glass border-white/10 text-[9px] font-black uppercase tracking-widest hover:bg-accent/10 hover:text-accent"
-            >
-              Skip → Coding
-            </Button>
-          )}
           <div className="px-5 py-2 glass rounded-full border-accent/20 font-mono text-accent">
             {Math.floor(timeLeft/60)}:{(timeLeft%60).toString().padStart(2,'0')}
           </div>
