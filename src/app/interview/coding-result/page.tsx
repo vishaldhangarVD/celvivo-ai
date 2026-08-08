@@ -34,7 +34,8 @@ import {
   Check,
   Timer,
   Terminal,
-  ChevronDown
+  ChevronDown,
+  PieChart
 } from 'lucide-react';
 import { useUser, useFirestore, useDoc, useCollection } from '@/firebase';
 import { doc, collection, query, where, orderBy } from 'firebase/firestore';
@@ -78,10 +79,33 @@ export default function CodingResultTerminal() {
     };
   }, [journey]);
 
+  const aggregateStats = useMemo(() => {
+    if (!questionResults || questionResults.length === 0) return null;
+    
+    const passedTests = questionResults.reduce((acc, curr) => acc + (curr.passedTestCases || 0), 0);
+    const totalTests = questionResults.reduce((acc, curr) => acc + (curr.totalTestCases || 0), 0);
+    const maxTime = Math.max(...questionResults.map(r => parseFloat(r.executionTime) || 0));
+    const maxMemory = Math.max(...questionResults.map(r => parseInt(r.memory) || 0));
+    
+    return {
+      passedTests,
+      totalTests,
+      maxTime: maxTime > 0 ? maxTime.toFixed(2) : "0.00",
+      maxMemory: maxMemory > 0 ? maxMemory : "N/A",
+      successRate: totalTests > 0 ? Math.round((passedTests / totalTests) * 100) : 0
+    };
+  }, [questionResults]);
+
   const isPassed = (result?.score || 0) >= 70;
 
   const getQuestionTitle = (questionId: string) => {
     return MASTER_QUESTIONS.find(q => q.id === questionId)?.title || "Protocol Node";
+  };
+
+  const getScoreColor = (score: number) => {
+    if (score >= 80) return "text-green-400";
+    if (score >= 60) return "text-orange-400";
+    return "text-red-400";
   };
 
   if (journeyLoading) return (
@@ -179,15 +203,10 @@ export default function CodingResultTerminal() {
           </div>
 
           <div className="lg:col-span-8 flex flex-col gap-6 overflow-hidden">
-            <Card className="flex-1 premium-card bg-white/[0.01] border-white/5 p-10 overflow-hidden flex flex-col">
-              <div className="flex items-center justify-between mb-10 shrink-0">
-                <h3 className="text-xs font-black uppercase tracking-[0.3em] text-accent flex items-center gap-3">
-                  <Activity className="w-4 h-4" /> Telemetry Summary
-                </h3>
-                <span className="text-[9px] font-bold uppercase tracking-widest text-white/20">Archived Node Results</span>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-4 shrink-0 mb-8">
+            <div className="overflow-y-auto custom-scrollbar flex-1 pr-2 space-y-6">
+              
+              {/* Summary Metrics */}
+              <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-4 shrink-0">
                 {[
                   { label: "Total Questions", val: result?.totalQuestions || 0, icon: Layers, color: "text-blue-400" },
                   { label: "Correct Nodes", val: result?.passedQuestions || 0, icon: CheckCircle2, color: "text-green-400" },
@@ -206,8 +225,46 @@ export default function CodingResultTerminal() {
                 ))}
               </div>
 
-              <div className="flex-1 overflow-y-auto custom-scrollbar space-y-4 pr-2">
-                <h4 className="text-[10px] font-black uppercase tracking-[0.3em] text-white/20 flex items-center gap-3 ml-2 sticky top-0 bg-[#050816] py-2 z-10">
+              {/* Performance Breakdown Section */}
+              <Card className="premium-card bg-white/[0.01] border-white/5 p-10 space-y-8">
+                <div className="flex items-center justify-between">
+                  <div className="space-y-1">
+                    <h3 className="text-xs font-black uppercase tracking-[0.3em] text-accent flex items-center gap-3">
+                      <PieChart className="w-4 h-4" /> Performance Breakdown
+                    </h3>
+                    <p className="text-[9px] font-bold text-white/30 uppercase tracking-widest">Multi-dimensional implementation audit</p>
+                  </div>
+                </div>
+                
+                <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+                  {[
+                    { label: "Correctness", val: `${result?.score || 0}%`, status: result?.score >= 70 ? "OPTIMAL" : "CRITICAL", icon: CheckCircle2 },
+                    { label: "Test Case Success", val: `${aggregateStats?.successRate || 0}%`, sub: `${aggregateStats?.passedTests || 0}/${aggregateStats?.totalTests || 0} Nodes`, icon: Target },
+                    { label: "Execution Time", val: aggregateStats?.maxTime && aggregateStats.maxTime !== "0.00" ? `${aggregateStats.maxTime}s` : "N/A", sub: "Peak Latency", icon: Clock },
+                    { label: "Memory Usage", val: aggregateStats?.maxMemory && aggregateStats.maxMemory !== "N/A" ? `${aggregateStats.maxMemory}KB` : "N/A", sub: "Peak Allocation", icon: Cpu },
+                    { label: "Code Quality", val: "Awaiting AI", sub: "Neural Audit Pending", icon: Sparkles, dimmed: true },
+                    { label: "Edge Case Handling", val: aggregateStats?.successRate === 100 ? "VERIFIED" : "N/A", sub: "Boundary Validation", icon: ShieldCheck, dimmed: aggregateStats?.successRate !== 100 }
+                  ].map((m, i) => (
+                    <div key={i} className={cn("p-6 glass rounded-[2rem] border-white/5 space-y-4 transition-all hover:bg-white/[0.02]", m.dimmed && "opacity-40")}>
+                      <div className="flex justify-between items-start">
+                        <div className="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center text-accent">
+                          <m.icon className="w-5 h-5" />
+                        </div>
+                        {m.status && <Badge variant="outline" className={cn("text-[7px] font-black tracking-widest", m.status === 'OPTIMAL' ? "text-green-400 border-green-500/20" : "text-red-400 border-red-500/20")}>{m.status}</Badge>}
+                      </div>
+                      <div className="space-y-1">
+                        <p className="text-[9px] font-black text-white/30 uppercase tracking-widest">{m.label}</p>
+                        <p className="text-xl font-bold text-white">{m.val}</p>
+                        {m.sub && <p className="text-[8px] font-medium text-white/20 uppercase tracking-widest">{m.sub}</p>}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </Card>
+
+              {/* Challenge List */}
+              <div className="space-y-4">
+                <h4 className="text-[10px] font-black uppercase tracking-[0.3em] text-white/20 flex items-center gap-3 ml-2">
                    <Code2 className="w-4 h-4 text-accent" /> Coding Challenge Results
                 </h4>
                 
@@ -249,7 +306,7 @@ export default function CodingResultTerminal() {
                             exit={{ height: 0, opacity: 0 }}
                             className="overflow-hidden"
                           >
-                            <div className="p-8 glass rounded-[2rem] border-accent/10 bg-accent/[0.01] space-y-8 mt-2">
+                            <div className="p-8 glass rounded-[2.5rem] border-accent/10 bg-accent/[0.01] space-y-8 mt-2">
                                <div className="grid md:grid-cols-2 gap-8">
                                  <div className="space-y-4">
                                    <h5 className="text-[10px] font-black uppercase tracking-widest text-accent flex items-center gap-2">
@@ -320,23 +377,9 @@ export default function CodingResultTerminal() {
                   </div>
                 )}
               </div>
+            </div>
 
-              <div className="mt-6 pt-6 border-t border-white/5 shrink-0 grid grid-cols-2 md:grid-cols-4 gap-4">
-                 {[
-                   { label: "Correct Answers", val: `0${result?.passedQuestions || 0}`, color: "text-green-400" },
-                   { label: "Wrong Answers", val: `0${(result?.totalQuestions || 0) - (result?.passedQuestions || 0)}`, color: "text-red-400" },
-                   { label: "Accuracy Rate", val: `${result?.score || 0}%`, color: "text-white" },
-                   { label: "Submission", val: result?.submissionTime || "N/A", color: "text-white/40" }
-                 ].map((s, i) => (
-                    <div key={i} className="space-y-1">
-                      <p className="text-[8px] font-bold uppercase tracking-widest text-white/30">{s.label}</p>
-                      <p className={cn("text-xs font-black tabular-nums", s.color)}>{s.val}</p>
-                    </div>
-                 ))}
-              </div>
-            </Card>
-
-            <div className="flex justify-end">
+            <div className="flex justify-end gap-4 shrink-0 pt-4 border-t border-white/5">
               <Button onClick={() => router.push('/dashboard')} variant="ghost" className="h-12 px-8 rounded-xl glass border-white/10 text-[9px] font-black uppercase tracking-widest text-white/30 hover:text-white">
                 Exit to Control Panel
               </Button>
