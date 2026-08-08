@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect, useMemo, useCallback } from 'react';
@@ -122,6 +123,18 @@ export default function CodingEnginePage() {
       for (const [idxStr, res] of resultsArray) {
         const idx = parseInt(idxStr);
         const q = questions[idx];
+        
+        // Calculate performance metrics (Max execution time and memory among test cases)
+        const executionTime = res.results?.length > 0 
+          ? Math.max(...res.results.map((r: any) => parseFloat(r.executionTime || 0))) 
+          : 0;
+        const memory = res.results?.length > 0 
+          ? Math.max(...res.results.map((r: any) => {
+              const m = parseInt(r.memory || 0);
+              return isNaN(m) ? 0 : m;
+            })) 
+          : 0;
+
         await addDoc(collection(db, 'users', user.uid, 'coding_results'), {
           interviewId: journey.sessionId || "unknown",
           userId: user.uid,
@@ -132,6 +145,8 @@ export default function CodingEnginePage() {
           totalTestCases: res.totalCount,
           status: res.status,
           submittedCode: res.code,
+          executionTime,
+          memory,
           completedAt: serverTimestamp(),
         });
       }
@@ -691,3 +706,4 @@ export default function CodingEnginePage() {
     </div>
   );
 }
+
