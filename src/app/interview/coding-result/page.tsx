@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useMemo } from 'react';
@@ -173,7 +172,6 @@ export default function CodingResultTerminal() {
               </div>
             </Card>
 
-            {/* Final Recommendation Section */}
             <Card className="premium-card bg-white/[0.01] border-white/5 p-8 space-y-6 relative overflow-hidden group">
                <div className="absolute top-0 right-0 p-8 opacity-5 group-hover:opacity-10 transition-opacity">
                  <Gavel className="w-24 h-24 text-accent" />
@@ -241,7 +239,6 @@ export default function CodingResultTerminal() {
           <div className="lg:col-span-8 flex flex-col gap-6 overflow-hidden">
             <div className="overflow-y-auto custom-scrollbar flex-1 pr-2 space-y-6">
               
-              {/* Summary Metrics */}
               <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-4 shrink-0">
                 {[
                   { label: "Total Questions", val: result?.totalQuestions || 0, icon: Layers, color: "text-blue-400" },
@@ -261,7 +258,6 @@ export default function CodingResultTerminal() {
                 ))}
               </div>
 
-              {/* Performance Breakdown Section */}
               <Card className="premium-card bg-white/[0.01] border-white/5 p-10 space-y-8">
                 <div className="flex items-center justify-between">
                   <div className="space-y-1">
@@ -298,7 +294,6 @@ export default function CodingResultTerminal() {
                 </div>
               </Card>
 
-              {/* Challenge List */}
               <div className="space-y-4">
                 <h4 className="text-[10px] font-black uppercase tracking-[0.3em] text-white/20 flex items-center gap-3 ml-2">
                    <Code2 className="w-4 h-4 text-accent" /> Coding Challenge Results

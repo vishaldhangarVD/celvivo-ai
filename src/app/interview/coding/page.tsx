@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useEffect, useMemo, useCallback } from 'react';
@@ -342,7 +341,7 @@ export default function CodingEnginePage() {
         <Button 
           onClick={finalizeAssessment}
           variant="ghost" 
-          className="h-8 px-3 rounded-lg glass border-white/10 text-[9px] font-black uppercase tracking-widest hover:bg-accent/10 hover:text-accent opacity-20 hover:opacity-100 transition-opacity"
+          className="h-8 px-3 rounded-lg glass border-white/10 text-[9px] font-black uppercase tracking-widest hover:bg-accent/10 hover:text-accent"
         >
           DEV SKIP
         </Button>
@@ -374,7 +373,7 @@ export default function CodingEnginePage() {
         <div className="flex items-center gap-8">
           <div className={cn(
             "px-6 py-2 rounded-xl glass border-white/10 font-mono text-xl tabular-nums tracking-widest flex items-center gap-3",
-            timeLeft < 300 ? "text-red-500 animate-pulse shadow-[0_0_20px_rgba(239,68,68,0.2)]" : "text-accent"
+            timeLeft < 300 ? "text-red-500 animate-pulse shadow-[0_0_20px_rgba(34,211,238,0.2)]" : "text-accent"
           )}>
             <Timer className="w-5 h-5" /> {formatTime(timeLeft)}
           </div>
