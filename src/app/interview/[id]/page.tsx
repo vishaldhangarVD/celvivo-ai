@@ -47,16 +47,17 @@ function VirtualArenaContent() {
 
   const [askedQuestions, setAskedQuestions] = useState<string[]>([]);
   const recognitionRef = useRef<any>(null);
-  const videoRef = useRef<HTMLVideoElement>(null);
-  const aiVideoRef = useRef<HTMLVideoElement>(null);
-  const streamRef = useRef<MediaStream | null>(null);
+  const userVideoRef = useRef<HTMLVideoElement | null>(null);
+  const aiVideoRef = useRef<HTMLVideoElement | null>(null);
 
-  // User Webcam Setup
+  // User Live Webcam Protocol
   useEffect(() => {
-    async function startCamera() {
+    let stream: MediaStream | null = null;
+
+    const startCamera = async () => {
       try {
         setCameraError(null);
-        const stream = await navigator.mediaDevices.getUserMedia({
+        stream = await navigator.mediaDevices.getUserMedia({
           video: {
             width: { ideal: 1280 },
             height: { ideal: 720 },
@@ -64,10 +65,16 @@ function VirtualArenaContent() {
           },
           audio: true
         });
-        if (videoRef.current) {
-          videoRef.current.srcObject = stream;
+
+        if (userVideoRef.current) {
+          userVideoRef.current.srcObject = stream;
+          // Ensuring play occurs after srcObject is assigned
+          try {
+            await userVideoRef.current.play();
+          } catch (playError) {
+            console.warn("Autoplay blocked by browser policy, waiting for interaction.");
+          }
         }
-        streamRef.current = stream;
       } catch (err: any) {
         console.error("Camera Access Denied:", err);
         setCameraError(err.message || "Camera access denied");
@@ -77,13 +84,13 @@ function VirtualArenaContent() {
           description: "Camera and Microphone permissions are required for the Neural Arena."
         });
       }
-    }
+    };
 
     startCamera();
 
     return () => {
-      if (streamRef.current) {
-        streamRef.current.getTracks().forEach(track => track.stop());
+      if (stream) {
+        stream.getTracks().forEach(track => track.stop());
       }
     };
   }, [toast]);
@@ -322,7 +329,7 @@ function VirtualArenaContent() {
               </div>
             ) : (
               <video
-                ref={videoRef}
+                ref={userVideoRef}
                 autoPlay
                 playsInline
                 muted
