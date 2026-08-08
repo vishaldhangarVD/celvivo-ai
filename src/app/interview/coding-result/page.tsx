@@ -30,7 +30,8 @@ import {
   Loader2,
   AlertTriangle,
   Flame,
-  Check
+  Check,
+  Timer
 } from 'lucide-react';
 import { useUser, useFirestore, useDoc, useCollection } from '@/firebase';
 import { doc, collection, query, where, orderBy } from 'firebase/firestore';
@@ -188,11 +189,14 @@ export default function CodingResultTerminal() {
                 <span className="text-[9px] font-bold uppercase tracking-widest text-white/20">Archived Node Results</span>
               </div>
 
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-4 shrink-0 mb-8">
+              <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-4 shrink-0 mb-8">
                 {[
-                  { label: "Nodes Solved", val: result?.passedQuestions || 0, icon: CheckCircle2, color: "text-green-400" },
-                  { label: "Failed Probes", val: (result?.totalQuestions || 5) - (result?.passedQuestions || 0), icon: XCircle, color: "text-red-400" },
-                  { label: "Accuracy Rate", val: `${result?.score}%`, icon: Target, color: "text-accent" },
+                  { label: "Total Questions", val: result?.totalQuestions || 0, icon: Layers, color: "text-blue-400" },
+                  { label: "Correct Nodes", val: result?.passedQuestions || 0, icon: CheckCircle2, color: "text-green-400" },
+                  { label: "Failed Probes", val: (result?.totalQuestions || 0) - (result?.passedQuestions || 0), icon: XCircle, color: "text-red-400" },
+                  { label: "Execution Status", val: "Success", icon: Activity, color: "text-accent" },
+                  { label: "Code Integrity", val: "Optimal", icon: Cpu, color: "text-purple-400" },
+                  { label: "Master Score", val: `${result?.score}%`, icon: Trophy, color: "text-yellow-400" }
                 ].map((stat, i) => (
                   <div key={i} className="p-4 glass rounded-2xl border-white/5 flex flex-col items-center text-center group hover:bg-white/[0.03] transition-all">
                     <div className={cn("w-8 h-8 rounded-lg flex items-center justify-center mb-3 bg-white/5", stat.color)}>
@@ -239,19 +243,24 @@ export default function CodingResultTerminal() {
                   ))
                 ) : (
                   <div className="py-12 text-center glass rounded-2xl border-white/5 border-dashed">
-                    <p className="text-xs font-light text-white/20 uppercase tracking-widest">No implemention archives found.</p>
+                    <p className="text-xs font-light text-white/20 uppercase tracking-widest">No implementation archives found.</p>
                   </div>
                 )}
               </div>
 
-              <div className="mt-6 pt-6 border-t border-white/5 shrink-0">
-                 <div className="flex justify-between items-center text-[9px] font-bold uppercase text-white/40 mb-3">
-                   <span>Node Logic Precision</span>
-                   <span className="text-accent">{result?.score}%</span>
-                 </div>
-                 <div className="h-1 bg-white/5 rounded-full overflow-hidden">
-                   <motion.div initial={{ width: 0 }} animate={{ width: `${result?.score}%` }} className="h-full bg-accent" />
-                 </div>
+              {/* Bottom Real Data Summary Panel */}
+              <div className="mt-6 pt-6 border-t border-white/5 shrink-0 grid grid-cols-2 md:grid-cols-4 gap-4">
+                 {[
+                   { label: "Correct Answers", val: `0${result?.passedQuestions || 0}`, color: "text-green-400" },
+                   { label: "Wrong Answers", val: `0${(result?.totalQuestions || 0) - (result?.passedQuestions || 0)}`, color: "text-red-400" },
+                   { label: "Accuracy Rate", val: `${result?.score || 0}%`, color: "text-white" },
+                   { label: "Submission", val: result?.submissionTime || "N/A", color: "text-white/40" }
+                 ].map((s, i) => (
+                    <div key={i} className="space-y-1">
+                      <p className="text-[8px] font-bold uppercase tracking-widest text-white/30">{s.label}</p>
+                      <p className={cn("text-xs font-black tabular-nums", s.color)}>{s.val}</p>
+                    </div>
+                 ))}
               </div>
             </Card>
 
