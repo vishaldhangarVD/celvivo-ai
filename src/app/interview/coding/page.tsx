@@ -168,7 +168,7 @@ export default function CodingEnginePage() {
     try {
       const response = await fetch('/api/execute', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: 'Content-Type': 'application/json',
         body: JSON.stringify({ 
           source_code: code, 
           language: selectedLang.id, 
@@ -198,7 +198,7 @@ export default function CodingEnginePage() {
     try {
       const response = await fetch('/api/execute', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: 'Content-Type': 'application/json',
         body: JSON.stringify({ 
           source_code: code, 
           language: selectedLang.id, 
@@ -322,7 +322,7 @@ export default function CodingEnginePage() {
       {/* DEV ONLY BUTTON */}
       <div className="fixed top-2 right-2 z-[200]">
         <Button 
-          onClick={() => console.log("DEV SKIP")}
+          onClick={() => router.push('/interview/coding-result')}
           variant="ghost" 
           className="h-8 px-3 rounded-lg glass border-white/10 text-[9px] font-black uppercase tracking-widest hover:bg-accent/10 hover:text-accent opacity-20 hover:opacity-100 transition-opacity"
         >
