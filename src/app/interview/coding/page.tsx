@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { motion, AnimatePresence } from 'framer-motion';
+import { AnimatePresence, motion } from 'framer-motion';
 import Editor from '@monaco-editor/react';
 import Navbar from '@/components/layout/Navbar';
 import NavigationControls from '@/components/NavigationControls';
@@ -39,7 +39,7 @@ import {
   Rocket
 } from 'lucide-react';
 import { useUser, useFirestore, useDoc } from '@/firebase';
-import { doc, updateDoc, serverTimestamp, collection, addDoc } from 'firebase/firestore';
+import { doc, updateDoc, serverTimestamp, collection, addDoc, getDoc } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { MASTER_QUESTIONS } from '@/lib/coding-questions-data';
@@ -256,12 +256,33 @@ export default function CodingEnginePage() {
 
   useEffect(() => {
     async function initEnvironment() {
-      if (!db || !journey || questions.length > 0) return;
+      if (!db || !user || !journey || questions.length > 0) return;
+      
+      // STABILITY: Use existing questions if they belong to the current session (handles refresh)
+      if (journey.codingQuestions && 
+          journey.codingQuestions.length > 0 && 
+          journey.questionsSessionId === journey.sessionId) {
+        setQuestions(journey.codingQuestions);
+        setIsInitializing(false);
+        return;
+      }
       
       try {
-        const easyPool = [...MASTER_QUESTIONS].filter(q => q.difficulty === 'Easy');
-        const medPool = [...MASTER_QUESTIONS].filter(q => q.difficulty === 'Medium');
-        const hardPool = [...MASTER_QUESTIONS].filter(q => q.difficulty === 'Hard');
+        // FRESHNESS: Exclude previously used questions by checking user history
+        const userRef = doc(db, 'users', user.uid);
+        const userSnap = await getDoc(userRef);
+        const usedIds = userSnap.data()?.codingQuestionHistory || [];
+
+        const getFilteredPool = (difficulty: string) => {
+          const pool = [...MASTER_QUESTIONS].filter(q => q.difficulty === difficulty);
+          const unused = pool.filter(q => !usedIds.includes(q.id));
+          // Cycle pool if exhausted
+          return unused.length > 0 ? unused : pool;
+        };
+
+        const easyPool = getFilteredPool('Easy');
+        const medPool = getFilteredPool('Medium');
+        const hardPool = getFilteredPool('Hard');
 
         const mirrorWordIdx = easyPool.findIndex(q => q.title === "The Mirror Word Test");
         let selectedEasy: any[] = [];
@@ -279,9 +300,18 @@ export default function CodingEnginePage() {
           ...hardPool.sort(() => 0.5 - Math.random()).slice(0, 1)
         ];
 
+        // Archive for current session stability
         await updateDoc(journeyRef!, {
           codingQuestions: finalQuestions,
+          questionsSessionId: journey.sessionId || "unknown",
           updatedAt: serverTimestamp()
+        });
+
+        // Update global history to avoid repetition in future rounds
+        const newIds = finalQuestions.map(q => q.id);
+        const updatedHistory = Array.from(new Set([...usedIds, ...newIds]));
+        await updateDoc(userRef, {
+          codingQuestionHistory: updatedHistory
         });
 
         setQuestions(finalQuestions);
@@ -293,7 +323,7 @@ export default function CodingEnginePage() {
       }
     }
     initEnvironment();
-  }, [db, journey, journeyRef, questions.length, toast]);
+  }, [db, user, journey, journeyRef, questions.length, toast]);
 
   useEffect(() => {
     if (questions[currentIdx]) {
