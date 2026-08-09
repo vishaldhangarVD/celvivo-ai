@@ -92,7 +92,13 @@ function VirtualArenaContent() {
 
       if (userVideoRef.current) {
         userVideoRef.current.srcObject = mediaStream;
-        await userVideoRef.current.play();
+        try {
+          await userVideoRef.current.play();
+        } catch (error: any) {
+          if (error?.name !== "AbortError") {
+            console.error("Camera video playback error:", error);
+          }
+        }
       }
     } catch (error: any) {
       console.error("CAMERA START ERROR:", error);
@@ -183,7 +189,11 @@ function VirtualArenaContent() {
             setAskedQuestions([response.nextQuestion]);
             
             if (aiVideoRef.current) {
-              aiVideoRef.current.play().catch(e => console.warn("AI Video playback blocked", e));
+              aiVideoRef.current.play().catch((error: any) => {
+                if (error?.name !== "AbortError") {
+                  console.warn("AI video playback error:", error);
+                }
+              });
             }
           }
         } catch (e) {
@@ -237,7 +247,11 @@ function VirtualArenaContent() {
 
       if (aiVideoRef.current) {
         aiVideoRef.current.currentTime = 0;
-        aiVideoRef.current.play().catch(e => console.warn("AI Video playback blocked", e));
+        aiVideoRef.current.play().catch((error: any) => {
+          if (error?.name !== "AbortError") {
+            console.warn("AI video playback error:", error);
+          }
+        });
       }
 
       if (response.isInterviewComplete) {
@@ -335,7 +349,7 @@ function VirtualArenaContent() {
                   <h3 className="text-2xl font-bold text-white">Camera Access Required</h3>
                   <p className="text-muted-foreground font-light max-w-md">Please enable camera and microphone permissions in your browser to proceed with the neural interview simulation.</p>
                 </div>
-                <Button onClick={startCamera} className="btn-premium px-8">Enable Camera</Button>
+                <button onClick={startCamera} className="btn-premium px-8 py-3 rounded-full text-white font-bold">Enable Camera</button>
               </div>
             ) : (
               <video
