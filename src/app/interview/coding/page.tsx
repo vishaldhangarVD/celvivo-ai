@@ -258,57 +258,61 @@ export default function CodingEnginePage() {
     async function initEnvironment() {
       if (!db || !user || !journey || questions.length > 0) return;
       
-      // STABILITY: Use existing questions if they belong to the current session (handles refresh)
+      // STABILITY: Verify if existing questions belong to the CURRENT active session
       if (journey.codingQuestions && 
           journey.codingQuestions.length > 0 && 
           journey.questionsSessionId === journey.sessionId) {
+        console.log("[CODING ROUND] Reusing stable session questions:", journey.sessionId);
         setQuestions(journey.codingQuestions);
         setIsInitializing(false);
         return;
       }
       
       try {
-        // FRESHNESS: Exclude previously used questions by checking user history
+        console.log("[CODING ROUND] Initializing NEW question set for session:", journey.sessionId);
+        
+        // FRESHNESS: Exclude previously used questions by checking global user history
         const userRef = doc(db, 'users', user.uid);
         const userSnap = await getDoc(userRef);
-        const usedIds = userSnap.data()?.codingQuestionHistory || [];
+        const userData = userSnap.data();
+        const usedIds = Array.isArray(userData?.codingQuestionHistory) ? userData.codingQuestionHistory : [];
+        
+        console.log("[CODING ROUND] Excluding previously used IDs:", usedIds);
 
         const getFilteredPool = (difficulty: string) => {
           const pool = [...MASTER_QUESTIONS].filter(q => q.difficulty === difficulty);
-          const unused = pool.filter(q => !usedIds.includes(q.id));
-          // Cycle pool if exhausted
-          return unused.length > 0 ? unused : pool;
+          // Strictly exclude used IDs
+          let unused = pool.filter(q => !usedIds.includes(q.id));
+          
+          if (unused.length === 0) {
+            console.warn(`[CODING ROUND] Unused pool for ${difficulty} is EXHAUSTED. Cycling pool.`);
+            return pool;
+          }
+          return unused;
         };
 
         const easyPool = getFilteredPool('Easy');
         const medPool = getFilteredPool('Medium');
         const hardPool = getFilteredPool('Hard');
 
-        const mirrorWordIdx = easyPool.findIndex(q => q.title === "The Mirror Word Test");
-        let selectedEasy: any[] = [];
+        // Randomized selection (2-2-1 distribution)
+        const selectedEasy = easyPool.sort(() => 0.5 - Math.random()).slice(0, 2);
+        const selectedMed = medPool.sort(() => 0.5 - Math.random()).slice(0, 2);
+        const selectedHard = hardPool.sort(() => 0.5 - Math.random()).slice(0, 1);
+
+        const finalQuestions = [...selectedEasy, ...selectedMed, ...selectedHard];
+        const newIds = finalQuestions.map(q => q.id);
         
-        if (mirrorWordIdx !== -1) {
-          const mirrorWord = easyPool.splice(mirrorWordIdx, 1)[0];
-          selectedEasy = [mirrorWord, ...easyPool.sort(() => 0.5 - Math.random()).slice(0, 1)];
-        } else {
-          selectedEasy = easyPool.sort(() => 0.5 - Math.random()).slice(0, 2);
-        }
+        console.log("[CODING ROUND] Selected Node IDs:", newIds);
 
-        const finalQuestions = [
-          ...selectedEasy,
-          ...medPool.sort(() => 0.5 - Math.random()).slice(0, 2),
-          ...hardPool.sort(() => 0.5 - Math.random()).slice(0, 1)
-        ];
-
-        // Archive for current session stability
+        // 1. Archive for current session stability (Journey document)
         await updateDoc(journeyRef!, {
           codingQuestions: finalQuestions,
           questionsSessionId: journey.sessionId || "unknown",
           updatedAt: serverTimestamp()
         });
 
-        // Update global history to avoid repetition in future rounds
-        const newIds = finalQuestions.map(q => q.id);
+        // 2. Update global user history to avoid repetition in FUTURE rounds (User document)
         const updatedHistory = Array.from(new Set([...usedIds, ...newIds]));
         await updateDoc(userRef, {
           codingQuestionHistory: updatedHistory
@@ -316,7 +320,7 @@ export default function CodingEnginePage() {
 
         setQuestions(finalQuestions);
       } catch (e: any) {
-        console.error("Environment Sync Fault:", e);
+        console.error("[CODING ROUND] Environment Sync Fault:", e);
         toast({ variant: "destructive", title: "Matrix Sync Fault", description: "Failed to calibrate logic nodes." });
       } finally {
         setIsInitializing(false);

@@ -128,7 +128,11 @@ export default function InterviewSetupPage() {
     setIsTransitioning(true);
     
     try {
-      const sessionId = Math.random().toString(36).substring(7);
+      // Use crypto.randomUUID for guaranteed session uniqueness
+      const sessionId = typeof crypto.randomUUID === 'function' 
+        ? crypto.randomUUID() 
+        : Math.random().toString(36).substring(2) + Date.now().toString(36);
+
       await setDoc(doc(db, 'users', user.uid, 'journey', 'active'), {
         role: selectedRole,
         company: selectedCompany,
@@ -154,15 +158,19 @@ export default function InterviewSetupPage() {
   const handleSkipToCoding = async () => {
     if (!user || !db) return;
     
-    // Ensure at least some default session data exists so Coding Round doesn't break
     const role = selectedRole || "Software Engineer";
     const company = selectedCompany || "Google";
     const exp = selectedExp || "Senior";
     
+    const sessionId = typeof crypto.randomUUID === 'function' 
+      ? crypto.randomUUID() 
+      : Math.random().toString(36).substring(2) + Date.now().toString(36);
+
     await setDoc(doc(db, 'users', user.uid, 'journey', 'active'), {
       role,
       company,
       experience: exp,
+      sessionId,
       status: "Active",
       currentStage: "Coding Assessment",
       updatedAt: serverTimestamp(),
