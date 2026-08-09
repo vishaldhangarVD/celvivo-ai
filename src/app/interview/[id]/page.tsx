@@ -373,18 +373,38 @@ function VirtualArenaContent() {
             )}
 
             {/* AI Interviewer (Small Floating Box) */}
-            <div className="absolute bottom-10 right-10 w-80 aspect-video rounded-[2rem] overflow-hidden border border-white/10 shadow-2xl z-20 bg-[#0b0e1a]">
-               <video 
-                 ref={aiVideoRef}
-                 src="/interviewer-female.mp4"
-                 poster="/hr.png.png"
-                 className="w-full h-full object-cover"
-                 loop
-                 playsInline
-               />
-               <div className="absolute bottom-4 left-4">
-                 <Badge className="bg-accent/20 text-accent border-none text-[8px] font-black tracking-widest uppercase">AI Interviewer</Badge>
-               </div>
+            <div
+              className="
+                absolute
+                bottom-6
+                right-6
+                z-30
+                w-[280px]
+                sm:w-[320px]
+                aspect-video
+                rounded-[2rem]
+                overflow-hidden
+                border border-white/10
+                shadow-2xl
+                bg-[#0b0e1a]
+              "
+            >
+              <video
+                ref={aiVideoRef}
+                src="/interviewer-female.mp4"
+                poster="/hr.png.png"
+                className="w-full h-full object-cover"
+                loop
+                playsInline
+                autoPlay
+                muted
+              />
+
+              <div className="absolute bottom-3 left-3">
+                <Badge className="bg-accent/20 text-accent border-none text-[8px] font-black tracking-widest uppercase">
+                  AI Interviewer
+                </Badge>
+              </div>
             </div>
           </div>
         </div>
