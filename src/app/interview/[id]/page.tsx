@@ -79,8 +79,21 @@ function VirtualArenaContent() {
         throw new Error("Camera API is not available in this browser.");
       }
 
+      // Find available video devices and prefer a physical one
+      const devices = await navigator.mediaDevices.enumerateDevices();
+      const videoDevices = devices.filter(d => d.kind === 'videoinput');
+      
+      // Attempt to exclude virtual cameras (this is heuristic-based)
+      const physicalCamera = videoDevices.find(d => 
+        !d.label.toLowerCase().includes('virtual') && 
+        !d.label.toLowerCase().includes('obs') &&
+        !d.label.toLowerCase().includes('snap') &&
+        !d.label.toLowerCase().includes('iriun')
+      ) || videoDevices[0];
+
       const mediaStream = await navigator.mediaDevices.getUserMedia({
         video: {
+          deviceId: physicalCamera?.deviceId ? { exact: physicalCamera.deviceId } : undefined,
           width: { ideal: 1280 },
           height: { ideal: 720 },
           facingMode: "user",
@@ -320,7 +333,7 @@ function VirtualArenaContent() {
   };
 
   return (
-    <div className="h-screen bg-[#050816] flex flex-col relative overflow-hidden">
+    <div className="h-dvh bg-[#050816] flex flex-col relative overflow-hidden">
       <div className="particles-bg" />
       <header className="h-[10vh] border-b border-white/5 bg-[#0b0e1a]/80 backdrop-blur-xl flex items-center justify-between px-8 z-50 shrink-0">
         <div className="flex items-center gap-4">
@@ -337,8 +350,8 @@ function VirtualArenaContent() {
         </div>
       </header>
 
-      <main className="flex-1 flex flex-col relative">
-        <div className="flex-1 flex items-center justify-center p-6 relative">
+      <main className="flex-1 min-h-0 flex flex-col relative overflow-hidden">
+        <div className="flex-1 min-h-0 flex items-center justify-center p-4 md:p-6 relative overflow-hidden">
           <div className="w-full h-full max-w-7xl mx-auto relative rounded-[3rem] overflow-hidden bg-black shadow-[0_0_100px_rgba(0,0,0,0.5)] border border-white/5">
             {cameraError ? (
               <div className="w-full h-full flex flex-col items-center justify-center bg-[#0b0e1a] text-center p-12 space-y-6">
@@ -398,7 +411,7 @@ function VirtualArenaContent() {
           </div>
         </div>
 
-        <div className="h-[15vh] bg-[#0b0e1a]/95 backdrop-blur-2xl border-t border-white/5 flex items-center px-10 gap-6 z-50">
+        <div className="h-[15vh] min-h-0 shrink-0 bg-[#0b0e1a]/95 backdrop-blur-2xl border-t border-white/5 flex items-center px-10 gap-6 z-50">
            <Button onClick={toggleMic} disabled={isProcessing} className={`w-16 h-16 rounded-[1.5rem] shrink-0 transition-all ${isMicActive ? 'bg-red-500 text-white shadow-xl animate-pulse' : 'bg-white/5 text-white/40'}`}>
              <Mic className="w-6 h-6" />
            </Button>
