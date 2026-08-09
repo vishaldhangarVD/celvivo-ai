@@ -51,7 +51,7 @@ function VirtualArenaContent() {
   const userVideoRef = useRef<HTMLVideoElement | null>(null);
   const aiVideoRef = useRef<HTMLVideoElement | null>(null);
 
-  // User Live Webcam Protocol
+  // User Live Webcam Protocol with Intelligent Device Selection
   const startCamera = async () => {
     try {
       setCameraError(null);
@@ -60,27 +60,72 @@ function VirtualArenaContent() {
         throw new Error("Camera API is not available in this browser.");
       }
 
-      const mediaStream = await navigator.mediaDevices.getUserMedia({
+      // Enumerate available devices to find a physical camera
+      let devices = await navigator.mediaDevices.enumerateDevices();
+      let videoDevices = devices.filter(d => d.kind === 'videoinput');
+
+      // If labels are empty, we likely need permission first to see useful info
+      if (videoDevices.length === 0 || videoDevices.every(d => !d.label)) {
+        const initialStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+        // Re-enumerate now that we have permission
+        devices = await navigator.mediaDevices.enumerateDevices();
+        videoDevices = devices.filter(d => d.kind === 'videoinput');
+        
+        const selectedId = getBestCameraId(videoDevices);
+        await initializeStream(selectedId, initialStream);
+      } else {
+        const selectedId = getBestCameraId(videoDevices);
+        await initializeStream(selectedId);
+      }
+
+      console.log("CANDIDATE CAMERA INITIALIZED");
+    } catch (error: any) {
+      console.error("CAMERA SELECTION ERROR:", error);
+      setCameraError(
+        error?.message || "Unable to access camera. Please check your permissions."
+      );
+    }
+  };
+
+  const getBestCameraId = (devices: MediaDeviceInfo[]) => {
+    // Prefer physical cameras (avoid virtual ones if possible)
+    const virtualKeywords = ['virtual', 'obs', 'manycam', 'vcam', 'snap', 'sparkocam', 'camtwist'];
+    const physicalCameras = devices.filter(d => 
+      !virtualKeywords.some(kw => d.label.toLowerCase().includes(kw))
+    );
+    
+    // Return first physical camera, or first available device if only virtuals exist
+    return physicalCameras.length > 0 ? physicalCameras[0].deviceId : (devices[0]?.deviceId || null);
+  };
+
+  const initializeStream = async (deviceId: string | null, existingStream?: MediaStream) => {
+    // Determine if the existing stream already matches our selection
+    const needsNewStream = !existingStream || (deviceId && existingStream.getVideoTracks()[0].getSettings().deviceId !== deviceId);
+
+    let mediaStream: MediaStream;
+
+    if (needsNewStream) {
+      // Stop old tracks if we are replacing
+      if (existingStream) {
+        existingStream.getTracks().forEach(t => t.stop());
+      }
+      
+      mediaStream = await navigator.mediaDevices.getUserMedia({
         video: {
+          deviceId: deviceId ? { exact: deviceId } : undefined,
           width: { ideal: 1280 },
           height: { ideal: 720 },
           facingMode: "user",
         },
         audio: true,
       });
+    } else {
+      mediaStream = existingStream!;
+    }
 
-      if (userVideoRef.current) {
-        userVideoRef.current.srcObject = mediaStream;
-        // Properties like muted and playsInline are handled via JSX attributes
-        await userVideoRef.current.play();
-      }
-
-      console.log("REAL USER CAMERA STARTED");
-    } catch (error: any) {
-      console.error("REAL CAMERA ERROR:", error);
-      setCameraError(
-        error?.message || "Unable to access camera. Please check your permissions."
-      );
+    if (userVideoRef.current) {
+      userVideoRef.current.srcObject = mediaStream;
+      await userVideoRef.current.play();
     }
   };
 
