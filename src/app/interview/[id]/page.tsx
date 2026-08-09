@@ -60,17 +60,17 @@ function VirtualArenaContent() {
       try {
         setCameraError(null);
 
-        if (!navigator.mediaDevices?.getUserMedia) {
-          throw new Error("Camera API is not available in this browser environment.");
+        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+          throw new Error("Camera API is not available in this browser.");
         }
 
         const mediaStream = await navigator.mediaDevices.getUserMedia({
           video: {
             width: { ideal: 1280 },
             height: { ideal: 720 },
-            facingMode: "user"
+            facingMode: "user",
           },
-          audio: true
+          audio: true,
         });
 
         if (cancelled) {
@@ -80,28 +80,28 @@ function VirtualArenaContent() {
 
         stream = mediaStream;
 
-        if (userVideoRef.current) {
-          userVideoRef.current.srcObject = mediaStream;
-          userVideoRef.current.muted = true; // Local mute for feedback prevention
+        const video = userVideoRef.current;
 
-          try {
-            await userVideoRef.current.play();
-          } catch (error) {
-            console.warn("Camera video play failed:", error);
-          }
+        if (!video) {
+          console.error("userVideoRef is not available");
+          return;
         }
+
+        video.srcObject = mediaStream;
+        video.muted = true;
+        video.autoplay = true;
+        video.playsInline = true;
+
+        await video.play();
+
+        console.log("REAL USER CAMERA STARTED");
       } catch (error: any) {
-        console.error("Camera initialization failed:", error);
+        console.error("REAL CAMERA ERROR:", error);
 
         if (!cancelled) {
           setCameraError(
-            error?.message || "Unable to access camera and microphone nodes."
+            error?.message || "Unable to access camera"
           );
-          toast({
-            variant: "destructive",
-            title: "Hardware Node Fault",
-            description: "Camera and Microphone permissions are required for the Neural Arena."
-          });
         }
       }
     };
@@ -110,11 +110,12 @@ function VirtualArenaContent() {
 
     return () => {
       cancelled = true;
+
       if (stream) {
         stream.getTracks().forEach(track => track.stop());
       }
     };
-  }, [toast]);
+  }, []);
 
   // Speech Recognition Setup
   useEffect(() => {
