@@ -1,6 +1,6 @@
 /**
- * @fileOverview Nexvoro AI Master Question Data (v11.0 - Sanitized).
- * All starter code solutions removed to provide a professional candidate implementation experience.
+ * @fileOverview Nexvoro AI Master Question Data (v12.0 - Sanitized).
+ * All functional solutions have been removed from starterCode to ensure a valid assessment experience.
  */
 
 export interface CodingQuestion {
@@ -51,11 +51,7 @@ export const MASTER_QUESTIONS: CodingQuestion[] = [
     tags: ["Strings", "Logic", "Pattern Recognition"],
     inputFormat: "A single line containing one sequence of characters (string).",
     outputFormat: "Print 'YES' if it is a Mirror Word, otherwise print 'NO'.",
-    constraints: [
-      "- 1 <= string length <= 10,000",
-      "- Consists of alphanumeric characters only.",
-      "- Case sensitivity is active (A is not a)."
-    ],
+    constraints: ["- 1 <= string length <= 10,000", "- Consists of alphanumeric characters only.", "- Case sensitivity is active (A is not a)."],
     sampleInput: "racecar",
     sampleOutput: "YES",
     explanation: "A Mirror Word is a palindrome. You must check if the input remains the same when reversed.",
@@ -65,12 +61,7 @@ export const MASTER_QUESTIONS: CodingQuestion[] = [
       returnType: "boolean",
       goal: "Detect if a string is a palindrome."
     },
-    walkthrough: {
-      input: "racecar",
-      received: "s = \"racecar\"",
-      expected: "True",
-      output: "YES"
-    },
+    walkthrough: { input: "racecar", received: "s = \"racecar\"", expected: "True", output: "YES" },
     starterCode: {
       python: "import sys\n\ndef is_mirror_word(s):\n    # TODO: Implement the logic to check if 's' is a palindrome\n    return False\n\nif __name__ == '__main__':\n    line = sys.stdin.read().strip()\n    if line and is_mirror_word(line):\n        print('YES')\n    else:\n        print('NO')",
       java: "import java.util.Scanner;\n\npublic class Main {\n    public static boolean isMirrorWord(String s) {\n        // TODO: Implement the logic to check if 's' is a palindrome\n        return false;\n    }\n\n    public static void main(String[] args) {\n        Scanner sc = new Scanner(System.in);\n        if (sc.hasNext()) {\n            String s = sc.next();\n            System.out.println(isMirrorWord(s) ? \"YES\" : \"NO\");\n        }\n    }\n}",
@@ -82,16 +73,7 @@ export const MASTER_QUESTIONS: CodingQuestion[] = [
       rust: "use std::io;\n\nfn is_mirror_word(s: &str) -> bool {\n    // TODO: Implement mirror word logic\n    false\n}\n\nfn main() {\n    let mut input = String::new();\n    io::stdin().read_line(&mut input).unwrap();\n    let s = input.trim();\n    if !s.is_empty() && is_mirror_word(s) {\n        println!(\"YES\");\n    } else {\n        println!(\"NO\");\n    }\n}"
     },
     hiddenTestCases: [
-      { input: "madam", output: "YES" },
-      { input: "a", output: "YES" },
-      { input: "ab", output: "NO" },
-      { input: "12321", output: "YES" },
-      { input: "Aa", output: "NO" },
-      { input: "A", output: "YES" },
-      { input: "12345", output: "NO" },
-      { input: "radar", output: "YES" },
-      { input: "rotor", output: "YES" },
-      { input: "nexvoro", output: "NO" }
+      { input: "madam", output: "YES" }, { input: "a", output: "YES" }, { input: "ab", output: "NO" }, { input: "12321", output: "YES" }, { input: "Aa", output: "NO" }, { input: "A", output: "YES" }, { input: "12345", output: "NO" }, { input: "radar", output: "YES" }, { input: "rotor", output: "YES" }, { input: "nexvoro", output: "NO" }
     ],
     timeLimit: "1s",
     memoryLimit: "256MB",
@@ -109,10 +91,7 @@ export const MASTER_QUESTIONS: CodingQuestion[] = [
     tags: ["Arrays", "Logic", "Sorting"],
     inputFormat: "Line 1: Integer N (Number of players).\nLine 2: N space-separated integers (Scores).",
     outputFormat: "Print the runner-up score as an integer. If no runner-up exists, print -1.",
-    constraints: [
-      "- 1 <= N <= 100,000",
-      "- 0 <= score <= 10^9"
-    ],
+    constraints: ["- 1 <= N <= 100,000", "- 0 <= score <= 10^9"],
     sampleInput: "5\n10 20 20 15 5",
     sampleOutput: "15",
     explanation: "Highest score is 20. The unique score just below that is 15.",
@@ -122,12 +101,7 @@ export const MASTER_QUESTIONS: CodingQuestion[] = [
       returnType: "int",
       goal: "Find the strictly second-largest unique element."
     },
-    walkthrough: {
-      input: "5\n10 20 20 15 5",
-      received: "scores = [10, 20, 20, 15, 5]",
-      expected: "15",
-      output: "15"
-    },
+    walkthrough: { input: "5\n10 20 20 15 5", received: "scores = [10, 20, 20, 15, 5]", expected: "15", output: "15" },
     starterCode: {
       python: "import sys\n\ndef get_runner_up(n, scores):\n    # TODO: Find the second largest unique element\n    return -1\n\nif __name__ == '__main__':\n    data = sys.stdin.read().split()\n    if len(data) >= 2:\n        n = int(data[0])\n        scores = [int(x) for x in data[1:n+1]]\n        print(get_runner_up(n, scores))",
       java: "import java.util.*;\n\npublic class Main {\n    public static int getRunnerUp(int n, int[] scores) {\n        // TODO: Find the second largest unique element\n        return -1;\n    }\n\n    public static void main(String[] args) {\n        Scanner sc = new Scanner(System.in);\n        if (sc.hasNextInt()) {\n            int n = sc.nextInt();\n            int[] scores = new int[n];\n            for (int i = 0; i < n; i++) scores[i] = sc.nextInt();\n            System.out.println(getRunnerUp(n, scores));\n        }\n    }\n}",
@@ -139,16 +113,7 @@ export const MASTER_QUESTIONS: CodingQuestion[] = [
       rust: "use std::io::{self, Read};\n\nfn get_runner_up(n: usize, scores: Vec<i32>) -> i32 {\n    // TODO: Find the second largest unique element\n    -1\n}\n\nfn main() {\n    let mut input = String::new();\n    io::stdin().read_to_string(&mut input).unwrap();\n    let mut words = input.split_whitespace();\n    if let Some(n_str) = words.next() {\n        let n: usize = n_str.parse().unwrap();\n        let scores: Vec<i32> = words.map(|s| s.parse().unwrap()).collect();\n        println!(\"{}\", get_runner_up(n, scores));\n    }\n}"
     },
     hiddenTestCases: [
-      { input: "2\n10 10", output: "-1" },
-      { input: "4\n1 2 3 4", output: "3" },
-      { input: "5\n100 100 100 99 98", output: "99" },
-      { input: "3\n5 10 2", output: "5" },
-      { input: "6\n5 5 5 5 5 5", output: "-1" },
-      { input: "5\n10 5 5 5 5", output: "5" },
-      { input: "2\n10 5", output: "5" },
-      { input: "1\n50", output: "-1" },
-      { input: "4\n-1 -2 -3 -4", output: "-2" },
-      { input: "10\n1 2 3 4 5 6 7 8 9 10", output: "9" }
+      { input: "2\n10 10", output: "-1" }, { input: "4\n1 2 3 4", output: "3" }, { input: "5\n100 100 100 99 98", output: "99" }, { input: "3\n5 10 2", output: "5" }, { input: "6\n5 5 5 5 5 5", output: "-1" }, { input: "5\n10 5 5 5 5", output: "5" }, { input: "2\n10 5", output: "5" }, { input: "1\n50", output: "-1" }, { input: "4\n-1 -2 -3 -4", output: "-2" }, { input: "10\n1 2 3 4 5 6 7 8 9 10", output: "9" }
     ],
     timeLimit: "1s",
     memoryLimit: "256MB",
@@ -173,26 +138,17 @@ export const MASTER_QUESTIONS: CodingQuestion[] = [
     functionInfo: { name: "countVowels(s)", params: "s: string", returnType: "int", goal: "Count vowels in a string." },
     walkthrough: { input: "Hello World", received: "s=\"Hello World\"", expected: "3", output: "3" },
     starterCode: {
-      python: "import sys\ndef count_vowels(s):\n    # TODO: Count vowels (a, e, i, o, u) case-insensitively\n    return 0\nif __name__ == '__main__':\n    print(count_vowels(sys.stdin.read()))",
+      python: "import sys\ndef count_vowels(s):\n    # TODO: Count vowels (a, e, i, o, u) case-insensitively\n    return 0\nif __name__ == '__main__':\n    print(count_vowels(sys.stdin.read().strip()))",
       java: "import java.util.Scanner;\npublic class Main {\n    public static int countVowels(String s) {\n        // TODO: Count vowels (a, e, i, o, u) case-insensitively\n        return 0;\n    }\n    public static void main(String[] args) {\n        Scanner sc = new Scanner(System.in);\n        if(sc.hasNextLine()) System.out.println(countVowels(sc.nextLine()));\n    }\n}",
       cpp: "#include <iostream>\n#include <string>\nusing namespace std;\nint countVowels(string s) {\n    // TODO: Count vowels (a, e, i, o, u) case-insensitively\n    return 0;\n}\nint main() { string s; getline(cin, s); cout << countVowels(s) << endl; return 0; }",
       javascript: "const fs = require('fs');\nfunction countVowels(s) {\n    // TODO: Count vowels (a, e, i, o, u) case-insensitively\n    return 0;\n}\nconst input = fs.readFileSync(0, 'utf8');\nconsole.log(countVowels(input));",
       c: "#include <stdio.h>\n#include <ctype.h>\nint countVowels(char* s) {\n    // TODO: Count vowels (a, e, i, o, u) case-insensitively\n    return 0;\n}\nint main() { char s[100001]; if(fgets(s, 100001, stdin)) printf(\"%d\\n\", countVowels(s)); return 0; }",
       csharp: "using System;\nclass Program {\n    static int CountVowels(string s) {\n        // TODO: Count vowels (a, e, i, o, u) case-insensitively\n        return 0;\n    }\n    static void Main() { string s = Console.ReadLine(); Console.WriteLine(CountVowels(s ?? \"\")); }\n}",
-      go: "package main\nimport (\"fmt\"; \"bufio\"; \"os\"; \"strings\")\nfunc countVowels(s string) int {\n    // TODO: Count vowels (a, e, i, o, u) case-insensitively\n    return 0\n}\nfunc main() {\n    reader := bufio.NewReader(os.Stdin)\n    s, _ := reader.ReadString('\\n')\n    fmt.Println(countVowels(s))\n}",
+      go: "package main\nimport (\"fmt\"; \"bufio\"; \"os\")\nfunc countVowels(s string) int {\n    // TODO: Count vowels (a, e, i, o, u) case-insensitively\n    return 0\n}\nfunc main() {\n    reader := bufio.NewReader(os.Stdin)\n    s, _ := reader.ReadString('\\n')\n    fmt.Println(countVowels(s))\n}",
       rust: "use std::io::{self, BufRead};\nfn count_vowels(s: &str) -> usize {\n    // TODO: Count vowels (a, e, i, o, u) case-insensitively\n    0\n}\nfn main() {\n    let stdin = io::stdin();\n    let mut line = String::new();\n    stdin.lock().read_line(&mut line).unwrap();\n    println!(\"{}\", count_vowels(&line));\n}"
     },
     hiddenTestCases: [
-      { input: "aeiou", output: "5" },
-      { input: "AEIOU", output: "5" },
-      { input: "bcdfg", output: "0" },
-      { input: "a", output: "1" },
-      { input: "", output: "0" },
-      { input: "Algorithm Node", output: "5" },
-      { input: "12345", output: "0" },
-      { input: "The quick brown fox", output: "5" },
-      { input: "Sky rhythm", output: "0" },
-      { input: "Education", output: "5" }
+      { input: "aeiou", output: "5" }, { input: "AEIOU", output: "5" }, { input: "bcdfg", output: "0" }, { input: "a", output: "1" }, { input: "", output: "0" }, { input: "Algorithm Node", output: "5" }, { input: "12345", output: "0" }, { input: "The quick brown fox", output: "5" }, { input: "Sky rhythm", output: "0" }, { input: "Education", output: "5" }
     ],
     timeLimit: "1s", memoryLimit: "256MB", languageSupport: ["python", "java", "cpp", "javascript", "c", "csharp", "go", "rust"]
   },
@@ -225,16 +181,7 @@ export const MASTER_QUESTIONS: CodingQuestion[] = [
       rust: "use std::io::{self, BufRead};\nfn sum_array(arr: &[i64]) -> i64 {\n    // TODO: Return total sum of array elements\n    0\n}\nfn main() {\n    let stdin = io::stdin();\n    let mut lines = stdin.lock().lines();\n    if let Some(Ok(_)) = lines.next() {\n        if let Some(Ok(l2)) = lines.next() {\n            let a: Vec<i64> = l2.split_whitespace().map(|x| x.parse::<i64>().unwrap()).collect();\n            println!(\"{}\", sum_array(&a));\n        }\n    }\n}"
     },
     hiddenTestCases: [
-      { input: "1\n100", output: "100" },
-      { input: "5\n-1 -2 -3 -4 -5", output: "-15" },
-      { input: "3\n1000000 1000000 1000000", output: "3000000" },
-      { input: "2\n-1000000 1000000", output: "0" },
-      { input: "4\n0 0 0 0", output: "0" },
-      { input: "10\n1 1 1 1 1 1 1 1 1 1", output: "10" },
-      { input: "2\n123456 654321", output: "777777" },
-      { input: "3\n10 20 -30", output: "0" },
-      { input: "5\n10 10 10 10 10", output: "50" },
-      { input: "2\n-50 25", output: "-25" }
+      { input: "1\n100", output: "100" }, { input: "5\n-1 -2 -3 -4 -5", output: "-15" }, { input: "3\n1000000 1000000 1000000", output: "3000000" }, { input: "2\n-1000000 1000000", output: "0" }, { input: "4\n0 0 0 0", output: "0" }, { input: "10\n1 1 1 1 1 1 1 1 1 1", output: "10" }, { input: "2\n123456 654321", output: "777777" }, { input: "3\n10 20 -30", output: "0" }, { input: "5\n10 10 10 10 10", output: "50" }, { input: "2\n-50 25", output: "-25" }
     ],
     timeLimit: "1s", memoryLimit: "256MB", languageSupport: ["python", "java", "cpp", "javascript", "c", "csharp", "go", "rust"]
   },
@@ -257,26 +204,17 @@ export const MASTER_QUESTIONS: CodingQuestion[] = [
     functionInfo: { name: "findMax(n, arr)", params: "n: int, arr: int[]", returnType: "int", goal: "Find maximum value in array." },
     walkthrough: { input: "3, [10, 50, 20]", received: "arr=[10,50,20]", expected: "50", output: "50" },
     starterCode: {
-      python: "import sys\ndef find_max(arr):\n    # TODO: Find maximum element in array\n    return -1\nif __name__ == '__main__':\n    data = sys.stdin.read().split()\n    if data: print(find_max([int(x) for x in data[1:]]))",
-      java: "import java.util.Scanner;\npublic class Main {\n    public static long findMax(int n, int[] arr) {\n        // TODO: Find maximum element in array\n        return 0;\n    }\n    public static void main(String[] args) {\n        Scanner sc = new Scanner(System.in);\n        if(sc.hasNextInt()) {\n            int n = sc.nextInt(); int[] a = new int[n];\n            for(int i=0; i<n; i++) a[i] = sc.nextInt();\n            System.out.println(findMax(n, a));\n        }\n    }\n}",
-      cpp: "#include <iostream>\n#include <vector>\nusing namespace std;\nlong long findMax(int n, vector<int>& a) {\n    // TODO: Find maximum element in array\n    return 0;\n}\nint main() {\n    int n; if(cin >> n) {\n        vector<int> a(n);\n        for(int i=0; i<n; i++) cin >> a[i];\n        cout << findMax(n, a) << endl;\n    } return 0;\n}",
-      javascript: "const fs = require('fs');\nfunction findMax(n, arr) {\n    // TODO: Find maximum element in array\n    return 0;\n}\nconst input = fs.readFileSync(0, 'utf8').split(/\\s+/);\nif(input.length > 1) {\n    const n = parseInt(input[0]);\n    const arr = input.slice(1, n+1).map(Number);\n    console.log(findMax(n, arr));\n}",
-      c: "#include <stdio.h>\nlong long findMax(int n, int* arr) {\n    // TODO: Find maximum element in array\n    return 0;\n}\nint main() {\n    int n; if(scanf(\"%d\", &n) != EOF) {\n        int a[100001];\n        for(int i=0; i<n; i++) scanf(\"%d\", &a[i]);\n        printf(\"%lld\\n\", findMax(n, a));\n    } return 0;\n}",
-      csharp: "using System;\nclass Program {\n    static long FindMax(int n, int[] arr) {\n        // TODO: Find maximum element in array\n        return 0;\n    }\n    static void Main() {\n        string l1 = Console.ReadLine();\n        if(l1 != null) {\n            int n = int.Parse(l1);\n            string[] l2 = Console.ReadLine().Split(' ', StringSplitOptions.RemoveEmptyEntries);\n            int[] arr = Array.ConvertAll(l2, int.Parse);\n            Console.WriteLine(FindMax(n, arr));\n        }\n    }\n}",
-      go: "package main\nimport \"fmt\"\nfunc findMax(n int, arr []int) int64 {\n    // TODO: Find maximum element in array\n    return 0\n}\nfunc main() {\n    var n int; if _, err := fmt.Scan(&n); err == nil {\n        a := make([]int, n)\n        for i := 0; i < n; i++ { fmt.Scan(&a[i]) }\n        fmt.Println(findMax(n, a))\n    }\n}",
-      rust: "use std::io::{self, BufRead};\nfn find_max(arr: &[i64]) -> i64 {\n    // TODO: Find maximum element in array\n    0\n}\nfn main() {\n    let stdin = io::stdin();\n    let mut lines = stdin.lock().lines();\n    if let Some(Ok(_)) = lines.next() {\n        if let Some(Ok(l2)) = lines.next() {\n            let a: Vec<i64> = l2.split_whitespace().map(|x| x.parse::<i64>().unwrap()).collect();\n            println!(\"{}\", find_max(&a));\n        }\n    }\n}"
+      python: "import sys\ndef find_max(arr):\n    # TODO: Find maximum element in array\n    return -10**10\nif __name__ == '__main__':\n    data = sys.stdin.read().split()\n    if data: print(find_max([int(x) for x in data[1:]]))",
+      java: "import java.util.Scanner;\npublic class Main {\n    public static long findMax(int n, int[] arr) {\n        // TODO: Find maximum element in array\n        return Long.MIN_VALUE;\n    }\n    public static void main(String[] args) {\n        Scanner sc = new Scanner(System.in);\n        if(sc.hasNextInt()) {\n            int n = sc.nextInt(); int[] a = new int[n];\n            for(int i=0; i<n; i++) a[i] = sc.nextInt();\n            System.out.println(findMax(n, a));\n        }\n    }\n}",
+      cpp: "#include <iostream>\n#include <vector>\n#include <climits>\nusing namespace std;\nlong long findMax(int n, vector<int>& a) {\n    // TODO: Find maximum element in array\n    return LLONG_MIN;\n}\nint main() {\n    int n; if(cin >> n) {\n        vector<int> a(n);\n        for(int i=0; i<n; i++) cin >> a[i];\n        cout << findMax(n, a) << endl;\n    } return 0;\n}",
+      javascript: "const fs = require('fs');\nfunction findMax(n, arr) {\n    // TODO: Find maximum element in array\n    return -Infinity;\n}\nconst input = fs.readFileSync(0, 'utf8').split(/\\s+/);\nif(input.length > 1) {\n    const n = parseInt(input[0]);\n    const arr = input.slice(1, n+1).map(Number);\n    console.log(findMax(n, arr));\n}",
+      c: "#include <stdio.h>\n#include <limits.h>\nlong long findMax(int n, int* arr) {\n    // TODO: Find maximum element in array\n    return -2147483648LL;\n}\nint main() {\n    int n; if(scanf(\"%d\", &n) != EOF) {\n        int a[100001];\n        for(int i=0; i<n; i++) scanf(\"%d\", &a[i]);\n        printf(\"%lld\\n\", findMax(n, a));\n    } return 0;\n}",
+      csharp: "using System;\nclass Program {\n    static long FindMax(int n, int[] arr) {\n        // TODO: Find maximum element in array\n        return long.MinValue;\n    }\n    static void Main() {\n        string l1 = Console.ReadLine();\n        if(l1 != null) {\n            int n = int.Parse(l1);\n            int[] arr = Array.ConvertAll(Console.ReadLine().Split(' ', StringSplitOptions.RemoveEmptyEntries), int.Parse);\n            Console.WriteLine(FindMax(n, arr));\n        }\n    }\n}",
+      go: "package main\nimport \"fmt\"\nfunc findMax(n int, arr []int) int64 {\n    // TODO: Find maximum element in array\n    return -9223372036854775808\n}\nfunc main() {\n    var n int; if _, err := fmt.Scan(&n); err == nil {\n        a := make([]int, n)\n        for i := 0; i < n; i++ { fmt.Scan(&a[i]) }\n        fmt.Println(findMax(n, a))\n    }\n}",
+      rust: "use std::io::{self, BufRead};\nfn find_max(arr: &[i64]) -> i64 {\n    // TODO: Find maximum element in array\n    i64::MIN\n}\nfn main() {\n    let stdin = io::stdin();\n    let mut lines = stdin.lock().lines();\n    if let Some(Ok(_)) = lines.next() {\n        if let Some(Ok(l2)) = lines.next() {\n            let a: Vec<i64> = l2.split_whitespace().map(|x| x.parse::<i64>().unwrap()).collect();\n            println!(\"{}\", find_max(&a));\n        }\n    }\n}"
     },
     hiddenTestCases: [
-      { input: "1\n5", output: "5" },
-      { input: "5\n1 2 3 4 5", output: "5" },
-      { input: "5\n5 4 3 2 1", output: "5" },
-      { input: "3\n-10 -5 -20", output: "-5" },
-      { input: "4\n100 100 100 100", output: "100" },
-      { input: "6\n0 10 0 10 0 10", output: "10" },
-      { input: "2\n-1000000000 1000000000", output: "1000000000" },
-      { input: "5\n12 45 67 23 89", output: "89" },
-      { input: "3\n0 0 0", output: "0" },
-      { input: "10\n1 9 2 8 3 7 4 6 5 0", output: "9" }
+      { input: "1\n5", output: "5" }, { input: "5\n1 2 3 4 5", output: "5" }, { input: "5\n5 4 3 2 1", output: "5" }, { input: "3\n-10 -5 -20", output: "-5" }, { input: "4\n100 100 100 100", output: "100" }, { input: "6\n0 10 0 10 0 10", output: "10" }, { input: "2\n-1000000000 1000000000", output: "1000000000" }, { input: "5\n12 45 67 23 89", output: "89" }, { input: "3\n0 0 0", output: "0" }, { input: "10\n1 9 2 8 3 7 4 6 5 0", output: "9" }
     ],
     timeLimit: "1s", memoryLimit: "256MB", languageSupport: ["python", "java", "cpp", "javascript", "c", "csharp", "go", "rust"]
   },
@@ -309,16 +247,7 @@ export const MASTER_QUESTIONS: CodingQuestion[] = [
       rust: "use std::io::{self, BufRead};\nfn reverse_string(s: &str) -> String {\n    // TODO: Return reversed version of 's'\n    String::new()\n}\nfn main() {\n    let mut line = String::new();\n    io::stdin().lock().read_line(&mut line).unwrap();\n    println!(\"{}\", reverse_string(line.trim()));\n}"
     },
     hiddenTestCases: [
-      { input: "abc", output: "cba" },
-      { input: "123", output: "321" },
-      { input: "a", output: "a" },
-      { input: "racecar", output: "racecar" },
-      { input: "Hello World", output: "dlroW olleH" },
-      { input: "A", output: "A" },
-      { input: "  ", output: "  " },
-      { input: "0101", output: "1010" },
-      { input: "nexvoroAI", output: "IAorovxen" },
-      { input: "z", output: "z" }
+      { input: "abc", output: "cba" }, { input: "123", output: "321" }, { input: "a", output: "a" }, { input: "racecar", output: "racecar" }, { input: "Hello World", output: "dlroW olleH" }, { input: "A", output: "A" }, { input: "  ", output: "  " }, { input: "0101", output: "1010" }, { input: "nexvoroAI", output: "IAorovxen" }, { input: "z", output: "z" }
     ],
     timeLimit: "1s", memoryLimit: "256MB", languageSupport: ["python", "java", "cpp", "javascript", "c", "csharp", "go", "rust"]
   },
@@ -351,16 +280,7 @@ export const MASTER_QUESTIONS: CodingQuestion[] = [
       rust: "use std::io::{self, BufRead};\nfn char_freq(s: &str, c: char) -> usize {\n    // TODO: Return frequency of character 'c' in string 's'\n    0\n}\nfn main() {\n    let stdin = io::stdin();\n    let mut lines = stdin.lock().lines();\n    if let Some(Ok(s)) = lines.next() {\n        if let Some(Ok(c_line)) = lines.next() {\n            let c = c_line.chars().next().unwrap();\n            println!(\"{}\", char_freq(&s, c));\n        }\n    }\n}"
     },
     hiddenTestCases: [
-      { input: "aaaaa\na", output: "5" },
-      { input: "abcde\nz", output: "0" },
-      { input: "  \n ", output: "2" },
-      { input: "AbcA\nA", output: "1" },
-      { input: "112233\n1", output: "2" },
-      { input: "Protocol Node\no", output: "3" },
-      { input: "X\nX", output: "1" },
-      { input: "apple\np", output: "2" },
-      { input: "banana\na", output: "3" },
-      { input: "mississippi\ns", output: "4" }
+      { input: "aaaaa\na", output: "5" }, { input: "abcde\nz", output: "0" }, { input: "  \n ", output: "2" }, { input: "AbcA\nA", output: "1" }, { input: "112233\n1", output: "2" }, { input: "Protocol Node\no", output: "3" }, { input: "X\nX", output: "1" }, { input: "apple\np", output: "2" }, { input: "banana\na", output: "3" }, { input: "mississippi\ns", output: "4" }
     ],
     timeLimit: "1s", memoryLimit: "256MB", languageSupport: ["python", "java", "cpp", "javascript", "c", "csharp", "go", "rust"]
   },
@@ -388,21 +308,12 @@ export const MASTER_QUESTIONS: CodingQuestion[] = [
       cpp: "#include <iostream>\n#include <vector>\nusing namespace std;\nint countUnique(int n, vector<int>& a) {\n    // TODO: Count unique elements in a sorted array\n    return 0;\n}\nint main() {\n    int n; if(cin >> n) {\n        vector<int> a(n); for(int i=0; i<n; i++) cin >> a[i];\n        cout << countUnique(n, a) << endl;\n    } return 0;\n}",
       javascript: "const fs = require('fs');\nfunction countUnique(n, arr) {\n    // TODO: Count unique elements in a sorted array\n    return 0;\n}\nconst input = fs.readFileSync(0, 'utf8').split(/\\s+/);\nif(input.length > 1) {\n    const n = parseInt(input[0]);\n    const arr = input.slice(1, n+1).map(Number);\n    console.log(countUnique(n, arr));\n}",
       c: "#include <stdio.h>\nint countUnique(int n, int* arr) {\n    // TODO: Count unique elements in a sorted array\n    return 0;\n}\nint main() {\n    int n; if(scanf(\"%d\", &n) != EOF) {\n        int a[100001]; for(int i=0; i<n; i++) scanf(\"%d\", &a[i]);\n        printf(\"%d\\n\", countUnique(n, a));\n    } return 0;\n}",
-      csharp: "using System;\nclass Program {\n    static int CountUnique(int n, int[] arr) {\n        // TODO: Count unique elements in a sorted array\n        return 0;\n    }\n    static void Main() {\n        string l1 = Console.ReadLine();\n        if(l1 != null) {\n            int n = int.Parse(l1);\n            string[] l2 = Console.ReadLine().Split(' ', StringSplitOptions.RemoveEmptyEntries);\n            int[] arr = Array.ConvertAll(l2, int.Parse);\n            Console.WriteLine(CountUnique(n, arr));\n        }\n    }\n}",
+      csharp: "using System;\nclass Program {\n    static int CountUnique(int n, int[] arr) {\n        // TODO: Count unique elements in a sorted array\n        return 0;\n    }\n    static void Main() {\n        string l1 = Console.ReadLine();\n        if(l1 != null) {\n            int n = int.Parse(l1);\n            int[] arr = Array.ConvertAll(Console.ReadLine().Split(' ', StringSplitOptions.RemoveEmptyEntries), int.Parse);\n            Console.WriteLine(CountUnique(n, arr));\n        }\n    }\n}",
       go: "package main\nimport \"fmt\"\nfunc countUnique(n int, arr []int) int {\n    // TODO: Count unique elements in a sorted array\n    return 0\n}\nfunc main() {\n    var n int; if _, err := fmt.Scan(&n); err == nil {\n        a := make([]int, n)\n        for i := 0; i < n; i++ { fmt.Scan(&a[i]) }\n        fmt.Println(countUnique(n, a))\n    }\n}",
       rust: "use std::io::{self, BufRead};\nfn count_unique(arr: &[i32]) -> usize {\n    // TODO: Count unique elements in a sorted array\n    0\n}\nfn main() {\n    let stdin = io::stdin();\n    let mut lines = stdin.lock().lines();\n    if let Some(Ok(l1)) = lines.next() {\n        let n: usize = l1.trim().parse().unwrap();\n        if let Some(Ok(l2)) = lines.next() {\n            let a: Vec<i32> = l2.split_whitespace().map(|x| x.parse().unwrap()).collect();\n            println!(\"{}\", count_unique(&a));\n        }\n    }\n}"
     },
     hiddenTestCases: [
-      { input: "1\n10", output: "1" },
-      { input: "2\n1 1", output: "1" },
-      { input: "3\n1 2 3", output: "3" },
-      { input: "6\n1 1 1 2 2 2", output: "2" },
-      { input: "4\n-1 -1 0 0", output: "2" },
-      { input: "10\n1 1 1 1 1 1 1 1 1 1", output: "1" },
-      { input: "5\n0 1 2 3 4", output: "5" },
-      { input: "2\n-5 -5", output: "1" },
-      { input: "4\n10 10 20 30", output: "3" },
-      { input: "3\n100 200 200", output: "2" }
+      { input: "1\n10", output: "1" }, { input: "2\n1 1", output: "1" }, { input: "3\n1 2 3", output: "3" }, { input: "6\n1 1 1 2 2 2", output: "2" }, { input: "4\n-1 -1 0 0", output: "2" }, { input: "10\n1 1 1 1 1 1 1 1 1 1", output: "1" }, { input: "5\n0 1 2 3 4", output: "5" }, { input: "2\n-5 -5", output: "1" }, { input: "4\n10 10 20 30", output: "3" }, { input: "3\n100 200 200", output: "2" }
     ],
     timeLimit: "1s", memoryLimit: "256MB", languageSupport: ["python", "java", "cpp", "javascript", "c", "csharp", "go", "rust"]
   },
@@ -435,16 +346,7 @@ export const MASTER_QUESTIONS: CodingQuestion[] = [
       rust: "use std::io::{self, BufRead};\nfn search(a: &[i32], t: i32) -> String {\n    // TODO: Check if 't' exists in 'a'\n    \"NOT FOUND\".to_string()\n}\nfn main() {\n    let stdin = io::stdin();\n    let mut lines = stdin.lock().lines();\n    if let Some(Ok(l1)) = lines.next() {\n        let n: usize = l1.trim().parse().unwrap();\n        if let Some(Ok(l2)) = lines.next() {\n            let a: Vec<i32> = l2.split_whitespace().map(|x| x.parse().unwrap()).collect();\n            if let Some(Ok(l3)) = lines.next() {\n                let t: i32 = l3.trim().parse().unwrap();\n                println!(\"{}\", search(&a, t));\n            }\n        }\n    }\n}"
     },
     hiddenTestCases: [
-      { input: "1\n5\n5", output: "FOUND" },
-      { input: "1\n5\n10", output: "NOT FOUND" },
-      { input: "5\n1 2 3 4 5\n1", output: "FOUND" },
-      { input: "5\n1 2 3 4 5\n5", output: "FOUND" },
-      { input: "3\n-10 -20 -30\n-20", output: "FOUND" },
-      { input: "4\n10 20 30 40\n25", output: "NOT FOUND" },
-      { input: "2\n0 100\n0", output: "FOUND" },
-      { input: "5\n10 10 10 10 10\n10", output: "FOUND" },
-      { input: "6\n1 3 5 7 9 11\n8", output: "NOT FOUND" },
-      { input: "3\n12345 67890 0\n0", output: "FOUND" }
+      { input: "1\n5\n5", output: "FOUND" }, { input: "1\n5\n10", output: "NOT FOUND" }, { input: "5\n1 2 3 4 5\n1", output: "FOUND" }, { input: "5\n1 2 3 4 5\n5", output: "FOUND" }, { input: "3\n-10 -20 -30\n-20", output: "FOUND" }, { input: "4\n10 20 30 40\n25", output: "NOT FOUND" }, { input: "2\n0 100\n0", output: "FOUND" }, { input: "5\n10 10 10 10 10\n10", output: "FOUND" }, { input: "6\n1 3 5 7 9 11\n8", output: "NOT FOUND" }, { input: "3\n12345 67890 0\n0", output: "FOUND" }
     ],
     timeLimit: "1s", memoryLimit: "256MB", languageSupport: ["python", "java", "cpp", "javascript", "c", "csharp", "go", "rust"]
   },
@@ -470,23 +372,14 @@ export const MASTER_QUESTIONS: CodingQuestion[] = [
       python: "import sys\ndef min_diff(arr):\n    # TODO: Find the minimum absolute difference between any two elements\n    return 0\nif __name__ == '__main__':\n    data = sys.stdin.read().split()\n    if data: print(min_diff([int(x) for x in data[1:]]))",
       java: "import java.util.*;\npublic class Main {\n    public static long minDiff(int n, long[] a) {\n        // TODO: Find the minimum absolute difference between any two elements\n        return 0;\n    }\n    public static void main(String[] args) {\n        Scanner sc = new Scanner(System.in);\n        if(sc.hasNextInt()) {\n            int n = sc.nextInt(); long[] a = new long[n];\n            for(int i=0; i<n; i++) a[i] = sc.nextLong();\n            System.out.println(minDiff(n, a));\n        }\n    }\n}",
       cpp: "#include <iostream>\n#include <vector>\n#include <algorithm>\nusing namespace std;\nlong long minDiff(int n, vector<long long>& a) {\n    // TODO: Find the minimum absolute difference between any two elements\n    return 0;\n}\nint main() {\n    int n; if(cin >> n) {\n        vector<long long> a(n); for(int i=0; i<n; i++) cin >> a[i];\n        cout << minDiff(n, a) << endl;\n    } return 0;\n}",
-      javascript: "const fs = require('fs');\nfunction minDiff(n, a) {\n    // TODO: Find the minimum absolute difference between any two elements\n    return 0;\n}\nconst input = fs.readFileSync(0, 'utf8').split(/\\s+/);\nif(input.length > 1) {\n    const n = parseInt(input[0]);\n    const a = input.slice(1, n+1).map(Number);\n    console.log(minDiff(n, a));\n}",
+      javascript: "const fs = require('fs');\nfunction minDiff(n, a) {\n    // TODO: Find the minimum absolute difference between any two elements\n    return 0;\n}\nconst input = fs.readFileSync(0, 'utf8').split(/\\s+/);\nif(input.length > 1) {\n    const n = parseInt(input[0]); const a = input.slice(1, n+1).map(Number);\n    console.log(minDiff(n, a));\n}",
       c: "#include <stdio.h>\n#include <stdlib.h>\n#include <limits.h>\nlong long minDiff(int n, int* a) {\n    // TODO: Find the minimum absolute difference between any two elements\n    return 0;\n}\nint main() {\n    int n; if(scanf(\"%d\", &n) != EOF) {\n        int a[100001]; for(int i=0; i<n; i++) scanf(\"%d\", &a[i]);\n        printf(\"%lld\\n\", minDiff(n, a));\n    } return 0;\n}",
       csharp: "using System;\nusing System.Linq;\nclass Program {\n    static long MinDiff(int n, long[] a) {\n        // TODO: Find the minimum absolute difference between any two elements\n        return 0;\n    }\n    static void Main() {\n        string l1 = Console.ReadLine();\n        if(l1 != null) {\n            int n = int.Parse(l1);\n            long[] a = Console.ReadLine().Split(' ', StringSplitOptions.RemoveEmptyEntries).Select(long.Parse).ToArray();\n            Console.WriteLine(MinDiff(n, a));\n        }\n    }\n}",
       go: "package main\nimport (\"fmt\"; \"sort\")\nfunc minDiff(n int, arr []int) int {\n    // TODO: Find the minimum absolute difference between any two elements\n    return 0\n}\nfunc main() {\n    var n int; if _, err := fmt.Scan(&n); err == nil {\n        a := make([]int, n); for i := 0; i < n; i++ { fmt.Scan(&a[i]) }\n        fmt.Println(minDiff(n, a))\n    }\n}",
       rust: "use std::io::{self, BufRead};\nfn min_diff(a: &mut [i64]) -> i64 {\n    // TODO: Find the minimum absolute difference between any two elements\n    0\n}\nfn main() {\n    let stdin = io::stdin();\n    let mut lines = stdin.lock().lines();\n    if let Some(Ok(l1)) = lines.next() {\n        let n: usize = l1.trim().parse().unwrap();\n        if let Some(Ok(l2)) = lines.next() {\n            let mut a: Vec<i64> = l2.split_whitespace().map(|x| x.parse().unwrap()).collect();\n            println!(\"{}\", min_diff(&mut a));\n        }\n    }\n}"
     },
     hiddenTestCases: [
-      { input: "2\n10 20", output: "10" },
-      { input: "3\n1 5 10", output: "4" },
-      { input: "5\n10 10 10 10 10", output: "0" },
-      { input: "4\n-10 -2 5 8", output: "3" },
-      { input: "3\n0 100 200", output: "100" },
-      { input: "6\n1 10 20 30 40 41", output: "1" },
-      { input: "2\n1000000 0", output: "1000000" },
-      { input: "4\n5 12 18 20", output: "2" },
-      { input: "5\n-50 -30 0 10 15", output: "5" },
-      { input: "3\n10 11 12", output: "1" }
+      { input: "2\n10 20", output: "10" }, { input: "3\n1 5 10", output: "4" }, { input: "5\n10 10 10 10 10", output: "0" }, { input: "4\n-10 -2 5 8", output: "3" }, { input: "3\n0 100 200", output: "100" }, { input: "6\n1 10 20 30 40 41", output: "1" }, { input: "2\n1000000 0", output: "1000000" }, { input: "4\n5 12 18 20", output: "2" }, { input: "5\n-50 -30 0 10 15", output: "5" }, { input: "3\n10 11 12", output: "1" }
     ],
     timeLimit: "1s", memoryLimit: "256MB", languageSupport: ["python", "java", "cpp", "javascript", "c", "csharp", "go", "rust"]
   },
@@ -506,7 +399,7 @@ export const MASTER_QUESTIONS: CodingQuestion[] = [
     sampleInput: "4\n2 7 11 15\n9",
     sampleOutput: "0 1",
     explanation: "Find two numbers whose sum equals the target and print their indices.",
-    functionInfo: { name: "twoSum(n, arr, t)", params: "n: int, arr: int[], t: int", returnType: "int[]", goal: "Find indices of two numbers that sum to target." },
+    functionInfo: { name: "twoSum(n, arr, t)", params: "n: int, arr: int[]", returnType: "int[]", goal: "Find indices of two numbers that sum to target." },
     walkthrough: { input: "[2,7], 9", received: "arr=[2,7], t=9", expected: "0 1", output: "0 1" },
     starterCode: {
       python: "import sys\ndef two_sum(arr, t):\n    # TODO: Find indices of two elements that sum to 't'\n    return \"0 0\"\nif __name__ == '__main__':\n    data = sys.stdin.read().split()\n    if len(data) >= 3:\n        n = int(data[0]); t = int(data[n+1]); arr = [int(x) for x in data[1:n+1]]\n        print(two_sum(arr, t))",
@@ -519,16 +412,7 @@ export const MASTER_QUESTIONS: CodingQuestion[] = [
       rust: "use std::io::{self, BufRead};\nfn solve(a: &[i32], t: i32) {\n    // TODO: Find indices of two elements that sum to 't' and print them\n}\nfn main() {\n    let stdin = io::stdin();\n    let mut lines = stdin.lock().lines();\n    if let Some(Ok(l1)) = lines.next() {\n        let n: usize = l1.trim().parse().unwrap();\n        if let Some(Ok(l2)) = lines.next() {\n            let a: Vec<i32> = l2.split_whitespace().map(|x| x.parse().unwrap()).collect();\n            if let Some(Ok(l3)) = lines.next() {\n                let t: i32 = l3.trim().parse().unwrap();\n                solve(&a, t);\n            }\n        }\n    }\n}"
     },
     hiddenTestCases: [
-      { input: "2\n1 2\n3", output: "0 1" },
-      { input: "3\n10 20 30\n50", output: "1 2" },
-      { input: "5\n-1 -2 -3 -4 -5\n-8", output: "2 4" },
-      { input: "4\n100 200 300 400\n500", output: "0 3" },
-      { input: "3\n0 0 0\n0", output: "0 1" },
-      { input: "6\n1 3 5 7 9 11\n20", output: "4 5" },
-      { input: "2\n-50 50\n0", output: "0 1" },
-      { input: "5\n10 15 20 25 30\n45", output: "2 3" },
-      { input: "4\n5 8 12 18\n20", output: "1 3" },
-      { input: "3\n1 10 100\n101", output: "1 2" }
+      { input: "2\n1 2\n3", output: "0 1" }, { input: "3\n10 20 30\n50", output: "1 2" }, { input: "5\n-1 -2 -3 -4 -5\n-8", output: "2 4" }, { input: "4\n100 200 300 400\n500", output: "0 3" }, { input: "3\n0 0 0\n0", output: "0 1" }, { input: "6\n1 3 5 7 9 11\n20", output: "4 5" }, { input: "2\n-50 50\n0", output: "0 1" }, { input: "5\n10 15 20 25 30\n45", output: "2 3" }, { input: "4\n5 8 12 18\n20", output: "1 3" }, { input: "3\n1 10 100\n101", output: "1 2" }
     ],
     timeLimit: "1s", memoryLimit: "256MB", languageSupport: ["python", "java", "cpp", "javascript", "c", "csharp", "go", "rust"]
   },
@@ -558,19 +442,10 @@ export const MASTER_QUESTIONS: CodingQuestion[] = [
       c: "#include <stdio.h>\nlong long maxSubArray(int n, int* arr) {\n    // TODO: Implement Kadane's algorithm\n    return 0;\n}\nint main() {\n    int n; if(scanf(\"%d\", &n) != EOF) {\n        int a[100001]; for(int i=0; i<n; i++) scanf(\"%d\", &a[i]);\n        printf(\"%lld\\n\", maxSubArray(n, a));\n    } return 0;\n}",
       csharp: "using System;\nclass Program {\n    static long MaxSubArray(int n, int[] arr) {\n        // TODO: Implement Kadane's algorithm\n        return 0;\n    }\n    static void Main() {\n        string l1 = Console.ReadLine();\n        if(l1 != null) {\n            int n = int.Parse(l1);\n            int[] a = Console.ReadLine().Split(' ', StringSplitOptions.RemoveEmptyEntries).Select(int.Parse).ToArray();\n            Console.WriteLine(MaxSubArray(n, a));\n        }\n    }\n}",
       go: "package main\nimport \"fmt\"\nfunc maxSubArray(n int, arr []int) int64 {\n    // TODO: Implement Kadane's algorithm\n    return 0\n}\nfunc main() {\n    var n int; if _, err := fmt.Scan(&n); err == nil {\n        a := make([]int, n); for i := 0; i < n; i++ { fmt.Scan(&a[i]) }\n        fmt.Println(maxSubArray(n, a))\n    }\n}",
-      rust: "use std::io::{self, BufRead};\nfn max_subarray(a: &[i64]) -> i64 {\n    // TODO: Implement Kadane's algorithm\n    0\n}\nfn main() {\n    let stdin = io::stdin();\n    let mut lines = stdin.lock().lines();\n    if let Some(Ok(_)) = lines.next() {\n        if let Some(Ok(l2)) = lines.next() {\n            let a: Vec<i64> = l2.split_whitespace().map(|x| x.parse().unwrap()).collect();\n            println!(\"{}\", max_subarray(&a));\n        }\n    }\n}"
+      rust: "use std::io::{self, BufRead};\nfn max_subarray(a: &[i64]) -> i64 {\n    // TODO: Implement Kadane's algorithm\n    0\n}\nfn main() {\n    let stdin = io::stdin(); let mut lines = stdin.lock().lines();\n    if let Some(Ok(_)) = lines.next() {\n        if let Some(Ok(l2)) = lines.next() {\n            let a: Vec<i64> = l2.split_whitespace().map(|x| x.parse().unwrap()).collect();\n            println!(\"{}\", max_subarray(&a));\n        }\n    }\n}"
     },
     hiddenTestCases: [
-      { input: "1\n-5", output: "-5" },
-      { input: "5\n1 2 3 4 5", output: "15" },
-      { input: "5\n-1 -2 -3 -4 -5", output: "-1" },
-      { input: "4\n-1 2 3 -1", output: "5" },
-      { input: "2\n10 -20", output: "10" },
-      { input: "6\n-2 1 -3 4 -1 2", output: "6" },
-      { input: "3\n5 4 -1", output: "9" },
-      { input: "5\n-10 0 -1 2 1", output: "3" },
-      { input: "4\n1 2 -5 10", output: "10" },
-      { input: "10\n1 2 3 4 5 6 7 8 9 10", output: "55" }
+      { input: "1\n-5", output: "-5" }, { input: "5\n1 2 3 4 5", output: "15" }, { input: "5\n-1 -2 -3 -4 -5", output: "-1" }, { input: "4\n-1 2 3 -1", output: "5" }, { input: "2\n10 -20", output: "10" }, { input: "6\n-2 1 -3 4 -1 2", output: "6" }, { input: "3\n5 4 -1", output: "9" }, { input: "5\n-10 0 -1 2 1", output: "3" }, { input: "4\n1 2 -5 10", output: "10" }, { input: "10\n1 2 3 4 5 6 7 8 9 10", output: "55" }
     ],
     timeLimit: "1s", memoryLimit: "256MB", languageSupport: ["python", "java", "cpp", "javascript", "c", "csharp", "go", "rust"]
   },
@@ -603,16 +478,7 @@ export const MASTER_QUESTIONS: CodingQuestion[] = [
       rust: "use std::io::{self, BufRead};\nfn is_valid(s: &str) -> bool {\n    // TODO: Validate bracket balance using a stack\n    false\n}\nfn main() {\n    let mut line = String::new(); io::stdin().lock().read_line(&mut line).unwrap();\n    println!(\"{}\", if is_valid(line.trim()) { \"YES\" } else { \"NO\" });\n}"
     },
     hiddenTestCases: [
-      { input: "()", output: "YES" },
-      { input: "([)]", output: "NO" },
-      { input: "{[]}", output: "YES" },
-      { input: "(", output: "NO" },
-      { input: ")", output: "NO" },
-      { input: "{{}}", output: "YES" },
-      { input: "[", output: "NO" },
-      { input: "[(())]", output: "YES" },
-      { input: "((()))", output: "YES" },
-      { input: "{[()]}", output: "YES" }
+      { input: "()", output: "YES" }, { input: "([)]", output: "NO" }, { input: "{[]}", output: "YES" }, { input: "(", output: "NO" }, { input: ")", output: "NO" }, { input: "{{}}", output: "YES" }, { input: "[", output: "NO" }, { input: "[(())]", output: "YES" }, { input: "((()))", output: "YES" }, { input: "{[()]}", output: "YES" }
     ],
     timeLimit: "1s", memoryLimit: "256MB", languageSupport: ["python", "java", "cpp", "javascript", "c", "csharp", "go", "rust"]
   },
@@ -645,16 +511,7 @@ export const MASTER_QUESTIONS: CodingQuestion[] = [
       rust: "use std::io::{self, BufRead};\nfn is_anagram(s1: &str, s2: &str) -> bool {\n    // TODO: Determine if 's1' and 's2' are anagrams\n    false\n}\nfn main() {\n    let stdin = io::stdin();\n    let mut lines = stdin.lock().lines();\n    if let Some(Ok(s1)) = lines.next() {\n        if let Some(Ok(s2)) = lines.next() {\n            println!(\"{}\", if is_anagram(s1.trim(), s2.trim()) { \"YES\" } else { \"NO\" });\n        }\n    }\n}"
     },
     hiddenTestCases: [
-      { input: "anagram\nnagaram", output: "YES" },
-      { input: "rat\ncar", output: "NO" },
-      { input: "a\na", output: "YES" },
-      { input: "abc\ndef", output: "NO" },
-      { input: "race\ncare", output: "YES" },
-      { input: "cinema\niceman", output: "YES" },
-      { input: "hello\nworld", output: "NO" },
-      { input: "abcde\nedcba", output: "YES" },
-      { input: "aaabbb\nbbbaaa", output: "YES" },
-      { input: "abc\nab", output: "NO" }
+      { input: "anagram\nnagaram", output: "YES" }, { input: "rat\ncar", output: "NO" }, { input: "a\na", output: "YES" }, { input: "abc\ndef", output: "NO" }, { input: "race\ncare", output: "YES" }, { input: "cinema\niceman", output: "YES" }, { input: "hello\nworld", output: "NO" }, { input: "abcde\nedcba", output: "YES" }, { input: "aaabbb\nbbbaaa", output: "YES" }, { input: "abc\nab", output: "NO" }
     ],
     timeLimit: "1s", memoryLimit: "256MB", languageSupport: ["python", "java", "cpp", "javascript", "c", "csharp", "go", "rust"]
   },
@@ -677,26 +534,17 @@ export const MASTER_QUESTIONS: CodingQuestion[] = [
     functionInfo: { name: "merge(n1, a1, n2, a2)", params: "n1: int, a1: int[], n2: int, a2: int[]", returnType: "int[]", goal: "Merge two sorted arrays." },
     walkthrough: { input: "[1], [2]", received: "a1=[1], a2=[2]", expected: "1 2", output: "1 2" },
     starterCode: {
-      python: "import sys\ndef merge(a1, a2):\n    # TODO: Merge two sorted arrays into a new sorted array\n    return \"\"\nif __name__ == '__main__':\n    data = sys.stdin.read().split()\n    if data:\n        n1 = int(data[0]); a1 = [int(x) for x in data[1:n1+1]]\n        n2 = int(data[n1+1]); a2 = [int(x) for x in data[n1+2:]]\n        print(merge(a1, a2))",
-      java: "import java.util.Scanner;\npublic class Main {\n    public static void merge(int n1, int[] a1, int n2, int[] a2) {\n        // TODO: Merge and print the combined sorted elements\n    }\n    public static void main(String[] args) {\n        Scanner sc = new Scanner(System.in);\n        if(sc.hasNextInt()) {\n            int n1 = sc.nextInt(); int[] a1 = new int[n1];\n            for(int i=0; i<n1; i++) a1[i] = sc.nextInt();\n            int n2 = sc.nextInt(); int[] a2 = new int[n2];\n            for(int i=0; i<n2; i++) a2[i] = sc.nextInt();\n            merge(n1, a1, n2, a2);\n        }\n    }\n}",
-      cpp: "#include <iostream>\n#include <vector>\nusing namespace std;\nvoid merge(vector<int>& a1, vector<int>& a2) {\n    // TODO: Merge and print the combined sorted elements\n}\nint main() {\n    int n1, n2; if(cin >> n1) {\n        vector<int> a1(n1); for(int i=0; i<n1; i++) cin >> a1[i];\n        cin >> n2; vector<int> a2(n2); for(int i=0; i<n2; i++) cin >> a2[i];\n        merge(a1, a2);\n    } return 0;\n}",
-      javascript: "const fs = require('fs');\nfunction merge(a1, a2) {\n    // TODO: Merge two sorted arrays into a new sorted array\n    return [];\n}\nconst input = fs.readFileSync(0, 'utf8').split(/\\s+/);\nif(input.length > 1) {\n    const n1 = parseInt(input[0]); const a1 = input.slice(1, n1+1).map(Number);\n    const n2 = parseInt(input[n1+1]); const a2 = input.slice(n1+2, n1+n2+2).map(Number);\n    console.log(merge(a1, a2).join(' '));\n}",
-      c: "#include <stdio.h>\nvoid merge(int n1, int* a1, int n2, int* a2) {\n    // TODO: Merge and print the combined sorted elements\n}\nint main() {\n    int n1, n2; if(scanf(\"%d\", &n1) != EOF) {\n        int a1[100001], a2[100001]; for(int i=0; i<n1; i++) scanf(\"%d\", &a1[i]);\n        scanf(\"%d\", &n2); for(int i=0; i<n2; i++) scanf(\"%d\", &a2[i]);\n        merge(n1, a1, n2, a2);\n    } return 0;\n}",
-      csharp: "using System;\nusing System.Collections.Generic;\nusing System.Linq;\nclass Program {\n    static void Merge(int[] a1, int[] a2) {\n        // TODO: Merge and print the combined sorted elements\n    }\n    static void Main() {\n        string s1 = Console.ReadLine(); if(s1==null) return;\n        int n1 = int.Parse(s1);\n        int[] a1 = Console.ReadLine().Split(' ', StringSplitOptions.RemoveEmptyEntries).Select(int.Parse).ToArray();\n        int n2 = int.Parse(Console.ReadLine());\n        int[] a2 = Console.ReadLine().Split(' ', StringSplitOptions.RemoveEmptyEntries).Select(int.Parse).ToArray();\n        Merge(a1, a2);\n    }\n}",
+      python: "import sys\ndef merge(a1, a2):\n    # TODO: Merge two sorted arrays into a new sorted array and return space-separated string\n    return \"\"\nif __name__ == '__main__':\n    data = sys.stdin.read().split()\n    if data:\n        n1 = int(data[0]); a1 = [int(x) for x in data[1:n1+1]]\n        n2 = int(data[n1+1]); a2 = [int(x) for x in data[n1+2:]]\n        print(merge(a1, a2))",
+      java: "import java.util.Scanner;\npublic class Main {\n    public static void merge(int n1, int[] a1, int n2, int[] a2) {\n        // TODO: Merge and print the combined sorted elements separated by space\n    }\n    public static void main(String[] args) {\n        Scanner sc = new Scanner(System.in);\n        if(sc.hasNextInt()) {\n            int n1 = sc.nextInt(); int[] a1 = new int[n1];\n            for(int i=0; i<n1; i++) a1[i] = sc.nextInt();\n            int n2 = sc.nextInt(); int[] a2 = new int[n2];\n            for(int i=0; i<n2; i++) a2[i] = sc.nextInt();\n            merge(n1, a1, n2, a2);\n        }\n    }\n}",
+      cpp: "#include <iostream>\n#include <vector>\nusing namespace std;\nvoid merge(vector<int>& a1, vector<int>& a2) {\n    // TODO: Merge and print the combined sorted elements separated by space\n}\nint main() {\n    int n1, n2; if(cin >> n1) {\n        vector<int> a1(n1); for(int i=0; i<n1; i++) cin >> a1[i];\n        cin >> n2; vector<int> a2(n2); for(int i=0; i<n2; i++) cin >> a2[i];\n        merge(a1, a2);\n    } return 0;\n}",
+      javascript: "const fs = require('fs');\nfunction merge(a1, a2) {\n    // TODO: Merge two sorted arrays into a new sorted array and return it\n    return [];\n}\nconst input = fs.readFileSync(0, 'utf8').split(/\\s+/);\nif(input.length > 1) {\n    const n1 = parseInt(input[0]); const a1 = input.slice(1, n1+1).map(Number);\n    const n2 = parseInt(input[n1+1]); const a2 = input.slice(n1+2, n1+n2+2).map(Number);\n    console.log(merge(a1, a2).join(' '));\n}",
+      c: "#include <stdio.h>\nvoid merge(int n1, int* a1, int n2, int* a2) {\n    // TODO: Merge and print the combined sorted elements separated by space\n}\nint main() {\n    int n1, n2; if(scanf(\"%d\", &n1) != EOF) {\n        int a1[100001], a2[100001]; for(int i=0; i<n1; i++) scanf(\"%d\", &a1[i]);\n        scanf(\"%d\", &n2); for(int i=0; i<n2; i++) scanf(\"%d\", &a2[i]);\n        merge(n1, a1, n2, a2);\n    } return 0;\n}",
+      csharp: "using System;\nusing System.Collections.Generic;\nusing System.Linq;\nclass Program {\n    static void Merge(int[] a1, int[] a2) {\n        // TODO: Merge and print the combined sorted elements separated by space\n    }\n    static void Main() {\n        string s1 = Console.ReadLine(); if(s1==null) return;\n        int n1 = int.Parse(s1);\n        int[] a1 = Console.ReadLine().Split(' ', StringSplitOptions.RemoveEmptyEntries).Select(int.Parse).ToArray();\n        int n2 = int.Parse(Console.ReadLine());\n        int[] a2 = Console.ReadLine().Split(' ', StringSplitOptions.RemoveEmptyEntries).Select(int.Parse).ToArray();\n        Merge(a1, a2);\n    }\n}",
       go: "package main\nimport (\"fmt\")\nfunc merge(a1, a2 []int) []int {\n    // TODO: Merge two sorted arrays into a new sorted array\n    return []int{}\n}\nfunc main() {\n    var n1, n2 int; fmt.Scan(&n1)\n    a1 := make([]int, n1); for i := 0; i < n1; i++ { fmt.Scan(&a1[i]) }\n    fmt.Scan(&n2); a2 := make([]int, n2); for i := 0; i < n2; i++ { fmt.Scan(&a2[i]) }\n    res := merge(a1, a2)\n    for i, v := range res { fmt.Print(v); if i < len(res)-1 { fmt.Print(\" \") } }\n    fmt.Println()\n}",
       rust: "use std::io::{self, BufRead};\nfn merge(a1: &[i32], a2: &[i32]) -> Vec<i32> {\n    // TODO: Merge two sorted arrays into a new sorted array\n    Vec::new()\n}\nfn main() {\n    let stdin = io::stdin(); let mut lines = stdin.lock().lines();\n    if let Some(Ok(l1)) = lines.next() {\n        let n1: usize = l1.trim().parse().unwrap();\n        if let Some(Ok(l2)) = lines.next() {\n            let a1: Vec<i32> = l2.split_whitespace().map(|x| x.parse().unwrap()).collect();\n            if let Some(Ok(l3)) = lines.next() {\n                let n2: usize = l3.trim().parse().unwrap();\n                if let Some(Ok(l4)) = lines.next() {\n                    let a2: Vec<i32> = l4.split_whitespace().map(|x| x.parse().unwrap()).collect();\n                    let res = merge(&a1, &a2);\n                    println!(\"{}\", res.iter().map(|x| x.to_string()).collect::<Vec<String>>().join(\" \"));\n                }\n            }\n        }\n    }\n}"
     },
     hiddenTestCases: [
-      { input: "1\n1\n1\n2", output: "1 2" },
-      { input: "3\n10 20 30\n2\n5 15", output: "5 10 15 20 30" },
-      { input: "2\n1 1\n2\n1 1", output: "1 1 1 1" },
-      { input: "4\n1 2 3 4\n1\n5", output: "1 2 3 4 5" },
-      { input: "2\n1 5\n2\n0 10", output: "0 1 5 10" },
-      { input: "3\n1 2 3\n0\n", output: "1 2 3" },
-      { input: "0\n\n2\n10 20", output: "10 20" },
-      { input: "3\n-5 0 5\n3\n-10 1 10", output: "-10 -5 0 1 5 10" },
-      { input: "5\n1 2 3 4 5\n5\n6 7 8 9 10", output: "1 2 3 4 5 6 7 8 9 10" },
-      { input: "2\n100 200\n2\n50 150", output: "50 100 150 200" }
+      { input: "1\n1\n1\n2", output: "1 2" }, { input: "3\n10 20 30\n2\n5 15", output: "5 10 15 20 30" }, { input: "2\n1 1\n2\n1 1", output: "1 1 1 1" }, { input: "4\n1 2 3 4\n1\n5", output: "1 2 3 4 5" }, { input: "2\n1 5\n2\n0 10", output: "0 1 5 10" }, { input: "3\n1 2 3\n0\n", output: "1 2 3" }, { input: "0\n\n2\n10 20", output: "10 20" }, { input: "3\n-5 0 5\n3\n-10 1 10", output: "-10 -5 0 1 5 10" }, { input: "5\n1 2 3 4 5\n5\n6 7 8 9 10", output: "1 2 3 4 5 6 7 8 9 10" }, { input: "2\n100 200\n2\n50 150", output: "50 100 150 200" }
     ],
     timeLimit: "1s", memoryLimit: "256MB", languageSupport: ["python", "java", "cpp", "javascript", "c", "csharp", "go", "rust"]
   },
@@ -729,16 +577,7 @@ export const MASTER_QUESTIONS: CodingQuestion[] = [
       rust: "use std::io::{self, BufRead};\nfn binary_search(a: &[i32], t: i32) -> i32 {\n    // TODO: Implement binary search to find 't' in sorted 'a'\n    -1\n}\nfn main() {\n    let stdin = io::stdin(); let mut lines = stdin.lock().lines();\n    if let Some(Ok(l1)) = lines.next() {\n        let n: usize = l1.trim().parse().unwrap();\n        if let Some(Ok(l2)) = lines.next() {\n            let a: Vec<i32> = l2.split_whitespace().map(|x| x.parse().unwrap()).collect();\n            if let Some(Ok(l3)) = lines.next() {\n                let t: i32 = l3.trim().parse().unwrap();\n                println!(\"{}\", binary_search(&a, t));\n            }\n        }\n    }\n}"
     },
     hiddenTestCases: [
-      { input: "1\n10\n10", output: "0" },
-      { input: "2\n10 20\n10", output: "0" },
-      { input: "2\n10 20\n20", output: "1" },
-      { input: "5\n1 3 5 7 9\n5", output: "2" },
-      { input: "5\n1 3 5 7 9\n10", output: "-1" },
-      { input: "4\n-10 -5 0 5\n0", output: "2" },
-      { input: "3\n100 200 300\n150", output: "-1" },
-      { input: "6\n1 2 3 4 5 6\n1", output: "0" },
-      { input: "6\n1 2 3 4 5 6\n6", output: "5" },
-      { input: "3\n-100 -50 0\n-100", output: "0" }
+      { input: "1\n10\n10", output: "0" }, { input: "2\n10 20\n10", output: "0" }, { input: "2\n10 20\n20", output: "1" }, { input: "5\n1 3 5 7 9\n5", output: "2" }, { input: "5\n1 3 5 7 9\n10", output: "-1" }, { input: "4\n-10 -5 0 5\n0", output: "2" }, { input: "3\n100 200 300\n150", output: "-1" }, { input: "6\n1 2 3 4 5 6\n1", output: "0" }, { input: "6\n1 2 3 4 5 6\n6", output: "5" }, { input: "3\n-100 -50 0\n-100", output: "0" }
     ],
     timeLimit: "1s", memoryLimit: "256MB", languageSupport: ["python", "java", "cpp", "javascript", "c", "csharp", "go", "rust"]
   },
@@ -771,16 +610,7 @@ export const MASTER_QUESTIONS: CodingQuestion[] = [
       rust: "use std::io::{self, BufRead};\nfn max_sum_k(a: &[i64], k: usize) -> i64 {\n    // TODO: Find maximum sum of a contiguous subarray of size 'k'\n    0\n}\nfn main() {\n    let stdin = io::stdin(); let mut lines = stdin.lock().lines();\n    if let Some(Ok(l1)) = lines.next() {\n        let v: Vec<usize> = l1.split_whitespace().map(|x| x.parse().unwrap()).collect();\n        let (n, k) = (v[0], v[1]);\n        if let Some(Ok(l2)) = lines.next() {\n            let a: Vec<i64> = l2.split_whitespace().map(|x| x.parse().unwrap()).collect();\n            println!(\"{}\", max_sum_k(&a, k));\n        }\n    }\n}"
     },
     hiddenTestCases: [
-      { input: "2 1\n10 20", output: "20" },
-      { input: "5 3\n1 2 3 4 5", output: "12" },
-      { input: "3 3\n10 10 10", output: "30" },
-      { input: "5 2\n-1 -2 -3 -4 -5", output: "-3" },
-      { input: "4 1\n100 200 300 400", output: "400" },
-      { input: "6 3\n1 1 1 1 1 1", output: "3" },
-      { input: "2 2\n-50 50", output: "0" },
-      { input: "5 4\n1 2 3 4 100", output: "109" },
-      { input: "4 2\n5 8 1 10", output: "13" },
-      { input: "10 5\n1 1 1 1 100 1 1 1 1 1", output: "104" }
+      { input: "2 1\n10 20", output: "20" }, { input: "5 3\n1 2 3 4 5", output: "12" }, { input: "3 3\n10 10 10", output: "30" }, { input: "5 2\n-1 -2 -3 -4 -5", output: "-3" }, { input: "4 1\n100 200 300 400", output: "400" }, { input: "6 3\n1 1 1 1 1 1", output: "3" }, { input: "2 2\n-50 50", output: "0" }, { input: "5 4\n1 2 3 4 100", output: "109" }, { input: "4 2\n5 8 1 10", output: "13" }, { input: "10 5\n1 1 1 1 100 1 1 1 1 1", output: "104" }
     ],
     timeLimit: "1s", memoryLimit: "256MB", languageSupport: ["python", "java", "cpp", "javascript", "c", "csharp", "go", "rust"]
   },
@@ -813,16 +643,7 @@ export const MASTER_QUESTIONS: CodingQuestion[] = [
       rust: "use std::io::{self, BufRead};\nfn find_equilibrium(a: &[i32]) -> i32 {\n    // TODO: Find the equilibrium index (sum left == sum right)\n    -1\n}\nfn main() {\n    let stdin = io::stdin(); let mut lines = stdin.lock().lines();\n    if let Some(Ok(l1)) = lines.next() {\n        let n: usize = l1.trim().parse().unwrap();\n        if let Some(Ok(l2)) = lines.next() {\n            let a: Vec<i32> = l2.split_whitespace().map(|x| x.parse().unwrap()).collect();\n            println!(\"{}\", find_equilibrium(&a));\n        }\n    }\n}"
     },
     hiddenTestCases: [
-      { input: "1\n5", output: "0" },
-      { input: "2\n1 2", output: "-1" },
-      { input: "5\n1 7 3 6 5", output: "-1" },
-      { input: "6\n1 7 3 6 5 6", output: "3" },
-      { input: "3\n1 0 -1", output: "1" },
-      { input: "4\n1 1 1 1", output: "-1" },
-      { input: "5\n0 0 0 0 0", output: "0" },
-      { input: "3\n-1 0 1", output: "1" },
-      { input: "5\n10 -10 5 2 3", output: "2" },
-      { input: "2\n0 0", output: "0" }
+      { input: "1\n5", output: "0" }, { input: "2\n1 2", output: "-1" }, { input: "5\n1 7 3 6 5", output: "-1" }, { input: "6\n1 7 3 6 5 6", output: "3" }, { input: "3\n1 0 -1", output: "1" }, { input: "4\n1 1 1 1", output: "-1" }, { input: "5\n0 0 0 0 0", output: "0" }, { input: "3\n-1 0 1", output: "1" }, { input: "5\n10 -10 5 2 3", output: "2" }, { input: "2\n0 0", output: "0" }
     ],
     timeLimit: "1s", memoryLimit: "256MB", languageSupport: ["python", "java", "cpp", "javascript", "c", "csharp", "go", "rust"]
   },
@@ -845,26 +666,17 @@ export const MASTER_QUESTIONS: CodingQuestion[] = [
     functionInfo: { name: "rotate(n, k, arr)", params: "n: int, k: int, arr: int[]", returnType: "int[]", goal: "Rotate array by K positions." },
     walkthrough: { input: "[1,2], 1", received: "arr=[1,2], k=1", expected: "2 1", output: "2 1" },
     starterCode: {
-      python: "import sys\ndef rotate(arr, k):\n    # TODO: Rotate array 'arr' to the right by 'k' steps\n    return \"\"\nif __name__ == '__main__':\n    data = sys.stdin.read().split()\n    if len(data) >= 2: \n        n = int(data[0]); k = int(data[1]); arr = [int(x) for x in data[2:n+2]]\n        print(rotate(arr, k))",
-      java: "import java.util.Scanner;\npublic class Main {\n    public static void rotate(int n, int k, int[] a) {\n        // TODO: Rotate array 'a' to the right by 'k' steps and print\n    }\n    public static void main(String[] args) {\n        Scanner sc = new Scanner(System.in);\n        if(sc.hasNextInt()) {\n            int n = sc.nextInt(); int k = sc.nextInt();\n            int[] a = new int[n]; for(int i=0; i<n; i++) a[i] = sc.nextInt();\n            rotate(n, k, a);\n        }\n    }\n}",
-      cpp: "#include <iostream>\n#include <vector>\nusing namespace std;\nvoid rotateArray(int n, int k, vector<int>& a) {\n    // TODO: Rotate array 'a' to the right by 'k' steps and print\n}\nint main() {\n    int n, k; if(cin >> n >> k) {\n        vector<int> a(n); for(int i=0; i<n; i++) cin >> a[i];\n        rotateArray(n, k, a);\n    } return 0;\n}",
-      javascript: "const fs = require('fs');\nfunction rotateArray(n, k, a) {\n    // TODO: Rotate array 'a' to the right by 'k' steps and return new array\n    return [];\n}\nconst input = fs.readFileSync(0, 'utf8').split(/\\s+/);\nif(input.length >= 2) {\n    const n = parseInt(input[0]); const k = parseInt(input[1]);\n    const a = input.slice(2, n+2).map(Number);\n    console.log(rotateArray(n, k, a).join(' '));\n}",
-      c: "#include <stdio.h>\nvoid rotateArray(int n, int k, int* a) {\n    // TODO: Rotate array 'a' to the right by 'k' steps and print\n}\nint main() {\n    int n, k; if(scanf(\"%d %d\", &n, &k) != EOF) {\n        int a[100001]; for(int i=0; i<n; i++) scanf(\"%d\", &a[i]);\n        rotateArray(n, k, a);\n    } return 0;\n}",
-      csharp: "using System;\nusing System.Linq;\nclass Program {\n    static void Rotate(int n, int k, int[] a) {\n        // TODO: Rotate array 'a' to the right by 'k' steps and print\n    }\n    static void Main() {\n        string[] s = Console.ReadLine().Split(' ', StringSplitOptions.RemoveEmptyEntries);\n        if(s.Length < 2) return; int n=int.Parse(s[0]), k=int.Parse(s[1]);\n        int[] a = Console.ReadLine().Split(' ', StringSplitOptions.RemoveEmptyEntries).Select(int.Parse).ToArray();\n        Rotate(n, k, a);\n    }\n}",
+      python: "import sys\ndef rotate(arr, k):\n    # TODO: Rotate array 'arr' to the right by 'k' steps and return space-separated string\n    return \"\"\nif __name__ == '__main__':\n    data = sys.stdin.read().split()\n    if len(data) >= 2: \n        n = int(data[0]); k = int(data[1]); arr = [int(x) for x in data[2:n+2]]\n        print(rotate(arr, k))",
+      java: "import java.util.Scanner;\npublic class Main {\n    public static void rotate(int n, int k, int[] a) {\n        // TODO: Rotate array 'a' to the right by 'k' steps and print separated by space\n    }\n    public static void main(String[] args) {\n        Scanner sc = new Scanner(System.in);\n        if(sc.hasNextInt()) {\n            int n = sc.nextInt(); int k = sc.nextInt();\n            int[] a = new int[n]; for(int i=0; i<n; i++) a[i] = sc.nextInt();\n            rotate(n, k, a);\n        }\n    }\n}",
+      cpp: "#include <iostream>\n#include <vector>\nusing namespace std;\nvoid rotateArray(int n, int k, vector<int>& a) {\n    // TODO: Rotate array 'a' to the right by 'k' steps and print separated by space\n}\nint main() {\n    int n, k; if(cin >> n >> k) {\n        vector<int> a(n); for(int i=0; i<n; i++) cin >> a[i];\n        rotateArray(n, k, a);\n    } return 0;\n}",
+      javascript: "const fs = require('fs');\nfunction rotateArray(n, k, a) {\n    // TODO: Rotate array 'a' to the right by 'k' steps and return it as array\n    return [];\n}\nconst input = fs.readFileSync(0, 'utf8').split(/\\s+/);\nif(input.length >= 2) {\n    const n = parseInt(input[0]); const k = parseInt(input[1]);\n    const a = input.slice(2, n+2).map(Number);\n    console.log(rotateArray(n, k, a).join(' '));\n}",
+      c: "#include <stdio.h>\nvoid rotateArray(int n, int k, int* a) {\n    // TODO: Rotate array 'a' to the right by 'k' steps and print separated by space\n}\nint main() {\n    int n, k; if(scanf(\"%d %d\", &n, &k) != EOF) {\n        int a[100001]; for(int i=0; i<n; i++) scanf(\"%d\", &a[i]);\n        rotateArray(n, k, a);\n    } return 0;\n}",
+      csharp: "using System;\nusing System.Linq;\nclass Program {\n    static void Rotate(int n, int k, int[] a) {\n        // TODO: Rotate array 'a' to the right by 'k' steps and print separated by space\n    }\n    static void Main() {\n        string[] s = Console.ReadLine().Split(' ', StringSplitOptions.RemoveEmptyEntries);\n        if(s.Length < 2) return; int n=int.Parse(s[0]), k=int.Parse(s[1]);\n        int[] a = Console.ReadLine().Split(' ', StringSplitOptions.RemoveEmptyEntries).Select(int.Parse).ToArray();\n        Rotate(n, k, a);\n    }\n}",
       go: "package main\nimport (\"fmt\")\nfunc rotate(n, k int, arr []int) []int {\n    // TODO: Rotate array 'arr' to the right by 'k' steps\n    return []int{}\n}\nfunc main() {\n    var n, k int; fmt.Scan(&n, &k)\n    a := make([]int, n); for i := 0; i < n; i++ { fmt.Scan(&a[i]) }\n    res := rotate(n, k, a)\n    for i, v := range res { fmt.Print(v); if i < len(res)-1 { fmt.Print(\" \") } }\n    fmt.Println()\n}",
       rust: "use std::io::{self, BufRead};\nfn rotate(a: &[i32], k: usize) -> Vec<i32> {\n    // TODO: Rotate array 'a' to the right by 'k' steps\n    Vec::new()\n}\nfn main() {\n    let stdin = io::stdin(); let mut lines = stdin.lock().lines();\n    if let Some(Ok(l1)) = lines.next() {\n        let v: Vec<usize> = l1.split_whitespace().map(|x| x.parse().unwrap()).collect();\n        let (n, k) = (v[0], v[1]);\n        if let Some(Ok(l2)) = lines.next() {\n            let a: Vec<i32> = l2.split_whitespace().map(|x| x.parse().unwrap()).collect();\n            let res = rotate(&a, k);\n            println!(\"{}\", res.iter().map(|x| x.to_string()).collect::<Vec<String>>().join(\" \"));\n        }\n    }\n}"
     },
     hiddenTestCases: [
-      { input: "2 1\n1 2", output: "2 1" },
-      { input: "5 2\n1 2 3 4 5", output: "4 5 1 2 3" },
-      { input: "3 0\n10 20 30", output: "10 20 30" },
-      { input: "4 4\n1 2 3 4", output: "1 2 3 4" },
-      { input: "5 10\n1 2 3 4 5", output: "1 2 3 4 5" },
-      { input: "2 3\n5 10", output: "10 5" },
-      { input: "6 1\n1 2 3 4 5 6", output: "6 1 2 3 4 5" },
-      { input: "4 2\n-1 -2 -3 -4", output: "-3 -4 -1 -2" },
-      { input: "3 5\n10 20 30", output: "20 30 10" },
-      { input: "1 100\n5", output: "5" }
+      { input: "2 1\n1 2", output: "2 1" }, { input: "5 2\n1 2 3 4 5", output: "4 5 1 2 3" }, { input: "3 0\n10 20 30", output: "10 20 30" }, { input: "4 4\n1 2 3 4", output: "1 2 3 4" }, { input: "5 10\n1 2 3 4 5", output: "1 2 3 4 5" }, { input: "2 3\n5 10", output: "10 5" }, { input: "6 1\n1 2 3 4 5 6", output: "6 1 2 3 4 5" }, { input: "4 2\n-1 -2 -3 -4", output: "-3 -4 -1 -2" }, { input: "3 5\n10 20 30", output: "20 30 10" }, { input: "1 100\n5", output: "5" }
     ],
     timeLimit: "1s", memoryLimit: "256MB", languageSupport: ["python", "java", "cpp", "javascript", "c", "csharp", "go", "rust"]
   },
@@ -897,16 +709,7 @@ export const MASTER_QUESTIONS: CodingQuestion[] = [
       rust: "use std::io::{self, BufRead};\nfn longest_unique_sub(s: &str) -> usize {\n    // TODO: Find length of longest substring without repeating characters\n    0\n}\nfn main() {\n    let mut line = String::new(); io::stdin().lock().read_line(&mut line).unwrap();\n    println!(\"{}\", longest_unique_sub(line.trim()));\n}"
     },
     hiddenTestCases: [
-      { input: "abcabcbb", output: "3" },
-      { input: "bbbbb", output: "1" },
-      { input: "pwwkew", output: "3" },
-      { input: "abcdef", output: "6" },
-      { input: "a", output: "1" },
-      { input: "abcbdef", output: "4" },
-      { input: "12312345", output: "5" },
-      { input: "dvdf", output: "3" },
-      { input: " ", output: "1" },
-      { input: "nexvoro", output: "7" }
+      { input: "abcabcbb", output: "3" }, { input: "bbbbb", output: "1" }, { input: "pwwkew", output: "3" }, { input: "abcdef", output: "6" }, { input: "a", output: "1" }, { input: "abcbdef", output: "4" }, { input: "12312345", output: "5" }, { input: "dvdf", output: "3" }, { input: " ", output: "1" }, { input: "nexvoro", output: "7" }
     ],
     timeLimit: "1s", memoryLimit: "256MB", languageSupport: ["python", "java", "cpp", "javascript", "c", "csharp", "go", "rust"]
   },
@@ -939,16 +742,7 @@ export const MASTER_QUESTIONS: CodingQuestion[] = [
       rust: "use std::io::{self, BufRead};\nfn longest_pal(s: &str) -> usize {\n    // TODO: Find the length of the longest palindromic substring\n    0\n}\nfn main() {\n    let mut line = String::new(); io::stdin().lock().read_line(&mut line).unwrap();\n    println!(\"{}\", longest_pal(line.trim()));\n}"
     },
     hiddenTestCases: [
-      { input: "aaaaa", output: "5" },
-      { input: "abccba", output: "6" },
-      { input: "abcde", output: "1" },
-      { input: "racecar", output: "7" },
-      { input: "abbac", output: "4" },
-      { input: "noon", output: "4" },
-      { input: "a", output: "1" },
-      { input: "cbbd", output: "2" },
-      { input: "abacaba", output: "7" },
-      { input: "forgeeksskeegfor", output: "10" }
+      { input: "aaaaa", output: "5" }, { input: "abccba", output: "6" }, { input: "abcde", output: "1" }, { input: "racecar", output: "7" }, { input: "abbac", output: "4" }, { input: "noon", output: "4" }, { input: "a", output: "1" }, { input: "cbbd", output: "2" }, { input: "abacaba", output: "7" }, { input: "forgeeksskeegfor", output: "10" }
     ],
     timeLimit: "1s", memoryLimit: "256MB", languageSupport: ["python", "java", "cpp", "javascript", "c", "csharp", "go", "rust"]
   },
@@ -971,26 +765,17 @@ export const MASTER_QUESTIONS: CodingQuestion[] = [
     functionInfo: { name: "mergeIntervals(n, intervals)", params: "n: int, intervals: int[][]", returnType: "int[][]", goal: "Combine overlapping intervals." },
     walkthrough: { input: "2, [1,5], [2,6]", received: "intv=[[1,5],[2,6]]", expected: "1 6", output: "1 6" },
     starterCode: {
-      python: "import sys\ndef merge(intervals):\n    # TODO: Merge overlapping intervals and print results\n    pass\nif __name__ == '__main__':\n    data = sys.stdin.read().split()\n    if data:\n        n = int(data[0]); intervals = []\n        for i in range(n): intervals.append([int(data[2*i+1]), int(data[2*i+2])])\n        merge(intervals)",
-      java: "import java.util.*;\npublic class Main {\n    public static void mergeIntervals(int n, int[][] a) {\n        // TODO: Merge overlapping intervals and print results\n    }\n    public static void main(String[] args) {\n        Scanner sc = new Scanner(System.in);\n        if(sc.hasNextInt()) {\n            int n = sc.nextInt(); int[][] a = new int[n][2];\n            for(int i=0; i<n; i++) { a[i][0]=sc.nextInt(); a[i][1]=sc.nextInt(); }\n            mergeIntervals(n, a);\n        }\n    }\n}",
-      cpp: "#include <iostream>\n#include <vector>\nusing namespace std;\nvoid mergeIntervals(int n, vector<pair<int, int>>& a) {\n    // TODO: Merge overlapping intervals and print results\n}\nint main() {\n    int n; if(cin >> n) {\n        vector<pair<int, int>> a(n);\n        for(int i=0; i<n; i++) cin >> a[i].first >> a[i].second;\n        mergeIntervals(n, a);\n    } return 0;\n}",
-      javascript: "const fs = require('fs');\nfunction mergeIntervals(n, a) {\n    // TODO: Merge overlapping intervals and log results\n}\nconst input = fs.readFileSync(0, 'utf8').split(/\\s+/);\nif(input.length > 1) {\n    const n = parseInt(input[0]); const a = [];\n    for(let i=0; i<n; i++) a.push([parseInt(input[2*i+1]), parseInt(input[2*i+2])]);\n    mergeIntervals(n, a);\n}",
-      c: "#include <stdio.h>\nvoid mergeIntervals(int n, int a[][2]) {\n    // TODO: Merge overlapping intervals and print results\n}\nint main() {\n    int n; if(scanf(\"%d\", &n) != EOF) {\n        int a[100001][2]; for(int i=0; i<n; i++) scanf(\"%d %d\", &a[i][0], &a[i][1]);\n        mergeIntervals(n, a);\n    } return 0;\n}",
-      csharp: "using System;\nusing System.Collections.Generic;\nusing System.Linq;\nclass Program {\n    static void MergeIntervals(int n, int[][] a) {\n        // TODO: Merge overlapping intervals and print results\n    }\n    static void Main() {\n        string l = Console.ReadLine(); if(l==null) return;\n        int n = int.Parse(l); List<int[]> a = new List<int[]>();\n        for(int i=0; i<n; i++) a.Add(Console.ReadLine().Split(' ', StringSplitOptions.RemoveEmptyEntries).Select(int.Parse).ToArray());\n        MergeIntervals(n, a.ToArray());\n    }\n}",
-      go: "package main\nimport (\"fmt\")\nfunc mergeIntervals(n int, a [][]int) {\n    // TODO: Merge overlapping intervals and print results\n}\nfunc main() {\n    var n int; fmt.Scan(&n)\n    a := make([][]int, n); for i := 0; i < n; i++ { a[i] = make([]int, 2); fmt.Scan(&a[i][0], &a[i][1]) }\n    mergeIntervals(n, a)\n}",
-      rust: "use std::io::{self, BufRead};\nfn merge_intervals(mut a: Vec<Vec<i32>>) {\n    // TODO: Merge overlapping intervals and print results\n}\nfn main() {\n    let stdin = io::stdin(); let mut lines = stdin.lock().lines();\n    if let Some(Ok(l1)) = lines.next() {\n        let n: usize = l1.trim().parse().unwrap();\n        let mut a = Vec::new();\n        for _ in 0..n { if let Some(Ok(ln)) = lines.next() {\n            let v: Vec<i32> = ln.split_whitespace().map(|x| x.parse().unwrap()).collect();\n            a.push(v);\n        } }\n        merge_intervals(a);\n    }\n}"
+      python: "import sys\ndef merge(intervals):\n    # TODO: Merge overlapping intervals and print results line by line\n    pass\nif __name__ == '__main__':\n    data = sys.stdin.read().split()\n    if data:\n        n = int(data[0]); intervals = []\n        for i in range(n): intervals.append([int(data[2*i+1]), int(data[2*i+2])])\n        merge(intervals)",
+      java: "import java.util.*;\npublic class Main {\n    public static void mergeIntervals(int n, int[][] a) {\n        // TODO: Merge overlapping intervals and print results line by line\n    }\n    public static void main(String[] args) {\n        Scanner sc = new Scanner(System.in);\n        if(sc.hasNextInt()) {\n            int n = sc.nextInt(); int[][] a = new int[n][2];\n            for(int i=0; i<n; i++) { a[i][0]=sc.nextInt(); a[i][1]=sc.nextInt(); }\n            mergeIntervals(n, a);\n        }\n    }\n}",
+      cpp: "#include <iostream>\n#include <vector>\n#include <algorithm>\nusing namespace std;\nvoid mergeIntervals(int n, vector<pair<int, int>>& a) {\n    // TODO: Merge overlapping intervals and print results line by line\n}\nint main() {\n    int n; if(cin >> n) {\n        vector<pair<int, int>> a(n);\n        for(int i=0; i<n; i++) cin >> a[i].first >> a[i].second;\n        mergeIntervals(n, a);\n    } return 0;\n}",
+      javascript: "const fs = require('fs');\nfunction mergeIntervals(n, a) {\n    // TODO: Merge overlapping intervals and log results line by line\n}\nconst input = fs.readFileSync(0, 'utf8').split(/\\s+/);\nif(input.length > 1) {\n    const n = parseInt(input[0]); const a = [];\n    for(let i=0; i<n; i++) a.push([parseInt(input[2*i+1]), parseInt(input[2*i+2])]);\n    mergeIntervals(n, a);\n}",
+      c: "#include <stdio.h>\n#include <stdlib.h>\nvoid mergeIntervals(int n, int a[][2]) {\n    // TODO: Merge overlapping intervals and print results line by line\n}\nint main() {\n    int n; if(scanf(\"%d\", &n) != EOF) {\n        int a[100001][2]; for(int i=0; i<n; i++) scanf(\"%d %d\", &a[i][0], &a[i][1]);\n        mergeIntervals(n, a);\n    } return 0;\n}",
+      csharp: "using System;\nusing System.Collections.Generic;\nusing System.Linq;\nclass Program {\n    static void MergeIntervals(int n, int[][] a) {\n        // TODO: Merge overlapping intervals and print results line by line\n    }\n    static void Main() {\n        string l = Console.ReadLine(); if(l==null) return;\n        int n = int.Parse(l); List<int[]> a = new List<int[]>();\n        for(int i=0; i<n; i++) a.Add(Console.ReadLine().Split(' ', StringSplitOptions.RemoveEmptyEntries).Select(int.Parse).ToArray());\n        MergeIntervals(n, a.ToArray());\n    }\n}",
+      go: "package main\nimport (\"fmt\"; \"sort\")\nfunc mergeIntervals(n int, a [][]int) {\n    // TODO: Merge overlapping intervals and print results line by line\n}\nfunc main() {\n    var n int; fmt.Scan(&n)\n    a := make([][]int, n); for i := 0; i < n; i++ { a[i] = make([]int, 2); fmt.Scan(&a[i][0], &a[i][1]) }\n    mergeIntervals(n, a)\n}",
+      rust: "use std::io::{self, BufRead};\nfn merge_intervals(mut a: Vec<Vec<i32>>) {\n    // TODO: Merge overlapping intervals and print results line by line\n}\nfn main() {\n    let stdin = io::stdin(); let mut lines = stdin.lock().lines();\n    if let Some(Ok(l1)) = lines.next() {\n        let n: usize = l1.trim().parse().unwrap();\n        let mut a = Vec::new();\n        for _ in 0..n { if let Some(Ok(ln)) = lines.next() {\n            let v: Vec<i32> = ln.split_whitespace().map(|x| x.parse().unwrap()).collect();\n            a.push(v);\n        } }\n        merge_intervals(a);\n    }\n}"
     },
     hiddenTestCases: [
-      { input: "2\n1 4\n4 5", output: "1 5" },
-      { input: "3\n1 3\n5 7\n10 12", output: "1 3\n5 7\n10 12" },
-      { input: "1\n10 20", output: "10 20" },
-      { input: "4\n1 10\n2 3\n4 5\n6 7", output: "1 10" },
-      { input: "2\n5 8\n1 10", output: "1 10" },
-      { input: "3\n1 5\n2 4\n3 6", output: "1 6" },
-      { input: "2\n1 2\n3 4", output: "1 2\n3 4" },
-      { input: "5\n1 2\n2 3\n3 4\n4 5\n5 6", output: "1 6" },
-      { input: "2\n1 100\n100 200", output: "1 200" },
-      { input: "3\n10 15\n15 20\n10 20", output: "10 20" }
+      { input: "2\n1 4\n4 5", output: "1 5" }, { input: "3\n1 3\n5 7\n10 12", output: "1 3\n5 7\n10 12" }, { input: "1\n10 20", output: "10 20" }, { input: "4\n1 10\n2 3\n4 5\n6 7", output: "1 10" }, { input: "2\n5 8\n1 10", output: "1 10" }, { input: "3\n1 5\n2 4\n3 6", output: "1 6" }, { input: "2\n1 2\n3 4", output: "1 2\n3 4" }, { input: "5\n1 2\n2 3\n3 4\n4 5\n5 6", output: "1 6" }, { input: "2\n1 100\n100 200", output: "1 200" }, { input: "3\n10 15\n15 20\n10 20", output: "10 20" }
     ],
     timeLimit: "2s", memoryLimit: "256MB", languageSupport: ["python", "java", "cpp", "javascript", "c", "csharp", "go", "rust"]
   },
@@ -1013,26 +798,17 @@ export const MASTER_QUESTIONS: CodingQuestion[] = [
     functionInfo: { name: "topK(n, k, arr)", params: "n: int, k: int, arr: int[]", returnType: "int[]", goal: "Find K most frequent elements." },
     walkthrough: { input: "[1,1,2], 1", received: "arr=[1,1,2], k=1", expected: "1", output: "1" },
     starterCode: {
-      python: "import sys\ndef top_k(arr, k):\n    # TODO: Find K most frequent elements\n    return \"\"\nif __name__ == '__main__':\n    data = sys.stdin.read().split()\n    if data:\n        n = int(data[0]); k = int(data[1]); arr = [int(x) for x in data[2:]]\n        print(top_k(arr, k))",
-      java: "import java.util.*;\npublic class Main {\n    public static void topK(int n, int k, int[] arr) {\n        // TODO: Find and print K most frequent elements\n    }\n    public static void main(String[] args) {\n        Scanner sc = new Scanner(System.in);\n        if(sc.hasNextInt()) {\n            int n = sc.nextInt(); int k = sc.nextInt();\n            int[] arr = new int[n];\n            for(int i=0; i<n; i++) arr[i] = sc.nextInt();\n            topK(n, k, arr);\n        }\n    }\n}",
-      cpp: "#include <iostream>\n#include <vector>\nusing namespace std;\nvoid topK(int n, int k, vector<int>& a) {\n    // TODO: Find and print K most frequent elements\n}\nint main() {\n    int n, k; if(cin >> n >> k) {\n        vector<int> a(n); for(int i=0; i<n; i++) cin >> a[i];\n        topK(n, k, a);\n    } return 0;\n}",
+      python: "import sys\ndef top_k(arr, k):\n    # TODO: Find K most frequent elements and return space-separated string\n    return \"\"\nif __name__ == '__main__':\n    data = sys.stdin.read().split()\n    if data:\n        n = int(data[0]); k = int(data[1]); arr = [int(x) for x in data[2:]]\n        print(top_k(arr, k))",
+      java: "import java.util.*;\npublic class Main {\n    public static void topK(int n, int k, int[] arr) {\n        // TODO: Find and print K most frequent elements separated by space\n    }\n    public static void main(String[] args) {\n        Scanner sc = new Scanner(System.in);\n        if(sc.hasNextInt()) {\n            int n = sc.nextInt(); int k = sc.nextInt();\n            int[] arr = new int[n];\n            for(int i=0; i<n; i++) arr[i] = sc.nextInt();\n            topK(n, k, arr);\n        }\n    }\n}",
+      cpp: "#include <iostream>\n#include <vector>\nusing namespace std;\nvoid topK(int n, int k, vector<int>& a) {\n    // TODO: Find and print K most frequent elements separated by space\n}\nint main() {\n    int n, k; if(cin >> n >> k) {\n        vector<int> a(n); for(int i=0; i<n; i++) cin >> a[i];\n        topK(n, k, a);\n    } return 0;\n}",
       javascript: "const fs = require('fs');\nfunction topK(n, k, a) {\n    // TODO: Find K most frequent elements and return them as an array\n    return [];\n}\nconst input = fs.readFileSync(0, 'utf8').split(/\\s+/);\nif(input.length >= 2) {\n    const n = parseInt(input[0]); const k = parseInt(input[1]);\n    const a = input.slice(2, n+2).map(Number);\n    console.log(topK(n, k, a).join(' '));\n}",
-      c: "#include <stdio.h>\nvoid topK(int n, int k, int* a) {\n    // TODO: Find and print K most frequent elements\n}\nint main() {\n    int n, k; if(scanf(\"%d %d\", &n, &k) != EOF) {\n        int a[100001]; for(int i=0; i<n; i++) scanf(\"%d\", &a[i]);\n        topK(n, k, a);\n    } return 0;\n}",
-      csharp: "using System;\nusing System.Collections.Generic;\nclass Program {\n    static void TopK(int n, int k, int[] a) {\n        // TODO: Find and print K most frequent elements\n    }\n    static void Main() {\n        string[] s = Console.ReadLine().Split(' ', StringSplitOptions.RemoveEmptyEntries);\n        if(s.Length < 2) return; int n=int.Parse(s[0]), k=int.Parse(s[1]);\n        int[] a = Console.ReadLine().Split(' ', StringSplitOptions.RemoveEmptyEntries).Select(int.Parse).ToArray();\n        TopK(n, k, a);\n    }\n}",
+      c: "#include <stdio.h>\nvoid topK(int n, int k, int* a) {\n    // TODO: Find and print K most frequent elements separated by space\n}\nint main() {\n    int n, k; if(scanf(\"%d %d\", &n, &k) != EOF) {\n        int a[100001]; for(int i=0; i<n; i++) scanf(\"%d\", &a[i]);\n        topK(n, k, a);\n    } return 0;\n}",
+      csharp: "using System;\nusing System.Collections.Generic;\nclass Program {\n    static void TopK(int n, int k, int[] a) {\n        // TODO: Find and print K most frequent elements separated by space\n    }\n    static void Main() {\n        string[] s = Console.ReadLine().Split(' ', StringSplitOptions.RemoveEmptyEntries);\n        if(s.Length < 2) return; int n=int.Parse(s[0]), k=int.Parse(s[1]);\n        int[] a = Console.ReadLine().Split(' ', StringSplitOptions.RemoveEmptyEntries).Select(int.Parse).ToArray();\n        TopK(n, k, a);\n    }\n}",
       go: "package main\nimport (\"fmt\")\nfunc topK(n, k int, arr []int) []int {\n    // TODO: Find K most frequent elements\n    return []int{}\n}\nfunc main() {\n    var n, k int; fmt.Scan(&n, &k)\n    a := make([]int, n); for i := 0; i < n; i++ { fmt.Scan(&a[i]) }\n    res := topK(n, k, a)\n    for i, v := range res { fmt.Print(v); if i < len(res)-1 { fmt.Print(\" \") } }\n    fmt.Println()\n}",
       rust: "use std::io::{self, BufRead};\nfn top_k(a: &[i32], k: usize) -> Vec<i32> {\n    // TODO: Find K most frequent elements\n    Vec::new()\n}\nfn main() {\n    let stdin = io::stdin(); let mut lines = stdin.lock().lines();\n    if let Some(Ok(l1)) = lines.next() {\n        let v: Vec<usize> = l1.split_whitespace().map(|x| x.parse().unwrap()).collect();\n        let (n, k) = (v[0], v[1]);\n        if let Some(Ok(l2)) = lines.next() {\n            let a: Vec<i32> = l2.split_whitespace().map(|x| x.parse().unwrap()).collect();\n            let res = top_k(&a, k);\n            println!(\"{}\", res.iter().map(|x| x.to_string()).collect::<Vec<String>>().join(\" \"));\n        }\n    }\n}"
     },
     hiddenTestCases: [
-      { input: "1 1\n5", output: "5" },
-      { input: "4 2\n1 2 1 2", output: "1 2" },
-      { input: "3 1\n1 2 2", output: "2" },
-      { input: "5 2\n1 1 1 1 5", output: "1 5" },
-      { input: "7 3\n1 2 3 1 2 1 0", output: "1 2 3" },
-      { input: "4 1\n10 10 10 10", output: "10" },
-      { input: "5 1\n1 2 3 4 5", output: "1" },
-      { input: "6 2\n1 2 3 1 2 3", output: "1 2" },
-      { input: "2 1\n100 200", output: "100" },
-      { input: "10 2\n1 1 1 2 2 2 3 3 4 5", output: "1 2" }
+      { input: "1 1\n5", output: "5" }, { input: "4 2\n1 2 1 2", output: "1 2" }, { input: "3 1\n1 2 2", output: "2" }, { input: "5 2\n1 1 1 1 5", output: "1 5" }, { input: "7 3\n1 2 3 1 2 1 0", output: "1 2 3" }, { input: "4 1\n10 10 10 10", output: "10" }, { input: "5 1\n1 2 3 4 5", output: "1" }, { input: "6 2\n1 2 3 1 2 3", output: "1 2" }, { input: "2 1\n100 200", output: "100" }, { input: "10 2\n1 1 1 2 2 2 3 3 4 5", output: "1 2" }
     ],
     timeLimit: "2s", memoryLimit: "256MB", languageSupport: ["python", "java", "cpp", "javascript", "c", "csharp", "go", "rust"]
   },
@@ -1065,16 +841,7 @@ export const MASTER_QUESTIONS: CodingQuestion[] = [
       rust: "use std::io::{self, BufRead};\nfn min_window(s: &str, t: &str) -> usize {\n    // TODO: Find length of the smallest window in 's' containing all characters of 't'\n    0\n}\nfn main() {\n    let stdin = io::stdin(); let mut lines = stdin.lock().lines();\n    if let Some(Ok(s)) = lines.next() {\n        if let Some(Ok(t)) = lines.next() {\n            println!(\"{}\", min_window(s.trim(), t.trim()));\n        }\n    }\n}"
     },
     hiddenTestCases: [
-      { input: "ADOBECODEBANC\nABC", output: "4" },
-      { input: "a\na", output: "1" },
-      { input: "a\naa", output: "0" },
-      { input: "abc\nb", output: "1" },
-      { input: "aaabbb\nab", output: "2" },
-      { input: "ab\nd", output: "0" },
-      { input: "xyz\nxy", output: "2" },
-      { input: "ABC\nABC", output: "3" },
-      { input: "aa\naa", output: "2" },
-      { input: "thisisaverylongstring\nits", output: "4" }
+      { input: "ADOBECODEBANC\nABC", output: "4" }, { input: "a\na", output: "1" }, { input: "a\naa", output: "0" }, { input: "abc\nb", output: "1" }, { input: "aaabbb\nab", output: "2" }, { input: "ab\nd", output: "0" }, { input: "xyz\nxy", output: "2" }, { input: "ABC\nABC", output: "3" }, { input: "aa\naa", output: "2" }, { input: "thisisaverylongstring\nits", output: "4" }
     ],
     timeLimit: "3s", memoryLimit: "256MB", languageSupport: ["python", "java", "cpp", "javascript", "c", "csharp", "go", "rust"]
   },
@@ -1102,21 +869,12 @@ export const MASTER_QUESTIONS: CodingQuestion[] = [
       cpp: "#include <iostream>\n#include <vector>\nusing namespace std;\nint longestConsecutive(int n, vector<int>& a) {\n    // TODO: Find length of the longest consecutive sequence in O(n) time\n    return 0;\n}\nint main() {\n    int n; if(cin >> n) {\n        vector<int> a(n); for(int i=0; i<n; i++) cin >> a[i];\n        cout << longestConsecutive(n, a) << endl;\n    } return 0;\n}",
       javascript: "const fs = require('fs');\nfunction longestConsecutive(n, a) {\n    // TODO: Find length of the longest consecutive sequence in O(n) time\n    return 0;\n}\nconst input = fs.readFileSync(0, 'utf8').split(/\\s+/);\nif(input.length > 1) {\n    const n = parseInt(input[0]); const a = input.slice(1, n+1).map(Number);\n    console.log(longestConsecutive(n, a));\n}",
       c: "#include <stdio.h>\nint longestConsecutive(int n, int* arr) {\n    // TODO: Find length of the longest consecutive sequence in O(n) time\n    return 0;\n}\nint main() {\n    int n; if(scanf(\"%d\", &n) != EOF) {\n        int a[100001]; for(int i=0; i<n; i++) scanf(\"%d\", &a[i]);\n        printf(\"%d\\n\", longestConsecutive(n, a));\n    } return 0;\n}",
-      csharp: "using System;\nusing System.Collections.Generic;\nclass Program {\n    static int LongestConsecutive(int n, int[] arr) {\n        // TODO: Find length of the longest consecutive sequence in O(n) time\n        return 0;\n    }\n    static void Main() {\n        string l = Console.ReadLine(); if(l==null) return;\n        int n = int.Parse(l);\n        int[] a = Console.ReadLine().Split(' ', StringSplitOptions.RemoveEmptyEntries).Select(int.Parse).ToArray();\n        Console.WriteLine(LongestConsecutive(n, a));\n    }\n}",
+      csharp: "using System;\nusing System.Collections.Generic;\nusing System.Linq;\nclass Program {\n    static int LongestConsecutive(int n, int[] arr) {\n        // TODO: Find length of the longest consecutive sequence in O(n) time\n        return 0;\n    }\n    static void Main() {\n        string l = Console.ReadLine(); if(l==null) return;\n        int n = int.Parse(l);\n        int[] a = Console.ReadLine().Split(' ', StringSplitOptions.RemoveEmptyEntries).Select(int.Parse).ToArray();\n        Console.WriteLine(LongestConsecutive(n, a));\n    }\n}",
       go: "package main\nimport \"fmt\"\nfunc longestConsecutive(n int, arr []int) int {\n    // TODO: Find length of the longest consecutive sequence in O(n) time\n    return 0\n}\nfunc main() {\n    var n int; fmt.Scan(&n)\n    a := make([]int, n); for i := 0; i < n; i++ { fmt.Scan(&a[i]) }\n    fmt.Println(longestConsecutive(n, a))\n}",
       rust: "use std::io::{self, BufRead};\nfn longest_consecutive(a: &[i32]) -> usize {\n    // TODO: Find length of the longest consecutive sequence in O(n) time\n    0\n}\nfn main() {\n    let stdin = io::stdin(); let mut lines = stdin.lock().lines();\n    if let Some(Ok(l1)) = lines.next() {\n        let n: usize = l1.trim().parse().unwrap();\n        if let Some(Ok(l2)) = lines.next() {\n            let a: Vec<i32> = l2.split_whitespace().map(|x| x.parse().unwrap()).collect();\n            println!(\"{}\", longest_consecutive(&a));\n        }\n    }\n}"
     },
     hiddenTestCases: [
-      { input: "6\n100 4 200 1 3 2", output: "4" },
-      { input: "1\n5", output: "1" },
-      { input: "5\n1 1 1 1 1", output: "1" },
-      { input: "5\n10 20 30 40 50", output: "1" },
-      { input: "4\n1 2 3 4", output: "4" },
-      { input: "3\n-1 0 1", output: "3" },
-      { input: "5\n0 3 7 2 5", output: "1" },
-      { input: "6\n9 1 4 7 3 -1", output: "1" },
-      { input: "2\n10 11", output: "2" },
-      { input: "10\n1 3 5 7 9 2 4 6 8 10", output: "10" }
+      { input: "6\n100 4 200 1 3 2", output: "4" }, { input: "1\n5", output: "1" }, { input: "5\n1 1 1 1 1", output: "1" }, { input: "5\n10 20 30 40 50", output: "1" }, { input: "4\n1 2 3 4", output: "4" }, { input: "3\n-1 0 1", output: "3" }, { input: "5\n0 3 7 2 5", output: "1" }, { input: "6\n9 1 4 7 3 -1", output: "1" }, { input: "2\n10 11", output: "2" }, { input: "10\n1 3 5 7 9 2 4 6 8 10", output: "10" }
     ],
     timeLimit: "1s", memoryLimit: "256MB", languageSupport: ["python", "java", "cpp", "javascript", "c", "csharp", "go", "rust"]
   },
@@ -1136,7 +894,7 @@ export const MASTER_QUESTIONS: CodingQuestion[] = [
     sampleInput: "3\n0 0 1\n1 0 1\n1 0 0",
     sampleOutput: "YES",
     explanation: "Determine if a continuous path of 0s exists between the top-left and bottom-right corners.",
-    functionInfo: { name: "isPath(n, matrix)", params: "n: int, matrix: int[][]", returnType: "boolean", goal: "Find if exit is reachable from start." },
+    functionInfo: { name: "hasPath(n, grid)", params: "n: int, grid: int[][]", returnType: "boolean", goal: "Find if exit is reachable from start." },
     walkthrough: { input: "2, [[0,1],[1,0]]", received: "grid=[[0,1],[1,0]]", expected: "NO", output: "NO" },
     starterCode: {
       python: "import sys\ndef has_path(n, grid):\n    # TODO: Return True if a path exists from (0,0) to (n-1, n-1)\n    return False\nif __name__ == '__main__':\n    data = sys.stdin.read().split()\n    if data:\n        n = int(data[0]); grid = []\n        for i in range(n): grid.append([int(x) for x in data[1+i*n : 1+(i+1)*n]])\n        print(\"YES\" if has_path(n, grid) else \"NO\")",
@@ -1149,16 +907,7 @@ export const MASTER_QUESTIONS: CodingQuestion[] = [
       rust: "use std::io::{self, BufRead};\nfn has_path(n: usize, g: Vec<Vec<i32>>) -> bool {\n    // TODO: Return true if a path exists from (0,0) to (n-1, n-1)\n    false\n}\nfn main() {\n    let stdin = io::stdin(); let mut lines = stdin.lock().lines();\n    if let Some(Ok(l1)) = lines.next() {\n        let n: usize = l1.trim().parse().unwrap();\n        let mut g = Vec::new(); for _ in 0..n { if let Some(Ok(ln)) = lines.next() {\n            let row: Vec<i32> = ln.split_whitespace().map(|x| x.parse().unwrap()).collect(); g.push(row);\n        } }\n        println!(\"{}\", if has_path(n, g) { \"YES\" } else { \"NO\" });\n    }\n}"
     },
     hiddenTestCases: [
-      { input: "3\n0 0 0\n0 0 0\n0 0 0", output: "YES" },
-      { input: "2\n1 0\n0 0", output: "NO" },
-      { input: "3\n0 1 0\n1 1 0\n0 0 0", output: "NO" },
-      { input: "4\n0 0 1 1\n1 0 0 1\n1 1 0 0\n1 1 1 0", output: "YES" },
-      { input: "2\n0 0\n0 0", output: "YES" },
-      { input: "5\n0 1 1 1 1\n0 0 0 0 0\n1 1 1 1 0\n0 0 0 0 0\n0 1 1 1 0", output: "YES" },
-      { input: "3\n0 0 1\n1 0 0\n1 1 0", output: "YES" },
-      { input: "2\n0 1\n1 0", output: "NO" },
-      { input: "4\n0 0 0 0\n0 1 1 0\n0 1 1 0\n0 0 0 0", output: "YES" },
-      { input: "1\n0", output: "YES" }
+      { input: "3\n0 0 0\n0 0 0\n0 0 0", output: "YES" }, { input: "2\n1 0\n0 0", output: "NO" }, { input: "3\n0 1 0\n1 1 0\n0 0 0", output: "NO" }, { input: "4\n0 0 1 1\n1 0 0 1\n1 1 0 0\n1 1 1 0", output: "YES" }, { input: "2\n0 0\n0 0", output: "YES" }, { input: "5\n0 1 1 1 1\n0 0 0 0 0\n1 1 1 1 0\n0 0 0 0 0\n0 1 1 1 0", output: "YES" }, { input: "3\n0 0 1\n1 0 0\n1 1 0", output: "YES" }, { input: "2\n0 1\n1 0", output: "NO" }, { input: "4\n0 0 0 0\n0 1 1 0\n0 1 1 0\n0 0 0 0", output: "YES" }, { input: "1\n0", output: "YES" }
     ],
     timeLimit: "1s", memoryLimit: "256MB", languageSupport: ["python", "java", "cpp", "javascript", "c", "csharp", "go", "rust"]
   },
@@ -1183,24 +932,15 @@ export const MASTER_QUESTIONS: CodingQuestion[] = [
     starterCode: {
       python: "import sys\ndef shortest_path(n, grid):\n    # TODO: Find shortest path from (0,0) to (n-1, n-1) using BFS\n    return -1\nif __name__ == '__main__':\n    data = sys.stdin.read().split()\n    if data:\n        n = int(data[0]); grid = []\n        for i in range(n): grid.append([int(x) for x in data[1+i*n : 1+(i+1)*n]])\n        print(shortest_path(n, grid))",
       java: "import java.util.*;\npublic class Main {\n    public static int shortestPath(int n, int[][] g) {\n        // TODO: Find shortest path from (0,0) to (n-1, n-1) using BFS\n        return -1;\n    }\n    public static void main(String[] args) {\n        Scanner sc = new Scanner(System.in);\n        if(sc.hasNextInt()) {\n            int n = sc.nextInt(); int[][] g = new int[n][n];\n            for(int i=0; i<n; i++) for(int j=0; j<n; j++) g[i][j] = sc.nextInt();\n            System.out.println(shortestPath(n, g));\n        }\n    }\n}",
-      cpp: "#include <iostream>\n#include <vector>\nusing namespace std;\nint shortestPath(int n, vector<vector<int>>& g) {\n    // TODO: Find shortest path from (0,0) to (n-1, n-1) using BFS\n    return -1;\n}\nint main() {\n    int n; if(cin >> n) {\n        vector<vector<int>> g(n, vector<int>(n));\n        for(int i=0; i<n; i++) for(int j=0; j<n; j++) cin >> g[i][j];\n        cout << shortestPath(n, g) << endl;\n    } return 0;\n}",
+      cpp: "#include <iostream>\n#include <vector>\n#include <queue>\nusing namespace std;\nint shortestPath(int n, vector<vector<int>>& g) {\n    // TODO: Find shortest path from (0,0) to (n-1, n-1) using BFS\n    return -1;\n}\nint main() {\n    int n; if(cin >> n) {\n        vector<vector<int>> g(n, vector<int>(n));\n        for(int i=0; i<n; i++) for(int j=0; j<n; j++) cin >> g[i][j];\n        cout << shortestPath(n, g) << endl;\n    } return 0;\n}",
       javascript: "const fs = require('fs');\nfunction shortestPath(n, g) {\n    // TODO: Find shortest path from (0,0) to (n-1, n-1) using BFS\n    return -1;\n}\nconst data = fs.readFileSync(0, 'utf8').split(/\\s+/);\nif(data.length > 1) {\n    const n = parseInt(data[0]); const g = [];\n    for(let i=0; i<n; i++) g.push(data.slice(1+i*n, 1+(i+1)*n).map(Number));\n    console.log(shortestPath(n, g));\n}",
-      c: "#include <stdio.h>\nint shortestPath(int n, int g[][101]) {\n    // TODO: Find shortest path from (0,0) to (n-1, n-1) using BFS\n    return -1;\n}\nint main() {\n    int n; if(scanf(\"%d\", &n) != EOF) {\n        int g[101][101]; for(int i=0; i<n; i++) for(int j=0; j<n; j++) scanf(\"%d\", &g[i][j]);\n        printf(\"%d\\n\", shortestPath(n, g));\n    } return 0;\n}",
+      c: "#include <stdio.h>\n#include <stdlib.h>\nint shortestPath(int n, int g[][101]) {\n    // TODO: Find shortest path from (0,0) to (n-1, n-1) using BFS\n    return -1;\n}\nint main() {\n    int n; if(scanf(\"%d\", &n) != EOF) {\n        int g[101][101]; for(int i=0; i<n; i++) for(int j=0; j<n; j++) scanf(\"%d\", &g[i][j]);\n        printf(\"%d\\n\", shortestPath(n, g));\n    } return 0;\n}",
       csharp: "using System;\nusing System.Collections.Generic;\nclass Program {\n    static int ShortestPath(int n, int[,] g) {\n        // TODO: Find shortest path from (0,0) to (n-1, n-1) using BFS\n        return -1;\n    }\n    static void Main() {\n        string l = Console.ReadLine(); if(l==null) return;\n        int n = int.Parse(l); int[,] g = new int[n,n];\n        for(int i=0; i<n; i++) {\n            string[] line = Console.ReadLine().Split(' ', StringSplitOptions.RemoveEmptyEntries);\n            for(int j=0; j<n; j++) g[i,j] = int.Parse(line[j]);\n        }\n        Console.WriteLine(ShortestPath(n, g));\n    }\n}",
       go: "package main\nimport \"fmt\"\nfunc shortestPath(n int, g [][]int) int {\n    // TODO: Find shortest path from (0,0) to (n-1, n-1) using BFS\n    return -1\n}\nfunc main() {\n    var n int; fmt.Scan(&n)\n    g := make([][]int, n); for i := 0; i < n; i++ { g[i] = make([]int, n); for j := 0; j < n; j++ { fmt.Scan(&g[i][j]) } }\n    fmt.Println(shortestPath(n, g))\n}",
       rust: "use std::io::{self, BufRead};\nfn shortest_path(n: usize, g: Vec<Vec<i32>>) -> i32 {\n    // TODO: Find shortest path from (0,0) to (n-1, n-1) using BFS\n    -1\n}\nfn main() {\n    let stdin = io::stdin(); let mut lines = stdin.lock().lines();\n    if let Some(Ok(l1)) = lines.next() {\n        let n: usize = l1.trim().parse().unwrap();\n        let mut g = Vec::new(); for _ in 0..n { if let Some(Ok(ln)) = lines.next() {\n            let row: Vec<i32> = ln.split_whitespace().map(|x| x.parse().unwrap()).collect(); g.push(row);\n        } }\n        println!(\"{}\", shortest_path(n, g));\n    }\n}"
     },
     hiddenTestCases: [
-      { input: "3\n0 0 0\n0 0 0\n0 0 0", output: "5" },
-      { input: "2\n0 1\n0 0", output: "3" },
-      { input: "3\n0 1 0\n0 1 0\n0 0 0", output: "5" },
-      { input: "4\n0 0 0 0\n1 1 1 0\n0 0 0 0\n0 1 1 1\n0 0 0 0", output: "7" },
-      { input: "2\n1 0\n0 0", output: "-1" },
-      { input: "3\n0 0 1\n1 0 0\n1 1 0", output: "5" },
-      { input: "5\n0 1 1 1 1\n0 0 0 0 0\n1 1 1 1 0\n0 0 0 0 0\n0 1 1 1 0", output: "13" },
-      { input: "1\n0", output: "1" },
-      { input: "2\n0 1\n1 0", output: "-1" },
-      { input: "4\n0 1 1 1\n0 1 1 1\n0 1 1 1\n0 0 0 0", output: "7" }
+      { input: "3\n0 0 0\n0 0 0\n0 0 0", output: "5" }, { input: "2\n0 1\n0 0", output: "3" }, { input: "3\n0 1 0\n0 1 0\n0 0 0", output: "5" }, { input: "4\n0 0 0 0\n1 1 1 0\n0 0 0 0\n0 1 1 1\n0 0 0 0", output: "7" }, { input: "2\n1 0\n0 0", output: "-1" }, { input: "3\n0 0 1\n1 0 0\n1 1 0", output: "5" }, { input: "5\n0 1 1 1 1\n0 0 0 0 0\n1 1 1 1 0\n0 0 0 0 0\n0 1 1 1 0", output: "13" }, { input: "1\n0", output: "1" }, { input: "2\n0 1\n1 0", output: "-1" }, { input: "4\n0 1 1 1\n0 1 1 1\n0 1 1 1\n0 0 0 0", output: "7" }
     ],
     timeLimit: "1s", memoryLimit: "256MB", languageSupport: ["python", "java", "cpp", "javascript", "c", "csharp", "go", "rust"]
   },
@@ -1225,7 +965,7 @@ export const MASTER_QUESTIONS: CodingQuestion[] = [
     starterCode: {
       python: "import sys\ndef lcs(s1, s2):\n    # TODO: Find the length of the longest common subsequence\n    return 0\nif __name__ == '__main__':\n    lines = sys.stdin.read().splitlines()\n    if len(lines)>=2: print(lcs(lines[0], lines[1]))",
       java: "import java.util.Scanner;\npublic class Main {\n    public static int lcs(String s1, String s2) {\n        // TODO: Find the length of the longest common subsequence\n        return 0;\n    }\n    public static void main(String[] args) {\n        Scanner sc = new Scanner(System.in);\n        if(sc.hasNext()) {\n            String s1 = sc.next(); String s2 = sc.next();\n            System.out.println(lcs(s1, s2));\n        }\n    }\n}",
-      cpp: "#include <iostream>\n#include <string>\nusing namespace std;\nint lcs(string s1, string s2) {\n    // TODO: Find the length of the longest common subsequence\n    return 0;\n}\nint main() {\n    string s1, s2; if(cin >> s1 >> s2) cout << lcs(s1, s2) << endl;\n    return 0;\n}",
+      cpp: "#include <iostream>\n#include <string>\n#include <vector>\n#include <algorithm>\nusing namespace std;\nint lcs(string s1, string s2) {\n    // TODO: Find the length of the longest common subsequence\n    return 0;\n}\nint main() {\n    string s1, s2; if(cin >> s1 >> s2) cout << lcs(s1, s2) << endl;\n    return 0;\n}",
       javascript: "const fs = require('fs');\nfunction lcs(s1, s2) {\n    // TODO: Find the length of the longest common subsequence\n    return 0;\n}\nconst input = fs.readFileSync(0, 'utf8').split(/\\s+/);\nif(input.length >= 2) console.log(lcs(input[0], input[1]));",
       c: "#include <stdio.h>\n#include <string.h>\nint lcs(char* s1, char* s2) {\n    // TODO: Find the length of the longest common subsequence\n    return 0;\n}\nint main() {\n    char s1[1001], s2[1001]; if(scanf(\"%s %s\", s1, s2) != EOF) printf(\"%d\\n\", lcs(s1, s2));\n    return 0;\n}",
       csharp: "using System;\nclass Program {\n    static int Lcs(string s1, string s2) {\n        // TODO: Find the length of the longest common subsequence\n        return 0;\n    }\n    static void Main() {\n        string s1 = Console.ReadLine(); string s2 = Console.ReadLine();\n        if(s1!=null && s2!=null) Console.WriteLine(Lcs(s1.Trim(), s2.Trim()));\n    }\n}",
@@ -1233,16 +973,7 @@ export const MASTER_QUESTIONS: CodingQuestion[] = [
       rust: "use std::io::{self, BufRead};\nfn lcs(s1: &str, s2: &str) -> usize {\n    // TODO: Find the length of the longest common subsequence\n    0\n}\nfn main() {\n    let stdin = io::stdin(); let mut lines = stdin.lock().lines();\n    if let Some(Ok(s1)) = lines.next() {\n        if let Some(Ok(s2)) = lines.next() {\n            println!(\"{}\", lcs(s1.trim(), s2.trim()));\n        }\n    }\n}"
     },
     hiddenTestCases: [
-      { input: "abc\nabc", output: "3" },
-      { input: "abc\ndef", output: "0" },
-      { input: "AGGTAB\nGXTXAYB", output: "4" },
-      { input: "longest\nstone", output: "3" },
-      { input: "a\na", output: "1" },
-      { input: "a\nb", output: "0" },
-      { input: "dynamic\nprogramming", output: "3" },
-      { input: "apple\npeach", output: "2" },
-      { input: "hello\nworld", output: "1" },
-      { input: "abcde\nace", output: "3" }
+      { input: "abc\nabc", output: "3" }, { input: "abc\ndef", output: "0" }, { input: "AGGTAB\nGXTXAYB", output: "4" }, { input: "longest\nstone", output: "3" }, { input: "a\na", output: "1" }, { input: "a\nb", output: "0" }, { input: "dynamic\nprogramming", output: "3" }, { input: "apple\npeach", output: "2" }, { input: "hello\nworld", output: "1" }, { input: "abcde\nace", output: "3" }
     ],
     timeLimit: "1s", memoryLimit: "256MB", languageSupport: ["python", "java", "cpp", "javascript", "c", "csharp", "go", "rust"]
   },
@@ -1267,24 +998,15 @@ export const MASTER_QUESTIONS: CodingQuestion[] = [
     starterCode: {
       python: "import sys\ndef coin_change(coins, t):\n    # TODO: Find the minimum number of coins needed to make amount 't'\n    return -1\nif __name__ == '__main__':\n    data = sys.stdin.read().split()\n    if data:\n        n=int(data[0]); t=int(data[1]); coins=[int(x) for x in data[2:]]\n        print(coin_change(coins, t))",
       java: "import java.util.*;\npublic class Main {\n    public static int coinChange(int[] coins, int t) {\n        // TODO: Find the minimum number of coins needed to make amount 't'\n        return -1;\n    }\n    public static void main(String[] args) {\n        Scanner sc = new Scanner(System.in);\n        if(sc.hasNextInt()) {\n            int n = sc.nextInt(); int t = sc.nextInt();\n            int[] coins = new int[n]; for(int i=0; i<n; i++) coins[i] = sc.nextInt();\n            System.out.println(coinChange(coins, t));\n        }\n    }\n}",
-      cpp: "#include <iostream>\n#include <vector>\nusing namespace std;\nint coinChange(vector<int>& coins, int t) {\n    // TODO: Find the minimum number of coins needed to make amount 't'\n    return -1;\n}\nint main() {\n    int n, t; if(cin >> n >> t) {\n        vector<int> coins(n); for(int i=0; i<n; i++) cin >> coins[i];\n        cout << coinChange(coins, t) << endl;\n    } return 0;\n}",
+      cpp: "#include <iostream>\n#include <vector>\n#include <algorithm>\nusing namespace std;\nint coinChange(vector<int>& coins, int t) {\n    // TODO: Find the minimum number of coins needed to make amount 't'\n    return -1;\n}\nint main() {\n    int n, t; if(cin >> n >> t) {\n        vector<int> coins(n); for(int i=0; i<n; i++) cin >> coins[i];\n        cout << coinChange(coins, t) << endl;\n    } return 0;\n}",
       javascript: "const fs = require('fs');\nfunction coinChange(coins, t) {\n    // TODO: Find the minimum number of coins needed to make amount 't'\n    return -1;\n}\nconst input = fs.readFileSync(0, 'utf8').split(/\\s+/);\nif(input.length >= 2) {\n    const n = parseInt(input[0]); const t = parseInt(input[1]);\n    const coins = input.slice(2, n+2).map(Number);\n    console.log(coinChange(coins, t));\n}",
-      c: "#include <stdio.h>\nint coinChange(int n, int* coins, int t) {\n    // TODO: Find the minimum number of coins needed to make amount 't'\n    return -1;\n}\nint main() {\n    int n, t; if(scanf(\"%d %d\", &n, &t) != EOF) {\n        int coins[101]; for(int i=0; i<n; i++) scanf(\"%d\", &coins[i]);\n        printf(\"%d\\n\", coinChange(n, coins, t));\n    } return 0;\n}",
+      c: "#include <stdio.h>\n#include <stdlib.h>\nint coinChange(int n, int* coins, int t) {\n    // TODO: Find the minimum number of coins needed to make amount 't'\n    return -1;\n}\nint main() {\n    int n, t; if(scanf(\"%d %d\", &n, &t) != EOF) {\n        int coins[101]; for(int i=0; i<n; i++) scanf(\"%d\", &coins[i]);\n        printf(\"%d\\n\", coinChange(n, coins, t));\n    } return 0;\n}",
       csharp: "using System;\nusing System.Linq;\nclass Program {\n    static int CoinChange(int[] coins, int t) {\n        // TODO: Find the minimum number of coins needed to make amount 't'\n        return -1;\n    }\n    static void Main() {\n        string[] l1 = Console.ReadLine().Split(' ', StringSplitOptions.RemoveEmptyEntries);\n        if(l1.Length < 2) return; int n=int.Parse(l1[0]), t=int.Parse(l1[1]);\n        int[] coins = Console.ReadLine().Split(' ', StringSplitOptions.RemoveEmptyEntries).Select(int.Parse).ToArray();\n        Console.WriteLine(CoinChange(coins, t));\n    }\n}",
       go: "package main\nimport \"fmt\"\nfunc coinChange(coins []int, t int) int {\n    // TODO: Find the minimum number of coins needed to make amount 't'\n    return -1\n}\nfunc main() {\n    var n, t int; fmt.Scan(&n, &t)\n    coins := make([]int, n); for i:=0; i<n; i++ { fmt.Scan(&coins[i]) }\n    fmt.Println(coinChange(coins, t))\n}",
       rust: "use std::io::{self, BufRead};\nfn coin_change(coins: &[i32], t: i32) -> i32 {\n    // TODO: Find the minimum number of coins needed to make amount 't'\n    -1\n}\nfn main() {\n    let stdin = io::stdin(); let mut lines = stdin.lock().lines();\n    if let Some(Ok(l1)) = lines.next() {\n        let v: Vec<i32> = l1.split_whitespace().map(|x| x.parse().unwrap()).collect();\n        let (_n, t) = (v[0], v[1]);\n        if let Some(Ok(l2)) = lines.next() {\n            let coins: Vec<i32> = l2.split_whitespace().map(|x| x.parse().unwrap()).collect();\n            println!(\"{}\", coin_change(&coins, t));\n        }\n    }\n}"
     },
     hiddenTestCases: [
-      { input: "1 2\n1", output: "2" },
-      { input: "1 2\n5", output: "-1" },
-      { input: "3 11\n1 2 5", output: "3" },
-      { input: "2 3\n2 1", output: "2" },
-      { input: "4 10\n1 3 4 5", output: "2" },
-      { input: "3 0\n1 2 5", output: "0" },
-      { input: "2 7\n2 3", output: "3" },
-      { input: "3 6249\n186 419 83", output: "20" },
-      { input: "2 100\n1 101", output: "100" },
-      { input: "1 100\n100", output: "1" }
+      { input: "1 2\n1", output: "2" }, { input: "1 2\n5", output: "-1" }, { input: "3 11\n1 2 5", output: "3" }, { input: "2 3\n2 1", output: "2" }, { input: "4 10\n1 3 4 5", output: "2" }, { input: "3 0\n1 2 5", output: "0" }, { input: "2 7\n2 3", output: "3" }, { input: "3 6249\n186 419 83", output: "20" }, { input: "2 100\n1 101", output: "100" }, { input: "1 100\n100", output: "1" }
     ],
     timeLimit: "2s", memoryLimit: "256MB", languageSupport: ["python", "java", "cpp", "javascript", "c", "csharp", "go", "rust"]
   },
@@ -1309,24 +1031,15 @@ export const MASTER_QUESTIONS: CodingQuestion[] = [
     starterCode: {
       python: "import sys\ndef trap(arr):\n    # TODO: Calculate how much water can be trapped after rain\n    return 0\nif __name__ == '__main__':\n    data = sys.stdin.read().split()\n    if data: print(trap([int(x) for x in data[1:]]))",
       java: "import java.util.Scanner;\npublic class Main {\n    public static long trap(int n, int[] a) {\n        // TODO: Calculate how much water can be trapped after rain\n        return 0;\n    }\n    public static void main(String[] args) {\n        Scanner sc = new Scanner(System.in);\n        if(sc.hasNextInt()) {\n            int n = sc.nextInt(); int[] a = new int[n];\n            for(int i=0; i<n; i++) a[i] = sc.nextInt();\n            System.out.println(trap(n, a));\n        }\n    }\n}",
-      cpp: "#include <iostream>\n#include <vector>\nusing namespace std;\nlong long trap(int n, vector<int>& a) {\n    // TODO: Calculate how much water can be trapped after rain\n    return 0;\n}\nint main() {\n    int n; if(cin >> n) {\n        vector<int> a(n); for(int i=0; i<n; i++) cin >> a[i];\n        cout << trap(n, a) << endl;\n    } return 0;\n}",
+      cpp: "#include <iostream>\n#include <vector>\n#include <algorithm>\nusing namespace std;\nlong long trap(int n, vector<int>& a) {\n    // TODO: Calculate how much water can be trapped after rain\n    return 0;\n}\nint main() {\n    int n; if(cin >> n) {\n        vector<int> a(n); for(int i=0; i<n; i++) cin >> a[i];\n        cout << trap(n, a) << endl;\n    } return 0;\n}",
       javascript: "const fs = require('fs');\nfunction trap(n, a) {\n    // TODO: Calculate how much water can be trapped after rain\n    return 0;\n}\nconst input = fs.readFileSync(0, 'utf8').split(/\\s+/);\nif(input.length > 1) {\n    const n = parseInt(input[0]); const a = input.slice(1, n+1).map(Number);\n    console.log(trap(n, a));\n}",
-      c: "#include <stdio.h>\nlong long trap(int n, int* a) {\n    // TODO: Calculate how much water can be trapped after rain\n    return 0;\n}\nint main() {\n    int n; if(scanf(\"%d\", &n) != EOF) {\n        int a[100001]; for(int i=0; i<n; i++) scanf(\"%d\", &a[i]);\n        printf(\"%lld\\n\", trap(n, a));\n    } return 0;\n}",
+      c: "#include <stdio.h>\n#include <stdlib.h>\nlong long trap(int n, int* a) {\n    // TODO: Calculate how much water can be trapped after rain\n    return 0;\n}\nint main() {\n    int n; if(scanf(\"%d\", &n) != EOF) {\n        int a[100001]; for(int i=0; i<n; i++) scanf(\"%d\", &a[i]);\n        printf(\"%lld\\n\", trap(n, a));\n    } return 0;\n}",
       csharp: "using System;\nusing System.Linq;\nclass Program {\n    static long Trap(int n, int[] a) {\n        // TODO: Calculate how much water can be trapped after rain\n        return 0;\n    }\n    static void Main() {\n        string l1 = Console.ReadLine(); if(l1==null) return;\n        int n = int.Parse(l1);\n        int[] a = Console.ReadLine().Split(' ', StringSplitOptions.RemoveEmptyEntries).Select(int.Parse).ToArray();\n        Console.WriteLine(Trap(n, a));\n    }\n}",
       go: "package main\nimport \"fmt\"\nfunc trap(n int, arr []int) int64 {\n    // TODO: Calculate how much water can be trapped after rain\n    return 0\n}\nfunc main() {\n    var n int; fmt.Scan(&n)\n    a := make([]int, n); for i := 0; i < n; i++ { fmt.Scan(&a[i]) }\n    fmt.Println(trap(n, a))\n}",
       rust: "use std::io::{self, BufRead};\nfn trap(a: &[i32]) -> i64 {\n    // TODO: Calculate how much water can be trapped after rain\n    0\n}\nfn main() {\n    let stdin = io::stdin(); let mut lines = stdin.lock().lines();\n    if let Some(Ok(l1)) = lines.next() {\n        let n: usize = l1.trim().parse().unwrap();\n        if let Some(Ok(l2)) = lines.next() {\n            let a: Vec<i32> = l2.split_whitespace().map(|x| x.parse().unwrap()).collect();\n            println!(\"{}\", trap(&a));\n        }\n    }\n}"
     },
     hiddenTestCases: [
-      { input: "1\n5", output: "0" },
-      { input: "2\n1 1", output: "0" },
-      { input: "3\n1 2 1", output: "0" },
-      { input: "5\n4 2 0 3 2 5", output: "9" },
-      { input: "6\n0 1 0 2 1 0", output: "1" },
-      { input: "3\n2 0 2", output: "2" },
-      { input: "5\n3 0 0 0 3", output: "6" },
-      { input: "2\n10 0", output: "0" },
-      { input: "4\n10 5 2 10", output: "15" },
-      { input: "10\n1 2 1 2 1 2 1 2 1 2", output: "4" }
+      { input: "1\n5", output: "0" }, { input: "2\n1 1", output: "0" }, { input: "3\n1 2 1", output: "0" }, { input: "5\n4 2 0 3 2 5", output: "9" }, { input: "6\n0 1 0 2 1 0", output: "1" }, { input: "3\n2 0 2", output: "2" }, { input: "5\n3 0 0 0 3", output: "6" }, { input: "2\n10 0", output: "0" }, { input: "4\n10 5 2 10", output: "15" }, { input: "10\n1 2 1 2 1 2 1 2 1 2", output: "4" }
     ],
     timeLimit: "3s", memoryLimit: "256MB", languageSupport: ["python", "java", "cpp", "javascript", "c", "csharp", "go", "rust"]
   }
