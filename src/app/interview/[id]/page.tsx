@@ -52,66 +52,44 @@ function VirtualArenaContent() {
   const aiVideoRef = useRef<HTMLVideoElement | null>(null);
 
   // User Live Webcam Protocol
-  useEffect(() => {
-    let stream: MediaStream | null = null;
-    let cancelled = false;
+  const startCamera = async () => {
+    try {
+      setCameraError(null);
 
-    const startCamera = async () => {
-      try {
-        setCameraError(null);
-
-        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-          throw new Error("Camera API is not available in this browser.");
-        }
-
-        const mediaStream = await navigator.mediaDevices.getUserMedia({
-          video: {
-            width: { ideal: 1280 },
-            height: { ideal: 720 },
-            facingMode: "user",
-          },
-          audio: true,
-        });
-
-        if (cancelled) {
-          mediaStream.getTracks().forEach(track => track.stop());
-          return;
-        }
-
-        stream = mediaStream;
-
-        const video = userVideoRef.current;
-
-        if (!video) {
-          console.error("userVideoRef is not available");
-          return;
-        }
-
-        video.srcObject = mediaStream;
-        video.muted = true;
-        video.autoplay = true;
-        video.playsInline = true;
-
-        await video.play();
-
-        console.log("REAL USER CAMERA STARTED");
-      } catch (error: any) {
-        console.error("REAL CAMERA ERROR:", error);
-
-        if (!cancelled) {
-          setCameraError(
-            error?.message || "Unable to access camera"
-          );
-        }
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        throw new Error("Camera API is not available in this browser.");
       }
-    };
 
+      const mediaStream = await navigator.mediaDevices.getUserMedia({
+        video: {
+          width: { ideal: 1280 },
+          height: { ideal: 720 },
+          facingMode: "user",
+        },
+        audio: true,
+      });
+
+      if (userVideoRef.current) {
+        userVideoRef.current.srcObject = mediaStream;
+        // Properties like muted and playsInline are handled via JSX attributes
+        await userVideoRef.current.play();
+      }
+
+      console.log("REAL USER CAMERA STARTED");
+    } catch (error: any) {
+      console.error("REAL CAMERA ERROR:", error);
+      setCameraError(
+        error?.message || "Unable to access camera. Please check your permissions."
+      );
+    }
+  };
+
+  useEffect(() => {
     startCamera();
 
     return () => {
-      cancelled = true;
-
-      if (stream) {
+      if (userVideoRef.current && userVideoRef.current.srcObject) {
+        const stream = userVideoRef.current.srcObject as MediaStream;
         stream.getTracks().forEach(track => track.stop());
       }
     };
@@ -326,7 +304,7 @@ function VirtualArenaContent() {
       <main className="flex-1 flex flex-col relative">
         <div className="flex-1 flex items-center justify-center p-6 relative">
           <div className="w-full h-full max-w-7xl mx-auto relative rounded-[3rem] overflow-hidden bg-black shadow-[0_0_100px_rgba(0,0,0,0.5)] border border-white/5">
-            {/* User Live Camera Feed (Large Area) */}
+            {/* User Live Camera Feed */}
             {cameraError ? (
               <div className="w-full h-full flex flex-col items-center justify-center bg-[#0b0e1a] text-center p-12 space-y-6">
                 <div className="w-20 h-20 rounded-full bg-red-500/10 flex items-center justify-center border border-red-500/20">
@@ -336,7 +314,7 @@ function VirtualArenaContent() {
                   <h3 className="text-2xl font-bold text-white">Camera Access Required</h3>
                   <p className="text-muted-foreground font-light max-w-md">Please enable camera and microphone permissions in your browser to proceed with the neural interview simulation.</p>
                 </div>
-                <Button onClick={() => window.location.reload()} className="btn-premium px-8">Retry Neural Link</Button>
+                <Button onClick={startCamera} className="btn-premium px-8">Enable Camera</Button>
               </div>
             ) : (
               <video
