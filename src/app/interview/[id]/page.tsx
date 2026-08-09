@@ -50,97 +50,75 @@ function VirtualArenaContent() {
   const recognitionRef = useRef<any>(null);
   const userVideoRef = useRef<HTMLVideoElement | null>(null);
   const aiVideoRef = useRef<HTMLVideoElement | null>(null);
+  const mediaStreamRef = useRef<MediaStream | null>(null);
 
-  // User Live Webcam Protocol with Intelligent Device Selection
+  const stopCamera = () => {
+    const stream = mediaStreamRef.current;
+    if (stream) {
+      stream.getTracks().forEach((track) => {
+        track.stop();
+      });
+      mediaStreamRef.current = null;
+    }
+    if (userVideoRef.current) {
+      userVideoRef.current.pause();
+      userVideoRef.current.srcObject = null;
+    }
+  };
+
   const startCamera = async () => {
     try {
       setCameraError(null);
+
+      if (mediaStreamRef.current) {
+        mediaStreamRef.current.getTracks().forEach(track => track.stop());
+        mediaStreamRef.current = null;
+      }
 
       if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
         throw new Error("Camera API is not available in this browser.");
       }
 
-      // Enumerate available devices to find a physical camera
-      let devices = await navigator.mediaDevices.enumerateDevices();
-      let videoDevices = devices.filter(d => d.kind === 'videoinput');
-
-      // If labels are empty, we likely need permission first to see useful info
-      if (videoDevices.length === 0 || videoDevices.every(d => !d.label)) {
-        const initialStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
-        // Re-enumerate now that we have permission
-        devices = await navigator.mediaDevices.enumerateDevices();
-        videoDevices = devices.filter(d => d.kind === 'videoinput');
-        
-        const selectedId = getBestCameraId(videoDevices);
-        await initializeStream(selectedId, initialStream);
-      } else {
-        const selectedId = getBestCameraId(videoDevices);
-        await initializeStream(selectedId);
-      }
-
-      console.log("CANDIDATE CAMERA INITIALIZED");
-    } catch (error: any) {
-      console.error("CAMERA SELECTION ERROR:", error);
-      setCameraError(
-        error?.message || "Unable to access camera. Please check your permissions."
-      );
-    }
-  };
-
-  const getBestCameraId = (devices: MediaDeviceInfo[]) => {
-    // Prefer physical cameras (avoid virtual ones if possible)
-    const virtualKeywords = ['virtual', 'obs', 'manycam', 'vcam', 'snap', 'sparkocam', 'camtwist'];
-    const physicalCameras = devices.filter(d => 
-      !virtualKeywords.some(kw => d.label.toLowerCase().includes(kw))
-    );
-    
-    // Return first physical camera, or first available device if only virtuals exist
-    return physicalCameras.length > 0 ? physicalCameras[0].deviceId : (devices[0]?.deviceId || null);
-  };
-
-  const initializeStream = async (deviceId: string | null, existingStream?: MediaStream) => {
-    // Determine if the existing stream already matches our selection
-    const needsNewStream = !existingStream || (deviceId && existingStream.getVideoTracks()[0].getSettings().deviceId !== deviceId);
-
-    let mediaStream: MediaStream;
-
-    if (needsNewStream) {
-      // Stop old tracks if we are replacing
-      if (existingStream) {
-        existingStream.getTracks().forEach(t => t.stop());
-      }
-      
-      mediaStream = await navigator.mediaDevices.getUserMedia({
+      const mediaStream = await navigator.mediaDevices.getUserMedia({
         video: {
-          deviceId: deviceId ? { exact: deviceId } : undefined,
           width: { ideal: 1280 },
           height: { ideal: 720 },
           facingMode: "user",
         },
         audio: true,
       });
-    } else {
-      mediaStream = existingStream!;
-    }
 
-    if (userVideoRef.current) {
-      userVideoRef.current.srcObject = mediaStream;
-      await userVideoRef.current.play();
+      mediaStreamRef.current = mediaStream;
+
+      if (userVideoRef.current) {
+        userVideoRef.current.srcObject = mediaStream;
+        await userVideoRef.current.play();
+      }
+    } catch (error: any) {
+      console.error("CAMERA START ERROR:", error);
+      setCameraError(
+        error?.message || "Unable to access camera. Please check your permissions."
+      );
     }
   };
 
   useEffect(() => {
     startCamera();
-
     return () => {
-      if (userVideoRef.current && userVideoRef.current.srcObject) {
-        const stream = userVideoRef.current.srcObject as MediaStream;
-        stream.getTracks().forEach(track => track.stop());
-      }
+      stopCamera();
     };
   }, []);
 
-  // Speech Recognition Setup
+  useEffect(() => {
+    const handlePageHide = () => {
+      stopCamera();
+    };
+    window.addEventListener("pagehide", handlePageHide);
+    return () => {
+      window.removeEventListener("pagehide", handlePageHide);
+    };
+  }, []);
+
   useEffect(() => {
     const initRecognition = async () => {
       try {
@@ -168,7 +146,6 @@ function VirtualArenaContent() {
     initRecognition();
   }, []);
 
-  // Timer Logic
   useEffect(() => {
     if (isSimulationComplete) return;
     const timer = setInterval(() => {
@@ -177,7 +154,6 @@ function VirtualArenaContent() {
     return () => clearInterval(timer);
   }, [isSimulationComplete]);
 
-  // Bootstrap Simulation Journey
   useEffect(() => {
     async function init() {
       if (!user || !db || !role || !company) return;
@@ -313,6 +289,7 @@ function VirtualArenaContent() {
       });
       
       await deleteDoc(doc(db, 'users', user.uid, 'journey', 'active'));
+      stopCamera();
       router.push(`/feedback/${docRef.id}`);
     } catch (e) {
       console.error(e);
@@ -349,7 +326,6 @@ function VirtualArenaContent() {
       <main className="flex-1 flex flex-col relative">
         <div className="flex-1 flex items-center justify-center p-6 relative">
           <div className="w-full h-full max-w-7xl mx-auto relative rounded-[3rem] overflow-hidden bg-black shadow-[0_0_100px_rgba(0,0,0,0.5)] border border-white/5">
-            {/* User Live Camera Feed */}
             {cameraError ? (
               <div className="w-full h-full flex flex-col items-center justify-center bg-[#0b0e1a] text-center p-12 space-y-6">
                 <div className="w-20 h-20 rounded-full bg-red-500/10 flex items-center justify-center border border-red-500/20">
@@ -372,7 +348,6 @@ function VirtualArenaContent() {
               />
             )}
 
-            {/* AI Interviewer (Small Floating Box) */}
             <div
               className="
                 absolute
@@ -432,7 +407,17 @@ function VirtualArenaContent() {
         </div>
       </main>
 
-      <NavigationControls className="top-24" onHome={() => router.push('/')} onBack={() => router.push('/interview')} />
+      <NavigationControls 
+        className="top-24" 
+        onHome={() => {
+          stopCamera();
+          router.push('/');
+        }} 
+        onBack={() => {
+          stopCamera();
+          router.push('/interview');
+        }} 
+      />
 
       <AnimatePresence>
         {isInitializing && (
