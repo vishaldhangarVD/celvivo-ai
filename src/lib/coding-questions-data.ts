@@ -137,7 +137,7 @@ bool isMirrorWord(char* s) {
 int main() {
     char s[10001];
     if (scanf("%s", s) != EOF) {
-        printf("%s\\n", isMirrorWord(s) ? "YES" : "NO");
+        printf("%s\n", isMirrorWord(s) ? "YES" : "NO");
     }
     return 0;
 }`,
@@ -213,7 +213,7 @@ fn main() {
     estimatedTime: "10 mins",
     company: "Accenture",
     tags: ["Arrays", "Sorting"],
-    inputFormat: "Line 1: N.\\nLine 2: N integers.",
+    inputFormat: "Line 1: N.\nLine 2: N integers.",
     outputFormat: "Runner-up score or -1.",
     constraints: ["1 <= N <= 100000"],
     sampleInput: "5\n10 20 20 15 5",
@@ -285,7 +285,7 @@ function getRunnerUp(n, scores) {
     return -1;
 }
 
-const input = fs.readFileSync(0, 'utf8').split(/\\s+/);
+const input = fs.readFileSync(0, 'utf8').split(/\s+/);
 if (input.length >= 2) {
     const n = parseInt(input[0]);
     const scores = input.slice(1, n + 1).map(Number);
@@ -303,7 +303,7 @@ int main() {
     if (scanf("%d", &n) != EOF) {
         int arr[100001];
         for (int i = 0; i < n; i++) scanf("%d", &arr[i]);
-        printf("%d\\n", getRunnerUp(n, arr));
+        printf("%d\n", getRunnerUp(n, arr));
     }
     return 0;
 }`,
@@ -321,8 +321,11 @@ class Program {
         string l = Console.ReadLine();
         if (l != null) {
             int n = int.Parse(l);
-            int[] scores = Console.ReadLine().Split(' ').Select(int.Parse).ToArray();
-            Console.WriteLine(GetRunnerUp(n, scores));
+            string scoresStr = Console.ReadLine();
+            if (scoresStr != null) {
+                int[] scores = scoresStr.Split(' ').Select(int.Parse).ToArray();
+                Console.WriteLine(GetRunnerUp(n, scores));
+            }
         }
     }
 }`,
@@ -453,7 +456,7 @@ int countVowels(char* s) {
 int main() {
     char s[100001];
     if (fgets(s, 100001, stdin)) {
-        printf("%d\\n", countVowels(s));
+        printf("%d\n", countVowels(s));
     }
     return 0;
 }`,
@@ -485,7 +488,7 @@ func countVowels(s string) int {
 
 func main() {
     reader := bufio.NewReader(os.Stdin)
-    s, _ := reader.ReadString('\\n')
+    s, _ := reader.ReadString('\n')
     fmt.Println(countVowels(s))
 }`,
       rust: `use std::io::{self, BufRead};
@@ -498,8 +501,9 @@ fn count_vowels(s: &str) -> usize {
 fn main() {
     let stdin = io::stdin();
     let mut line = String::new();
-    stdin.lock().read_line(&mut line).unwrap();
-    println!("{}", count_vowels(line.trim()));
+    if stdin.lock().read_line(&mut line).is_ok() {
+        println!("{}", count_vowels(line.trim()));
+    }
 }`
     },
     hiddenTestCases: [
@@ -517,7 +521,7 @@ fn main() {
     estimatedTime: "10 mins",
     company: "Wipro",
     tags: ["Arrays", "Logic"],
-    inputFormat: "Line 1: N.\\nLine 2: N integers.",
+    inputFormat: "Line 1: N.\nLine 2: N integers.",
     outputFormat: "Total sum.",
     constraints: ["1 <= N <= 100000", "-10^6 <= val <= 10^6"],
     sampleInput: "4\n1 2 3 4",
@@ -587,7 +591,7 @@ function sumArray(n, arr) {
     return 0;
 }
 
-const input = fs.readFileSync(0, 'utf8').split(/\\s+/);
+const input = fs.readFileSync(0, 'utf8').split(/\s+/);
 if (input.length >= 2) {
     const n = parseInt(input[0]);
     const arr = input.slice(1, n + 1).map(Number);
@@ -605,7 +609,7 @@ int main() {
     if (scanf("%d", &n) != EOF) {
         int arr[100001];
         for (int i = 0; i < n; i++) scanf("%d", &arr[i]);
-        printf("%lld\\n", sumArray(n, arr));
+        printf("%lld\n", sumArray(n, arr));
     }
     return 0;
 }`,
@@ -622,8 +626,11 @@ class Program {
         string l = Console.ReadLine();
         if (l != null) {
             int n = int.Parse(l);
-            int[] arr = Console.ReadLine().Split(' ').Select(int.Parse).ToArray();
-            Console.WriteLine(SumArray(n, arr));
+            string arrStr = Console.ReadLine();
+            if (arrStr != null) {
+                int[] arr = arrStr.Split(' ').Select(int.Parse).ToArray();
+                Console.WriteLine(SumArray(n, arr));
+            }
         }
     }
 }`,
@@ -679,7 +686,7 @@ fn main() {
     estimatedTime: "10 mins",
     company: "Cognizant",
     tags: ["Arrays", "Logic"],
-    inputFormat: "Line 1: N.\\nLine 2: N integers.",
+    inputFormat: "Line 1: N.\nLine 2: N integers.",
     outputFormat: "Maximum integer.",
     constraints: ["1 <= N <= 100000", "-10^9 <= val <= 10^9"],
     sampleInput: "3\n10 50 20",
@@ -750,7 +757,7 @@ function findMax(n, arr) {
     return -Infinity;
 }
 
-const input = fs.readFileSync(0, 'utf8').split(/\\s+/);
+const input = fs.readFileSync(0, 'utf8').split(/\s+/);
 if (input.length >= 2) {
     const n = parseInt(input[0]);
     const arr = input.slice(1, n + 1).map(Number);
@@ -769,7 +776,7 @@ int main() {
     if (scanf("%d", &n) != EOF) {
         int arr[100001];
         for (int i = 0; i < n; i++) scanf("%d", &arr[i]);
-        printf("%d\\n", findMax(n, arr));
+        printf("%d\n", findMax(n, arr));
     }
     return 0;
 }`,
@@ -786,8 +793,11 @@ class Program {
         string l = Console.ReadLine();
         if (l != null) {
             int n = int.Parse(l);
-            int[] arr = Console.ReadLine().Split(' ').Select(int.Parse).ToArray();
-            Console.WriteLine(FindMax(n, arr));
+            string arrStr = Console.ReadLine();
+            if (arrStr != null) {
+                int[] arr = arrStr.Split(' ').Select(int.Parse).ToArray();
+                Console.WriteLine(FindMax(n, arr));
+            }
         }
     }
 }`,
@@ -918,9 +928,9 @@ int main() {
     char s[100001];
     if (fgets(s, 100001, stdin)) {
         int len = strlen(s);
-        if (len > 0 && s[len-1] == '\\n') s[len-1] = '\\0';
+        if (len > 0 && s[len-1] == '\n') s[len-1] = '\0';
         reverseString(s);
-        printf("%s\\n", s);
+        printf("%s\n", s);
     }
     return 0;
 }`,
@@ -952,7 +962,7 @@ func reverseString(s string) string {
 
 func main() {
     reader := bufio.NewReader(os.Stdin)
-    s, _ := reader.ReadString('\\n')
+    s, _ := reader.ReadString('\n')
     fmt.Println(reverseString(s))
 }`,
       rust: `use std::io::{self, BufRead};
@@ -965,8 +975,9 @@ fn reverse_string(s: &str) -> String {
 fn main() {
     let stdin = io::stdin();
     let mut line = String::new();
-    stdin.lock().read_line(&mut line).unwrap();
-    println!("{}", reverse_string(line.trim()));
+    if stdin.lock().read_line(&mut line).is_ok() {
+        println!("{}", reverse_string(line.trim()));
+    }
 }`
     },
     hiddenTestCases: [
@@ -984,7 +995,7 @@ fn main() {
     estimatedTime: "10 mins",
     company: "Tech Mahindra",
     tags: ["Strings", "Logic"],
-    inputFormat: "Line 1: String S.\\nLine 2: Character C.",
+    inputFormat: "Line 1: String S.\nLine 2: Character C.",
     outputFormat: "Frequency count.",
     constraints: ["1 <= |S| <= 100000"],
     sampleInput: "Programming in Python\nn",
@@ -1056,9 +1067,9 @@ function charFreq(s, c) {
     return 0;
 }
 
-const lines = fs.readFileSync(0, 'utf8').split('\\n');
-if (lines.length >= 2) {
-    console.log(charFreq(lines[0], lines[1][0]));
+const inputLines = fs.readFileSync(0, 'utf8').split('\n');
+if (inputLines.length >= 2) {
+    console.log(charFreq(inputLines[0], inputLines[1][0]));
 }`,
       c: `#include <stdio.h>
 #include <string.h>
@@ -1072,7 +1083,7 @@ int main() {
     char s[100001], c;
     if (fgets(s, 100001, stdin)) {
         if (scanf(" %c", &c) != EOF) {
-            printf("%d\\n", charFreq(s, c));
+            printf("%d\n", charFreq(s, c));
         }
     }
     return 0;
@@ -1108,8 +1119,8 @@ func charFreq(s string, c byte) int {
 
 func main() {
     reader := bufio.NewReader(os.Stdin)
-    s, _ := reader.ReadString('\\n')
-    cStr, _ := reader.ReadString('\\n')
+    s, _ := reader.ReadString('\n')
+    cStr, _ := reader.ReadString('\n')
     if len(cStr) > 0 {
         fmt.Println(charFreq(s, cStr[0]))
     }
@@ -1148,7 +1159,7 @@ fn main() {
     estimatedTime: "10 mins",
     company: "TCS",
     tags: ["Arrays", "Logic"],
-    inputFormat: "Line 1: N.\\nLine 2: N sorted integers.",
+    inputFormat: "Line 1: N.\nLine 2: N sorted integers.",
     outputFormat: "Unique count.",
     constraints: ["1 <= N <= 100000"],
     sampleInput: "5\n1 1 2 2 3",
@@ -1218,7 +1229,7 @@ function countUnique(n, arr) {
     return 0;
 }
 
-const input = fs.readFileSync(0, 'utf8').split(/\\s+/);
+const input = fs.readFileSync(0, 'utf8').split(/\s+/);
 if (input.length >= 2) {
     const n = parseInt(input[0]);
     const arr = input.slice(1, n + 1).map(Number);
@@ -1236,7 +1247,7 @@ int main() {
     if (scanf("%d", &n) != EOF) {
         int arr[100001];
         for (int i = 0; i < n; i++) scanf("%d", &arr[i]);
-        printf("%d\\n", countUnique(n, arr));
+        printf("%d\n", countUnique(n, arr));
     }
     return 0;
 }`,
@@ -1253,8 +1264,11 @@ class Program {
         string l = Console.ReadLine();
         if (l != null) {
             int n = int.Parse(l);
-            int[] arr = Console.ReadLine().Split(' ').Select(int.Parse).ToArray();
-            Console.WriteLine(CountUnique(n, arr));
+            string arrStr = Console.ReadLine();
+            if (arrStr != null) {
+                int[] arr = arrStr.Split(' ').Select(int.Parse).ToArray();
+                Console.WriteLine(CountUnique(n, arr));
+            }
         }
     }
 }`,
@@ -1310,7 +1324,7 @@ fn main() {
     estimatedTime: "10 mins",
     company: "HCL",
     tags: ["Arrays", "Logic"],
-    inputFormat: "Line 1: N.\\nLine 2: N integers.\\nLine 3: T.",
+    inputFormat: "Line 1: N.\nLine 2: N integers.\nLine 3: T.",
     outputFormat: "FOUND or NOT FOUND.",
     constraints: ["1 <= N <= 100000"],
     sampleInput: "4\n1 5 8 12\n8",
@@ -1335,8 +1349,9 @@ if __name__ == "__main__":
     if len(data) >= 2:
         n = int(data[0])
         arr = [int(x) for x in data[1:n+1]]
-        t = int(data[n+1])
-        print(search(n, arr, t))`,
+        if len(data) > n + 1:
+            t = int(data[n+1])
+            print(search(n, arr, t))`,
       java: `import java.util.Scanner;
 
 public class Main {
@@ -1351,8 +1366,10 @@ public class Main {
             int n = sc.nextInt();
             int[] arr = new int[n];
             for (int i = 0; i < n; i++) arr[i] = sc.nextInt();
-            int t = sc.nextInt();
-            System.out.println(search(n, arr, t));
+            if (sc.hasNextInt()) {
+                int t = sc.nextInt();
+                System.out.println(search(n, arr, t));
+            }
         }
     }
 }`,
@@ -1372,8 +1389,9 @@ int main() {
     if (cin >> n) {
         vector<int> arr(n);
         for (int i = 0; i < n; i++) cin >> arr[i];
-        cin >> t;
-        cout << search(n, arr, t) << endl;
+        if (cin >> t) {
+            cout << search(n, arr, t) << endl;
+        }
     }
     return 0;
 }`,
@@ -1384,7 +1402,7 @@ function search(n, arr, t) {
     return "NOT FOUND";
 }
 
-const input = fs.readFileSync(0, 'utf8').split(/\\s+/);
+const input = fs.readFileSync(0, 'utf8').split(/\s+/);
 if (input.length >= 3) {
     const n = parseInt(input[0]);
     const arr = input.slice(1, n + 1).map(Number);
@@ -1403,8 +1421,9 @@ int main() {
     if (scanf("%d", &n) != EOF) {
         int arr[100001];
         for (int i = 0; i < n; i++) scanf("%d", &arr[i]);
-        scanf("%d", &t);
-        printf("%s\\n", search(n, arr, t));
+        if (scanf("%d", &t) != EOF) {
+            printf("%s\n", search(n, arr, t));
+        }
     }
     return 0;
 }`,
@@ -1421,9 +1440,15 @@ class Program {
         string l = Console.ReadLine();
         if (l != null) {
             int n = int.Parse(l);
-            int[] arr = Console.ReadLine().Split(' ').Select(int.Parse).ToArray();
-            int t = int.Parse(Console.ReadLine());
-            Console.WriteLine(Search(n, arr, t));
+            string arrStr = Console.ReadLine();
+            if (arrStr != null) {
+                int[] arr = arrStr.Split(' ').Select(int.Parse).ToArray();
+                string tStr = Console.ReadLine();
+                if (tStr != null) {
+                    int t = int.Parse(tStr);
+                    Console.WriteLine(Search(n, arr, t));
+                }
+            }
         }
     }
 }`,
@@ -1486,7 +1511,7 @@ fn main() {
     estimatedTime: "10 mins",
     company: "Deloitte",
     tags: ["Arrays", "Logic"],
-    inputFormat: "Line 1: N.\\nLine 2: N integers.",
+    inputFormat: "Line 1: N.\nLine 2: N integers.",
     outputFormat: "Minimum difference.",
     constraints: ["2 <= N <= 100000"],
     sampleInput: "4\n1 15 3 9",
@@ -1557,7 +1582,7 @@ function minDiff(n, arr) {
     return 0;
 }
 
-const input = fs.readFileSync(0, 'utf8').split(/\\s+/);
+const input = fs.readFileSync(0, 'utf8').split(/\s+/);
 if (input.length >= 2) {
     const n = parseInt(input[0]);
     const arr = input.slice(1, n + 1).map(Number);
@@ -1576,7 +1601,7 @@ int main() {
     if (scanf("%d", &n) != EOF) {
         int arr[100001];
         for (int i = 0; i < n; i++) scanf("%d", &arr[i]);
-        printf("%d\\n", minDiff(n, arr));
+        printf("%d\n", minDiff(n, arr));
     }
     return 0;
 }`,
@@ -1593,8 +1618,11 @@ class Program {
         string l = Console.ReadLine();
         if (l != null) {
             int n = int.Parse(l);
-            int[] arr = Console.ReadLine().Split(' ').Select(int.Parse).ToArray();
-            Console.WriteLine(MinDiff(n, arr));
+            string arrStr = Console.ReadLine();
+            if (arrStr != null) {
+                int[] arr = arrStr.Split(' ').Select(int.Parse).ToArray();
+                Console.WriteLine(MinDiff(n, arr));
+            }
         }
     }
 }`,
@@ -1654,7 +1682,7 @@ fn main() {
     estimatedTime: "20 mins",
     company: "Google",
     tags: ["Arrays", "Hash Map"],
-    inputFormat: "Line 1: N.\\nLine 2: N integers.\\nLine 3: T.",
+    inputFormat: "Line 1: N.\nLine 2: N integers.\nLine 3: T.",
     outputFormat: "Two indices separated by space.",
     constraints: ["2 <= N <= 100000"],
     sampleInput: "4\n2 7 11 15\n9",
@@ -1694,8 +1722,10 @@ public class Main {
             int n = sc.nextInt();
             int[] arr = new int[n];
             for (int i = 0; i < n; i++) arr[i] = sc.nextInt();
-            int t = sc.nextInt();
-            twoSum(n, arr, t);
+            if (sc.hasNextInt()) {
+                int t = sc.nextInt();
+                twoSum(n, arr, t);
+            }
         }
     }
 }`,
@@ -1714,8 +1744,9 @@ int main() {
     if (cin >> n) {
         vector<int> arr(n);
         for (int i = 0; i < n; i++) cin >> arr[i];
-        cin >> t;
-        twoSum(n, arr, t);
+        if (cin >> t) {
+            twoSum(n, arr, t);
+        }
     }
     return 0;
 }`,
@@ -1725,7 +1756,7 @@ function twoSum(n, arr, t) {
     // TODO: Implement two-sum logic and print indices
 }
 
-const input = fs.readFileSync(0, 'utf8').split(/\\s+/);
+const input = fs.readFileSync(0, 'utf8').split(/\s+/);
 if (input.length >= 3) {
     const n = parseInt(input[0]);
     const arr = input.slice(1, n + 1).map(Number);
@@ -1743,8 +1774,9 @@ int main() {
     if (scanf("%d", &n) != EOF) {
         int arr[100001];
         for (int i = 0; i < n; i++) scanf("%d", &arr[i]);
-        scanf("%d", &t);
-        twoSum(n, arr, t);
+        if (scanf("%d", &t) != EOF) {
+            twoSum(n, arr, t);
+        }
     }
     return 0;
 }`,
@@ -1761,9 +1793,15 @@ class Program {
         string l = Console.ReadLine();
         if (l != null) {
             int n = int.Parse(l);
-            int[] arr = Console.ReadLine().Split(' ').Select(int.Parse).ToArray();
-            int t = int.Parse(Console.ReadLine());
-            TwoSum(n, arr, t);
+            string arrStr = Console.ReadLine();
+            if (arrStr != null) {
+                int[] arr = arrStr.Split(' ').Select(int.Parse).ToArray();
+                string tStr = Console.ReadLine();
+                if (tStr != null) {
+                    int t = int.Parse(tStr);
+                    TwoSum(n, arr, t);
+                }
+            }
         }
     }
 }`,
@@ -1822,7 +1860,7 @@ fn main() {
     estimatedTime: "15 mins",
     company: "Amazon",
     tags: ["Arrays", "DP"],
-    inputFormat: "Line 1: N.\\nLine 2: N integers.",
+    inputFormat: "Line 1: N.\nLine 2: N integers.",
     outputFormat: "Maximum sum.",
     constraints: ["1 <= N <= 100000"],
     sampleInput: "9\n-2 1 -3 4 -1 2 1 -5 4",
@@ -1893,7 +1931,7 @@ function maxSubArray(n, arr) {
     return 0;
 }
 
-const input = fs.readFileSync(0, 'utf8').split(/\\s+/);
+const input = fs.readFileSync(0, 'utf8').split(/\s+/);
 if (input.length >= 2) {
     const n = parseInt(input[0]);
     const arr = input.slice(1, n + 1).map(Number);
@@ -1911,7 +1949,7 @@ int main() {
     if (scanf("%d", &n) != EOF) {
         int arr[100001];
         for (int i = 0; i < n; i++) scanf("%d", &arr[i]);
-        printf("%lld\\n", maxSubArray(n, arr));
+        printf("%lld\n", maxSubArray(n, arr));
     }
     return 0;
 }`,
@@ -1928,8 +1966,11 @@ class Program {
         string l = Console.ReadLine();
         if (l != null) {
             int n = int.Parse(l);
-            int[] arr = Console.ReadLine().Split(' ').Select(int.Parse).ToArray();
-            Console.WriteLine(MaxSubArray(n, arr));
+            string arrStr = Console.ReadLine();
+            if (arrStr != null) {
+                int[] arr = arrStr.Split(' ').Select(int.Parse).ToArray();
+                Console.WriteLine(MaxSubArray(n, arr));
+            }
         }
     }
 }`,
@@ -2059,6 +2100,7 @@ if (input) {
 }`,
       c: `#include <stdio.h>
 #include <stdbool.h>
+#include <string.h>
 
 bool isValid(char* s) {
     // TODO: Implement bracket validation using stack
@@ -2068,7 +2110,7 @@ bool isValid(char* s) {
 int main() {
     char s[100001];
     if (scanf("%s", s) != EOF) {
-        printf("%s\\n", isValid(s) ? "YES" : "NO");
+        printf("%s\n", isValid(s) ? "YES" : "NO");
     }
     return 0;
 }`,
@@ -2141,7 +2183,7 @@ fn main() {
     estimatedTime: "15 mins",
     company: "Meta",
     tags: ["Strings", "Logic"],
-    inputFormat: "Line 1: S1.\\nLine 2: S2.",
+    inputFormat: "Line 1: S1.\nLine 2: S2.",
     outputFormat: "YES or NO.",
     constraints: ["1 <= |S1|, |S2| <= 100000"],
     sampleInput: "listen\nsilent",
@@ -2164,7 +2206,7 @@ def is_anagram(s1, s2):
 if __name__ == "__main__":
     lines = sys.stdin.read().splitlines()
     if len(lines) >= 2:
-        if is_anagram(lines[0], lines[1]):
+        if is_anagram(lines[0].strip(), lines[1].strip()):
             print("YES")
         else:
             print("NO")`,
@@ -2182,7 +2224,7 @@ public class Main {
             String s1 = sc.nextLine();
             if (sc.hasNextLine()) {
                 String s2 = sc.nextLine();
-                System.out.println(isAnagram(s1, s2) ? "YES" : "NO");
+                System.out.println(isAnagram(s1.trim(), s2.trim()) ? "YES" : "NO");
             }
         }
     }
@@ -2212,9 +2254,9 @@ function isAnagram(s1, s2) {
     return false;
 }
 
-const input = fs.readFileSync(0, 'utf8').split('\\n');
+const input = fs.readFileSync(0, 'utf8').split('\n');
 if (input.length >= 2) {
-    console.log(isAnagram(input[0], input[1]) ? "YES" : "NO");
+    console.log(isAnagram(input[0].trim(), input[1].trim()) ? "YES" : "NO");
 }`,
       c: `#include <stdio.h>
 #include <string.h>
@@ -2228,7 +2270,7 @@ bool isAnagram(char* s1, char* s2) {
 int main() {
     char s1[100001], s2[100001];
     if (scanf("%s %s", s1, s2) != EOF) {
-        printf("%s\\n", isAnagram(s1, s2) ? "YES" : "NO");
+        printf("%s\n", isAnagram(s1, s2) ? "YES" : "NO");
     }
     return 0;
 }`,
@@ -2298,7 +2340,7 @@ fn main() {
     estimatedTime: "15 mins",
     company: "Flipkart",
     tags: ["Arrays", "Logic"],
-    inputFormat: "Line 1: N1.\\nLine 2: N1 integers.\\nLine 3: N2.\\nLine 4: N2 integers.",
+    inputFormat: "Line 1: N1.\nLine 2: N1 integers.\nLine 3: N2.\nLine 4: N2 integers.",
     outputFormat: "Merged sorted integers separated by space.",
     constraints: ["1 <= N1, N2 <= 100000"],
     sampleInput: "3\n1 3 5\n2\n2 4",
@@ -2320,7 +2362,7 @@ def merge_arrays(n1, a1, n2, a2):
 
 if __name__ == "__main__":
     data = sys.stdin.read().split()
-    if len(data) >= 2:
+    if len(data) >= 4:
         n1 = int(data[0])
         a1 = [int(x) for x in data[1:n1+1]]
         n2 = int(data[n1+1])
@@ -2331,7 +2373,7 @@ if __name__ == "__main__":
 
 public class Main {
     public static void merge(int n1, int[] a1, int n2, int[] a2) {
-        // TODO: Implement merge logic for sorted arrays and print
+        // TODO: Implement merge logic for sorted arrays and print results
     }
 
     public static void main(String[] args) {
@@ -2340,10 +2382,12 @@ public class Main {
             int n1 = sc.nextInt();
             int[] a1 = new int[n1];
             for (int i = 0; i < n1; i++) a1[i] = sc.nextInt();
-            int n2 = sc.nextInt();
-            int[] a2 = new int[n2];
-            for (int i = 0; i < n2; i++) a2[i] = sc.nextInt();
-            merge(n1, a1, n2, a2);
+            if (sc.hasNextInt()) {
+                int n2 = sc.nextInt();
+                int[] a2 = new int[n2];
+                for (int i = 0; i < n2; i++) a2[i] = sc.nextInt();
+                merge(n1, a1, n2, a2);
+            }
         }
     }
 }`,
@@ -2353,7 +2397,7 @@ public class Main {
 using namespace std;
 
 void mergeArrays(int n1, vector<int>& a1, int n2, vector<int>& a2) {
-    // TODO: Implement merge logic for sorted arrays and print
+    // TODO: Implement merge logic for sorted arrays and print results
 }
 
 int main() {
@@ -2361,10 +2405,11 @@ int main() {
     if (cin >> n1) {
         vector<int> a1(n1);
         for (int i = 0; i < n1; i++) cin >> a1[i];
-        cin >> n2;
-        vector<int> a2(n2);
-        for (int i = 0; i < n2; i++) cin >> a2[i];
-        mergeArrays(n1, a1, n2, a2);
+        if (cin >> n2) {
+            vector<int> a2(n2);
+            for (int i = 0; i < n2; i++) cin >> a2[i];
+            mergeArrays(n1, a1, n2, a2);
+        }
     }
     return 0;
 }`,
@@ -2375,8 +2420,8 @@ function mergeArrays(n1, a1, n2, a2) {
     return [];
 }
 
-const input = fs.readFileSync(0, 'utf8').split(/\\s+/);
-if (input.length >= 2) {
+const input = fs.readFileSync(0, 'utf8').split(/\s+/);
+if (input.length >= 4) {
     let n1 = parseInt(input[0]);
     let a1 = input.slice(1, n1 + 1).map(Number);
     let n2 = parseInt(input[n1 + 1]);
@@ -2386,7 +2431,7 @@ if (input.length >= 2) {
       c: `#include <stdio.h>
 
 void mergeArrays(int n1, int* a1, int n2, int* a2) {
-    // TODO: Implement merge logic for sorted arrays and print
+    // TODO: Implement merge logic for sorted arrays and print results
 }
 
 int main() {
@@ -2394,9 +2439,10 @@ int main() {
     if (scanf("%d", &n1) != EOF) {
         int a1[100001], a2[100001];
         for (int i = 0; i < n1; i++) scanf("%d", &a1[i]);
-        scanf("%d", &n2);
-        for (int i = 0; i < n2; i++) scanf("%d", &a2[i]);
-        mergeArrays(n1, a1, n2, a2);
+        if (scanf("%d", &n2) != EOF) {
+            for (int i = 0; i < n2; i++) scanf("%d", &a2[i]);
+            mergeArrays(n1, a1, n2, a2);
+        }
     }
     return 0;
 }`,
@@ -2404,8 +2450,8 @@ int main() {
 using System.Linq;
 
 class Program {
-    static void MergeArrays(int[] a1, int[] a2) {
-        // TODO: Implement merge logic for sorted arrays and print
+    static void MergeArrays(int n1, int[] a1, int n2, int[] a2) {
+        // TODO: Implement merge logic for sorted arrays and print results
     }
 
     static void Main() {
@@ -2413,9 +2459,11 @@ class Program {
         if (l1 == null) return;
         int n1 = int.Parse(l1);
         int[] a1 = Console.ReadLine().Split(' ').Select(int.Parse).ToArray();
-        int n2 = int.Parse(Console.ReadLine());
+        string l2 = Console.ReadLine();
+        if (l2 == null) return;
+        int n2 = int.Parse(l2);
         int[] a2 = Console.ReadLine().Split(' ').Select(int.Parse).ToArray();
-        MergeArrays(a1, a2);
+        MergeArrays(n1, a1, n2, a2);
     }
 }`,
       go: `package main
@@ -2423,21 +2471,23 @@ class Program {
 import "fmt"
 
 func mergeArrays(a1, a2 []int) {
-    // TODO: Implement merge logic for sorted arrays and print
+    // TODO: Implement merge logic for sorted arrays and print results
 }
 
 func main() {
     var n1, n2 int
     fmt.Scan(&n1)
-    a1 := make([]int, n1); for i := 0; i < n1; i++ { fmt.Scan(&a1[i]) }
+    a1 := make([]int, n1)
+    for i := 0; i < n1; i++ { fmt.Scan(&a1[i]) }
     fmt.Scan(&n2)
-    a2 := make([]int, n2); for i := 0; i < n2; i++ { fmt.Scan(&a2[i]) }
+    a2 := make([]int, n2)
+    for i := 0; i < n2; i++ { fmt.Scan(&a2[i]) }
     mergeArrays(a1, a2)
 }`,
       rust: `use std::io::{self, Read};
 
 fn merge_arrays(a1: Vec<i32>, a2: Vec<i32>) {
-    // TODO: Implement merge logic for sorted arrays and print
+    // TODO: Implement merge logic for sorted arrays and print results
 }
 
 fn main() {
@@ -2448,10 +2498,12 @@ fn main() {
             let n1: usize = n1_str.parse().unwrap();
             let mut a1 = Vec::new();
             for _ in 0..n1 { a1.push(words.next().unwrap().parse().unwrap()); }
-            let n2: usize = words.next().unwrap().parse().unwrap();
-            let mut a2 = Vec::new();
-            for _ in 0..n2 { a2.push(words.next().unwrap().parse().unwrap()); }
-            merge_arrays(a1, a2);
+            if let Some(n2_str) = words.next() {
+                let n2: usize = n2_str.parse().unwrap();
+                let mut a2 = Vec::new();
+                for _ in 0..n2 { a2.push(words.next().unwrap().parse().unwrap()); }
+                merge_arrays(a1, a2);
+            }
         }
     }
 }`
@@ -2471,7 +2523,7 @@ fn main() {
     estimatedTime: "15 mins",
     company: "Microsoft",
     tags: ["Arrays", "Logic"],
-    inputFormat: "Line 1: N.\\nLine 2: N sorted integers.\\nLine 3: T.",
+    inputFormat: "Line 1: N.\nLine 2: N sorted integers.\nLine 3: T.",
     outputFormat: "Index or -1.",
     constraints: ["1 <= N <= 100000"],
     sampleInput: "5\n1 2 3 4 5\n4",
@@ -2512,8 +2564,10 @@ public class Main {
             int n = sc.nextInt();
             int[] arr = new int[n];
             for (int i = 0; i < n; i++) arr[i] = sc.nextInt();
-            int t = sc.nextInt();
-            System.out.println(binarySearch(n, arr, t));
+            if (sc.hasNextInt()) {
+                int t = sc.nextInt();
+                System.out.println(binarySearch(n, arr, t));
+            }
         }
     }
 }`,
@@ -2532,8 +2586,9 @@ int main() {
     if (cin >> n) {
         vector<int> arr(n);
         for (int i = 0; i < n; i++) cin >> arr[i];
-        cin >> t;
-        cout << binarySearch(n, arr, t) << endl;
+        if (cin >> t) {
+            cout << binarySearch(n, arr, t) << endl;
+        }
     }
     return 0;
 }`,
@@ -2544,7 +2599,7 @@ function binarySearch(n, arr, t) {
     return -1;
 }
 
-const input = fs.readFileSync(0, 'utf8').split(/\\s+/);
+const input = fs.readFileSync(0, 'utf8').split(/\s+/);
 if (input.length >= 3) {
     const n = parseInt(input[0]);
     const arr = input.slice(1, n + 1).map(Number);
@@ -2563,8 +2618,9 @@ int main() {
     if (scanf("%d", &n) != EOF) {
         int arr[100001];
         for (int i = 0; i < n; i++) scanf("%d", &arr[i]);
-        scanf("%d", &t);
-        printf("%d\\n", binarySearch(n, arr, t));
+        if (scanf("%d", &t) != EOF) {
+            printf("%d\n", binarySearch(n, arr, t));
+        }
     }
     return 0;
 }`,
@@ -2581,9 +2637,15 @@ class Program {
         string l = Console.ReadLine();
         if (l != null) {
             int n = int.Parse(l);
-            int[] arr = Console.ReadLine().Split(' ').Select(int.Parse).ToArray();
-            int t = int.Parse(Console.ReadLine());
-            Console.WriteLine(BinarySearch(n, arr, t));
+            string arrStr = Console.ReadLine();
+            if (arrStr != null) {
+                int[] arr = arrStr.Split(' ').Select(int.Parse).ToArray();
+                string tStr = Console.ReadLine();
+                if (tStr != null) {
+                    int t = int.Parse(tStr);
+                    Console.WriteLine(BinarySearch(n, arr, t));
+                }
+            }
         }
     }
 }`,
@@ -2644,7 +2706,7 @@ fn main() {
     estimatedTime: "15 mins",
     company: "Amazon",
     tags: ["Arrays", "Logic"],
-    inputFormat: "Line 1: N, K.\\nLine 2: N integers.",
+    inputFormat: "Line 1: N, K.\nLine 2: N integers.",
     outputFormat: "Maximum sum.",
     constraints: ["1 <= K <= N <= 100000"],
     sampleInput: "4 2\n1 2 3 4",
@@ -2717,8 +2779,8 @@ function maxSumK(n, k, arr) {
     return 0;
 }
 
-const input = fs.readFileSync(0, 'utf8').split(/\\s+/);
-if (input.length >= 2) {
+const input = fs.readFileSync(0, 'utf8').split(/\s+/);
+if (input.length >= 3) {
     const n = parseInt(input[0]);
     const k = parseInt(input[1]);
     const arr = input.slice(2, n + 2).map(Number);
@@ -2736,7 +2798,7 @@ int main() {
     if (scanf("%d %d", &n, &k) != EOF) {
         int arr[100001];
         for (int i = 0; i < n; i++) scanf("%d", &arr[i]);
-        printf("%lld\\n", maxSumK(n, k, arr));
+        printf("%lld\n", maxSumK(n, k, arr));
     }
     return 0;
 }`,
@@ -2750,12 +2812,16 @@ class Program {
     }
 
     static void Main() {
-        string[] l1 = Console.ReadLine().Split(' ');
+        string l1 = Console.ReadLine();
         if (l1 == null) return;
-        int n = int.Parse(l1[0]);
-        int k = int.Parse(l1[1]);
-        int[] arr = Console.ReadLine().Split(' ').Select(int.Parse).ToArray();
-        Console.WriteLine(MaxSumK(n, k, arr));
+        string[] p = l1.Split(' ');
+        int n = int.Parse(p[0]);
+        int k = int.Parse(p[1]);
+        string arrStr = Console.ReadLine();
+        if (arrStr != null) {
+            int[] arr = arrStr.Split(' ').Select(int.Parse).ToArray();
+            Console.WriteLine(MaxSumK(n, k, arr));
+        }
     }
 }`,
       go: `package main
@@ -2812,7 +2878,7 @@ fn main() {
     estimatedTime: "15 mins",
     company: "TCS",
     tags: ["Arrays", "Logic"],
-    inputFormat: "Line 1: N.\\nLine 2: N integers.",
+    inputFormat: "Line 1: N.\nLine 2: N integers.",
     outputFormat: "Index or -1.",
     constraints: ["1 <= N <= 100000"],
     sampleInput: "3\n1 2 1",
@@ -2882,7 +2948,7 @@ function findEquilibrium(n, arr) {
     return -1;
 }
 
-const input = fs.readFileSync(0, 'utf8').split(/\\s+/);
+const input = fs.readFileSync(0, 'utf8').split(/\s+/);
 if (input.length >= 2) {
     const n = parseInt(input[0]);
     const arr = input.slice(1, n + 1).map(Number);
@@ -2900,7 +2966,7 @@ int main() {
     if (scanf("%d", &n) != EOF) {
         int arr[100001];
         for (int i = 0; i < n; i++) scanf("%d", &arr[i]);
-        printf("%d\\n", findEquilibrium(n, arr));
+        printf("%d\n", findEquilibrium(n, arr));
     }
     return 0;
 }`,
@@ -2917,8 +2983,11 @@ class Program {
         string l = Console.ReadLine();
         if (l != null) {
             int n = int.Parse(l);
-            int[] arr = Console.ReadLine().Split(' ').Select(int.Parse).ToArray();
-            Console.WriteLine(FindEquilibrium(n, arr));
+            string arrStr = Console.ReadLine();
+            if (arrStr != null) {
+                int[] arr = arrStr.Split(' ').Select(int.Parse).ToArray();
+                Console.WriteLine(FindEquilibrium(n, arr));
+            }
         }
     }
 }`,
@@ -2953,7 +3022,8 @@ fn main() {
         let mut words = input.split_whitespace();
         if let Some(n_str) = words.next() {
             let n: usize = n_str.parse().unwrap();
-            let arr: Vec<i32> = words.map(|s| s.parse().unwrap()).collect();
+            let mut arr = Vec::new();
+            for _ in 0..n { arr.push(words.next().unwrap().parse().unwrap()); }
             println!("{}", find_equilibrium(n, arr));
         }
     }
@@ -2974,7 +3044,7 @@ fn main() {
     estimatedTime: "15 mins",
     company: "Accenture",
     tags: ["Arrays", "Logic"],
-    inputFormat: "Line 1: N, K.\\nLine 2: N integers.",
+    inputFormat: "Line 1: N, K.\nLine 2: N integers.",
     outputFormat: "Rotated integers separated by space.",
     constraints: ["1 <= N <= 100000", "K >= 0"],
     sampleInput: "3 1\n1 2 3",
@@ -3049,8 +3119,8 @@ function rotate(n, k, arr) {
     // TODO: Implement array rotation logic
 }
 
-const input = fs.readFileSync(0, 'utf8').split(/\\s+/);
-if (input.length >= 2) {
+const input = fs.readFileSync(0, 'utf8').split(/\s+/);
+if (input.length >= 3) {
     const n = parseInt(input[0]);
     const k = parseInt(input[1]);
     const arr = input.slice(2, n + 2).map(Number);
@@ -3070,7 +3140,7 @@ int main() {
         for (int i = 0; i < n; i++) scanf("%d", &arr[i]);
         rotate(n, k, arr);
         for (int i = 0; i < n; i++) printf("%d%s", arr[i], (i == n-1 ? "" : " "));
-        printf("\\n");
+        printf("\n");
     }
     return 0;
 }`,
@@ -3083,13 +3153,17 @@ class Program {
     }
 
     static void Main() {
-        string[] l1 = Console.ReadLine().Split(' ');
+        string l1 = Console.ReadLine();
         if (l1 == null) return;
-        int n = int.Parse(l1[0]);
-        int k = int.Parse(l1[1]);
-        int[] arr = Console.ReadLine().Split(' ').Select(int.Parse).ToArray();
-        Rotate(n, k, arr);
-        Console.WriteLine(string.Join(" ", arr));
+        string[] p = l1.Split(' ');
+        int n = int.Parse(p[0]);
+        int k = int.Parse(p[1]);
+        string arrStr = Console.ReadLine();
+        if (arrStr != null) {
+            int[] arr = arrStr.Split(' ').Select(int.Parse).ToArray();
+            Rotate(n, k, arr);
+            Console.WriteLine(string.Join(" ", arr));
+        }
     }
 }`,
       go: `package main
@@ -3230,7 +3304,7 @@ int longestUniqueSub(char* s) {
 int main() {
     char s[100001];
     if (fgets(s, 100001, stdin)) {
-        printf("%d\\n", longestUniqueSub(s));
+        printf("%d\n", longestUniqueSub(s));
     }
     return 0;
 }`,
@@ -3263,7 +3337,7 @@ func longestUniqueSub(s string) int {
 
 func main() {
     reader := bufio.NewReader(os.Stdin)
-    s, _ := reader.ReadString('\\n')
+    s, _ := reader.ReadString('\n')
     fmt.Println(longestUniqueSub(s))
 }`,
       rust: `use std::io::{self, BufRead};
@@ -3276,8 +3350,9 @@ fn longest_unique_sub(s: &str) -> usize {
 fn main() {
     let stdin = io::stdin();
     let mut line = String::new();
-    stdin.lock().read_line(&mut line).unwrap();
-    println!("{}", longest_unique_sub(line.trim()));
+    if stdin.lock().read_line(&mut line).is_ok() {
+        println!("{}", longest_unique_sub(line.trim()));
+    }
 }`
     },
     hiddenTestCases: [
@@ -3376,7 +3451,7 @@ int longestPal(char* s) {
 int main() {
     char s[2001];
     if (fgets(s, 2001, stdin)) {
-        printf("%d\\n", longestPal(s));
+        printf("%d\n", longestPal(s));
     }
     return 0;
 }`,
@@ -3408,7 +3483,7 @@ func longestPal(s string) int {
 
 func main() {
     reader := bufio.NewReader(os.Stdin)
-    s, _ := reader.ReadString('\\n')
+    s, _ := reader.ReadString('\n')
     fmt.Println(longestPal(s))
 }`,
       rust: `use std::io::{self, BufRead};
@@ -3421,8 +3496,9 @@ fn longest_pal(s: &str) -> usize {
 fn main() {
     let stdin = io::stdin();
     let mut line = String::new();
-    stdin.lock().read_line(&mut line).unwrap();
-    println!("{}", longest_pal(line.trim()));
+    if stdin.lock().read_line(&mut line).is_ok() {
+        println!("{}", longest_pal(line.trim()));
+    }
 }`
     },
     hiddenTestCases: [
@@ -3440,7 +3516,7 @@ fn main() {
     estimatedTime: "25 mins",
     company: "Uber",
     tags: ["Arrays", "Logic"],
-    inputFormat: "Line 1: N.\\nN lines: start end.",
+    inputFormat: "Line 1: N.\nN lines: start end.",
     outputFormat: "Merged intervals line by line, sorted by start.",
     constraints: ["1 <= N <= 100000"],
     sampleInput: "4\n1 3\n8 10\n15 18\n2 6",
@@ -3474,7 +3550,7 @@ import java.util.ArrayList;
 
 public class Main {
     public static void mergeIntervals(int n, int[][] intervals) {
-        // TODO: Implement interval merging logic and print
+        // TODO: Implement interval merging logic and print results
     }
 
     public static void main(String[] args) {
@@ -3497,7 +3573,7 @@ public class Main {
 using namespace std;
 
 void mergeIntervals(int n, vector<pair<int, int>>& arr) {
-    // TODO: Implement interval merging logic and print
+    // TODO: Implement interval merging logic and print results
 }
 
 int main() {
@@ -3512,10 +3588,10 @@ int main() {
       javascript: `const fs = require('fs');
 
 function mergeIntervals(n, arr) {
-    // TODO: Implement interval merging logic and print
+    // TODO: Implement interval merging logic and print results
 }
 
-const input = fs.readFileSync(0, 'utf8').split(/\\s+/);
+const input = fs.readFileSync(0, 'utf8').split(/\s+/);
 if (input.length >= 1) {
     const n = parseInt(input[0]);
     const arr = [];
@@ -3528,7 +3604,7 @@ if (input.length >= 1) {
 #include <stdlib.h>
 
 void mergeIntervals(int n, int arr[][2]) {
-    // TODO: Implement interval merging logic and print
+    // TODO: Implement interval merging logic and print results
 }
 
 int main() {
@@ -3547,7 +3623,7 @@ using System.Linq;
 
 class Program {
     static void MergeIntervals(int n, int[][] arr) {
-        // TODO: Implement interval merging logic and print
+        // TODO: Implement interval merging logic and print results
     }
 
     static void Main() {
@@ -3566,7 +3642,7 @@ class Program {
 import "fmt"
 
 func mergeIntervals(n int, arr [][]int) {
-    // TODO: Implement interval merging logic and print
+    // TODO: Implement interval merging logic and print results
 }
 
 func main() {
@@ -3582,7 +3658,7 @@ func main() {
       rust: `use std::io::{self, Read};
 
 fn merge_intervals(n: usize, mut arr: Vec<Vec<i32>>) {
-    // TODO: Implement interval merging logic and print
+    // TODO: Implement interval merging logic and print results
 }
 
 fn main() {
@@ -3615,7 +3691,7 @@ fn main() {
     estimatedTime: "25 mins",
     company: "Amazon",
     tags: ["Arrays", "Logic"],
-    inputFormat: "Line 1: N, K.\\nLine 2: N integers.",
+    inputFormat: "Line 1: N, K.\nLine 2: N integers.",
     outputFormat: "K integers separated by space.",
     constraints: ["1 <= K <= N <= 100000"],
     sampleInput: "6 2\n1 1 1 2 2 3",
@@ -3688,7 +3764,7 @@ function topK(n, k, arr) {
     // TODO: Implement top-K frequency logic and print results
 }
 
-const input = fs.readFileSync(0, 'utf8').split(/\\s+/);
+const input = fs.readFileSync(0, 'utf8').split(/\s+/);
 if (input.length >= 2) {
     const n = parseInt(input[0]);
     const k = parseInt(input[1]);
@@ -3720,12 +3796,15 @@ class Program {
     }
 
     static void Main() {
-        string[] line1 = Console.ReadLine().Split(' ');
+        string line1 = Console.ReadLine();
         if (line1 == null) return;
-        int n = int.Parse(line1[0]);
-        int k = int.Parse(line1[1]);
-        int[] arr = Console.ReadLine().Split(' ').Select(int.Parse).ToArray();
-        TopK(n, k, arr);
+        int n = int.Parse(line1.Split(' ')[0]);
+        int k = int.Parse(line1.Split(' ')[1]);
+        string arrStr = Console.ReadLine();
+        if (arrStr != null) {
+            int[] arr = arrStr.Split(' ').Select(int.Parse).ToArray();
+            TopK(n, k, arr);
+        }
     }
 }`,
       go: `package main
@@ -3780,7 +3859,7 @@ fn main() {
     estimatedTime: "30 mins",
     company: "Google",
     tags: ["Strings", "Logic"],
-    inputFormat: "Line 1: S.\\nLine 2: T.",
+    inputFormat: "Line 1: S.\nLine 2: T.",
     outputFormat: "Minimum length or 0.",
     constraints: ["1 <= |S|, |T| <= 100000"],
     sampleInput: "ADOBECODEBANC\nABC",
@@ -3803,7 +3882,7 @@ def min_window(s, t):
 if __name__ == "__main__":
     lines = sys.stdin.read().splitlines()
     if len(lines) >= 2:
-        print(min_window(lines[0], lines[1]))`,
+        print(min_window(lines[0].strip(), lines[1].strip()))`,
       java: `import java.util.Scanner;
 import java.util.HashMap;
 
@@ -3818,7 +3897,7 @@ public class Main {
         if (sc.hasNextLine()) {
             String s = sc.nextLine();
             if (sc.hasNextLine()) {
-                System.out.println(minWindow(s, sc.nextLine()));
+                System.out.println(minWindow(s.trim(), sc.nextLine().trim()));
             }
         }
     }
@@ -3849,9 +3928,9 @@ function minWindow(s, t) {
     return 0;
 }
 
-const input = fs.readFileSync(0, 'utf8').split('\\n');
+const input = fs.readFileSync(0, 'utf8').split('\n');
 if (input.length >= 2) {
-    console.log(minWindow(input[0], input[1]));
+    console.log(minWindow(input[0].trim(), input[1].trim()));
 }`,
       c: `#include <stdio.h>
 #include <string.h>
@@ -3864,7 +3943,7 @@ int minWindow(char* s, char* t) {
 int main() {
     char s[100001], t[100001];
     if (scanf("%s %s", s, t) != EOF) {
-        printf("%d\\n", minWindow(s, t));
+        printf("%d\n", minWindow(s, t));
     }
     return 0;
 }`,
@@ -3931,7 +4010,7 @@ fn main() {
     estimatedTime: "25 mins",
     company: "Google",
     tags: ["Arrays", "Logic"],
-    inputFormat: "Line 1: N.\\nLine 2: N integers.",
+    inputFormat: "Line 1: N.\nLine 2: N integers.",
     outputFormat: "Longest length.",
     constraints: ["1 <= N <= 100000"],
     sampleInput: "6\n100 4 200 1 3 2",
@@ -4004,7 +4083,7 @@ function longestConsecutive(n, arr) {
     return 0;
 }
 
-const input = fs.readFileSync(0, 'utf8').split(/\\s+/);
+const input = fs.readFileSync(0, 'utf8').split(/\s+/);
 if (input.length >= 1) {
     const n = parseInt(input[0]);
     const arr = input.slice(1, n + 1).map(Number);
@@ -4022,7 +4101,7 @@ int main() {
     if (scanf("%d", &n) != EOF) {
         int arr[100001];
         for (int i = 0; i < n; i++) scanf("%d", &arr[i]);
-        printf("%d\\n", longestConsecutive(n, arr));
+        printf("%d\n", longestConsecutive(n, arr));
     }
     return 0;
 }`,
@@ -4040,8 +4119,11 @@ class Program {
         string l = Console.ReadLine();
         if (l != null) {
             int n = int.Parse(l);
-            int[] arr = Console.ReadLine().Split(' ').Select(int.Parse).ToArray();
-            Console.WriteLine(LongestConsecutive(n, arr));
+            string arrStr = Console.ReadLine();
+            if (arrStr != null) {
+                int[] arr = arrStr.Split(' ').Select(int.Parse).ToArray();
+                Console.WriteLine(LongestConsecutive(n, arr));
+            }
         }
     }
 }`,
@@ -4098,7 +4180,7 @@ fn main() {
     estimatedTime: "25 mins",
     company: "Meta",
     tags: ["Graphs", "Logic"],
-    inputFormat: "Line 1: N.\\nN lines: N integers.",
+    inputFormat: "Line 1: N.\nN lines: N integers.",
     outputFormat: "YES or NO.",
     constraints: ["1 <= N <= 100"],
     sampleInput: "3\n0 0 1\n1 0 1\n1 0 0",
@@ -4177,7 +4259,7 @@ function hasPath(n, grid) {
     return false;
 }
 
-const input = fs.readFileSync(0, 'utf8').split(/\\s+/);
+const input = fs.readFileSync(0, 'utf8').split(/\s+/);
 if (input.length >= 1) {
     let n = parseInt(input[0]);
     let grid = [];
@@ -4201,7 +4283,7 @@ int main() {
         for (int i = 0; i < n; i++) {
             for (int j = 0; j < n; j++) scanf("%d", &grid[i][j]);
         }
-        printf("%s\\n", hasPath(n, grid) ? "YES" : "NO");
+        printf("%s\n", hasPath(n, grid) ? "YES" : "NO");
     }
     return 0;
 }`,
@@ -4219,7 +4301,9 @@ class Program {
         int n = int.Parse(l);
         int[][] grid = new int[n][];
         for (int i = 0; i < n; i++) {
-            grid[i] = Console.ReadLine().Split(' ').Select(int.Parse).ToArray();
+            string row = Console.ReadLine();
+            if (row != null)
+                grid[i] = row.Split(' ').Select(int.Parse).ToArray();
         }
         Console.WriteLine(HasPath(n, grid) ? "YES" : "NO");
     }
@@ -4288,7 +4372,7 @@ fn main() {
     estimatedTime: "25 mins",
     company: "Google",
     tags: ["Graphs", "Logic"],
-    inputFormat: "Line 1: N.\\nN lines: N integers.",
+    inputFormat: "Line 1: N.\nN lines: N integers.",
     outputFormat: "Shortest length or -1.",
     constraints: ["1 <= N <= 100"],
     sampleInput: "3\n0 0 0\n1 1 0\n1 1 0",
@@ -4367,7 +4451,7 @@ function shortestPath(n, grid) {
     return -1;
 }
 
-const input = fs.readFileSync(0, 'utf8').split(/\\s+/);
+const input = fs.readFileSync(0, 'utf8').split(/\s+/);
 if (input.length >= 1) {
     let n = parseInt(input[0]);
     let grid = [];
@@ -4390,12 +4474,13 @@ int main() {
         for (int i = 0; i < n; i++) {
             for (int j = 0; j < n; j++) scanf("%d", &grid[i][j]);
         }
-        printf("%d\\n", shortestPath(n, grid));
+        printf("%d\n", shortestPath(n, grid));
     }
     return 0;
 }`,
       csharp: `using System;
 using System.Collections.Generic;
+using System.Linq;
 
 class Program {
     static int ShortestPath(int n, int[][] grid) {
@@ -4409,7 +4494,9 @@ class Program {
         int n = int.Parse(l);
         int[][] grid = new int[n][];
         for (int i = 0; i < n; i++) {
-            grid[i] = Console.ReadLine().Split(' ').Select(int.Parse).ToArray();
+            string row = Console.ReadLine();
+            if (row != null)
+                grid[i] = row.Split(' ').Select(int.Parse).ToArray();
         }
         Console.WriteLine(ShortestPath(n, grid));
     }
@@ -4474,7 +4561,7 @@ fn main() {
     estimatedTime: "25 mins",
     company: "Google",
     tags: ["Strings", "DP"],
-    inputFormat: "Line 1: S1.\\nLine 2: S2.",
+    inputFormat: "Line 1: S1.\nLine 2: S2.",
     outputFormat: "LCS length.",
     constraints: ["1 <= |S1|, |S2| <= 1000"],
     sampleInput: "abcde\nace",
@@ -4497,7 +4584,7 @@ def lcs(s1, s2):
 if __name__ == "__main__":
     lines = sys.stdin.read().splitlines()
     if len(lines) >= 2:
-        print(lcs(lines[0], lines[1]))`,
+        print(lcs(lines[0].strip(), lines[1].strip()))`,
       java: `import java.util.Scanner;
 
 public class Main {
@@ -4511,7 +4598,8 @@ public class Main {
         if (sc.hasNextLine()) {
             String s1 = sc.nextLine();
             if (sc.hasNextLine()) {
-                System.out.println(lcs(s1, sc.nextLine()));
+                String s2 = sc.nextLine();
+                System.out.println(lcs(s1.trim(), s2.trim()));
             }
         }
     }
@@ -4542,9 +4630,9 @@ function lcs(s1, s2) {
     return 0;
 }
 
-const input = fs.readFileSync(0, 'utf8').split('\\n');
+const input = fs.readFileSync(0, 'utf8').split('\n');
 if (input.length >= 2) {
-    console.log(lcs(input[0], input[1]));
+    console.log(lcs(input[0].trim(), input[1].trim()));
 }`,
       c: `#include <stdio.h>
 #include <string.h>
@@ -4557,7 +4645,7 @@ int lcs(char* s1, char* s2) {
 int main() {
     char s1[1001], s2[1001];
     if (scanf("%s %s", s1, s2) != EOF) {
-        printf("%d\\n", lcs(s1, s2));
+        printf("%d\n", lcs(s1, s2));
     }
     return 0;
 }`,
@@ -4623,7 +4711,7 @@ fn main() {
     estimatedTime: "25 mins",
     company: "Goldman Sachs",
     tags: ["Arrays", "DP"],
-    inputFormat: "Line 1: N types, T amount.\\nLine 2: N integers.",
+    inputFormat: "Line 1: N types, T amount.\nLine 2: N integers.",
     outputFormat: "Minimum coins or -1.",
     constraints: ["1 <= T <= 10000", "1 <= N <= 100"],
     sampleInput: "3 11\n1 2 5",
@@ -4697,7 +4785,7 @@ function coinChange(coins, t) {
     return -1;
 }
 
-const input = fs.readFileSync(0, 'utf8').split(/\\s+/);
+const input = fs.readFileSync(0, 'utf8').split(/\s+/);
 if (input.length >= 2) {
     const n = parseInt(input[0]);
     const t = parseInt(input[1]);
@@ -4716,7 +4804,7 @@ int main() {
     if (scanf("%d %d", &n, &t) != EOF) {
         int coins[101];
         for (int i = 0; i < n; i++) scanf("%d", &coins[i]);
-        printf("%d\\n", coinChange(n, coins, t));
+        printf("%d\n", coinChange(n, coins, t));
     }
     return 0;
 }`,
@@ -4735,8 +4823,11 @@ class Program {
         string[] p = l.Split(' ');
         int n = int.Parse(p[0]);
         int t = int.Parse(p[1]);
-        int[] coins = Console.ReadLine().Split(' ').Select(int.Parse).ToArray();
-        Console.WriteLine(CoinChange(coins, t));
+        string arrStr = Console.ReadLine();
+        if (arrStr != null) {
+            int[] coins = arrStr.Split(' ').Select(int.Parse).ToArray();
+            Console.WriteLine(CoinChange(coins, t));
+        }
     }
 }`,
       go: `package main
@@ -4793,7 +4884,7 @@ fn main() {
     estimatedTime: "30 mins",
     company: "Google",
     tags: ["Arrays", "Logic"],
-    inputFormat: "Line 1: N.\\nLine 2: N heights.",
+    inputFormat: "Line 1: N.\nLine 2: N heights.",
     outputFormat: "Total water trapped.",
     constraints: ["1 <= N <= 100000"],
     sampleInput: "12\n0 1 0 2 1 0 1 3 2 1 2 1",
@@ -4864,7 +4955,7 @@ function trap(n, arr) {
     return 0;
 }
 
-const input = fs.readFileSync(0, 'utf8').split(/\\s+/);
+const input = fs.readFileSync(0, 'utf8').split(/\s+/);
 if (input.length >= 2) {
     const n = parseInt(input[0]);
     const arr = input.slice(1, n + 1).map(Number);
@@ -4882,7 +4973,7 @@ int main() {
     if (scanf("%d", &n) != EOF) {
         int arr[100001];
         for (int i = 0; i < n; i++) scanf("%d", &arr[i]);
-        printf("%lld\\n", trap(n, arr));
+        printf("%lld\n", trap(n, arr));
     }
     return 0;
 }`,
@@ -4899,8 +4990,11 @@ class Program {
         string l = Console.ReadLine();
         if (l == null) return;
         int n = int.Parse(l);
-        int[] arr = Console.ReadLine().Split(' ').Select(int.Parse).ToArray();
-        Console.WriteLine(Trap(n, arr));
+        string arrStr = Console.ReadLine();
+        if (arrStr != null) {
+            int[] arr = arrStr.Split(' ').Select(int.Parse).ToArray();
+            Console.WriteLine(Trap(n, arr));
+        }
     }
 }`,
       go: `package main
