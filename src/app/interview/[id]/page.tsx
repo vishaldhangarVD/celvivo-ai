@@ -1,3 +1,4 @@
+
 "use client";
 import { Suspense, useEffect, useState, useRef, useMemo } from "react";
 import { useRouter, useParams, useSearchParams } from "next/navigation";
@@ -25,7 +26,16 @@ import {
   Frown,
   Flag,
   ChevronRight,
-  Timer
+  Timer,
+  User,
+  Video,
+  Activity,
+  Wifi,
+  Calculator,
+  FileEdit,
+  Award,
+  Lightbulb,
+  MoreHorizontal
 } from "lucide-react";
 import Navbar from "@/components/layout/Navbar";
 import { aiMockInterview } from "@/ai/flows/ai-mock-interview-v2";
@@ -34,6 +44,8 @@ import { useUser, useFirestore } from "@/firebase";
 import { doc, serverTimestamp, collection, addDoc, getDoc, deleteDoc } from "firebase/firestore";
 import { useToast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
+import { Card } from "@/components/ui/card";
+import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 
 function VirtualArenaContent() {
@@ -351,179 +363,226 @@ function VirtualArenaContent() {
     <div className="h-dvh bg-[#050816] flex flex-col relative overflow-hidden">
       <div className="particles-bg" />
       
-      <div className="flex-1 flex overflow-hidden">
-        {/* LEFT SIDEBAR */}
-        <aside className="w-20 border-r border-white/5 bg-[#0b0e1a] flex flex-col items-center py-10 gap-10 z-[60] shrink-0">
-          <Link href="/">
-            <Button variant="ghost" size="icon" onClick={stopCamera} className="w-12 h-12 rounded-2xl glass hover:bg-accent/10 hover:text-accent transition-all">
-              <Home className="w-5 h-5" />
-            </Button>
-          </Link>
-          <Button variant="ghost" size="icon" className="w-12 h-12 rounded-2xl bg-accent/10 text-accent border border-accent/20">
-            <MessageSquare className="w-5 h-5" />
-          </Button>
-          <Button variant="ghost" size="icon" className="w-12 h-12 rounded-2xl glass hover:bg-white/5 text-white/40">
-            <BarChart4 className="w-5 h-5" />
-          </Button>
-          <div className="mt-auto flex flex-col gap-6">
-            <Button variant="ghost" size="icon" className="w-12 h-12 rounded-2xl glass hover:bg-white/5 text-white/40">
-              <HelpCircle className="w-5 h-5" />
-            </Button>
-            <Button variant="ghost" size="icon" className="w-12 h-12 rounded-2xl glass hover:bg-white/5 text-white/40">
-              <Settings className="w-5 h-5" />
-            </Button>
-          </div>
-        </aside>
+      {/* HEADER SECTION */}
+      <header className="h-[72px] border-b border-white/5 bg-[#0b0e1a] flex items-center justify-between px-6 shrink-0 z-50">
+        <div className="flex items-center gap-6">
+           <div className="w-10 h-10 rounded-xl bg-blue-500/10 flex items-center justify-center text-blue-500 border border-blue-500/20 font-black text-xl">G</div>
+           <div>
+             <h1 className="text-sm font-black uppercase tracking-widest text-white leading-none">{company.toUpperCase()} ARENA</h1>
+             <p className="text-[10px] text-white/40 uppercase font-black mt-1">Protocol Node {currentIdx}</p>
+           </div>
+        </div>
 
-        <div className="flex-1 flex flex-col overflow-hidden">
-          {/* TOP HEADER */}
-          <header className="h-[10vh] border-b border-white/5 bg-[#0b0e1a]/80 backdrop-blur-xl flex items-center justify-between px-8 z-50 shrink-0">
-            <div className="flex items-center gap-6">
-               <div className="w-10 h-10 rounded-xl bg-blue-500/10 flex items-center justify-center text-blue-500 border border-blue-500/20 font-black text-xl">G</div>
-               <div>
-                 <h1 className="text-sm font-black uppercase tracking-widest text-premium">{company.toUpperCase()} ARENA</h1>
-                 <p className="text-[10px] text-muted-foreground uppercase font-black tracking-widest">Protocol Node {currentIdx}</p>
-               </div>
+        <div className="text-center">
+          <p className="text-[10px] font-black text-white/30 uppercase tracking-widest mb-1">Time Remaining</p>
+          <div className="px-4 py-1.5 glass rounded-lg border-accent/20 font-mono text-lg text-accent tabular-nums flex items-center gap-3">
+            <Timer className="w-4 h-4" /> {formatTime(timeLeft)}
+          </div>
+        </div>
+        
+        <div className="flex items-center gap-3">
+          <Button variant="ghost" size="icon" className="text-white/40 hover:text-white"><HelpCircle className="w-5 h-5" /></Button>
+          <Button variant="ghost" size="icon" className="text-white/40 hover:text-white"><MessageSquare className="w-5 h-5" /></Button>
+          <Button variant="ghost" size="icon" className="text-white/40 hover:text-white"><Flag className="w-5 h-5" /></Button>
+          <Button 
+            onClick={() => finalizeSession(transcript)}
+            className="h-10 px-6 rounded-xl bg-red-500/10 hover:bg-red-500 text-red-500 hover:text-white border border-red-500/20 transition-all font-bold text-[10px] uppercase tracking-widest"
+          >
+            End Interview
+          </Button>
+          <Button variant="ghost" size="icon" className="text-white/40 hover:text-white"><MoreHorizontal className="w-5 h-5" /></Button>
+        </div>
+      </header>
+
+      {/* MAIN CONTENT AREA */}
+      <div className="flex-1 flex overflow-hidden">
+        
+        {/* LEFT COLUMN: Video Arena */}
+        <div className="flex-1 flex flex-col overflow-y-auto custom-scrollbar p-6 space-y-6">
+          <div className="flex-1 min-h-[400px] relative rounded-[2rem] overflow-hidden bg-black border border-white/5 shadow-2xl">
+            {cameraError ? (
+              <div className="w-full h-full flex flex-col items-center justify-center bg-[#0b0e1a] text-center p-12 space-y-6">
+                <VideoOff className="w-16 h-16 text-red-400" />
+                <h3 className="text-xl font-bold text-white">Camera Access Required</h3>
+                <Button onClick={startCamera} className="btn-premium">Enable Camera</Button>
+              </div>
+            ) : (
+              <video
+                ref={userVideoRef}
+                autoPlay
+                playsInline
+                muted
+                className="w-full h-full object-cover"
+                style={{ transform: 'scaleX(-1)' }}
+              />
+            )}
+
+            {/* Status Badges */}
+            <div className="absolute top-6 left-6 flex items-center gap-2 px-3 py-1.5 glass rounded-full border-green-500/20 text-green-400">
+              <ShieldCheck className="w-3 h-3" />
+              <span className="text-[9px] font-black uppercase tracking-widest">Secure Connection</span>
             </div>
             
-            <div className="flex items-center gap-6">
-              <Button 
-                onClick={() => router.push('/interview/coding')} 
-                variant="ghost" 
-                className="h-10 px-6 rounded-xl glass border-white/10 text-[10px] font-black uppercase tracking-widest hover:bg-accent/10 hover:text-accent"
-              >
-                Skip → Coding
-              </Button>
-              <div className="px-6 py-2 glass rounded-xl border-accent/20 font-mono text-xl text-accent tabular-nums flex items-center gap-3">
-                <Timer className="w-5 h-5" /> {formatTime(timeLeft)}
-              </div>
+            <div className="absolute bottom-6 left-6 flex items-center gap-2 px-3 py-1.5 glass rounded-full border-white/10 text-white/60">
+              <User className="w-3 h-3" />
+              <span className="text-[9px] font-black uppercase tracking-widest">You</span>
             </div>
-          </header>
 
-          {/* MAIN VIDEO AREA */}
-          <main className="flex-1 min-h-0 flex flex-col relative overflow-hidden bg-[#050816]">
-            <div className="flex-1 min-h-0 flex items-center justify-center p-4 md:p-6 relative overflow-hidden">
-              <div className="w-full h-full max-w-7xl mx-auto relative rounded-[3rem] overflow-hidden bg-black border border-white/5 shadow-2xl">
-                {cameraError ? (
-                  <div className="w-full h-full flex flex-col items-center justify-center bg-[#0b0e1a] text-center p-12 space-y-6">
-                    <div className="w-20 h-20 rounded-full bg-red-500/10 flex items-center justify-center border border-red-500/20">
-                      <VideoOff className="w-10 h-10 text-red-400" />
-                    </div>
-                    <div className="space-y-2">
-                      <h3 className="text-2xl font-bold text-white">Camera Access Required</h3>
-                      <p className="text-muted-foreground font-light max-w-md">Please enable camera and microphone permissions in your browser to proceed with the neural interview simulation.</p>
-                    </div>
-                    <button onClick={startCamera} className="btn-premium px-8 py-3 rounded-full text-white font-bold">Enable Camera</button>
-                  </div>
-                ) : (
-                  <video
-                    ref={userVideoRef}
-                    autoPlay
-                    playsInline
-                    muted
-                    className="w-full h-full object-cover"
-                    style={{ transform: 'scaleX(-1)' }}
-                  />
-                )}
-
-                {/* QUESTION CARD */}
-                <div className="absolute top-1/2 -translate-y-1/2 left-10 z-40">
-                  <motion.div 
-                    initial={{ opacity: 0, x: -50 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    key={currentIdx}
-                    className="bg-[#08090D]/95 backdrop-blur-2xl p-8 rounded-[2rem] border border-white/10 w-[340px] shadow-[0_0_100px_rgba(0,0,0,0.5)] space-y-5 relative overflow-hidden group"
-                  >
-                    <div className="absolute top-0 left-0 w-2 h-full bg-accent group-hover:shadow-[0_0_20px_#22d3ee] transition-all" />
-                    <div className="space-y-2">
-                      <Badge className="bg-accent/20 text-accent border-none text-[10px] font-black uppercase tracking-widest px-4 py-1">QUESTION {currentIdx} / 10</Badge>
-                      <h3 className="text-xl font-bold text-white leading-tight tracking-tight mt-4">
-                        {currentInterviewerQuestion}
-                      </h3>
-                    </div>
-                    <div className="pt-6 border-t border-white/5 flex items-center gap-3">
-                      <div className="w-2 h-2 rounded-full bg-accent animate-pulse" />
-                      <span className="text-[10px] font-bold text-white/30 uppercase tracking-[0.2em]">AI Interviewer is asking...</span>
-                    </div>
-                  </motion.div>
-                </div>
-
-                {/* AI INTERVIEWER FLOATING BOX */}
-                <div
-                  className="
-                    absolute
-                    bottom-6
-                    right-6
-                    z-30
-                    w-[280px]
-                    sm:w-[320px]
-                    aspect-video
-                    rounded-[2rem]
-                    overflow-hidden
-                    border border-white/10
-                    shadow-2xl
-                    bg-[#0b0e1a]
-                  "
-                >
-                  <video
-                    ref={aiVideoRef}
-                    src="/interviewer-female.mp4"
-                    poster="/hr.png.png"
-                    className="w-full h-full object-cover"
-                    loop
-                    playsInline
-                    autoPlay
-                    muted
-                  />
-                  <div className="absolute bottom-3 left-3">
-                    <Badge className="bg-accent/20 text-accent border-none text-[8px] font-black tracking-widest uppercase">
-                      AI Interviewer
-                    </Badge>
-                  </div>
-                </div>
+            {/* Floating Interviewer PiP */}
+            <div className="absolute bottom-6 right-6 w-[240px] aspect-video rounded-2xl overflow-hidden border border-white/10 shadow-2xl bg-[#0b0e1a]">
+              <video
+                ref={aiVideoRef}
+                src="/interviewer-female.mp4"
+                poster="/hr.png.png"
+                className="w-full h-full object-cover"
+                loop
+                playsInline
+                autoPlay
+                muted
+              />
+              <div className="absolute bottom-2 left-2 px-2 py-0.5 glass rounded-lg border-white/10">
+                <span className="text-[8px] font-black tracking-widest uppercase text-white/60">Interviewer</span>
               </div>
             </div>
 
-            {/* BOTTOM CONTROL BAR */}
-            <footer className="h-[15vh] min-h-0 shrink-0 bg-[#0b0e1a]/95 backdrop-blur-2xl border-t border-white/5 flex items-center px-10 gap-6 z-50">
-               <div className="flex items-center gap-6">
-                 <Button 
-                  onClick={() => finalizeSession(transcript)}
-                  className="h-14 px-8 rounded-2xl bg-red-500/10 hover:bg-red-500 text-red-500 hover:text-white border border-red-500/20 transition-all font-bold text-[10px] uppercase tracking-widest flex gap-3 group"
-                 >
-                   <PhoneOff className="w-4 h-4 group-hover:animate-bounce" /> End Interview
-                 </Button>
-                 <Button variant="ghost" size="icon" className="w-14 h-14 rounded-2xl glass hover:bg-white/5 text-white/40">
-                   <MicOff className="w-5 h-5" />
-                 </Button>
-               </div>
+            {/* Video Area Bottom Controls */}
+            <div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex items-center gap-4">
+              <Button variant="ghost" size="icon" className="w-12 h-12 rounded-full glass hover:bg-white/10 text-white"><Mic className="w-5 h-5" /></Button>
+              <Button variant="ghost" size="icon" className="w-12 h-12 rounded-full glass hover:bg-white/10 text-white"><Video className="w-5 h-5" /></Button>
+            </div>
+          </div>
 
-               <div className="flex-1 flex justify-center">
-                  <Button 
-                    onClick={toggleMic} 
-                    disabled={isProcessing} 
+          {/* Metrics & Quick Actions */}
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 shrink-0">
+            <Card className="glass border-white/5 p-4 flex items-center gap-4">
+              <div className="w-10 h-10 rounded-xl bg-accent/10 flex items-center justify-center text-accent"><Activity className="w-5 h-5" /></div>
+              <div>
+                <p className="text-[8px] font-black text-white/20 uppercase tracking-widest leading-none mb-1">Interview Progress</p>
+                <p className="text-sm font-bold text-white leading-none">{Math.round((currentIdx / 10) * 100)}% Complete</p>
+              </div>
+            </Card>
+            <Card className="glass border-white/5 p-4 flex items-center gap-4">
+              <div className="w-10 h-10 rounded-xl bg-purple-500/10 flex items-center justify-center text-purple-400"><Clock className="w-5 h-5" /></div>
+              <div>
+                <p className="text-[8px] font-black text-white/20 uppercase tracking-widest leading-none mb-1">Time Elapsed</p>
+                <p className="text-sm font-bold text-white leading-none">05:24</p>
+              </div>
+            </Card>
+            <Card className="glass border-white/5 p-4 flex items-center gap-4">
+              <div className="w-10 h-10 rounded-xl bg-green-500/10 flex items-center justify-center text-green-400"><Wifi className="w-5 h-5" /></div>
+              <div>
+                <p className="text-[8px] font-black text-white/20 uppercase tracking-widest leading-none mb-1">Connection</p>
+                <p className="text-sm font-bold text-white leading-none">98ms Latency</p>
+              </div>
+            </Card>
+            <Card className="glass border-white/5 p-4 flex items-center gap-4">
+              <div className="flex -space-x-2">
+                 <Button variant="ghost" size="icon" className="w-8 h-8 rounded-full glass border-white/10 hover:bg-white/5 p-0"><Calculator className="w-3.5 h-3.5" /></Button>
+                 <Button variant="ghost" size="icon" className="w-8 h-8 rounded-full glass border-white/10 hover:bg-white/5 p-0"><FileEdit className="w-3.5 h-3.5" /></Button>
+                 <Button variant="ghost" size="icon" className="w-8 h-8 rounded-full glass border-white/10 hover:bg-white/5 p-0"><MessageSquare className="w-3.5 h-3.5" /></Button>
+              </div>
+              <div className="ml-4">
+                <p className="text-[8px] font-black text-white/20 uppercase tracking-widest leading-none mb-1">Quick Actions</p>
+                <p className="text-[10px] font-bold text-white/60 uppercase leading-none">Tools Active</p>
+              </div>
+            </Card>
+          </div>
+        </div>
+
+        {/* RIGHT COLUMN: Interview Panel */}
+        <div className="w-full lg:w-[28%] border-l border-white/5 bg-[#0b0e1a] flex flex-col shrink-0">
+          <div className="h-14 border-b border-white/5 flex items-center px-4 gap-4">
+             <button className="text-[10px] font-black uppercase tracking-widest text-accent border-b-2 border-accent h-full px-2">Interview</button>
+             <button className="text-[10px] font-black uppercase tracking-widest text-white/30 hover:text-white px-2">Notes</button>
+             <button className="text-[10px] font-black uppercase tracking-widest text-white/30 hover:text-white px-2">Transcript</button>
+          </div>
+          
+          <div className="flex-1 p-6 flex flex-col space-y-6 overflow-y-auto custom-scrollbar">
+             <div className="space-y-4">
+                <div className="flex justify-between items-end">
+                  <h3 className="text-[11px] font-black uppercase tracking-widest text-white/30">Question {currentIdx} of 10</h3>
+                  <span className="text-[11px] font-black text-accent uppercase tracking-widest">{currentIdx}0%</span>
+                </div>
+                <div className="h-1.5 w-full bg-white/5 rounded-full overflow-hidden">
+                  <div className="h-full bg-accent transition-all duration-500" style={{ width: `${currentIdx}0%` }} />
+                </div>
+             </div>
+
+             <Card className="glass border-white/10 bg-white/[0.02] p-6 space-y-4 rounded-2xl relative overflow-hidden">
+                <div className="absolute top-0 right-0 p-3 opacity-10"><Brain className="w-8 h-8 text-accent" /></div>
+                <p className="text-base font-light text-white leading-relaxed pr-6">{currentInterviewerQuestion}</p>
+                <div className="pt-4 border-t border-white/5 flex items-center justify-between">
+                  <span className="text-[9px] font-black text-white/20 uppercase tracking-[0.2em]">Prep Time</span>
+                  <div className="flex items-center gap-2 text-accent">
+                     <Timer className="w-3 h-3" />
+                     <span className="text-xs font-mono">00:45</span>
+                  </div>
+                </div>
+             </Card>
+
+             <Card className="glass border-purple-500/10 bg-purple-500/[0.02] p-5 space-y-2 rounded-2xl">
+                <div className="flex items-center gap-2 text-purple-400">
+                  <Lightbulb className="w-4 h-4" />
+                  <span className="text-[10px] font-black uppercase tracking-widest">Simulation Tip</span>
+                </div>
+                <p className="text-xs text-white/60 font-light leading-relaxed">Structure your response using the STAR method (Situation, Task, Action, Result) for behavioral questions.</p>
+             </Card>
+
+             <div className="flex-1" />
+
+             {/* Answer Submission Hub */}
+             <div className="space-y-4 pt-6 border-t border-white/5">
+                <div className="relative group">
+                  <Textarea 
+                    value={userAnswer}
+                    onChange={(e) => setUserAnswer(e.target.value)}
+                    placeholder="Type your strategic response here..."
+                    className="min-h-[140px] rounded-2xl glass border-white/10 bg-transparent p-4 text-sm font-light resize-none focus:border-accent transition-all pr-12 custom-scrollbar"
+                  />
+                  <button 
+                    onClick={toggleMic}
                     className={cn(
-                      "w-24 h-24 rounded-full transition-all duration-500 flex items-center justify-center shadow-2xl relative",
-                      isMicActive ? "bg-red-500 text-white animate-pulse" : "btn-premium text-white"
+                      "absolute right-4 bottom-4 w-10 h-10 rounded-xl flex items-center justify-center transition-all",
+                      isMicActive ? "bg-red-500 text-white animate-pulse shadow-lg" : "bg-white/5 text-white/40 hover:text-white"
                     )}
                   >
-                    <div className="absolute inset-0 rounded-full border-4 border-white/10 animate-ping opacity-20" />
-                    {isProcessing ? <Loader2 className="w-10 h-10 animate-spin" /> : <Mic className="w-10 h-10" />}
-                  </Button>
-               </div>
-
-               <div className="flex items-center gap-4">
-                 <Button variant="ghost" size="icon" className="w-12 h-12 rounded-xl glass hover:bg-white/5 text-white/40"><StickyNote className="w-4 h-4" /></Button>
-                 <Button variant="ghost" size="icon" className="w-12 h-12 rounded-xl glass hover:bg-white/5 text-white/40"><RotateCw className="w-4 h-4" /></Button>
-                 <Button variant="ghost" size="icon" className="w-12 h-12 rounded-xl glass hover:bg-white/5 text-white/40"><Frown className="w-4 h-4" /></Button>
-                 <div className="w-px h-8 bg-white/5 mx-2" />
-                 <Button variant="ghost" size="icon" className="w-12 h-12 rounded-xl glass hover:bg-white/5 text-white/40"><Flag className="w-4 h-4" /></Button>
-               </div>
-            </footer>
-          </main>
+                    <Mic className="w-5 h-5" />
+                  </button>
+                </div>
+                <Button 
+                  onClick={handleSend}
+                  disabled={isProcessing || !userAnswer.trim()}
+                  className="w-full h-14 btn-premium rounded-2xl text-xs font-black uppercase tracking-[0.3em] shadow-2xl group"
+                >
+                  {isProcessing ? <Loader2 className="w-5 h-5 animate-spin" /> : <>Submit Answer <Send className="ml-3 w-4 h-4 transition-transform group-hover:translate-x-1" /></>}
+                </Button>
+             </div>
+          </div>
         </div>
       </div>
 
+      {/* FOOTER: Global Tips Bar */}
+      <footer className="h-16 border-t border-white/5 bg-[#0b0e1a] flex items-center px-8 gap-12 shrink-0 z-50">
+        <div className="flex items-center gap-3">
+          <Award className="w-5 h-5 text-accent" />
+          <span className="text-[10px] font-black uppercase tracking-widest text-white/30">Interview Tips:</span>
+        </div>
+        <div className="flex-1 flex items-center gap-12 overflow-hidden">
+          {[
+            "Think before you speak",
+            "Structure your answers",
+            "Be specific & metrics-driven",
+            "Stay calm & confident"
+          ].map((tip, i) => (
+            <div key={i} className="flex items-center gap-3 shrink-0">
+              <div className="w-1.5 h-1.5 rounded-full bg-accent/40" />
+              <span className="text-[10px] font-bold uppercase tracking-widest text-white/60">{tip}</span>
+            </div>
+          ))}
+        </div>
+      </footer>
+
+      {/* OVERLAYS: Initializing & Finalizing */}
       <AnimatePresence>
         {isInitializing && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-[#050816]/95 backdrop-blur-2xl">
@@ -541,7 +600,7 @@ function VirtualArenaContent() {
           </motion.div>
         )}
 
-        {isSimulationComplete && (
+        {isSimulationComplete && isGeneratingReport && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-[#050816]/95 backdrop-blur-2xl">
             <div className="max-w-md w-full text-center space-y-8">
               <div className="relative">
