@@ -35,7 +35,8 @@ import {
   FileEdit,
   Award,
   Lightbulb,
-  MoreHorizontal
+  MoreHorizontal,
+  Clock
 } from "lucide-react";
 import Navbar from "@/components/layout/Navbar";
 import { aiMockInterview } from "@/ai/flows/ai-mock-interview-v2";
@@ -397,7 +398,20 @@ function VirtualArenaContent() {
       {/* MAIN CONTENT AREA */}
       <div className="flex-1 flex overflow-hidden">
         
-        {/* LEFT COLUMN: Video Arena */}
+        {/* LEFT COLUMN: Sidebar Icons */}
+        <div className="w-[72px] border-r border-white/5 bg-[#0b0e1a] flex flex-col items-center py-8 gap-10 shrink-0">
+          <Link href="/">
+            <Button variant="ghost" size="icon" className="text-white/20 hover:text-white"><Home className="w-5 h-5" /></Button>
+          </Link>
+          <Button variant="ghost" size="icon" className="text-accent bg-accent/10 rounded-xl"><Mic className="w-5 h-5" /></Button>
+          <Button variant="ghost" size="icon" className="text-white/20 hover:text-white"><BarChart4 className="w-5 h-5" /></Button>
+          <div className="mt-auto flex flex-col gap-6">
+            <Button variant="ghost" size="icon" className="text-white/20 hover:text-white"><HelpCircle className="w-5 h-5" /></Button>
+            <Button variant="ghost" size="icon" className="text-white/20 hover:text-white"><Settings className="w-5 h-5" /></Button>
+          </div>
+        </div>
+
+        {/* CENTER COLUMN: Video Arena */}
         <div className="flex-1 flex flex-col overflow-y-auto custom-scrollbar p-6 space-y-6">
           <div className="flex-1 min-h-[400px] relative rounded-[2rem] overflow-hidden bg-black border border-white/5 shadow-2xl">
             {cameraError ? (
@@ -444,6 +458,23 @@ function VirtualArenaContent() {
                 <span className="text-[8px] font-black tracking-widest uppercase text-white/60">Interviewer</span>
               </div>
             </div>
+
+            {/* Floating Question Overlay Card */}
+            <Card className="absolute top-6 right-6 w-[340px] bg-[#08090D]/95 backdrop-blur-xl border border-white/5 p-8 rounded-[2rem] shadow-2xl z-20">
+               <div className="absolute left-0 top-8 bottom-8 w-1 bg-gradient-to-b from-accent to-purple-600 rounded-full" />
+               <div className="space-y-4">
+                  <div className="flex justify-between items-center">
+                    <Badge variant="outline" className="border-accent/30 text-accent text-[9px] font-black uppercase tracking-widest">Question {currentIdx} / 10</Badge>
+                  </div>
+                  <p className="text-sm font-light text-white leading-relaxed pr-2">{currentInterviewerQuestion}</p>
+                  <div className="pt-4 border-t border-white/5">
+                    <p className="text-[8px] font-black text-white/20 uppercase tracking-[0.2em] flex items-center gap-2">
+                       <div className="w-1.5 h-1.5 rounded-full bg-accent animate-pulse" />
+                       AI Interviewer is asking...
+                    </p>
+                  </div>
+               </div>
+            </Card>
 
             {/* Video Area Bottom Controls */}
             <div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex items-center gap-4">
