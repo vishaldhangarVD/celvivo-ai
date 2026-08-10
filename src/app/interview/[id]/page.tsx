@@ -53,16 +53,42 @@ function VirtualArenaContent() {
   const mediaStreamRef = useRef<MediaStream | null>(null);
 
   const stopCamera = () => {
-    const stream = mediaStreamRef.current;
-    if (stream) {
-      stream.getTracks().forEach((track) => {
+    // Stop tracks from the stream ref
+    if (mediaStreamRef.current) {
+      mediaStreamRef.current.getTracks().forEach((track) => {
         track.stop();
       });
       mediaStreamRef.current = null;
     }
-    if (userVideoRef.current) {
-      userVideoRef.current.pause();
+
+    // Stop tracks from the video element directly for redundancy
+    if (userVideoRef.current?.srcObject) {
+      const stream = userVideoRef.current.srcObject as MediaStream;
+      stream.getTracks().forEach(track => track.stop());
       userVideoRef.current.srcObject = null;
+    }
+
+    if (userVideoRef.current) {
+      try {
+        userVideoRef.current.pause();
+      } catch (e) {}
+      userVideoRef.current.srcObject = null;
+    }
+  };
+
+  const playAiVideo = async () => {
+    const video = aiVideoRef.current;
+    if (!video) return;
+
+    try {
+      if (video.readyState >= 2) {
+        video.currentTime = 0;
+        await video.play();
+      }
+    } catch (error: any) {
+      if (error?.name !== "AbortError") {
+        console.warn("AI video playback failed:", error);
+      }
     }
   };
 
@@ -70,6 +96,7 @@ function VirtualArenaContent() {
     try {
       setCameraError(null);
 
+      // Stop any existing stream first
       if (mediaStreamRef.current) {
         mediaStreamRef.current.getTracks().forEach(track => track.stop());
         mediaStreamRef.current = null;
@@ -79,11 +106,9 @@ function VirtualArenaContent() {
         throw new Error("Camera API is not available in this browser.");
       }
 
-      // Find available video devices and prefer a physical one
       const devices = await navigator.mediaDevices.enumerateDevices();
       const videoDevices = devices.filter(d => d.kind === 'videoinput');
       
-      // Attempt to exclude virtual cameras (this is heuristic-based)
       const physicalCamera = videoDevices.find(d => 
         !d.label.toLowerCase().includes('virtual') && 
         !d.label.toLowerCase().includes('obs') &&
@@ -201,13 +226,7 @@ function VirtualArenaContent() {
             setTranscript([{ role: 'interviewer', text: response.nextQuestion }]);
             setAskedQuestions([response.nextQuestion]);
             
-            if (aiVideoRef.current) {
-              aiVideoRef.current.play().catch((error: any) => {
-                if (error?.name !== "AbortError") {
-                  console.warn("AI video playback error:", error);
-                }
-              });
-            }
+            playAiVideo();
           }
         } catch (e) {
           console.error("Bootstrap Fault:", e);
@@ -258,14 +277,7 @@ function VirtualArenaContent() {
       setAskedQuestions(prev => [...prev, response.nextQuestion]);
       setCurrentIdx(prev => prev + 1);
 
-      if (aiVideoRef.current) {
-        aiVideoRef.current.currentTime = 0;
-        aiVideoRef.current.play().catch((error: any) => {
-          if (error?.name !== "AbortError") {
-            console.warn("AI video playback error:", error);
-          }
-        });
-      }
+      playAiVideo();
 
       if (response.isInterviewComplete) {
         finalizeSession(updatedTranscript);
@@ -352,7 +364,7 @@ function VirtualArenaContent() {
 
       <main className="flex-1 min-h-0 flex flex-col relative overflow-hidden">
         <div className="flex-1 min-h-0 flex items-center justify-center p-4 md:p-6 relative overflow-hidden">
-          <div className="w-full h-full max-w-7xl mx-auto relative rounded-[3rem] overflow-hidden bg-black shadow-[0_0_100px_rgba(0,0,0,0.5)] border border-white/5">
+          <div className="w-full h-full max-w-7xl mx-auto relative rounded-[3rem] overflow-hidden bg-black border border-white/5">
             {cameraError ? (
               <div className="w-full h-full flex flex-col items-center justify-center bg-[#0b0e1a] text-center p-12 space-y-6">
                 <div className="w-20 h-20 rounded-full bg-red-500/10 flex items-center justify-center border border-red-500/20">
