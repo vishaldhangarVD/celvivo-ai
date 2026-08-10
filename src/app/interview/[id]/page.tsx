@@ -468,10 +468,10 @@ function VirtualArenaContent() {
                   </div>
                   <p className="text-sm font-light text-white leading-relaxed pr-2">{currentInterviewerQuestion}</p>
                   <div className="pt-4 border-t border-white/5">
-                    <p className="text-[8px] font-black text-white/20 uppercase tracking-[0.2em] flex items-center gap-2">
-                       <div className="w-1.5 h-1.5 rounded-full bg-accent animate-pulse" />
+                    <div className="text-[8px] font-black text-white/20 uppercase tracking-[0.2em] flex items-center gap-2">
+                       <span className="w-1.5 h-1.5 rounded-full bg-accent animate-pulse" />
                        AI Interviewer is asking...
-                    </p>
+                    </div>
                   </div>
                </div>
             </Card>
