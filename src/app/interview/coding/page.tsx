@@ -258,34 +258,25 @@ export default function CodingEnginePage() {
     async function initEnvironment() {
       if (!db || !user || !journey || questions.length > 0) return;
       
-      // STABILITY: Verify if existing questions belong to the CURRENT active session
       if (journey.codingQuestions && 
           journey.codingQuestions.length > 0 && 
           journey.questionsSessionId === journey.sessionId) {
-        console.log("[CODING ROUND] Reusing stable session questions:", journey.sessionId);
         setQuestions(journey.codingQuestions);
         setIsInitializing(false);
         return;
       }
       
       try {
-        console.log("[CODING ROUND] Initializing NEW question set for session:", journey.sessionId);
-        
-        // FRESHNESS: Exclude previously used questions by checking global user history
         const userRef = doc(db, 'users', user.uid);
         const userSnap = await getDoc(userRef);
         const userData = userSnap.data();
         const usedIds = Array.isArray(userData?.codingQuestionHistory) ? userData.codingQuestionHistory : [];
         
-        console.log("[CODING ROUND] Excluding previously used IDs:", usedIds);
-
         const getFilteredPool = (difficulty: string) => {
           const pool = [...MASTER_QUESTIONS].filter(q => q.difficulty === difficulty);
-          // Strictly exclude used IDs
           let unused = pool.filter(q => !usedIds.includes(q.id));
           
           if (unused.length === 0) {
-            console.warn(`[CODING ROUND] Unused pool for ${difficulty} is EXHAUSTED. Cycling pool.`);
             return pool;
           }
           return unused;
@@ -295,7 +286,6 @@ export default function CodingEnginePage() {
         const medPool = getFilteredPool('Medium');
         const hardPool = getFilteredPool('Hard');
 
-        // Randomized selection (2-2-1 distribution)
         const selectedEasy = easyPool.sort(() => 0.5 - Math.random()).slice(0, 2);
         const selectedMed = medPool.sort(() => 0.5 - Math.random()).slice(0, 2);
         const selectedHard = hardPool.sort(() => 0.5 - Math.random()).slice(0, 1);
@@ -303,16 +293,12 @@ export default function CodingEnginePage() {
         const finalQuestions = [...selectedEasy, ...selectedMed, ...selectedHard];
         const newIds = finalQuestions.map(q => q.id);
         
-        console.log("[CODING ROUND] Selected Node IDs:", newIds);
-
-        // 1. Archive for current session stability (Journey document)
         await updateDoc(journeyRef!, {
           codingQuestions: finalQuestions,
           questionsSessionId: journey.sessionId || "unknown",
           updatedAt: serverTimestamp()
         });
 
-        // 2. Update global user history to avoid repetition in FUTURE rounds (User document)
         const updatedHistory = Array.from(new Set([...usedIds, ...newIds]));
         await updateDoc(userRef, {
           codingQuestionHistory: updatedHistory
@@ -505,18 +491,6 @@ export default function CodingEnginePage() {
                   </div>
                 </div>
 
-                {currentQ?.walkthrough && (
-                  <div className="space-y-4 p-6 glass border-white/5 rounded-3xl bg-white/[0.02]">
-                    <h4 className="text-[11px] font-black uppercase tracking-[0.3em] text-white/40">EXAMPLE WALKTHROUGH</h4>
-                    <div className="space-y-3 text-[10px] font-mono leading-relaxed">
-                       <div className="flex gap-4"><span className="text-white/20 w-24">INPUT:</span> <span className="text-accent">{currentQ.walkthrough.input}</span></div>
-                       <div className="flex gap-4"><span className="text-white/20 w-24">RECEIVED:</span> <span className="text-purple-400">{currentQ.walkthrough.received}</span></div>
-                       <div className="flex gap-4"><span className="text-white/20 w-24">EXPECTED:</span> <span className="text-green-400">{currentQ.walkthrough.expected}</span></div>
-                       <div className="flex gap-4"><span className="text-white/20 w-24">OUTPUT:</span> <span className="text-green-400">{currentQ.walkthrough.output}</span></div>
-                    </div>
-                  </div>
-                )}
-
                 <Card className="p-6 glass border-purple-500/20 bg-purple-500/[0.02] space-y-3">
                   <h4 className="text-[11px] font-black uppercase tracking-[0.3em] text-purple-400 flex items-center gap-2">
                     <Sparkles className="w-4 h-4" /> AI AUDIT NOTE
@@ -567,7 +541,7 @@ export default function CodingEnginePage() {
               onChange={(val) => setCode(val || "")} 
               options={{ 
                 fontSize: 15, 
-                readOnly: isTimeExpired || isFinalizing, 
+                readOnly: isTimeExpired || isFinalizing ? true : false, 
                 minimap: { enabled: false },
                 fontFamily: 'JetBrains Mono, monospace',
                 lineHeight: 1.6
