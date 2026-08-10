@@ -1014,7 +1014,7 @@ fn main() {
     sampleOutput: "3",
     explanation: "'n' appears 3 times in 'Programming in Python'.",
     functionInfo: { name: "charFreq(s, c)", params: "s: string, c: char", returnType: "int", goal: "Count occurrences of char in string." },
-    walkthrough: { input: "\\"abc\\", 'a'", received: "s=\"abc\", c='a'", expected: "1", output: "1" },
+    walkthrough: { input: "\"abc\", 'a'", received: "s=\"abc\", c='a'", expected: "1", output: "1" },
     starterCode: {
       python: `import sys
 
@@ -1697,7 +1697,7 @@ fn main() {
     sampleInput: "4\n2 7 11 15\n9",
     sampleOutput: "0 1",
     explanation: "Find two numbers whose sum equals the target and print their indices.",
-    functionInfo: { name: "twoSum(n, arr, t)", params: "n: int, arr: int[], t: int", returnType: "int[]", goal: "Find indices of two numbers that sum to target." },
+    functionInfo: { name: "twoSum(n, arr, t)", params: "n: int, arr: int[]", returnType: "int[]", goal: "Find indices of two numbers that sum to target." },
     walkthrough: { input: "[2,7], 9", received: "arr=[2,7], t=9", expected: "0 1", output: "0 1" },
     starterCode: {
       python: `import sys
@@ -1804,7 +1804,7 @@ class Program {
                 string l3 = Console.ReadLine();
                 if (l3 != null) {
                     int t = int.Parse(l3);
-                    Solve(n, a, t);
+                    Console.WriteLine(Solve(n, a, t));
                 }
             }
         }
@@ -2043,7 +2043,7 @@ fn main() {
     sampleOutput: "YES",
     explanation: "Use a stack-based approach to ensure brackets are closed in the correct order.",
     functionInfo: { name: "isValid(s)", params: "s: string", returnType: "boolean", goal: "Validate bracket balancing." },
-    walkthrough: { input: "\\"{}\\"", received: "s=\"{}\"", expected: "YES", output: "YES" },
+    walkthrough: { input: "\"{}\"", received: "s=\"{}\"", expected: "YES", output: "YES" },
     starterCode: {
       python: `import sys
 
@@ -2196,7 +2196,7 @@ fn main() {
     sampleOutput: "YES",
     explanation: "Two strings are anagrams if they have the same frequency of every character.",
     functionInfo: { name: "isAnagram(s1, s2)", params: "s1: string, s2: string", returnType: "boolean", goal: "Detect if two strings are anagrams." },
-    walkthrough: { input: "\\"a\\", \\"a\\"", received: "s1=\"a\", s2=\"a\"", expected: "YES", output: "YES" },
+    walkthrough: { input: "\"a\", \"a\"", received: "s1=\"a\", s2=\"a\"", expected: "YES", output: "YES" },
     starterCode: {
       python: `import sys
 
@@ -2559,7 +2559,7 @@ fn main() {
     sampleInput: "5\n1 2 3 4 5\n4",
     sampleOutput: "3",
     explanation: "Implement an efficient search that runs in logarithmic time.",
-    functionInfo: { name: "binarySearch(n, arr, t)", params: "n: int, arr: int[], t: int", returnType: "int", goal: "Implement binary search." },
+    functionInfo: { name: "binarySearch(n, arr, t)", params: "n: int, arr: int[]", returnType: "int", goal: "Implement binary search." },
     walkthrough: { input: "[1,2,3], 3", received: "arr=[1,2,3], t=3", expected: "2", output: "2" },
     starterCode: {
       python: `import sys
@@ -3263,7 +3263,7 @@ fn main() {
     sampleOutput: "3",
     explanation: "Find the longest part of the string that contains no duplicate letters.",
     functionInfo: { name: "longestUniqueSub(s)", params: "s: string", returnType: "int", goal: "Find longest substring without duplicates." },
-    walkthrough: { input: "\\"bbbbb\\"", received: "s=\"bbbbb\"", expected: "1", output: "1" },
+    walkthrough: { input: "\"bbbbb\"", received: "s=\"bbbbb\"", expected: "1", output: "1" },
     starterCode: {
       python: `import sys
 
@@ -3401,7 +3401,7 @@ fn main() {
     sampleOutput: "3",
     explanation: "Implement an algorithm to find the longest substring that is also a palindrome.",
     functionInfo: { name: "longestPal(s)", params: "s: string", returnType: "int", goal: "Find longest palindromic substring length." },
-    walkthrough: { input: "\\"abacaba\\"", received: "s=\"abacaba\"", expected: "7", output: "7" },
+    walkthrough: { input: "\"abacaba\"", received: "s=\"abacaba\"", expected: "7", output: "7" },
     starterCode: {
       python: `import sys
 
@@ -3899,7 +3899,7 @@ fn main() {
     sampleOutput: "4",
     explanation: "Find the smallest contiguous sequence in S that contains all the letters in T.",
     functionInfo: { name: "minWindow(s, t)", params: "s: string, t: string", returnType: "int", goal: "Find min window substring length." },
-    walkthrough: { input: "\\"a\\", \\"a\\"", received: "s=\"a\", t=\"a\"", expected: "1", output: "1" },
+    walkthrough: { input: "\"a\", \"a\"", received: "s=\"a\", t=\"a\"", expected: "1", output: "1" },
     starterCode: {
       python: `import sys
 
@@ -4597,7 +4597,7 @@ fn main() {
     sampleOutput: "3",
     explanation: "Determine the length of the longest subsequence present in both strings using Dynamic Programming.",
     functionInfo: { name: "lcs(s1, s2)", params: "s1: string, s2: string", returnType: "int", goal: "Find length of LCS." },
-    walkthrough: { input: "\\"abc\\", \\"abc\\"", received: "s1=\"abc\", s2=\"abc\"", expected: "3", output: "3" },
+    walkthrough: { input: "\"abc\", \"abc\"", received: "s1=\"abc\", s2=\"abc\"", expected: "3", output: "3" },
     starterCode: {
       python: `import sys
 
