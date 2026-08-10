@@ -10,32 +10,32 @@ import {
   Send, 
   Mic, 
   Command, 
-  ShieldCheck,
-  VideoOff,
-  AlertCircle,
-  Brain,
-  Home,
-  MessageSquare,
-  BarChart4,
-  HelpCircle,
-  Settings,
-  PhoneOff,
-  MicOff,
-  StickyNote,
-  RotateCw,
-  Frown,
-  Flag,
-  ChevronRight,
-  Timer,
-  User,
-  Video,
-  Activity,
-  Wifi,
-  Calculator,
-  FileEdit,
-  Award,
-  Lightbulb,
-  MoreHorizontal,
+  ShieldCheck, 
+  VideoOff, 
+  AlertCircle, 
+  Brain, 
+  Home, 
+  MessageSquare, 
+  BarChart4, 
+  HelpCircle, 
+  Settings, 
+  PhoneOff, 
+  MicOff, 
+  StickyNote, 
+  RotateCw, 
+  Frown, 
+  Flag, 
+  ChevronRight, 
+  Timer, 
+  User, 
+  Video, 
+  Activity, 
+  Wifi, 
+  Calculator, 
+  FileEdit, 
+  Award, 
+  Lightbulb, 
+  MoreHorizontal, 
   Clock
 } from "lucide-react";
 import Navbar from "@/components/layout/Navbar";
@@ -459,23 +459,6 @@ function VirtualArenaContent() {
               </div>
             </div>
 
-            {/* Floating Question Overlay Card */}
-            <Card className="absolute top-6 right-6 w-[340px] bg-[#08090D]/95 backdrop-blur-xl border border-white/5 p-8 rounded-[2rem] shadow-2xl z-20">
-               <div className="absolute left-0 top-8 bottom-8 w-1 bg-gradient-to-b from-accent to-purple-600 rounded-full" />
-               <div className="space-y-4">
-                  <div className="flex justify-between items-center">
-                    <Badge variant="outline" className="border-accent/30 text-accent text-[9px] font-black uppercase tracking-widest">Question {currentIdx} / 10</Badge>
-                  </div>
-                  <p className="text-sm font-light text-white leading-relaxed pr-2">{currentInterviewerQuestion}</p>
-                  <div className="pt-4 border-t border-white/5">
-                    <div className="text-[8px] font-black text-white/20 uppercase tracking-[0.2em] flex items-center gap-2">
-                       <span className="w-1.5 h-1.5 rounded-full bg-accent animate-pulse" />
-                       AI Interviewer is asking...
-                    </div>
-                  </div>
-               </div>
-            </Card>
-
             {/* Video Area Bottom Controls */}
             <div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex items-center gap-4">
               <Button variant="ghost" size="icon" className="w-12 h-12 rounded-full glass hover:bg-white/10 text-white"><Mic className="w-5 h-5" /></Button>
@@ -521,7 +504,7 @@ function VirtualArenaContent() {
         </div>
 
         {/* RIGHT COLUMN: Interview Panel */}
-        <div className="w-full lg:w-[28%] border-l border-white/5 bg-[#0b0e1a] flex flex-col shrink-0">
+        <div className="w-full lg:w-[28%] border-l border-white/5 bg-[#0b0e1a] flex flex-col shrink-0 overflow-hidden">
           <div className="h-14 border-b border-white/5 flex items-center px-4 gap-4">
              <button className="text-[10px] font-black uppercase tracking-widest text-accent border-b-2 border-accent h-full px-2">Interview</button>
              <button className="text-[10px] font-black uppercase tracking-widest text-white/30 hover:text-white px-2">Notes</button>
@@ -539,30 +522,28 @@ function VirtualArenaContent() {
                 </div>
              </div>
 
-             <Card className="glass border-white/10 bg-white/[0.02] p-6 space-y-4 rounded-2xl relative overflow-hidden">
-                <div className="absolute top-0 right-0 p-3 opacity-10"><Brain className="w-8 h-8 text-accent" /></div>
-                <p className="text-base font-light text-white leading-relaxed pr-6">{currentInterviewerQuestion}</p>
-                <div className="pt-4 border-t border-white/5 flex items-center justify-between">
-                  <span className="text-[9px] font-black text-white/20 uppercase tracking-[0.2em]">Prep Time</span>
-                  <div className="flex items-center gap-2 text-accent">
-                     <Timer className="w-3 h-3" />
-                     <span className="text-xs font-mono">00:45</span>
+             <Card className="glass border-white/10 bg-[#08090D]/95 p-6 space-y-4 rounded-2xl relative overflow-hidden shadow-2xl">
+                <div className="absolute left-0 top-6 bottom-6 w-1 bg-gradient-to-b from-accent to-purple-600 rounded-full" />
+                <p className="text-base font-light text-white leading-relaxed pr-2">{currentInterviewerQuestion}</p>
+                <div className="pt-4 border-t border-white/5 space-y-4">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[9px] font-black text-white/20 uppercase tracking-[0.2em]">Prep Time</span>
+                    <div className="flex items-center gap-2 text-accent">
+                       <Timer className="w-3 h-3" />
+                       <span className="text-xs font-mono">00:45</span>
+                    </div>
+                  </div>
+                  <div className="text-[8px] font-black text-white/20 uppercase tracking-[0.2em] flex items-center gap-2">
+                    <span className="w-1.5 h-1.5 rounded-full bg-accent animate-pulse" />
+                    AI Interviewer is asking...
                   </div>
                 </div>
              </Card>
 
-             <Card className="glass border-purple-500/10 bg-purple-500/[0.02] p-5 space-y-2 rounded-2xl">
-                <div className="flex items-center gap-2 text-purple-400">
-                  <Lightbulb className="w-4 h-4" />
-                  <span className="text-[10px] font-black uppercase tracking-widest">Simulation Tip</span>
-                </div>
-                <p className="text-xs text-white/60 font-light leading-relaxed">Structure your response using the STAR method (Situation, Task, Action, Result) for behavioral questions.</p>
-             </Card>
-
-             <div className="flex-1" />
+             <div className="flex-1 min-h-[40px]" />
 
              {/* Answer Submission Hub */}
-             <div className="space-y-4 pt-6 border-t border-white/5">
+             <div className="space-y-4 pt-6 border-t border-white/5 shrink-0">
                 <div className="relative group">
                   <Textarea 
                     value={userAnswer}
