@@ -1,3 +1,4 @@
+
 "use client";
 import { Suspense, useEffect, useState, useRef, useMemo } from "react";
 import { useRouter, useParams, useSearchParams } from "next/navigation";
@@ -76,6 +77,12 @@ function VirtualArenaContent() {
   const userVideoRef = useRef<HTMLVideoElement | null>(null);
   const aiVideoRef = useRef<HTMLVideoElement | null>(null);
   const mediaStreamRef = useRef<MediaStream | null>(null);
+
+  const formattedName = useMemo(() => {
+    if (!user) return 'User';
+    const name = user.displayName || user.email?.split('@')[0] || 'User';
+    return name.charAt(0).toUpperCase() + name.slice(1);
+  }, [user]);
 
   const currentInterviewerQuestion = useMemo(() => {
     const lastInterviewer = [...transcript].reverse().find(t => t.role === 'interviewer');
@@ -359,16 +366,16 @@ function VirtualArenaContent() {
   };
 
   return (
-    <div className="h-screen w-full max-h-screen bg-[#050816] flex flex-col relative overflow-hidden">
+    <div className="h-dvh w-full max-h-dvh bg-[#050816] flex flex-col relative overflow-hidden">
       <div className="particles-bg" />
       
       {/* HEADER SECTION - RESPONSIVE HEIGHT */}
       <header className="h-14 lg:h-16 border-b border-white/5 bg-[#0b0e1a] flex items-center justify-between px-4 lg:px-6 shrink-0 z-50">
         <div className="flex items-center gap-3 lg:gap-6">
-           <div className="w-8 h-8 lg:w-9 lg:h-9 rounded-xl bg-blue-500/10 flex items-center justify-center text-blue-500 border border-blue-500/20 font-black text-lg">G</div>
+           <div className="w-8 h-8 lg:w-9 lg:h-9 rounded-xl bg-blue-500/10 flex items-center justify-center text-blue-500 border border-blue-500/20 font-black text-lg">N</div>
            <div>
-             <h1 className="text-[10px] lg:text-xs font-black uppercase tracking-widest text-white leading-none">{company.toUpperCase()} ARENA</h1>
-             <p className="text-[8px] lg:text-[9px] text-white/40 uppercase font-black mt-1">Protocol Node {currentIdx}</p>
+             <h1 className="text-[10px] lg:text-xs font-black uppercase tracking-widest text-white leading-none">NEXVOROAI</h1>
+             <p className="text-[8px] lg:text-[9px] text-white/40 uppercase font-black mt-1">{formattedName}</p>
            </div>
         </div>
 
