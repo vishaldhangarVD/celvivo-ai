@@ -361,10 +361,10 @@ function VirtualArenaContent() {
   };
 
   return (
-    <div className="h-dvh bg-[#050816] flex flex-col relative overflow-hidden">
+    <div className="h-screen w-screen bg-[#050816] flex flex-col relative overflow-hidden">
       <div className="particles-bg" />
       
-      {/* HEADER SECTION */}
+      {/* HEADER SECTION - FIXED HEIGHT */}
       <header className="h-[72px] border-b border-white/5 bg-[#0b0e1a] flex items-center justify-between px-6 shrink-0 z-50">
         <div className="flex items-center gap-6">
            <div className="w-10 h-10 rounded-xl bg-blue-500/10 flex items-center justify-center text-blue-500 border border-blue-500/20 font-black text-xl">G</div>
@@ -395,7 +395,7 @@ function VirtualArenaContent() {
         </div>
       </header>
 
-      {/* MAIN CONTENT AREA */}
+      {/* MAIN CONTENT AREA - FILL REMAINING VIEWPORT */}
       <div className="flex-1 flex overflow-hidden">
         
         {/* LEFT COLUMN: Sidebar Icons */}
@@ -411,9 +411,9 @@ function VirtualArenaContent() {
           </div>
         </div>
 
-        {/* CENTER COLUMN: Video Arena */}
-        <div className="flex-1 flex flex-col overflow-y-auto custom-scrollbar p-6 space-y-6">
-          <div className="flex-1 min-h-[400px] relative rounded-[2rem] overflow-hidden bg-black border border-white/5 shadow-2xl">
+        {/* CENTER COLUMN: Video Arena - FLEX-1 MIN-H-0 */}
+        <div className="flex-1 flex flex-col min-h-0 p-4 space-y-4 overflow-hidden">
+          <div className="flex-1 min-h-0 relative rounded-[2rem] overflow-hidden bg-black border border-white/5 shadow-2xl">
             {cameraError ? (
               <div className="w-full h-full flex flex-col items-center justify-center bg-[#0b0e1a] text-center p-12 space-y-6">
                 <VideoOff className="w-16 h-16 text-red-400" />
@@ -443,7 +443,7 @@ function VirtualArenaContent() {
             </div>
 
             {/* Floating Interviewer PiP */}
-            <div className="absolute bottom-6 right-6 w-[240px] aspect-video rounded-2xl overflow-hidden border border-white/10 shadow-2xl bg-[#0b0e1a]">
+            <div className="absolute bottom-6 right-6 w-[200px] lg:w-[240px] aspect-video rounded-2xl overflow-hidden border border-white/10 shadow-2xl bg-[#0b0e1a]">
               <video
                 ref={aiVideoRef}
                 src="/interviewer-female.mp4"
@@ -461,134 +461,132 @@ function VirtualArenaContent() {
 
             {/* Video Area Bottom Controls */}
             <div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex items-center gap-4">
-              <Button variant="ghost" size="icon" className="w-12 h-12 rounded-full glass hover:bg-white/10 text-white"><Mic className="w-5 h-5" /></Button>
-              <Button variant="ghost" size="icon" className="w-12 h-12 rounded-full glass hover:bg-white/10 text-white"><Video className="w-5 h-5" /></Button>
+              <Button variant="ghost" size="icon" className="w-10 h-10 lg:w-12 lg:h-12 rounded-full glass hover:bg-white/10 text-white"><Mic className="w-4 h-4 lg:w-5 lg:h-5" /></Button>
+              <Button variant="ghost" size="icon" className="w-10 h-10 lg:w-12 lg:h-12 rounded-full glass hover:bg-white/10 text-white"><Video className="w-4 h-4 lg:w-5 lg:h-5" /></Button>
             </div>
           </div>
 
-          {/* Metrics & Quick Actions */}
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 shrink-0">
-            <Card className="glass border-white/5 p-4 flex items-center gap-4">
-              <div className="w-10 h-10 rounded-xl bg-accent/10 flex items-center justify-center text-accent"><Activity className="w-5 h-5" /></div>
+          {/* Metrics & Quick Actions - SHRINK-0 */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 shrink-0">
+            <Card className="glass border-white/5 p-3 flex items-center gap-3">
+              <div className="w-8 h-8 rounded-lg bg-accent/10 flex items-center justify-center text-accent"><Activity className="w-4 h-4" /></div>
               <div>
-                <p className="text-[8px] font-black text-white/20 uppercase tracking-widest leading-none mb-1">Interview Progress</p>
-                <p className="text-sm font-bold text-white leading-none">{Math.round((currentIdx / 10) * 100)}% Complete</p>
+                <p className="text-[7px] font-black text-white/20 uppercase tracking-widest leading-none mb-1">Progress</p>
+                <p className="text-xs font-bold text-white leading-none">{Math.round((currentIdx / 10) * 100)}%</p>
               </div>
             </Card>
-            <Card className="glass border-white/5 p-4 flex items-center gap-4">
-              <div className="w-10 h-10 rounded-xl bg-purple-500/10 flex items-center justify-center text-purple-400"><Clock className="w-5 h-5" /></div>
+            <Card className="glass border-white/5 p-3 flex items-center gap-3">
+              <div className="w-8 h-8 rounded-lg bg-purple-500/10 flex items-center justify-center text-purple-400"><Clock className="w-4 h-4" /></div>
               <div>
-                <p className="text-[8px] font-black text-white/20 uppercase tracking-widest leading-none mb-1">Time Elapsed</p>
-                <p className="text-sm font-bold text-white leading-none">05:24</p>
+                <p className="text-[7px] font-black text-white/20 uppercase tracking-widest leading-none mb-1">Elapsed</p>
+                <p className="text-xs font-bold text-white leading-none">05:24</p>
               </div>
             </Card>
-            <Card className="glass border-white/5 p-4 flex items-center gap-4">
-              <div className="w-10 h-10 rounded-xl bg-green-500/10 flex items-center justify-center text-green-400"><Wifi className="w-5 h-5" /></div>
+            <Card className="glass border-white/5 p-3 flex items-center gap-3">
+              <div className="w-8 h-8 rounded-lg bg-green-500/10 flex items-center justify-center text-green-400"><Wifi className="w-4 h-4" /></div>
               <div>
-                <p className="text-[8px] font-black text-white/20 uppercase tracking-widest leading-none mb-1">Connection</p>
-                <p className="text-sm font-bold text-white leading-none">98ms Latency</p>
+                <p className="text-[7px] font-black text-white/20 uppercase tracking-widest leading-none mb-1">Status</p>
+                <p className="text-xs font-bold text-white leading-none">Optimal</p>
               </div>
             </Card>
-            <Card className="glass border-white/5 p-4 flex items-center gap-4">
+            <Card className="glass border-white/5 p-3 flex items-center gap-3">
               <div className="flex -space-x-2">
-                 <Button variant="ghost" size="icon" className="w-8 h-8 rounded-full glass border-white/10 hover:bg-white/5 p-0"><Calculator className="w-3.5 h-3.5" /></Button>
-                 <Button variant="ghost" size="icon" className="w-8 h-8 rounded-full glass border-white/10 hover:bg-white/5 p-0"><FileEdit className="w-3.5 h-3.5" /></Button>
-                 <Button variant="ghost" size="icon" className="w-8 h-8 rounded-full glass border-white/10 hover:bg-white/5 p-0"><MessageSquare className="w-3.5 h-3.5" /></Button>
+                 <Button variant="ghost" size="icon" className="w-7 h-7 rounded-full glass border-white/10 hover:bg-white/5 p-0"><Calculator className="w-3 h-3" /></Button>
+                 <Button variant="ghost" size="icon" className="w-7 h-7 rounded-full glass border-white/10 hover:bg-white/5 p-0"><FileEdit className="w-3 h-3" /></Button>
               </div>
-              <div className="ml-4">
-                <p className="text-[8px] font-black text-white/20 uppercase tracking-widest leading-none mb-1">Quick Actions</p>
-                <p className="text-[10px] font-bold text-white/60 uppercase leading-none">Tools Active</p>
+              <div className="ml-2">
+                <p className="text-[7px] font-black text-white/20 uppercase tracking-widest leading-none">Quick Tools</p>
               </div>
             </Card>
           </div>
         </div>
 
-        {/* RIGHT COLUMN: Interview Panel */}
-        <div className="w-full lg:w-[28%] border-l border-white/5 bg-[#0b0e1a] flex flex-col shrink-0 overflow-hidden">
-          <div className="h-14 border-b border-white/5 flex items-center px-4 gap-4">
-             <button className="text-[10px] font-black uppercase tracking-widest text-accent border-b-2 border-accent h-full px-2">Interview</button>
-             <button className="text-[10px] font-black uppercase tracking-widest text-white/30 hover:text-white px-2">Notes</button>
-             <button className="text-[10px] font-black uppercase tracking-widest text-white/30 hover:text-white px-2">Transcript</button>
+        {/* RIGHT COLUMN: Interview Panel - FLEX-COL MIN-H-0 */}
+        <div className="w-[300px] lg:w-[360px] border-l border-white/5 bg-[#0b0e1a] flex flex-col shrink-0 overflow-hidden">
+          <div className="h-12 border-b border-white/5 flex items-center px-4 gap-4 shrink-0">
+             <button className="text-[9px] font-black uppercase tracking-widest text-accent border-b-2 border-accent h-full px-2">Interview</button>
+             <button className="text-[9px] font-black uppercase tracking-widest text-white/30 hover:text-white px-2">Notes</button>
+             <button className="text-[9px] font-black uppercase tracking-widest text-white/30 hover:text-white px-2">Log</button>
           </div>
           
-          <div className="flex-1 p-6 flex flex-col space-y-6 overflow-y-auto custom-scrollbar">
-             <div className="space-y-4">
+          <div className="flex-1 p-5 flex flex-col space-y-5 min-h-0">
+             <div className="space-y-3 shrink-0">
                 <div className="flex justify-between items-end">
-                  <h3 className="text-[11px] font-black uppercase tracking-widest text-white/30">Question {currentIdx} of 10</h3>
-                  <span className="text-[11px] font-black text-accent uppercase tracking-widest">{currentIdx}0%</span>
+                  <h3 className="text-[10px] font-black uppercase tracking-widest text-white/30">Question {currentIdx} of 10</h3>
+                  <span className="text-[10px] font-black text-accent uppercase tracking-widest">{currentIdx}0%</span>
                 </div>
-                <div className="h-1.5 w-full bg-white/5 rounded-full overflow-hidden">
+                <div className="h-1 w-full bg-white/5 rounded-full overflow-hidden">
                   <div className="h-full bg-accent transition-all duration-500" style={{ width: `${currentIdx}0%` }} />
                 </div>
              </div>
 
-             <Card className="glass border-white/10 bg-[#08090D]/95 p-6 space-y-4 rounded-2xl relative overflow-hidden shadow-2xl">
-                <div className="absolute left-0 top-6 bottom-6 w-1 bg-gradient-to-b from-accent to-purple-600 rounded-full" />
-                <p className="text-base font-light text-white leading-relaxed pr-2">{currentInterviewerQuestion}</p>
-                <div className="pt-4 border-t border-white/5 space-y-4">
-                  <div className="flex items-center justify-between">
-                    <span className="text-[9px] font-black text-white/20 uppercase tracking-[0.2em]">Prep Time</span>
-                    <div className="flex items-center gap-2 text-accent">
-                       <Timer className="w-3 h-3" />
-                       <span className="text-xs font-mono">00:45</span>
+             {/* SCROLLABLE QUESTION AREA */}
+             <div className="flex-1 overflow-y-auto custom-scrollbar pr-2 space-y-4">
+                <Card className="glass border-white/10 bg-[#08090D]/95 p-5 space-y-4 rounded-2xl relative overflow-hidden shadow-2xl">
+                    <div className="absolute left-0 top-5 bottom-5 w-1 bg-gradient-to-b from-accent to-purple-600 rounded-full" />
+                    <p className="text-sm lg:text-base font-light text-white leading-relaxed">{currentInterviewerQuestion}</p>
+                    <div className="pt-3 border-t border-white/5 space-y-3">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[8px] font-black text-white/20 uppercase tracking-[0.2em]">Think Time</span>
+                        <div className="flex items-center gap-2 text-accent">
+                           <Timer className="w-3 h-3" />
+                           <span className="text-xs font-mono">00:45</span>
+                        </div>
+                      </div>
+                      <div className="text-[8px] font-black text-white/20 uppercase tracking-[0.2em] flex items-center gap-2">
+                        <span className="w-1.5 h-1.5 rounded-full bg-accent animate-pulse" />
+                        AI is asking...
+                      </div>
                     </div>
-                  </div>
-                  <div className="text-[8px] font-black text-white/20 uppercase tracking-[0.2em] flex items-center gap-2">
-                    <span className="w-1.5 h-1.5 rounded-full bg-accent animate-pulse" />
-                    AI Interviewer is asking...
-                  </div>
-                </div>
-             </Card>
+                </Card>
+             </div>
 
-             <div className="flex-1 min-h-[40px]" />
-
-             {/* Answer Submission Hub */}
-             <div className="space-y-4 pt-6 border-t border-white/5 shrink-0">
+             {/* Answer Submission Hub - FIXED TO BOTTOM OF SIDEBAR */}
+             <div className="space-y-3 pt-4 border-t border-white/5 shrink-0">
                 <div className="relative group">
                   <Textarea 
                     value={userAnswer}
                     onChange={(e) => setUserAnswer(e.target.value)}
-                    placeholder="Type your strategic response here..."
-                    className="min-h-[140px] rounded-2xl glass border-white/10 bg-transparent p-4 text-sm font-light resize-none focus:border-accent transition-all pr-12 custom-scrollbar"
+                    placeholder="Type response..."
+                    className="min-h-[100px] lg:min-h-[140px] rounded-xl glass border-white/10 bg-transparent p-3 text-sm font-light resize-none focus:border-accent transition-all pr-12 custom-scrollbar"
                   />
                   <button 
                     onClick={toggleMic}
                     className={cn(
-                      "absolute right-4 bottom-4 w-10 h-10 rounded-xl flex items-center justify-center transition-all",
+                      "absolute right-3 bottom-3 w-8 h-8 rounded-lg flex items-center justify-center transition-all",
                       isMicActive ? "bg-red-500 text-white animate-pulse shadow-lg" : "bg-white/5 text-white/40 hover:text-white"
                     )}
                   >
-                    <Mic className="w-5 h-5" />
+                    <Mic className="w-4 h-4" />
                   </button>
                 </div>
                 <Button 
                   onClick={handleSend}
                   disabled={isProcessing || !userAnswer.trim()}
-                  className="w-full h-14 btn-premium rounded-2xl text-xs font-black uppercase tracking-[0.3em] shadow-2xl group"
+                  className="w-full h-12 btn-premium rounded-xl text-[10px] font-black uppercase tracking-[0.3em] shadow-2xl group"
                 >
-                  {isProcessing ? <Loader2 className="w-5 h-5 animate-spin" /> : <>Submit Answer <Send className="ml-3 w-4 h-4 transition-transform group-hover:translate-x-1" /></>}
+                  {isProcessing ? <Loader2 className="w-4 h-4 animate-spin" /> : <>Submit Answer <Send className="ml-2 w-3 h-3 transition-transform group-hover:translate-x-1" /></>}
                 </Button>
              </div>
           </div>
         </div>
       </div>
 
-      {/* FOOTER: Global Tips Bar */}
-      <footer className="h-16 border-t border-white/5 bg-[#0b0e1a] flex items-center px-8 gap-12 shrink-0 z-50">
-        <div className="flex items-center gap-3">
-          <Award className="w-5 h-5 text-accent" />
-          <span className="text-[10px] font-black uppercase tracking-widest text-white/30">Interview Tips:</span>
+      {/* FOOTER: Global Tips Bar - FIXED HEIGHT */}
+      <footer className="h-[64px] border-t border-white/5 bg-[#0b0e1a] flex items-center px-8 gap-8 shrink-0 z-50">
+        <div className="flex items-center gap-3 shrink-0">
+          <Award className="w-4 h-4 text-accent" />
+          <span className="text-[9px] font-black uppercase tracking-widest text-white/30">Directives:</span>
         </div>
-        <div className="flex-1 flex items-center gap-12 overflow-hidden">
+        <div className="flex-1 flex items-center gap-10 overflow-hidden">
           {[
-            "Think before you speak",
             "Structure your answers",
             "Be specific & metrics-driven",
             "Stay calm & confident"
           ].map((tip, i) => (
             <div key={i} className="flex items-center gap-3 shrink-0">
-              <div className="w-1.5 h-1.5 rounded-full bg-accent/40" />
-              <span className="text-[10px] font-bold uppercase tracking-widest text-white/60">{tip}</span>
+              <div className="w-1 h-1 rounded-full bg-accent/40" />
+              <span className="text-[9px] font-bold uppercase tracking-widest text-white/60">{tip}</span>
             </div>
           ))}
         </div>
