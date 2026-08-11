@@ -38,7 +38,6 @@ import {
   MoreHorizontal, 
   Clock
 } from "lucide-react";
-import Navbar from "@/components/layout/Navbar";
 import { aiMockInterview } from "@/ai/flows/ai-mock-interview-v2";
 import { generateInterviewFeedback } from "@/ai/flows/ai-interview-feedback";
 import { useUser, useFirestore } from "@/firebase";
@@ -365,7 +364,7 @@ function VirtualArenaContent() {
       <div className="particles-bg" />
       
       {/* HEADER SECTION - FIXED HEIGHT */}
-      <header className="h-16 border-b border-white/5 bg-[#0b0e1a] flex items-center justify-between px-6 shrink-0 z-50">
+      <header className="h-14 lg:h-16 border-b border-white/5 bg-[#0b0e1a] flex items-center justify-between px-6 shrink-0 z-50">
         <div className="flex items-center gap-6">
            <div className="w-9 h-9 rounded-xl bg-blue-500/10 flex items-center justify-center text-blue-500 border border-blue-500/20 font-black text-lg">G</div>
            <div>
@@ -412,7 +411,7 @@ function VirtualArenaContent() {
         </div>
 
         {/* CENTER COLUMN: Video Arena - FLEX-1 MIN-H-0 */}
-        <div className="flex-1 flex flex-col min-h-0 p-3 space-y-3 overflow-hidden">
+        <div className="flex-1 flex flex-col min-h-0 p-2 lg:p-3 space-y-2 lg:space-y-3 overflow-hidden">
           <div className="flex-1 min-h-0 relative rounded-[2rem] overflow-hidden bg-black border border-white/5 shadow-2xl">
             {cameraError ? (
               <div className="w-full h-full flex flex-col items-center justify-center bg-[#0b0e1a] text-center p-8 space-y-4">
@@ -466,30 +465,30 @@ function VirtualArenaContent() {
             </div>
           </div>
 
-          {/* Metrics & Quick Actions - SHRINK-0 */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 shrink-0">
-            <Card className="glass border-white/5 p-2.5 flex items-center gap-2.5">
+          {/* Metrics & Quick Actions - COMPACT SHRINK-0 */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-2 lg:gap-3 shrink-0">
+            <Card className="glass border-white/5 p-2 flex items-center gap-2">
               <div className="w-7 h-7 rounded-lg bg-accent/10 flex items-center justify-center text-accent"><Activity className="w-3.5 h-3.5" /></div>
               <div>
                 <p className="text-[7px] font-black text-white/20 uppercase tracking-widest leading-none mb-1">Progress</p>
                 <p className="text-[11px] font-bold text-white leading-none">{Math.round((currentIdx / 10) * 100)}%</p>
               </div>
             </Card>
-            <Card className="glass border-white/5 p-2.5 flex items-center gap-2.5">
+            <Card className="glass border-white/5 p-2 flex items-center gap-2">
               <div className="w-7 h-7 rounded-lg bg-purple-500/10 flex items-center justify-center text-purple-400"><Clock className="w-3.5 h-3.5" /></div>
               <div>
                 <p className="text-[7px] font-black text-white/20 uppercase tracking-widest leading-none mb-1">Elapsed</p>
                 <p className="text-[11px] font-bold text-white leading-none">05:24</p>
               </div>
             </Card>
-            <Card className="glass border-white/5 p-2.5 flex items-center gap-2.5">
+            <Card className="glass border-white/5 p-2 flex items-center gap-2">
               <div className="w-7 h-7 rounded-lg bg-green-500/10 flex items-center justify-center text-green-400"><Wifi className="w-3.5 h-3.5" /></div>
               <div>
                 <p className="text-[7px] font-black text-white/20 uppercase tracking-widest leading-none mb-1">Status</p>
                 <p className="text-[11px] font-bold text-white leading-none">Optimal</p>
               </div>
             </Card>
-            <Card className="glass border-white/5 p-2.5 flex items-center gap-2.5">
+            <Card className="glass border-white/5 p-2 flex items-center gap-2">
               <div className="flex -space-x-1.5">
                  <Button variant="ghost" size="icon" className="w-6 h-6 rounded-full glass border-white/10 hover:bg-white/5 p-0"><Calculator className="w-2.5 h-2.5" /></Button>
                  <Button variant="ghost" size="icon" className="w-6 h-6 rounded-full glass border-white/10 hover:bg-white/5 p-0"><FileEdit className="w-2.5 h-2.5" /></Button>
@@ -510,8 +509,8 @@ function VirtualArenaContent() {
           </div>
           
           {/* SCROLLABLE CORE AREA */}
-          <div className="flex-1 p-4 flex flex-col space-y-4 min-h-0 overflow-hidden">
-             <div className="space-y-2.5 shrink-0">
+          <div className="flex-1 p-4 flex flex-col space-y-3 min-h-0 overflow-hidden">
+             <div className="space-y-2 shrink-0">
                 <div className="flex justify-between items-end">
                   <h3 className="text-[9px] font-black uppercase tracking-widest text-white/30">Question {currentIdx} of 10</h3>
                   <span className="text-[9px] font-black text-accent uppercase tracking-widest">{currentIdx}0%</span>
@@ -521,6 +520,7 @@ function VirtualArenaContent() {
                 </div>
              </div>
 
+             {/* INTERNAL SCROLL ZONE FOR QUESTION */}
              <div className="flex-1 overflow-y-auto custom-scrollbar pr-1.5 space-y-4 min-h-0">
                 <Card className="glass border-white/10 bg-[#08090D]/95 p-4 space-y-3 rounded-2xl relative overflow-hidden shadow-2xl">
                     <div className="absolute left-0 top-4 bottom-4 w-1 bg-gradient-to-b from-accent to-purple-600 rounded-full" />
@@ -548,7 +548,7 @@ function VirtualArenaContent() {
                     value={userAnswer}
                     onChange={(e) => setUserAnswer(e.target.value)}
                     placeholder="Type response..."
-                    className="min-h-[90px] lg:min-h-[120px] rounded-xl glass border-white/10 bg-transparent p-3 text-sm font-light resize-none focus:border-accent transition-all pr-10 custom-scrollbar"
+                    className="min-h-[80px] lg:min-h-[100px] rounded-xl glass border-white/10 bg-transparent p-3 text-sm font-light resize-none focus:border-accent transition-all pr-10 custom-scrollbar"
                   />
                   <button 
                     onClick={toggleMic}
@@ -563,7 +563,7 @@ function VirtualArenaContent() {
                 <Button 
                   onClick={handleSend}
                   disabled={isProcessing || !userAnswer.trim()}
-                  className="w-full h-11 btn-premium rounded-xl text-[9px] font-black uppercase tracking-[0.3em] shadow-2xl group"
+                  className="w-full h-10 lg:h-11 btn-premium rounded-xl text-[9px] font-black uppercase tracking-[0.3em] shadow-2xl group"
                 >
                   {isProcessing ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <>Submit Answer <Send className="ml-2 w-3 h-3 transition-transform group-hover:translate-x-1" /></>}
                 </Button>
@@ -573,7 +573,7 @@ function VirtualArenaContent() {
       </div>
 
       {/* FOOTER: Global Tips Bar - FIXED HEIGHT */}
-      <footer className="h-12 border-t border-white/5 bg-[#0b0e1a] flex items-center px-8 gap-8 shrink-0 z-50">
+      <footer className="h-10 lg:h-12 border-t border-white/5 bg-[#0b0e1a] flex items-center px-8 gap-8 shrink-0 z-50">
         <div className="flex items-center gap-3 shrink-0">
           <Award className="w-3.5 h-3.5 text-accent" />
           <span className="text-[8px] font-black uppercase tracking-widest text-white/30">Directives:</span>
