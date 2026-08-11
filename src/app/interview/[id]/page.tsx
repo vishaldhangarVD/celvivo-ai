@@ -1,4 +1,3 @@
-
 "use client";
 import { Suspense, useEffect, useState, useRef, useMemo } from "react";
 import { useRouter, useParams, useSearchParams } from "next/navigation";
@@ -91,6 +90,33 @@ function VirtualArenaContent() {
     return lastInterviewer?.text || "Initializing session...";
   }, [transcript]);
 
+  // Audio Synthesis Protocol - Speaks the current question aloud
+  useEffect(() => {
+    if (!currentInterviewerQuestion || currentInterviewerQuestion === "Initializing session...") return;
+
+    // Cancel any ongoing speech before starting a new node
+    if (typeof window !== 'undefined' && window.speechSynthesis) {
+      window.speechSynthesis.cancel();
+      
+      const utterance = new SpeechSynthesisUtterance(currentInterviewerQuestion);
+      utterance.rate = 1.0;
+      utterance.pitch = 1.0;
+      
+      // Select a professional female-sounding voice if available
+      const voices = window.speechSynthesis.getVoices();
+      const preferredVoice = voices.find(v => v.name.includes('Samantha') || v.name.includes('Female')) || voices[0];
+      if (preferredVoice) utterance.voice = preferredVoice;
+
+      window.speechSynthesis.speak(utterance);
+    }
+
+    return () => {
+      if (typeof window !== 'undefined' && window.speechSynthesis) {
+        window.speechSynthesis.cancel();
+      }
+    };
+  }, [currentInterviewerQuestion]);
+
   const toggleMediaMic = () => {
     const newState = !isMicOn;
     setIsMicOn(newState);
@@ -105,11 +131,9 @@ function VirtualArenaContent() {
     const newState = !isCameraOn;
     
     if (newState) {
-      // Logic for turning ON
       const stream = mediaStreamRef.current;
       let videoTrack = stream?.getVideoTracks()[0];
 
-      // If track is missing or ended, try to re-acquire just the video
       if (!videoTrack || videoTrack.readyState === 'ended') {
         try {
           const newStream = await navigator.mediaDevices.getUserMedia({ 
@@ -118,7 +142,6 @@ function VirtualArenaContent() {
           const newVideoTrack = newStream.getVideoTracks()[0];
           
           if (stream) {
-            // Remove old video tracks
             stream.getVideoTracks().forEach(t => {
               t.stop();
               stream.removeTrack(t);
@@ -139,7 +162,6 @@ function VirtualArenaContent() {
 
       setIsCameraOn(true);
 
-      // Re-connect to video element and play
       if (userVideoRef.current && mediaStreamRef.current) {
         userVideoRef.current.srcObject = mediaStreamRef.current;
         try {
@@ -149,7 +171,6 @@ function VirtualArenaContent() {
         }
       }
     } else {
-      // Logic for turning OFF
       setIsCameraOn(false);
       if (mediaStreamRef.current) {
         mediaStreamRef.current.getVideoTracks().forEach(track => {
@@ -218,7 +239,6 @@ function VirtualArenaContent() {
         audio: true,
       });
 
-      // Synchronize new stream with current UI state
       mediaStream.getAudioTracks().forEach(t => t.enabled = isMicOn);
       mediaStream.getVideoTracks().forEach(t => t.enabled = isCameraOn);
 
@@ -488,7 +508,6 @@ function VirtualArenaContent() {
 
         <div className="flex-1 flex flex-col min-h-0 p-2 lg:p-3 space-y-1.5 overflow-hidden">
           <div className="flex-1 min-h-0 relative rounded-[1.5rem] lg:rounded-[2rem] overflow-hidden bg-black border border-white/5 shadow-2xl">
-            {/* Always keep video element mounted to maintain stream reference and avoid ref breakage */}
             <video
               ref={userVideoRef}
               autoPlay
