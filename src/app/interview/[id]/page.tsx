@@ -410,7 +410,7 @@ function VirtualArenaContent() {
         </div>
 
         {/* CENTER COLUMN: Video Arena */}
-        <div className="flex-1 flex flex-col min-h-0 p-2 lg:p-3 space-y-2 overflow-hidden">
+        <div className="flex-1 flex flex-col min-h-0 p-2 lg:p-3 space-y-1.5 overflow-hidden">
           <div className="flex-1 min-h-0 relative rounded-[1.5rem] lg:rounded-[2rem] overflow-hidden bg-black border border-white/5 shadow-2xl">
             {cameraError ? (
               <div className="w-full h-full flex flex-col items-center justify-center bg-[#0b0e1a] text-center p-8 space-y-4">
@@ -465,7 +465,7 @@ function VirtualArenaContent() {
           </div>
 
           {/* Metrics & Quick Actions - COMPACT SHRINK-0 */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-2 shrink-0">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-2 shrink-0 pb-1">
             <Card className="glass border-white/5 p-1.5 lg:p-2 flex items-center gap-2">
               <div className="w-6 h-6 lg:w-7 lg:h-7 rounded-lg bg-accent/10 flex items-center justify-center text-accent"><Activity className="w-3 h-3 lg:w-3.5 lg:h-3.5" /></div>
               <div>
@@ -544,7 +544,7 @@ function VirtualArenaContent() {
              </div>
 
              {/* Answer Submission Hub - ANCHORED BOTTOM */}
-             <div className="p-3 lg:p-4 space-y-2 border-t border-white/5 shrink-0">
+             <div className="p-3 lg:p-4 space-y-2 border-t border-white/5 shrink-0 bg-[#0b0e1a]">
                 <div className="relative group">
                   <Textarea 
                     value={userAnswer}
@@ -575,7 +575,7 @@ function VirtualArenaContent() {
       </div>
 
       {/* FOOTER: Global Tips Bar - FIXED HEIGHT */}
-      <footer className="h-10 lg:h-12 border-t border-white/5 bg-[#0b0e1a] flex items-center px-4 lg:px-8 gap-4 lg:gap-8 shrink-0 z-50">
+      <footer className="h-10 lg:h-11 border-t border-white/5 bg-[#0b0e1a] flex items-center px-4 lg:px-8 gap-4 lg:gap-8 shrink-0 z-50 overflow-hidden">
         <div className="flex items-center gap-2 lg:gap-3 shrink-0">
           <Award className="w-3 h-3 lg:w-3.5 lg:h-3.5 text-accent" />
           <span className="text-[7px] lg:text-[8px] font-black uppercase tracking-widest text-white/30">Interview Tips:</span>
