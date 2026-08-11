@@ -410,7 +410,7 @@ function VirtualArenaContent() {
           </div>
         </div>
 
-        {/* CENTER COLUMN: Video Arena - FLEX-1 MIN-H-0 */}
+        {/* CENTER COLUMN: Video Arena */}
         <div className="flex-1 flex flex-col min-h-0 p-2 lg:p-3 space-y-2 lg:space-y-3 overflow-hidden">
           <div className="flex-1 min-h-0 relative rounded-[2rem] overflow-hidden bg-black border border-white/5 shadow-2xl">
             {cameraError ? (
@@ -500,7 +500,7 @@ function VirtualArenaContent() {
           </div>
         </div>
 
-        {/* RIGHT COLUMN: Interview Panel - FLEX-COL MIN-H-0 */}
+        {/* RIGHT COLUMN: Interview Panel */}
         <div className="w-[300px] lg:w-[340px] border-l border-white/5 bg-[#0b0e1a] flex flex-col shrink-0 overflow-hidden">
           <div className="h-10 border-b border-white/5 flex items-center px-4 gap-4 shrink-0">
              <button className="text-[8px] font-black uppercase tracking-widest text-accent border-b-2 border-accent h-full px-2">Interview</button>
@@ -535,7 +535,7 @@ function VirtualArenaContent() {
                       </div>
                       <div className="text-[8px] font-black text-white/20 uppercase tracking-[0.2em] flex items-center gap-2">
                         <span className="w-1.5 h-1.5 rounded-full bg-accent animate-pulse" />
-                        AI is asking...
+                        AI Interviewer is asking...
                       </div>
                     </div>
                 </Card>
@@ -576,10 +576,11 @@ function VirtualArenaContent() {
       <footer className="h-10 lg:h-12 border-t border-white/5 bg-[#0b0e1a] flex items-center px-8 gap-8 shrink-0 z-50">
         <div className="flex items-center gap-3 shrink-0">
           <Award className="w-3.5 h-3.5 text-accent" />
-          <span className="text-[8px] font-black uppercase tracking-widest text-white/30">Directives:</span>
+          <span className="text-[8px] font-black uppercase tracking-widest text-white/30">Interview Tips:</span>
         </div>
         <div className="flex-1 flex items-center gap-10 overflow-hidden">
           {[
+            "Think Before You Speak",
             "Structure your answers",
             "Be specific & metrics-driven",
             "Stay calm & confident"
