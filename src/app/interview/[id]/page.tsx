@@ -94,20 +94,33 @@ function VirtualArenaContent() {
   useEffect(() => {
     if (!currentInterviewerQuestion || currentInterviewerQuestion === "Initializing session...") return;
 
-    // Cancel any ongoing speech before starting a new node
     if (typeof window !== 'undefined' && window.speechSynthesis) {
       window.speechSynthesis.cancel();
       
-      const utterance = new SpeechSynthesisUtterance(currentInterviewerQuestion);
-      utterance.rate = 1.0;
-      utterance.pitch = 1.0;
-      
-      // Select a professional female-sounding voice if available
-      const voices = window.speechSynthesis.getVoices();
-      const preferredVoice = voices.find(v => v.name.includes('Samantha') || v.name.includes('Female')) || voices[0];
-      if (preferredVoice) utterance.voice = preferredVoice;
+      const speak = () => {
+        const utterance = new SpeechSynthesisUtterance(currentInterviewerQuestion);
+        utterance.lang = "en-IN";
+        utterance.rate = 0.95;
+        utterance.pitch = 1.0;
+        
+        const voices = window.speechSynthesis.getVoices();
+        // Target Priority: Female Indian English (en-IN) -> Any Indian English -> Any Female
+        const indianFemaleVoice = 
+          voices.find(v => v.lang === 'en-IN' && /female|woman|girl|sangeeta|vani|heera|neerja|praveena/i.test(v.name)) ||
+          voices.find(v => v.lang === 'en-IN') ||
+          voices.find(v => v.lang.startsWith('en-IN')) ||
+          voices.find(v => /female|woman/i.test(v.name) && v.lang.startsWith('en')) ||
+          voices[0];
 
-      window.speechSynthesis.speak(utterance);
+        if (indianFemaleVoice) utterance.voice = indianFemaleVoice;
+        window.speechSynthesis.speak(utterance);
+      };
+
+      if (window.speechSynthesis.getVoices().length === 0) {
+        window.speechSynthesis.onvoiceschanged = speak;
+      } else {
+        speak();
+      }
     }
 
     return () => {
