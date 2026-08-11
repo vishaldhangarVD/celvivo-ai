@@ -1,5 +1,5 @@
 /**
- * @fileOverview Nexvoro AI Master Question Data (v20.0 - Integrity Verified).
+ * @fileOverview Nexvoro AI Master Question Data (v21.0 - Integrity Verified).
  * A high-fidelity repository of 30 coding challenges with 8-language support.
  * All templates are strictly non-solved and follow production-grade syntax.
  */
@@ -70,7 +70,7 @@ export const MASTER_QUESTIONS: CodingQuestion[] = [
       python: `import sys
 
 def is_mirror_word(s):
-    # TODO: Implement palindrome checking
+    # TODO: Implement palindrome checking logic
     return False
 
 if __name__ == "__main__":
@@ -84,7 +84,7 @@ if __name__ == "__main__":
 
 public class Main {
     public static boolean isMirrorWord(String s) {
-        // TODO: Implement palindrome checking
+        // TODO: Implement palindrome checking logic
         return false;
     }
 
@@ -103,7 +103,7 @@ public class Main {
 using namespace std;
 
 bool isMirrorWord(string s) {
-    // TODO: Implement palindrome checking
+    // TODO: Implement palindrome checking logic
     return false;
 }
 
@@ -117,7 +117,7 @@ int main() {
       javascript: `const fs = require('fs');
 
 function isMirrorWord(s) {
-    // TODO: Implement palindrome checking
+    // TODO: Implement palindrome checking logic
     return false;
 }
 
@@ -130,7 +130,7 @@ if (input) {
 #include <stdbool.h>
 
 bool isMirrorWord(char* s) {
-    // TODO: Implement palindrome checking
+    // TODO: Implement palindrome checking logic
     return false;
 }
 
@@ -145,7 +145,7 @@ int main() {
 
 class Program {
     static bool IsMirrorWord(string s) {
-        // TODO: Implement palindrome checking
+        // TODO: Implement palindrome checking logic
         return false;
     }
 
@@ -161,7 +161,7 @@ class Program {
 import "fmt"
 
 func isMirrorWord(s string) bool {
-    // TODO: Implement palindrome checking
+    // TODO: Implement palindrome checking logic
     return false
 }
 
@@ -179,7 +179,7 @@ func main() {
       rust: `use std::io::{self, BufRead};
 
 fn is_mirror_word(s: &str) -> bool {
-    // TODO: Implement palindrome checking
+    // TODO: Implement palindrome checking logic
     false
 }
 
@@ -189,11 +189,7 @@ fn main() {
     if stdin.lock().read_line(&mut line).is_ok() {
         let s = line.trim();
         if !s.is_empty() {
-            if is_mirror_word(s) {
-                println!("YES");
-            } else {
-                println!("NO");
-            }
+            println!("{}", if is_mirror_word(s) { "YES" } else { "NO" });
         }
     }
 }`
@@ -230,7 +226,7 @@ fn main() {
       python: `import sys
 
 def get_runner_up(n, scores):
-    # TODO: Implement runner-up logic
+    # TODO: Implement runner-up finding logic
     return -1
 
 if __name__ == "__main__":
@@ -243,7 +239,7 @@ if __name__ == "__main__":
 
 public class Main {
     public static int getRunnerUp(int n, int[] scores) {
-        // TODO: Implement runner-up logic
+        // TODO: Implement runner-up finding logic
         return -1;
     }
 
@@ -264,7 +260,7 @@ public class Main {
 using namespace std;
 
 int getRunnerUp(int n, vector<int>& arr) {
-    // TODO: Implement runner-up logic
+    // TODO: Implement runner-up finding logic
     return -1;
 }
 
@@ -280,7 +276,7 @@ int main() {
       javascript: `const fs = require('fs');
 
 function getRunnerUp(n, scores) {
-    // TODO: Implement runner-up logic
+    // TODO: Implement runner-up finding logic
     return -1;
 }
 
@@ -293,7 +289,7 @@ if (input.length >= 2) {
       c: `#include <stdio.h>
 
 int getRunnerUp(int n, int* arr) {
-    // TODO: Implement runner-up logic
+    // TODO: Implement runner-up finding logic
     return -1;
 }
 
@@ -311,7 +307,7 @@ using System.Linq;
 
 class Program {
     static int GetRunnerUp(int n, int[] scores) {
-        // TODO: Implement runner-up logic
+        // TODO: Implement runner-up finding logic
         return -1;
     }
 
@@ -332,7 +328,7 @@ class Program {
 import "fmt"
 
 func getRunnerUp(n int, scores []int) int {
-    // TODO: Implement runner-up logic
+    // TODO: Implement runner-up finding logic
     return -1
 }
 
@@ -348,7 +344,7 @@ func main() {
       rust: `use std::io::{self, Read};
 
 fn get_runner_up(n: usize, scores: Vec<i32>) -> i32 {
-    // TODO: Implement runner-up logic
+    // TODO: Implement runner-up finding logic
     -1
 }
 
@@ -358,7 +354,12 @@ fn main() {
         let mut words = input.split_whitespace();
         if let Some(n_str) = words.next() {
             let n: usize = n_str.parse().unwrap();
-            let scores: Vec<i32> = words.map(|s| s.parse().unwrap()).collect();
+            let mut scores = Vec::new();
+            for _ in 0..n {
+                if let Some(s) = words.next() {
+                    scores.push(s.parse().unwrap());
+                }
+            }
             println!("{}", get_runner_up(n, scores));
         }
     }
@@ -487,7 +488,7 @@ func countVowels(s string) int {
 
 func main() {
     reader := bufio.NewReader(os.Stdin)
-    s, _ := reader.ReadString('\n')
+    s, _ := reader.ReadString('\\n')
     fmt.Println(countVowels(s))
 }`,
       rust: `use std::io::{self, BufRead};
@@ -569,7 +570,7 @@ public class Main {
 
 using namespace std;
 
-long long sumArray(int n, vector<int>& arr) {
+long long sumArray(int n, const vector<int>& arr) {
     // TODO: Implement array summation logic
     return 0;
 }
@@ -590,7 +591,7 @@ function sumArray(n, arr) {
     return 0;
 }
 
-const input = fs.readFileSync(0, 'utf8').split(/\s+/);
+const input = fs.readFileSync(0, 'utf8').split(/\\s+/);
 if (input.length >= 2) {
     const n = parseInt(input[0]);
     const arr = input.slice(1, n + 1).map(Number);
@@ -608,7 +609,7 @@ int main() {
     if (scanf("%d", &n) != EOF) {
         int arr[100001];
         for (int i = 0; i < n; i++) scanf("%d", &arr[i]);
-        printf("%lld\n", sumArray(n, arr));
+        printf("%lld\\n", sumArray(n, arr));
     }
     return 0;
 }`,
@@ -664,7 +665,12 @@ fn main() {
         let mut words = input.split_whitespace();
         if let Some(n_str) = words.next() {
             let n: usize = n_str.parse().unwrap();
-            let arr: Vec<i32> = words.map(|s| s.parse().unwrap()).collect();
+            let mut arr = Vec::new();
+            for _ in 0..n {
+                if let Some(s) = words.next() {
+                    arr.push(s.parse().unwrap());
+                }
+            }
             println!("{}", sum_array(n, arr));
         }
     }
@@ -702,7 +708,7 @@ fn main() {
       python: `import sys
 
 def find_max(n, arr):
-    # TODO: Implement logic here to find max
+    # TODO: Implement peak element detection logic
     return -10**9
 
 if __name__ == "__main__":
@@ -715,7 +721,7 @@ if __name__ == "__main__":
 
 public class Main {
     public static int findMax(int n, int[] arr) {
-        // TODO: Implement logic here to find max
+        // TODO: Implement peak element detection logic
         return Integer.MIN_VALUE;
     }
 
@@ -735,8 +741,8 @@ public class Main {
 
 using namespace std;
 
-int findMax(int n, vector<int>& arr) {
-    // TODO: Implement logic here to find max
+int findMax(int n, const vector<int>& arr) {
+    // TODO: Implement peak element detection logic
     return INT_MIN;
 }
 
@@ -752,11 +758,11 @@ int main() {
       javascript: `const fs = require('fs');
 
 function findMax(n, arr) {
-    // TODO: Implement logic here to find max
+    // TODO: Implement peak element detection logic
     return -Infinity;
 }
 
-const input = fs.readFileSync(0, 'utf8').split(/\s+/);
+const input = fs.readFileSync(0, 'utf8').split(/\\s+/);
 if (input.length >= 2) {
     const n = parseInt(input[0]);
     const arr = input.slice(1, n + 1).map(Number);
@@ -766,7 +772,7 @@ if (input.length >= 2) {
 #include <limits.h>
 
 int findMax(int n, int* arr) {
-    // TODO: Implement logic here to find max
+    // TODO: Implement peak element detection logic
     return INT_MIN;
 }
 
@@ -775,7 +781,7 @@ int main() {
     if (scanf("%d", &n) != EOF) {
         int arr[100001];
         for (int i = 0; i < n; i++) scanf("%d", &arr[i]);
-        printf("%d\n", findMax(n, arr));
+        printf("%d\\n", findMax(n, arr));
     }
     return 0;
 }`,
@@ -784,7 +790,7 @@ using System.Linq;
 
 class Program {
     static int FindMax(int n, int[] arr) {
-        // TODO: Implement logic here to find max
+        // TODO: Implement peak element detection logic
         return int.MinValue;
     }
 
@@ -805,7 +811,7 @@ class Program {
 import "fmt"
 
 func findMax(n int, arr []int) int {
-    // TODO: Implement logic here to find max
+    // TODO: Implement peak element detection logic
     return -1000000000
 }
 
@@ -821,7 +827,7 @@ func main() {
       rust: `use std::io::{self, Read};
 
 fn find_max(n: usize, arr: Vec<i32>) -> i32 {
-    // TODO: Implement logic here to find max
+    // TODO: Implement peak element detection logic
     i32::MIN
 }
 
@@ -831,7 +837,12 @@ fn main() {
         let mut words = input.split_whitespace();
         if let Some(n_str) = words.next() {
             let n: usize = n_str.parse().unwrap();
-            let arr: Vec<i32> = words.map(|s| s.parse().unwrap()).collect();
+            let mut arr = Vec::new();
+            for _ in 0..n {
+                if let Some(s) = words.next() {
+                    arr.push(s.parse().unwrap());
+                }
+            }
             println!("{}", find_max(n, arr));
         }
     }
@@ -927,9 +938,9 @@ int main() {
     char s[100001];
     if (fgets(s, 100001, stdin)) {
         int len = strlen(s);
-        if (len > 0 && s[len-1] == '\n') s[len-1] = '\0';
+        if (len > 0 && s[len-1] == '\\n') s[len-1] = '\\0';
         reverseString(s);
-        printf("%s\n", s);
+        printf("%s\\n", s);
     }
     return 0;
 }`,
@@ -961,7 +972,7 @@ func reverseString(s string) string {
 
 func main() {
     reader := bufio.NewReader(os.Stdin)
-    s, _ := reader.ReadString('\n')
+    s, _ := reader.ReadString('\\n')
     fmt.Println(reverseString(s))
 }`,
       rust: `use std::io::{self, BufRead};
@@ -994,10 +1005,10 @@ fn main() {
     estimatedTime: "10 mins",
     company: "Tech Mahindra",
     tags: ["Strings", "Logic"],
-    inputFormat: "Line 1: String S.\nLine 2: Character C.",
+    inputFormat: "Line 1: String S.\\nLine 2: Character C.",
     outputFormat: "Frequency count.",
     constraints: ["1 <= |S| <= 100000"],
-    sampleInput: "Programming in Python\nn",
+    sampleInput: "Programming in Python\\nn",
     sampleOutput: "3",
     explanation: "n appears thrice.",
     functionInfo: { name: "charFreq", params: "s, c", returnType: "int", goal: "Count char" },
@@ -1011,7 +1022,7 @@ fn main() {
       python: `import sys
 
 def char_freq(s, c):
-    # TODO: Implement frequency counting
+    # TODO: Implement frequency counting logic
     return 0
 
 if __name__ == "__main__":
@@ -1022,7 +1033,7 @@ if __name__ == "__main__":
 
 public class Main {
     public static int charFreq(String s, char c) {
-        // TODO: Implement frequency counting
+        // TODO: Implement frequency counting logic
         return 0;
     }
 
@@ -1044,8 +1055,8 @@ public class Main {
 
 using namespace std;
 
-int charFreq(string s, char c) {
-    // TODO: Implement frequency counting
+int charFreq(const string& s, char c) {
+    // TODO: Implement frequency counting logic
     return 0;
 }
 
@@ -1062,11 +1073,11 @@ int main() {
       javascript: `const fs = require('fs');
 
 function charFreq(s, c) {
-    // TODO: Implement frequency counting
+    // TODO: Implement frequency counting logic
     return 0;
 }
 
-const inputLines = fs.readFileSync(0, 'utf8').split('\n');
+const inputLines = fs.readFileSync(0, 'utf8').split('\\n');
 if (inputLines.length >= 2) {
     console.log(charFreq(inputLines[0], inputLines[1][0]));
 }`,
@@ -1074,7 +1085,7 @@ if (inputLines.length >= 2) {
 #include <string.h>
 
 int charFreq(char* s, char c) {
-    // TODO: Implement frequency counting
+    // TODO: Implement frequency counting logic
     return 0;
 }
 
@@ -1082,7 +1093,7 @@ int main() {
     char s[100001], c;
     if (fgets(s, 100001, stdin)) {
         if (scanf(" %c", &c) != EOF) {
-            printf("%d\n", charFreq(s, c));
+            printf("%d\\n", charFreq(s, c));
         }
     }
     return 0;
@@ -1091,7 +1102,7 @@ int main() {
 
 class Program {
     static int CharFreq(string s, char c) {
-        // TODO: Implement frequency counting
+        // TODO: Implement frequency counting logic
         return 0;
     }
 
@@ -1112,14 +1123,14 @@ import (
 )
 
 func charFreq(s string, c byte) int {
-    // TODO: Implement frequency counting
+    // TODO: Implement frequency counting logic
     return 0
 }
 
 func main() {
     reader := bufio.NewReader(os.Stdin)
-    s, _ := reader.ReadString('\n')
-    cStr, _ := reader.ReadString('\n')
+    s, _ := reader.ReadString('\\n')
+    cStr, _ := reader.ReadString('\\n')
     if len(cStr) > 0 {
         fmt.Println(charFreq(s, cStr[0]))
     }
@@ -1127,7 +1138,7 @@ func main() {
       rust: `use std::io::{self, BufRead};
 
 fn char_freq(s: &str, c: char) -> usize {
-    // TODO: Implement frequency counting
+    // TODO: Implement frequency counting logic
     0
 }
 
@@ -1175,7 +1186,7 @@ fn main() {
       python: `import sys
 
 def count_unique(n, arr):
-    # TODO: Implement unique element counting
+    # TODO: Implement unique element counting logic
     return 0
 
 if __name__ == "__main__":
@@ -1188,7 +1199,7 @@ if __name__ == "__main__":
 
 public class Main {
     public static int countUnique(int n, int[] arr) {
-        // TODO: Implement unique element counting
+        // TODO: Implement unique element counting logic
         return 0;
     }
 
@@ -1207,8 +1218,8 @@ public class Main {
 
 using namespace std;
 
-int countUnique(int n, vector<int>& arr) {
-    // TODO: Implement unique element counting
+int countUnique(int n, const vector<int>& arr) {
+    // TODO: Implement unique element counting logic
     return 0;
 }
 
@@ -1224,11 +1235,11 @@ int main() {
       javascript: `const fs = require('fs');
 
 function countUnique(n, arr) {
-    // TODO: Implement unique element counting
+    // TODO: Implement unique element counting logic
     return 0;
 }
 
-const input = fs.readFileSync(0, 'utf8').split(/\s+/);
+const input = fs.readFileSync(0, 'utf8').split(/\\s+/);
 if (input.length >= 2) {
     const n = parseInt(input[0]);
     const arr = input.slice(1, n + 1).map(Number);
@@ -1237,7 +1248,7 @@ if (input.length >= 2) {
       c: `#include <stdio.h>
 
 int countUnique(int n, int* arr) {
-    // TODO: Implement unique element counting
+    // TODO: Implement unique element counting logic
     return 0;
 }
 
@@ -1246,7 +1257,7 @@ int main() {
     if (scanf("%d", &n) != EOF) {
         int arr[100001];
         for (int i = 0; i < n; i++) scanf("%d", &arr[i]);
-        printf("%d\n", countUnique(n, arr));
+        printf("%d\\n", countUnique(n, arr));
     }
     return 0;
 }`,
@@ -1255,7 +1266,7 @@ using System.Linq;
 
 class Program {
     static int CountUnique(int n, int[] arr) {
-        // TODO: Implement unique element counting
+        // TODO: Implement unique element counting logic
         return 0;
     }
 
@@ -1276,7 +1287,7 @@ class Program {
 import "fmt"
 
 func countUnique(n int, arr []int) int {
-    // TODO: Implement unique element counting
+    // TODO: Implement unique element counting logic
     return 0
 }
 
@@ -1292,7 +1303,7 @@ func main() {
       rust: `use std::io::{self, Read};
 
 fn count_unique(n: usize, arr: Vec<i32>) -> usize {
-    // TODO: Implement unique element counting
+    // TODO: Implement unique element counting logic
     0
 }
 
@@ -1303,7 +1314,11 @@ fn main() {
         if let Some(n_str) = words.next() {
             let n: usize = n_str.parse().unwrap();
             let mut arr = Vec::new();
-            for _ in 0..n { arr.push(words.next().unwrap().parse().unwrap()); }
+            for _ in 0..n {
+                if let Some(s) = words.next() {
+                    arr.push(s.parse().unwrap());
+                }
+            }
             println!("{}", count_unique(n, arr));
         }
     }
@@ -1324,10 +1339,10 @@ fn main() {
     estimatedTime: "10 mins",
     company: "HCL",
     tags: ["Arrays", "Logic"],
-    inputFormat: "Line 1: N.\nLine 2: N integers.\nLine 3: T.",
+    inputFormat: "Line 1: N.\\nLine 2: N integers.\\nLine 3: T.",
     outputFormat: "FOUND or NOT FOUND.",
     constraints: ["1 <= N <= 100000"],
-    sampleInput: "4\n1 5 8 12\n8",
+    sampleInput: "4\\n1 5 8 12\\n8",
     sampleOutput: "FOUND",
     explanation: "8 is in the array.",
     functionInfo: { name: "search", params: "n, arr, t", returnType: "string", goal: "Search target" },
@@ -1341,7 +1356,7 @@ fn main() {
       python: `import sys
 
 def search(n, arr, t):
-    # TODO: Implement search logic
+    # TODO: Implement target search logic
     return "NOT FOUND"
 
 if __name__ == "__main__":
@@ -1356,7 +1371,7 @@ if __name__ == "__main__":
 
 public class Main {
     public static String search(int n, int[] arr, int t) {
-        // TODO: Implement search logic
+        // TODO: Implement target search logic
         return "NOT FOUND";
     }
 
@@ -1379,8 +1394,8 @@ public class Main {
 
 using namespace std;
 
-string search(int n, vector<int>& arr, int t) {
-    // TODO: Implement search logic
+string search(int n, const vector<int>& arr, int t) {
+    // TODO: Implement target search logic
     return "NOT FOUND";
 }
 
@@ -1398,11 +1413,11 @@ int main() {
       javascript: `const fs = require('fs');
 
 function search(n, arr, t) {
-    // TODO: Implement search logic
+    // TODO: Implement target search logic
     return "NOT FOUND";
 }
 
-const input = fs.readFileSync(0, 'utf8').split(/\s+/);
+const input = fs.readFileSync(0, 'utf8').split(/\\s+/);
 if (input.length >= 3) {
     const n = parseInt(input[0]);
     const arr = input.slice(1, n + 1).map(Number);
@@ -1412,7 +1427,7 @@ if (input.length >= 3) {
       c: `#include <stdio.h>
 
 char* search(int n, int* arr, int t) {
-    // TODO: Implement search logic
+    // TODO: Implement target search logic
     return "NOT FOUND";
 }
 
@@ -1422,7 +1437,7 @@ int main() {
         int arr[100001];
         for (int i = 0; i < n; i++) scanf("%d", &arr[i]);
         if (scanf("%d", &t) != EOF) {
-            printf("%s\n", search(n, arr, t));
+            printf("%s\\n", search(n, arr, t));
         }
     }
     return 0;
@@ -1432,7 +1447,7 @@ using System.Linq;
 
 class Program {
     static string Search(int n, int[] arr, int t) {
-        // TODO: Implement search logic
+        // TODO: Implement target search logic
         return "NOT FOUND";
     }
 
@@ -1457,7 +1472,7 @@ class Program {
 import "fmt"
 
 func search(n int, arr []int, t int) string {
-    // TODO: Implement search logic
+    // TODO: Implement target search logic
     return "NOT FOUND"
 }
 
@@ -1474,7 +1489,7 @@ func main() {
       rust: `use std::io::{self, Read};
 
 fn search(n: usize, arr: Vec<i32>, t: i32) -> String {
-    // TODO: Implement search logic
+    // TODO: Implement target search logic
     "NOT FOUND".to_string()
 }
 
@@ -1486,7 +1501,9 @@ fn main() {
             let n: usize = n_str.parse().unwrap();
             let mut arr = Vec::new();
             for _ in 0..n {
-                arr.push(words.next().unwrap().parse::<i32>().unwrap());
+                if let Some(s) = words.next() {
+                    arr.push(s.parse().unwrap());
+                }
             }
             if let Some(t_str) = words.next() {
                 let t = t_str.parse().unwrap();
@@ -1558,6 +1575,7 @@ public class Main {
       cpp: `#include <iostream>
 #include <vector>
 #include <algorithm>
+#include <climits>
 
 using namespace std;
 
@@ -1582,7 +1600,7 @@ function minDiff(n, arr) {
     return 0;
 }
 
-const input = fs.readFileSync(0, 'utf8').split(/\s+/);
+const input = fs.readFileSync(0, 'utf8').split(/\\s+/);
 if (input.length >= 2) {
     const n = parseInt(input[0]);
     const arr = input.slice(1, n + 1).map(Number);
@@ -1601,7 +1619,7 @@ int main() {
     if (scanf("%d", &n) != EOF) {
         int arr[100001];
         for (int i = 0; i < n; i++) scanf("%d", &arr[i]);
-        printf("%d\n", minDiff(n, arr));
+        printf("%d\\n", minDiff(n, arr));
     }
     return 0;
 }`,
@@ -1657,7 +1675,12 @@ fn main() {
         let mut words = input.split_whitespace();
         if let Some(n_str) = words.next() {
             let n: usize = n_str.parse().unwrap();
-            let arr: Vec<i32> = words.map(|s| s.parse().unwrap()).collect();
+            let mut arr = Vec::new();
+            for _ in 0..n {
+                if let Some(s) = words.next() {
+                    arr.push(s.parse().unwrap());
+                }
+            }
             println!("{}", min_diff(n, arr));
         }
     }
@@ -1682,10 +1705,10 @@ fn main() {
     estimatedTime: "20 mins",
     company: "Google",
     tags: ["Arrays", "Hash Map"],
-    inputFormat: "Line 1: N.\nLine 2: N integers.\nLine 3: T.",
+    inputFormat: "Line 1: N.\\nLine 2: N integers.\\nLine 3: T.",
     outputFormat: "Two indices separated by space.",
     constraints: ["2 <= N <= 100000"],
-    sampleInput: "4\n2 7 11 15\n9",
+    sampleInput: "4\\n2 7 11 15\\n9",
     sampleOutput: "0 1",
     explanation: "2+7 = 9.",
     functionInfo: { name: "twoSum", params: "n, arr, t", returnType: "void", goal: "Find indices" },
@@ -1710,7 +1733,6 @@ if __name__ == "__main__":
         t = int(data[n+1])
         two_sum(n, arr, t)`,
       java: `import java.util.Scanner;
-import java.util.HashMap;
 
 public class Main {
     public static void twoSum(int n, int[] arr, int t) {
@@ -1732,11 +1754,10 @@ public class Main {
 }`,
       cpp: `#include <iostream>
 #include <vector>
-#include <unordered_map>
 
 using namespace std;
 
-void twoSum(int n, vector<int>& arr, int t) {
+void twoSum(int n, const vector<int>& arr, int t) {
     // TODO: Implement two-sum logic and print indices
 }
 
@@ -1757,7 +1778,7 @@ function twoSum(n, arr, t) {
     // TODO: Implement two-sum logic and print indices
 }
 
-const input = fs.readFileSync(0, 'utf8').split(/\s+/);
+const input = fs.readFileSync(0, 'utf8').split(/\\s+/);
 if (input.length >= 3) {
     const n = parseInt(input[0]);
     const arr = input.slice(1, n + 1).map(Number);
@@ -1782,7 +1803,6 @@ int main() {
     return 0;
 }`,
       csharp: `using System;
-using System.Collections.Generic;
 using System.Linq;
 
 class Program {
@@ -1837,7 +1857,11 @@ fn main() {
         if let Some(n_str) = words.next() {
             let n: usize = n_str.parse().unwrap();
             let mut arr = Vec::new();
-            for _ in 0..n { arr.push(words.next().unwrap().parse().unwrap()); }
+            for _ in 0..n {
+                if let Some(s) = words.next() {
+                    arr.push(s.parse().unwrap());
+                }
+            }
             if let Some(t_str) = words.next() {
                 let t = t_str.parse().unwrap();
                 two_sum(n, arr, t);
@@ -1861,10 +1885,10 @@ fn main() {
     estimatedTime: "15 mins",
     company: "Amazon",
     tags: ["Arrays", "DP"],
-    inputFormat: "Line 1: N.\nLine 2: N integers.",
+    inputFormat: "Line 1: N.\\nLine 2: N integers.",
     outputFormat: "Maximum sum.",
     constraints: ["1 <= N <= 100000"],
-    sampleInput: "9\n-2 1 -3 4 -1 2 1 -5 4",
+    sampleInput: "9\\n-2 1 -3 4 -1 2 1 -5 4",
     sampleOutput: "6",
     explanation: "4,-1,2,1 sum to 6.",
     functionInfo: { name: "maxSubArray", params: "n, arr", returnType: "long", goal: "Find max sum" },
@@ -1911,7 +1935,7 @@ public class Main {
 
 using namespace std;
 
-long long maxSubArray(int n, vector<int>& arr) {
+long long maxSubArray(int n, const vector<int>& arr) {
     // TODO: Implement Kadane's algorithm
     return 0;
 }
@@ -1932,7 +1956,7 @@ function maxSubArray(n, arr) {
     return 0;
 }
 
-const input = fs.readFileSync(0, 'utf8').split(/\s+/);
+const input = fs.readFileSync(0, 'utf8').split(/\\s+/);
 if (input.length >= 2) {
     const n = parseInt(input[0]);
     const arr = input.slice(1, n + 1).map(Number);
@@ -1950,7 +1974,7 @@ int main() {
     if (scanf("%d", &n) != EOF) {
         int arr[100001];
         for (int i = 0; i < n; i++) scanf("%d", &arr[i]);
-        printf("%lld\n", maxSubArray(n, arr));
+        printf("%lld\\n", maxSubArray(n, arr));
     }
     return 0;
 }`,
@@ -2006,7 +2030,12 @@ fn main() {
         let mut words = input.split_whitespace();
         if let Some(n_str) = words.next() {
             let n: usize = n_str.parse().unwrap();
-            let arr: Vec<i32> = words.map(|s| s.parse().unwrap()).collect();
+            let mut arr = Vec::new();
+            for _ in 0..n {
+                if let Some(s) = words.next() {
+                    arr.push(s.parse().unwrap());
+                }
+            }
             println!("{}", max_sub_array(n, arr));
         }
     }
@@ -2044,7 +2073,7 @@ fn main() {
       python: `import sys
 
 def is_valid(s):
-    # TODO: Implement bracket validation using stack
+    # TODO: Implement bracket validation logic using a stack
     return False
 
 if __name__ == "__main__":
@@ -2055,11 +2084,10 @@ if __name__ == "__main__":
         else:
             print("NO")`,
       java: `import java.util.Scanner;
-import java.util.Stack;
 
 public class Main {
     public static boolean isValid(String s) {
-        // TODO: Implement bracket validation using stack
+        // TODO: Implement bracket validation logic using a stack
         return false;
     }
 
@@ -2072,12 +2100,11 @@ public class Main {
 }`,
       cpp: `#include <iostream>
 #include <string>
-#include <stack>
 
 using namespace std;
 
 bool isValid(string s) {
-    // TODO: Implement bracket validation using stack
+    // TODO: Implement bracket validation logic using a stack
     return false;
 }
 
@@ -2091,7 +2118,7 @@ int main() {
       javascript: `const fs = require('fs');
 
 function isValid(s) {
-    // TODO: Implement bracket validation using stack
+    // TODO: Implement bracket validation logic using a stack
     return false;
 }
 
@@ -2104,23 +2131,22 @@ if (input) {
 #include <string.h>
 
 bool isValid(char* s) {
-    // TODO: Implement bracket validation using stack
+    // TODO: Implement bracket validation logic using a stack
     return false;
 }
 
 int main() {
     char s[100001];
     if (scanf("%s", s) != EOF) {
-        printf("%s\n", isValid(s) ? "YES" : "NO");
+        printf("%s\\n", isValid(s) ? "YES" : "NO");
     }
     return 0;
 }`,
       csharp: `using System;
-using System.Collections.Generic;
 
 class Program {
     static bool IsValid(string s) {
-        // TODO: Implement bracket validation using stack
+        // TODO: Implement bracket validation logic using a stack
         return false;
     }
 
@@ -2136,7 +2162,7 @@ class Program {
 import "fmt"
 
 func isValid(s string) bool {
-    // TODO: Implement bracket validation using stack
+    // TODO: Implement bracket validation logic using a stack
     return false
 }
 
@@ -2154,7 +2180,7 @@ func main() {
       rust: `use std::io::{self, BufRead};
 
 fn is_valid(s: &str) -> bool {
-    // TODO: Implement bracket validation using stack
+    // TODO: Implement bracket validation logic using a stack
     false
 }
 
@@ -2184,10 +2210,10 @@ fn main() {
     estimatedTime: "15 mins",
     company: "Meta",
     tags: ["Strings", "Logic"],
-    inputFormat: "Line 1: S1.\nLine 2: S2.",
+    inputFormat: "Line 1: S1.\\nLine 2: S2.",
     outputFormat: "YES or NO.",
     constraints: ["1 <= |S1|, |S2| <= 100000"],
-    sampleInput: "listen\nsilent",
+    sampleInput: "listen\\nsilent",
     sampleOutput: "YES",
     explanation: "Both words contain exactly same characters.",
     functionInfo: { name: "isAnagram", params: "s1, s2", returnType: "boolean", goal: "Check anagram" },
@@ -2255,7 +2281,7 @@ function isAnagram(s1, s2) {
     return false;
 }
 
-const input = fs.readFileSync(0, 'utf8').split('\n');
+const input = fs.readFileSync(0, 'utf8').split('\\n');
 if (input.length >= 2) {
     console.log(isAnagram(input[0].trim(), input[1].trim()) ? "YES" : "NO");
 }`,
@@ -2271,7 +2297,7 @@ bool isAnagram(char* s1, char* s2) {
 int main() {
     char s1[100001], s2[100001];
     if (scanf("%s %s", s1, s2) != EOF) {
-        printf("%s\n", isAnagram(s1, s2) ? "YES" : "NO");
+        printf("%s\\n", isAnagram(s1, s2) ? "YES" : "NO");
     }
     return 0;
 }`,
@@ -2341,10 +2367,10 @@ fn main() {
     estimatedTime: "15 mins",
     company: "Flipkart",
     tags: ["Arrays", "Logic"],
-    inputFormat: "Line 1: N1.\nLine 2: N1 integers.\nLine 3: N2.\nLine 4: N2 integers.",
+    inputFormat: "Line 1: N1.\\nLine 2: N1 integers.\\nLine 3: N2.\\nLine 4: N2 integers.",
     outputFormat: "Merged sorted integers separated by space.",
     constraints: ["1 <= N1, N2 <= 100000"],
-    sampleInput: "3\n1 3 5\n2\n2 4",
+    sampleInput: "3\\n1 3 5\\n2\\n2 4",
     sampleOutput: "1 2 3 4 5",
     explanation: "Merged 1,2,3,4,5.",
     functionInfo: { name: "mergeArrays", params: "n1, a1, n2, a2", returnType: "int[]", goal: "Merge sorted" },
@@ -2397,7 +2423,7 @@ public class Main {
 
 using namespace std;
 
-void mergeArrays(int n1, vector<int>& a1, int n2, vector<int>& a2) {
+void mergeArrays(int n1, const vector<int>& a1, int n2, const vector<int>& a2) {
     // TODO: Implement merge logic for sorted arrays and print results
 }
 
@@ -2421,7 +2447,7 @@ function mergeArrays(n1, a1, n2, a2) {
     return [];
 }
 
-const input = fs.readFileSync(0, 'utf8').split(/\s+/);
+const input = fs.readFileSync(0, 'utf8').split(/\\s+/);
 if (input.length >= 4) {
     let n1 = parseInt(input[0]);
     let a1 = input.slice(1, n1 + 1).map(Number);
@@ -2524,10 +2550,10 @@ fn main() {
     estimatedTime: "15 mins",
     company: "Microsoft",
     tags: ["Arrays", "Logic"],
-    inputFormat: "Line 1: N.\nLine 2: N sorted integers.\nLine 3: T.",
+    inputFormat: "Line 1: N.\\nLine 2: N sorted integers.\\nLine 3: T.",
     outputFormat: "Index or -1.",
     constraints: ["1 <= N <= 100000"],
-    sampleInput: "5\n1 2 3 4 5\n4",
+    sampleInput: "5\\n1 2 3 4 5\\n4",
     sampleOutput: "3",
     explanation: "4 is found at index 3 (0-indexed).",
     functionInfo: { name: "binarySearch", params: "n, arr, t", returnType: "int", goal: "Binary search" },
@@ -2577,7 +2603,7 @@ public class Main {
 
 using namespace std;
 
-int binarySearch(int n, vector<int>& arr, int t) {
+int binarySearch(int n, const vector<int>& arr, int t) {
     // TODO: Implement binary search logic
     return -1;
 }
@@ -2600,7 +2626,7 @@ function binarySearch(n, arr, t) {
     return -1;
 }
 
-const input = fs.readFileSync(0, 'utf8').split(/\s+/);
+const input = fs.readFileSync(0, 'utf8').split(/\\s+/);
 if (input.length >= 3) {
     const n = parseInt(input[0]);
     const arr = input.slice(1, n + 1).map(Number);
@@ -2620,7 +2646,7 @@ int main() {
         int arr[100001];
         for (int i = 0; i < n; i++) scanf("%d", &arr[i]);
         if (scanf("%d", &t) != EOF) {
-            printf("%d\n", binarySearch(n, arr, t));
+            printf("%d\\n", binarySearch(n, arr, t));
         }
     }
     return 0;
@@ -2683,7 +2709,11 @@ fn main() {
         if let Some(n_str) = words.next() {
             let n: usize = n_str.parse().unwrap();
             let mut arr = Vec::new();
-            for _ in 0..n { arr.push(words.next().unwrap().parse().unwrap()); }
+            for _ in 0..n {
+                if let Some(s) = words.next() {
+                    arr.push(s.parse().unwrap());
+                }
+            }
             if let Some(t_str) = words.next() {
                 let t = t_str.parse().unwrap();
                 println!("{}", binary_search(n, arr, t));
@@ -2707,10 +2737,10 @@ fn main() {
     estimatedTime: "15 mins",
     company: "Amazon",
     tags: ["Arrays", "Logic"],
-    inputFormat: "Line 1: N, K.\nLine 2: N integers.",
+    inputFormat: "Line 1: N, K.\\nLine 2: N integers.",
     outputFormat: "Maximum sum.",
     constraints: ["1 <= K <= N <= 100000"],
-    sampleInput: "4 2\n1 2 3 4",
+    sampleInput: "4 2\\n1 2 3 4",
     sampleOutput: "7",
     explanation: "3+4 = 7 is the max window of size 2.",
     functionInfo: { name: "maxSumK", params: "n, k, arr", returnType: "long", goal: "Find max window sum" },
@@ -2759,7 +2789,7 @@ public class Main {
 
 using namespace std;
 
-long long maxSumK(int n, int k, vector<int>& arr) {
+long long maxSumK(int n, int k, const vector<int>& arr) {
     // TODO: Implement sliding window sum logic
     return 0;
 }
@@ -2780,7 +2810,7 @@ function maxSumK(n, k, arr) {
     return 0;
 }
 
-const input = fs.readFileSync(0, 'utf8').split(/\s+/);
+const input = fs.readFileSync(0, 'utf8').split(/\\s+/);
 if (input.length >= 3) {
     const n = parseInt(input[0]);
     const k = parseInt(input[1]);
@@ -2799,7 +2829,7 @@ int main() {
     if (scanf("%d %d", &n, &k) != EOF) {
         int arr[100001];
         for (int i = 0; i < n; i++) scanf("%d", &arr[i]);
-        printf("%lld\n", maxSumK(n, k, arr));
+        printf("%lld\\n", maxSumK(n, k, arr));
     }
     return 0;
 }`,
@@ -2858,7 +2888,11 @@ fn main() {
             let n: usize = n_str.parse().unwrap();
             let k: usize = words.next().unwrap().parse().unwrap();
             let mut arr = Vec::new();
-            for _ in 0..n { arr.push(words.next().unwrap().parse().unwrap()); }
+            for _ in 0..n {
+                if let Some(s) = words.next() {
+                    arr.push(s.parse().unwrap());
+                }
+            }
             println!("{}", max_sum_k(n, k, arr));
         }
     }
@@ -2879,10 +2913,10 @@ fn main() {
     estimatedTime: "15 mins",
     company: "TCS",
     tags: ["Arrays", "Logic"],
-    inputFormat: "Line 1: N.\nLine 2: N integers.",
+    inputFormat: "Line 1: N.\\nLine 2: N integers.",
     outputFormat: "Index or -1.",
     constraints: ["1 <= N <= 100000"],
-    sampleInput: "3\n1 2 1",
+    sampleInput: "3\\n1 2 1",
     sampleOutput: "1",
     explanation: "Sum left of index 1 is 1, sum right is 1.",
     functionInfo: { name: "findEquilibrium", params: "n, arr", returnType: "int", goal: "Find pivot" },
@@ -2928,7 +2962,7 @@ public class Main {
 
 using namespace std;
 
-int findEquilibrium(int n, vector<int>& arr) {
+int findEquilibrium(int n, const vector<int>& arr) {
     // TODO: Implement equilibrium index finding logic
     return -1;
 }
@@ -2949,7 +2983,7 @@ function findEquilibrium(n, arr) {
     return -1;
 }
 
-const input = fs.readFileSync(0, 'utf8').split(/\s+/);
+const input = fs.readFileSync(0, 'utf8').split(/\\s+/);
 if (input.length >= 2) {
     const n = parseInt(input[0]);
     const arr = input.slice(1, n + 1).map(Number);
@@ -2967,7 +3001,7 @@ int main() {
     if (scanf("%d", &n) != EOF) {
         int arr[100001];
         for (int i = 0; i < n; i++) scanf("%d", &arr[i]);
-        printf("%d\n", findEquilibrium(n, arr));
+        printf("%d\\n", findEquilibrium(n, arr));
     }
     return 0;
 }`,
@@ -3024,7 +3058,11 @@ fn main() {
         if let Some(n_str) = words.next() {
             let n: usize = n_str.parse().unwrap();
             let mut arr = Vec::new();
-            for _ in 0..n { arr.push(words.next().unwrap().parse().unwrap()); }
+            for _ in 0..n {
+                if let Some(s) = words.next() {
+                    arr.push(s.parse().unwrap());
+                }
+            }
             println!("{}", find_equilibrium(n, arr));
         }
     }
@@ -3045,10 +3083,10 @@ fn main() {
     estimatedTime: "15 mins",
     company: "Accenture",
     tags: ["Arrays", "Logic"],
-    inputFormat: "Line 1: N, K.\nLine 2: N integers.",
+    inputFormat: "Line 1: N, K.\\nLine 2: N integers.",
     outputFormat: "Rotated integers separated by space.",
     constraints: ["1 <= N <= 100000", "K >= 0"],
-    sampleInput: "3 1\n1 2 3",
+    sampleInput: "3 1\\n1 2 3",
     sampleOutput: "3 1 2",
     explanation: "3 shifts to the front.",
     functionInfo: { name: "rotate", params: "n, k, arr", returnType: "void", goal: "Rotate array" },
@@ -3095,7 +3133,6 @@ public class Main {
 }`,
       cpp: `#include <iostream>
 #include <vector>
-#include <algorithm>
 
 using namespace std;
 
@@ -3120,7 +3157,7 @@ function rotate(n, k, arr) {
     // TODO: Implement array rotation logic
 }
 
-const input = fs.readFileSync(0, 'utf8').split(/\s+/);
+const input = fs.readFileSync(0, 'utf8').split(/\\s+/);
 if (input.length >= 3) {
     const n = parseInt(input[0]);
     const k = parseInt(input[1]);
@@ -3141,7 +3178,7 @@ int main() {
         for (int i = 0; i < n; i++) scanf("%d", &arr[i]);
         rotate(n, k, arr);
         for (int i = 0; i < n; i++) printf("%d%s", arr[i], (i == n-1 ? "" : " "));
-        printf("\n");
+        printf("\\n");
     }
     return 0;
 }`,
@@ -3251,7 +3288,6 @@ if __name__ == "__main__":
     line = sys.stdin.read().strip()
     print(longest_unique_sub(line))`,
       java: `import java.util.Scanner;
-import java.util.HashSet;
 
 public class Main {
     public static int longestUniqueSub(String s) {
@@ -3268,8 +3304,6 @@ public class Main {
 }`,
       cpp: `#include <iostream>
 #include <string>
-#include <unordered_set>
-#include <algorithm>
 
 using namespace std;
 
@@ -3305,12 +3339,11 @@ int longestUniqueSub(char* s) {
 int main() {
     char s[100001];
     if (fgets(s, 100001, stdin)) {
-        printf("%d\n", longestUniqueSub(s));
+        printf("%d\\n", longestUniqueSub(s));
     }
     return 0;
 }`,
       csharp: `using System;
-using System.Collections.Generic;
 
 class Program {
     static int LongestUniqueSub(string s) {
@@ -3338,7 +3371,7 @@ func longestUniqueSub(s string) int {
 
 func main() {
     reader := bufio.NewReader(os.Stdin)
-    s, _ := reader.ReadString('\n')
+    s, _ := reader.ReadString('\\n')
     fmt.Println(longestUniqueSub(s))
 }`,
       rust: `use std::io::{self, BufRead};
@@ -3415,8 +3448,6 @@ public class Main {
 }`,
       cpp: `#include <iostream>
 #include <string>
-#include <vector>
-#include <algorithm>
 
 using namespace std;
 
@@ -3452,7 +3483,7 @@ int longestPal(char* s) {
 int main() {
     char s[2001];
     if (fgets(s, 2001, stdin)) {
-        printf("%d\n", longestPal(s));
+        printf("%d\\n", longestPal(s));
     }
     return 0;
 }`,
@@ -3484,7 +3515,7 @@ func longestPal(s string) int {
 
 func main() {
     reader := bufio.NewReader(os.Stdin)
-    s, _ := reader.ReadString('\n')
+    s, _ := reader.ReadString('\\n')
     fmt.Println(longestPal(s))
 }`,
       rust: `use std::io::{self, BufRead};
@@ -3517,11 +3548,11 @@ fn main() {
     estimatedTime: "25 mins",
     company: "Uber",
     tags: ["Arrays", "Logic"],
-    inputFormat: "Line 1: N.\nN lines: start end.",
+    inputFormat: "Line 1: N.\\nN lines: start end.",
     outputFormat: "Merged intervals line by line, sorted by start.",
     constraints: ["1 <= N <= 100000"],
-    sampleInput: "4\n1 3\n8 10\n15 18\n2 6",
-    sampleOutput: "1 6\n8 10\n15 18",
+    sampleInput: "4\\n1 3\\n8 10\\n15 18\\n2 6",
+    sampleOutput: "1 6\\n8 10\\n15 18",
     explanation: "1-3 and 2-6 overlap and merge into 1-6.",
     functionInfo: { name: "mergeIntervals", params: "n, intervals", returnType: "void", goal: "Merge overlapping" },
     walkthrough: {
@@ -3546,8 +3577,6 @@ if __name__ == "__main__":
             intervals.append([int(data[2*i+1]), int(data[2*i+2])])
         merge_intervals(n, intervals)`,
       java: `import java.util.Scanner;
-import java.util.Arrays;
-import java.util.ArrayList;
 
 public class Main {
     public static void mergeIntervals(int n, int[][] intervals) {
@@ -3569,7 +3598,6 @@ public class Main {
 }`,
       cpp: `#include <iostream>
 #include <vector>
-#include <algorithm>
 
 using namespace std;
 
@@ -3592,7 +3620,7 @@ function mergeIntervals(n, arr) {
     // TODO: Implement interval merging logic and print results
 }
 
-const input = fs.readFileSync(0, 'utf8').split(/\s+/);
+const input = fs.readFileSync(0, 'utf8').split(/\\s+/);
 if (input.length >= 1) {
     const n = parseInt(input[0]);
     const arr = [];
@@ -3604,7 +3632,7 @@ if (input.length >= 1) {
       c: `#include <stdio.h>
 #include <stdlib.h>
 
-void mergeIntervals(int n, int arr[][2]) {
+void mergeIntervals(int n, int (*arr)[2]) {
     // TODO: Implement interval merging logic and print results
 }
 
@@ -3619,7 +3647,6 @@ int main() {
     return 0;
 }`,
       csharp: `using System;
-using System.Collections.Generic;
 using System.Linq;
 
 class Program {
@@ -3633,7 +3660,9 @@ class Program {
         int n = int.Parse(line);
         int[][] arr = new int[n][];
         for (int i = 0; i < n; i++) {
-            arr[i] = Console.ReadLine().Split(' ').Select(int.Parse).ToArray();
+            string r = Console.ReadLine();
+            if (r != null)
+                arr[i] = r.Split(' ').Select(int.Parse).ToArray();
         }
         MergeIntervals(n, arr);
     }
@@ -3670,7 +3699,9 @@ fn main() {
             let n: usize = n_str.parse().unwrap();
             let mut arr = Vec::new();
             for _ in 0..n {
-                arr.push(vec![words.next().unwrap().parse().unwrap(), words.next().unwrap().parse().unwrap()]);
+                let start = words.next().unwrap().parse().unwrap();
+                let end = words.next().unwrap().parse().unwrap();
+                arr.push(vec![start, end]);
             }
             merge_intervals(n, arr);
         }
@@ -3692,10 +3723,10 @@ fn main() {
     estimatedTime: "25 mins",
     company: "Amazon",
     tags: ["Arrays", "Logic"],
-    inputFormat: "Line 1: N, K.\nLine 2: N integers.",
+    inputFormat: "Line 1: N, K.\\nLine 2: N integers.",
     outputFormat: "K integers separated by space.",
     constraints: ["1 <= K <= N <= 100000"],
-    sampleInput: "6 2\n1 1 1 2 2 3",
+    sampleInput: "6 2\\n1 1 1 2 2 3",
     sampleOutput: "1 2",
     explanation: "1 appears 3 times, 2 appears 2 times.",
     functionInfo: { name: "topK", params: "n, k, arr", returnType: "void", goal: "Find top K" },
@@ -3720,8 +3751,6 @@ if __name__ == "__main__":
         arr = [int(x) for x in data[2:n+2]]
         top_k(n, k, arr)`,
       java: `import java.util.Scanner;
-import java.util.HashMap;
-import java.util.PriorityQueue;
 
 public class Main {
     public static void topK(int n, int k, int[] arr) {
@@ -3741,12 +3770,10 @@ public class Main {
 }`,
       cpp: `#include <iostream>
 #include <vector>
-#include <unordered_map>
-#include <queue>
 
 using namespace std;
 
-void topK(int n, int k, vector<int>& arr) {
+void topK(int n, int k, const vector<int>& arr) {
     // TODO: Implement top-K frequency logic and print results
 }
 
@@ -3765,7 +3792,7 @@ function topK(n, k, arr) {
     // TODO: Implement top-K frequency logic and print results
 }
 
-const input = fs.readFileSync(0, 'utf8').split(/\s+/);
+const input = fs.readFileSync(0, 'utf8').split(/\\s+/);
 if (input.length >= 2) {
     const n = parseInt(input[0]);
     const k = parseInt(input[1]);
@@ -3788,7 +3815,6 @@ int main() {
     return 0;
 }`,
       csharp: `using System;
-using System.Collections.Generic;
 using System.Linq;
 
 class Program {
@@ -3839,7 +3865,11 @@ fn main() {
             let n: usize = line1_n.parse().unwrap();
             let k: usize = words.next().unwrap().parse().unwrap();
             let mut arr = Vec::new();
-            for _ in 0..n { arr.push(words.next().unwrap().parse().unwrap()); }
+            for _ in 0..n {
+                if let Some(s) = words.next() {
+                    arr.push(s.parse().unwrap());
+                }
+            }
             top_k(n, k, arr);
         }
     }
@@ -3860,10 +3890,10 @@ fn main() {
     estimatedTime: "30 mins",
     company: "Google",
     tags: ["Strings", "Logic"],
-    inputFormat: "Line 1: S.\nLine 2: T.",
+    inputFormat: "Line 1: S.\\nLine 2: T.",
     outputFormat: "Minimum length or 0.",
     constraints: ["1 <= |S|, |T| <= 100000"],
-    sampleInput: "ADOBECODEBANC\nABC",
+    sampleInput: "ADOBECODEBANC\\nABC",
     sampleOutput: "4",
     explanation: "The substring 'BANC' (length 4) is the smallest window containing 'A', 'B', and 'C'.",
     functionInfo: { name: "minWindow", params: "s, t", returnType: "int", goal: "Find min window" },
@@ -3885,7 +3915,6 @@ if __name__ == "__main__":
     if len(lines) >= 2:
         print(min_window(lines[0].strip(), lines[1].strip()))`,
       java: `import java.util.Scanner;
-import java.util.HashMap;
 
 public class Main {
     public static int minWindow(String s, String t) {
@@ -3905,8 +3934,6 @@ public class Main {
 }`,
       cpp: `#include <iostream>
 #include <string>
-#include <vector>
-#include <climits>
 
 using namespace std;
 
@@ -3929,7 +3956,7 @@ function minWindow(s, t) {
     return 0;
 }
 
-const input = fs.readFileSync(0, 'utf8').split('\n');
+const input = fs.readFileSync(0, 'utf8').split('\\n');
 if (input.length >= 2) {
     console.log(minWindow(input[0].trim(), input[1].trim()));
 }`,
@@ -3944,12 +3971,11 @@ int minWindow(char* s, char* t) {
 int main() {
     char s[100001], t[100001];
     if (scanf("%s %s", s, t) != EOF) {
-        printf("%d\n", minWindow(s, t));
+        printf("%d\\n", minWindow(s, t));
     }
     return 0;
 }`,
       csharp: `using System;
-using System.Collections.Generic;
 
 class Program {
     static int MinWindow(string s, string t) {
@@ -4011,10 +4037,10 @@ fn main() {
     estimatedTime: "25 mins",
     company: "Google",
     tags: ["Arrays", "Logic"],
-    inputFormat: "Line 1: N.\nLine 2: N integers.",
+    inputFormat: "Line 1: N.\\nLine 2: N integers.",
     outputFormat: "Longest length.",
     constraints: ["1 <= N <= 100000"],
-    sampleInput: "6\n100 4 200 1 3 2",
+    sampleInput: "6\\n100 4 200 1 3 2",
     sampleOutput: "4",
     explanation: "The longest sequence is [1, 2, 3, 4].",
     functionInfo: { name: "longestConsecutive", params: "n, arr", returnType: "int", goal: "Find longest sequence" },
@@ -4038,7 +4064,6 @@ if __name__ == "__main__":
         arr = [int(x) for x in data[1:n+1]]
         print(longest_consecutive(n, arr))`,
       java: `import java.util.Scanner;
-import java.util.HashSet;
 
 public class Main {
     public static int longestConsecutive(int n, int[] arr) {
@@ -4058,12 +4083,10 @@ public class Main {
 }`,
       cpp: `#include <iostream>
 #include <vector>
-#include <unordered_set>
-#include <algorithm>
 
 using namespace std;
 
-int longestConsecutive(int n, vector<int>& arr) {
+int longestConsecutive(int n, const vector<int>& arr) {
     // TODO: Implement longest consecutive sequence logic
     return 0;
 }
@@ -4084,7 +4107,7 @@ function longestConsecutive(n, arr) {
     return 0;
 }
 
-const input = fs.readFileSync(0, 'utf8').split(/\s+/);
+const input = fs.readFileSync(0, 'utf8').split(/\\s+/);
 if (input.length >= 1) {
     const n = parseInt(input[0]);
     const arr = input.slice(1, n + 1).map(Number);
@@ -4102,12 +4125,11 @@ int main() {
     if (scanf("%d", &n) != EOF) {
         int arr[100001];
         for (int i = 0; i < n; i++) scanf("%d", &arr[i]);
-        printf("%d\n", longestConsecutive(n, arr));
+        printf("%d\\n", longestConsecutive(n, arr));
     }
     return 0;
 }`,
       csharp: `using System;
-using System.Collections.Generic;
 using System.Linq;
 
 class Program {
@@ -4160,7 +4182,11 @@ fn main() {
         if let Some(n_str) = words.next() {
             let n: usize = n_str.parse().unwrap();
             let mut arr = Vec::new();
-            for _ in 0..n { arr.push(words.next().unwrap().parse().unwrap()); }
+            for _ in 0..n {
+                if let Some(s) = words.next() {
+                    arr.push(s.parse().unwrap());
+                }
+            }
             println!("{}", longest_consecutive(n, arr));
         }
     }
@@ -4181,10 +4207,10 @@ fn main() {
     estimatedTime: "25 mins",
     company: "Meta",
     tags: ["Graphs", "Logic"],
-    inputFormat: "Line 1: N.\nN lines: N integers.",
+    inputFormat: "Line 1: N.\\nN lines: N integers.",
     outputFormat: "YES or NO.",
     constraints: ["1 <= N <= 100"],
-    sampleInput: "3\n0 0 1\n1 0 1\n1 0 0",
+    sampleInput: "3\\n0 0 1\\n1 0 1\\n1 0 0",
     sampleOutput: "YES",
     explanation: "A path exists via (0,0) -> (0,1) -> (1,1) -> (2,1) -> (2,2).",
     functionInfo: { name: "hasPath", params: "n, grid", returnType: "boolean", goal: "Check connectivity" },
@@ -4237,7 +4263,7 @@ public class Main {
 
 using namespace std;
 
-bool hasPath(int n, vector<vector<int>>& grid) {
+bool hasPath(int n, const vector<vector<int>>& grid) {
     // TODO: Implement pathfinding logic (DFS/BFS)
     return false;
 }
@@ -4260,7 +4286,7 @@ function hasPath(n, grid) {
     return false;
 }
 
-const input = fs.readFileSync(0, 'utf8').split(/\s+/);
+const input = fs.readFileSync(0, 'utf8').split(/\\s+/);
 if (input.length >= 1) {
     let n = parseInt(input[0]);
     let grid = [];
@@ -4284,7 +4310,7 @@ int main() {
         for (int i = 0; i < n; i++) {
             for (int j = 0; j < n; j++) scanf("%d", &grid[i][j]);
         }
-        printf("%s\n", hasPath(n, grid) ? "YES" : "NO");
+        printf("%s\\n", hasPath(n, grid) ? "YES" : "NO");
     }
     return 0;
 }`,
@@ -4351,7 +4377,11 @@ fn main() {
             let mut grid = Vec::new();
             for _ in 0..n {
                 let mut row = Vec::new();
-                for _ in 0..n { row.push(words.next().unwrap().parse().unwrap()); }
+                for _ in 0..n {
+                    if let Some(s) = words.next() {
+                        row.push(s.parse().unwrap());
+                    }
+                }
                 grid.push(row);
             }
             println!("{}", if has_path(n, grid) { "YES" } else { "NO" });
@@ -4374,10 +4404,10 @@ fn main() {
     estimatedTime: "25 mins",
     company: "Google",
     tags: ["Graphs", "Logic"],
-    inputFormat: "Line 1: N.\nN lines: N integers.",
+    inputFormat: "Line 1: N.\\nN lines: N integers.",
     outputFormat: "Shortest length or -1.",
     constraints: ["1 <= N <= 100"],
-    sampleInput: "3\n0 0 0\n1 1 0\n1 1 0",
+    sampleInput: "3\\n0 0 0\\n1 1 0\\n1 1 0",
     sampleOutput: "5",
     explanation: "(0,0) -> (0,1) -> (0,2) -> (1,2) -> (2,2) has length 5.",
     functionInfo: { name: "shortestPath", params: "n, grid", returnType: "int", goal: "Shortest path BFS" },
@@ -4403,8 +4433,6 @@ if __name__ == "__main__":
             grid.append([int(x) for x in data[1+i*n : 1+(i+1)*n]])
         print(shortest_path(n, grid))`,
       java: `import java.util.Scanner;
-import java.util.Queue;
-import java.util.LinkedList;
 
 public class Main {
     public static int shortestPath(int n, int[][] grid) {
@@ -4426,11 +4454,10 @@ public class Main {
 }`,
       cpp: `#include <iostream>
 #include <vector>
-#include <queue>
 
 using namespace std;
 
-int shortestPath(int n, vector<vector<int>>& grid) {
+int shortestPath(int n, const vector<vector<int>>& grid) {
     // TODO: Implement BFS for shortest path in grid
     return -1;
 }
@@ -4453,7 +4480,7 @@ function shortestPath(n, grid) {
     return -1;
 }
 
-const input = fs.readFileSync(0, 'utf8').split(/\s+/);
+const input = fs.readFileSync(0, 'utf8').split(/\\s+/);
 if (input.length >= 1) {
     let n = parseInt(input[0]);
     let grid = [];
@@ -4476,12 +4503,11 @@ int main() {
         for (int i = 0; i < n; i++) {
             for (int j = 0; j < n; j++) scanf("%d", &grid[i][j]);
         }
-        printf("%d\n", shortestPath(n, grid));
+        printf("%d\\n", shortestPath(n, grid));
     }
     return 0;
 }`,
       csharp: `using System;
-using System.Collections.Generic;
 using System.Linq;
 
 class Program {
@@ -4540,7 +4566,11 @@ fn main() {
             let mut grid = Vec::new();
             for _ in 0..n {
                 let mut row = Vec::new();
-                for _ in 0..n { row.push(words.next().unwrap().parse().unwrap()); }
+                for _ in 0..n {
+                    if let Some(s) = words.next() {
+                        row.push(s.parse().unwrap());
+                    }
+                }
                 grid.push(row);
             }
             println!("{}", shortest_path(n, grid));
@@ -4563,10 +4593,10 @@ fn main() {
     estimatedTime: "25 mins",
     company: "Google",
     tags: ["Strings", "DP"],
-    inputFormat: "Line 1: S1.\nLine 2: S2.",
+    inputFormat: "Line 1: S1.\\nLine 2: S2.",
     outputFormat: "LCS length.",
     constraints: ["1 <= |S1|, |S2| <= 1000"],
-    sampleInput: "abcde\nace",
+    sampleInput: "abcde\\nace",
     sampleOutput: "3",
     explanation: "The longest common subsequence is 'ace', which has length 3.",
     functionInfo: { name: "lcs", params: "s1, s2", returnType: "int", goal: "Longest common subsequence" },
@@ -4613,7 +4643,7 @@ public class Main {
 
 using namespace std;
 
-int lcs(string s1, string s2) {
+int lcs(const string& s1, const string& s2) {
     // TODO: Implement LCS using Dynamic Programming
     return 0;
 }
@@ -4632,7 +4662,7 @@ function lcs(s1, s2) {
     return 0;
 }
 
-const input = fs.readFileSync(0, 'utf8').split('\n');
+const input = fs.readFileSync(0, 'utf8').split('\\n');
 if (input.length >= 2) {
     console.log(lcs(input[0].trim(), input[1].trim()));
 }`,
@@ -4647,7 +4677,7 @@ int lcs(char* s1, char* s2) {
 int main() {
     char s1[1001], s2[1001];
     if (scanf("%s %s", s1, s2) != EOF) {
-        printf("%d\n", lcs(s1, s2));
+        printf("%d\\n", lcs(s1, s2));
     }
     return 0;
 }`,
@@ -4713,10 +4743,10 @@ fn main() {
     estimatedTime: "25 mins",
     company: "Goldman Sachs",
     tags: ["Arrays", "DP"],
-    inputFormat: "Line 1: N types, T amount.\nLine 2: N integers.",
+    inputFormat: "Line 1: N types, T amount.\\nLine 2: N integers.",
     outputFormat: "Minimum coins or -1.",
     constraints: ["1 <= T <= 10000", "1 <= N <= 100"],
-    sampleInput: "3 11\n1 2 5",
+    sampleInput: "3 11\\n1 2 5",
     sampleOutput: "3",
     explanation: "5+5+1 = 11 using 3 coins.",
     functionInfo: { name: "coinChange", params: "n, t, coins", returnType: "int", goal: "Minimize coins" },
@@ -4741,10 +4771,9 @@ if __name__ == "__main__":
         coins = [int(x) for x in data[2:n+2]]
         print(coin_change(n, t, coins))`,
       java: `import java.util.Scanner;
-import java.util.Arrays;
 
 public class Main {
-    public static int coinChange(int[] coins, int t) {
+    public static int coinChange(int n, int t, int[] coins) {
         // TODO: Implement coin change using Dynamic Programming
         return -1;
     }
@@ -4756,17 +4785,16 @@ public class Main {
             int t = sc.nextInt();
             int[] coins = new int[n];
             for (int i = 0; i < n; i++) coins[i] = sc.nextInt();
-            System.out.println(coinChange(coins, t));
+            System.out.println(coinChange(n, t, coins));
         }
     }
 }`,
       cpp: `#include <iostream>
 #include <vector>
-#include <algorithm>
 
 using namespace std;
 
-int coinChange(vector<int>& coins, int t) {
+int coinChange(int n, int t, const vector<int>& coins) {
     // TODO: Implement coin change using Dynamic Programming
     return -1;
 }
@@ -4776,27 +4804,27 @@ int main() {
     if (cin >> n >> t) {
         vector<int> coins(n);
         for (int i = 0; i < n; i++) cin >> coins[i];
-        cout << coinChange(coins, t) << endl;
+        cout << coinChange(n, t, coins) << endl;
     }
     return 0;
 }`,
       javascript: `const fs = require('fs');
 
-function coinChange(coins, t) {
+function coinChange(n, t, coins) {
     // TODO: Implement coin change using Dynamic Programming
     return -1;
 }
 
-const input = fs.readFileSync(0, 'utf8').split(/\s+/);
+const input = fs.readFileSync(0, 'utf8').split(/\\s+/);
 if (input.length >= 2) {
     const n = parseInt(input[0]);
     const t = parseInt(input[1]);
     const coins = input.slice(2, n + 2).map(Number);
-    console.log(coinChange(coins, t));
+    console.log(coinChange(n, t, coins));
 }`,
       c: `#include <stdio.h>
 
-int coinChange(int n, int* coins, int t) {
+int coinChange(int n, int t, int* coins) {
     // TODO: Implement coin change using Dynamic Programming
     return -1;
 }
@@ -4806,7 +4834,7 @@ int main() {
     if (scanf("%d %d", &n, &t) != EOF) {
         int coins[101];
         for (int i = 0; i < n; i++) scanf("%d", &coins[i]);
-        printf("%d\n", coinChange(n, coins, t));
+        printf("%d\\n", coinChange(n, t, coins));
     }
     return 0;
 }`,
@@ -4814,7 +4842,7 @@ int main() {
 using System.Linq;
 
 class Program {
-    static int CoinChange(int[] coins, int t) {
+    static int CoinChange(int n, int t, int[] coins) {
         // TODO: Implement coin change using Dynamic Programming
         return -1;
     }
@@ -4828,7 +4856,7 @@ class Program {
         string arrStr = Console.ReadLine();
         if (arrStr != null) {
             int[] coins = arrStr.Split(' ').Select(int.Parse).ToArray();
-            Console.WriteLine(CoinChange(coins, t));
+            Console.WriteLine(CoinChange(n, t, coins));
         }
     }
 }`,
@@ -4836,7 +4864,7 @@ class Program {
 
 import "fmt"
 
-func coinChange(coins []int, t int) int {
+func coinChange(n, t int, coins []int) int {
     // TODO: Implement coin change using Dynamic Programming
     return -1
 }
@@ -4848,11 +4876,11 @@ func main() {
     for i := 0; i < n; i++ {
         fmt.Scan(&coins[i])
     }
-    fmt.Println(coinChange(coins, t))
+    fmt.Println(coinChange(n, t, coins))
 }`,
       rust: `use std::io::{self, Read};
 
-fn coin_change(coins: Vec<i32>, t: i32) -> i32 {
+fn coin_change(n: usize, t: i32, coins: Vec<i32>) -> i32 {
     // TODO: Implement coin change using Dynamic Programming
     -1
 }
@@ -4865,8 +4893,12 @@ fn main() {
             let n: usize = n_str.parse().unwrap();
             let t: i32 = words.next().unwrap().parse().unwrap();
             let mut coins = Vec::new();
-            for _ in 0..n { coins.push(words.next().unwrap().parse().unwrap()); }
-            println!("{}", coin_change(coins, t));
+            for _ in 0..n {
+                if let Some(s) = words.next() {
+                    coins.push(s.parse().unwrap());
+                }
+            }
+            println!("{}", coin_change(n, t, coins));
         }
     }
 }`
@@ -4886,10 +4918,10 @@ fn main() {
     estimatedTime: "30 mins",
     company: "Google",
     tags: ["Arrays", "Logic"],
-    inputFormat: "Line 1: N.\nLine 2: N heights.",
+    inputFormat: "Line 1: N.\\nLine 2: N heights.",
     outputFormat: "Total water trapped.",
     constraints: ["1 <= N <= 100000"],
-    sampleInput: "12\n0 1 0 2 1 0 1 3 2 1 2 1",
+    sampleInput: "12\\n0 1 0 2 1 0 1 3 2 1 2 1",
     sampleOutput: "6",
     explanation: "Bars of heights trap 6 units of water.",
     functionInfo: { name: "trap", params: "n, arr", returnType: "long", goal: "Calculate water" },
@@ -4903,7 +4935,7 @@ fn main() {
       python: `import sys
 
 def trap(n, arr):
-    # TODO: Implement trapping rain water logic (Two pointers/stack)
+    # TODO: Implement trapping rain water logic
     return 0
 
 if __name__ == "__main__":
@@ -4916,7 +4948,7 @@ if __name__ == "__main__":
 
 public class Main {
     public static long trap(int n, int[] arr) {
-        // TODO: Implement trapping rain water logic (Two pointers/stack)
+        // TODO: Implement trapping rain water logic
         return 0;
     }
 
@@ -4932,12 +4964,11 @@ public class Main {
 }`,
       cpp: `#include <iostream>
 #include <vector>
-#include <algorithm>
 
 using namespace std;
 
-long long trap(int n, vector<int>& arr) {
-    // TODO: Implement trapping rain water logic (Two pointers/stack)
+long long trap(int n, const vector<int>& arr) {
+    // TODO: Implement trapping rain water logic
     return 0;
 }
 
@@ -4953,11 +4984,11 @@ int main() {
       javascript: `const fs = require('fs');
 
 function trap(n, arr) {
-    // TODO: Implement trapping rain water logic (Two pointers/stack)
+    // TODO: Implement trapping rain water logic
     return 0;
 }
 
-const input = fs.readFileSync(0, 'utf8').split(/\s+/);
+const input = fs.readFileSync(0, 'utf8').split(/\\s+/);
 if (input.length >= 2) {
     const n = parseInt(input[0]);
     const arr = input.slice(1, n + 1).map(Number);
@@ -4966,7 +4997,7 @@ if (input.length >= 2) {
       c: `#include <stdio.h>
 
 long long trap(int n, int* arr) {
-    // TODO: Implement trapping rain water logic (Two pointers/stack)
+    // TODO: Implement trapping rain water logic
     return 0;
 }
 
@@ -4975,7 +5006,7 @@ int main() {
     if (scanf("%d", &n) != EOF) {
         int arr[100001];
         for (int i = 0; i < n; i++) scanf("%d", &arr[i]);
-        printf("%lld\n", trap(n, arr));
+        printf("%lld\\n", trap(n, arr));
     }
     return 0;
 }`,
@@ -4984,7 +5015,7 @@ using System.Linq;
 
 class Program {
     static long Trap(int n, int[] arr) {
-        // TODO: Implement trapping rain water logic (Two pointers/stack)
+        // TODO: Implement trapping rain water logic
         return 0;
     }
 
@@ -5004,7 +5035,7 @@ class Program {
 import "fmt"
 
 func trap(n int, arr []int) int64 {
-    // TODO: Implement trapping rain water logic (Two pointers/stack)
+    // TODO: Implement trapping rain water logic
     return 0
 }
 
@@ -5020,7 +5051,7 @@ func main() {
       rust: `use std::io::{self, Read};
 
 fn trap(n: usize, arr: Vec<i32>) -> i64 {
-    // TODO: Implement trapping rain water logic (Two pointers/stack)
+    // TODO: Implement trapping rain water logic
     0
 }
 
@@ -5030,7 +5061,12 @@ fn main() {
         let mut words = input.split_whitespace();
         if let Some(n_str) = words.next() {
             let n: usize = n_str.parse().unwrap();
-            let arr: Vec<i32> = words.map(|s| s.parse().unwrap()).collect();
+            let mut arr = Vec::new();
+            for _ in 0..n {
+                if let Some(s) = words.next() {
+                    arr.push(s.parse().unwrap());
+                }
+            }
             println!("{}", trap(n, arr));
         }
     }
