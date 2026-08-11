@@ -361,7 +361,7 @@ function VirtualArenaContent() {
   };
 
   return (
-    <div className="h-screen w-screen bg-[#050816] flex flex-col relative overflow-hidden">
+    <div className="h-dvh w-screen bg-[#050816] flex flex-col relative overflow-hidden">
       <div className="particles-bg" />
       
       {/* HEADER SECTION - FIXED HEIGHT */}
@@ -396,7 +396,7 @@ function VirtualArenaContent() {
       </header>
 
       {/* MAIN CONTENT AREA - FILL REMAINING VIEWPORT */}
-      <div className="flex-1 flex overflow-hidden">
+      <div className="flex-1 flex overflow-hidden min-h-0">
         
         {/* LEFT COLUMN: Sidebar Icons */}
         <div className="w-[72px] border-r border-white/5 bg-[#0b0e1a] flex flex-col items-center py-8 gap-10 shrink-0">
@@ -509,7 +509,7 @@ function VirtualArenaContent() {
              <button className="text-[9px] font-black uppercase tracking-widest text-white/30 hover:text-white px-2">Log</button>
           </div>
           
-          <div className="flex-1 p-5 flex flex-col space-y-5 min-h-0">
+          <div className="flex-1 p-5 flex flex-col space-y-5 min-h-0 overflow-hidden">
              <div className="space-y-3 shrink-0">
                 <div className="flex justify-between items-end">
                   <h3 className="text-[10px] font-black uppercase tracking-widest text-white/30">Question {currentIdx} of 10</h3>
@@ -521,7 +521,7 @@ function VirtualArenaContent() {
              </div>
 
              {/* SCROLLABLE QUESTION AREA */}
-             <div className="flex-1 overflow-y-auto custom-scrollbar pr-2 space-y-4">
+             <div className="flex-1 overflow-y-auto custom-scrollbar pr-2 space-y-4 min-h-0">
                 <Card className="glass border-white/10 bg-[#08090D]/95 p-5 space-y-4 rounded-2xl relative overflow-hidden shadow-2xl">
                     <div className="absolute left-0 top-5 bottom-5 w-1 bg-gradient-to-b from-accent to-purple-600 rounded-full" />
                     <p className="text-sm lg:text-base font-light text-white leading-relaxed">{currentInterviewerQuestion}</p>
