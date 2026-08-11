@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect, useMemo, useCallback } from 'react';
@@ -30,13 +31,10 @@ import {
   RotateCcw, 
   Sparkles,
   Timer,
-  AlertCircle,
-  HelpCircle,
-  ArrowDownCircle,
-  CheckCircle2,
-  FileCode,
   Info,
-  Rocket
+  Rocket,
+  ArrowDownCircle,
+  FastForward
 } from 'lucide-react';
 import { useUser, useFirestore, useDoc } from '@/firebase';
 import { doc, updateDoc, serverTimestamp, collection, addDoc, getDoc } from 'firebase/firestore';
@@ -74,6 +72,7 @@ export default function CodingEnginePage() {
   const [isRunning, setIsRunning] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isFinalizing, setIsFinalizing] = useState(false);
+  const [isNavigating, setIsNavigating] = useState(false);
   const [submitStep, setSubmitStep] = useState(0);
   const [terminalOutput, setTerminalOutput] = useState("Waiting for your implementation.");
   const [activeTerminalTab, setActiveTerminalTab] = useState("output");
@@ -109,6 +108,8 @@ export default function CodingEnginePage() {
   const finalizeAssessment = useCallback(async () => {
     if (isFinalizing || !user || !db || !journey) return;
     setIsFinalizing(true);
+    console.log("[CODING] Coding round completed");
+    
     try {
       for (let i = 0; i < 4; i++) {
         setSubmitStep(i);
@@ -173,8 +174,23 @@ export default function CodingEnginePage() {
     }
   }, [isFinalizing, user, db, journey, sessionResults, questions, journeyRef, router, toast]);
 
+  const goToNextQuestion = useCallback(async () => {
+    if (isNavigating) return;
+    setIsNavigating(true);
+
+    if (currentIdx < questions.length - 1) {
+      console.log("[CODING] Loading next question: Index", currentIdx + 1);
+      setCurrentIdx(prev => prev + 1);
+      setTerminalOutput("Waiting for your implementation.");
+      setActiveTerminalTab("output");
+      setIsNavigating(false);
+    } else {
+      await finalizeAssessment();
+    }
+  }, [currentIdx, questions.length, isNavigating, finalizeAssessment]);
+
   const handleRunCode = async () => {
-    if (isRunning || isSubmitting || isTimeExpired) return;
+    if (isRunning || isSubmitting || isTimeExpired || isNavigating) return;
     setIsRunning(true);
     setActiveTerminalTab("output");
     setTerminalOutput("Initializing system sample execution...");
@@ -206,8 +222,9 @@ export default function CodingEnginePage() {
   };
 
   const handleSubmitCode = async () => {
-    if (isSubmitting || isRunning || isTimeExpired || !questions[currentIdx]) return;
+    if (isSubmitting || isRunning || isTimeExpired || isNavigating || !questions[currentIdx]) return;
     setIsSubmitting(true);
+    console.log("[CODING] Submit started for Node", currentIdx + 1);
     setActiveTerminalTab("cases");
     setTerminalOutput("Connecting to Audit Matrix nodes...");
     
@@ -240,18 +257,40 @@ export default function CodingEnginePage() {
         language: selectedLang.label 
       };
 
+      console.log("[CODING] Hidden tests completed. Passed:", allPassed);
       setSessionResults(prev => ({ ...prev, [currentIdx]: submissionReport }));
       
       if (allPassed) {
-        toast({ title: "Node Synchronized", description: "Audit Matrix verification complete." });
+        console.log("[CODING] Submission passed. Triggering automatic navigation.");
+        toast({ title: "Node Synchronized", description: "Audit Matrix verified. Moving to next node." });
+        await goToNextQuestion();
       } else {
-        toast({ variant: "destructive", title: "Audit Fault", description: `Synchronized ${passed}/${total} nodes.` });
+        console.log("[CODING] Submission failed.");
+        toast({ variant: "destructive", title: "Audit Fault", description: `Synchronized ${passed}/${total} nodes. Retry or skip.` });
       }
     } catch (error: any) {
+      console.error("[CODING] Submission Error:", error);
       setTerminalOutput("[CRITICAL FAULT] Matrix node connection lost.");
     } finally {
       setIsSubmitting(false);
     }
+  };
+
+  const handleSkipQuestion = async () => {
+    if (isNavigating || isSubmitting || isRunning || isTimeExpired) return;
+    console.log("[CODING] Skip requested for Node", currentIdx + 1);
+    
+    const skipReport = { 
+      code: code || "// Skipped", 
+      results: [], 
+      status: 'Skipped', 
+      passedCount: 0, 
+      totalCount: questions[currentIdx].hiddenTestCases?.length || 1, 
+      language: selectedLang.label 
+    };
+
+    setSessionResults(prev => ({ ...prev, [currentIdx]: skipReport }));
+    await goToNextQuestion();
   };
 
   useEffect(() => {
@@ -349,23 +388,24 @@ export default function CodingEnginePage() {
 
   const currentQ = questions[currentIdx];
   const currentResult = sessionResults[currentIdx];
-  const isCurrentSubmitted = !!currentResult;
-  const allNodesSubmitted = Object.keys(sessionResults).length === questions.length;
+  const isCurrentFailed = !!currentResult && currentResult.status !== 'Solved' && currentResult.status !== 'Skipped';
 
   return (
     <div className="h-screen bg-[#050816] flex flex-col overflow-hidden relative">
       <div className="particles-bg" />
       <Navbar />
       
-      <div className="fixed top-2 right-2 z-[200]">
-        <Button 
-          onClick={finalizeAssessment}
-          variant="ghost" 
-          className="h-8 px-3 rounded-lg glass border-white/10 text-[9px] font-black uppercase tracking-widest hover:bg-accent/10 hover:text-accent"
-        >
-          DEV SKIP
-        </Button>
-      </div>
+      {process.env.NODE_ENV === 'development' && (
+        <div className="fixed top-2 right-2 z-[200]">
+          <Button 
+            onClick={finalizeAssessment}
+            variant="ghost" 
+            className="h-8 px-3 rounded-lg glass border-white/10 text-[9px] font-black uppercase tracking-widest hover:bg-accent/10 hover:text-accent"
+          >
+            DEV FINISH
+          </Button>
+        </div>
+      )}
 
       <header className="h-[72px] border-b border-white/5 bg-[#0b0e1a]/80 backdrop-blur-xl flex items-center justify-between px-8 z-50">
         <div className="flex items-center gap-6">
@@ -384,8 +424,8 @@ export default function CodingEnginePage() {
              <span className="text-[8px] font-black uppercase tracking-widest text-accent">α → α → β → β → Ω</span>
           </div>
           <div className="h-1 bg-white/5 rounded-full overflow-hidden flex gap-0.5">
-            {[1, 2, 3, 4, 5].map((s) => (
-              <div key={s} className={cn("flex-1 h-full transition-all duration-500", (currentIdx + 1) >= s ? "bg-accent shadow-[0_0_8px_#22d3ee]" : "bg-white/5")} />
+            {questions.map((_, s) => (
+              <div key={s} className={cn("flex-1 h-full transition-all duration-500", currentIdx >= s ? "bg-accent shadow-[0_0_8px_#22d3ee]" : "bg-white/5")} />
             ))}
           </div>
         </div>
@@ -406,24 +446,20 @@ export default function CodingEnginePage() {
             <div className="space-y-10">
               <div className="p-6 glass border-accent/20 bg-accent/[0.02] rounded-3xl space-y-4">
                 <h4 className="text-[10px] font-black uppercase tracking-[0.3em] text-accent flex items-center gap-2">
-                  <Activity className="w-4 h-4" /> HOW TO SOLVE
+                  <Activity className="w-4 h-4" /> ASSESSMENT PROTOCOL
                 </h4>
                 <div className="flex flex-col gap-2">
                   {[
-                    "Read Problem Narrative",
-                    "Understand Input & Output",
-                    "Complete the Function",
-                    "Run Sample",
-                    "Fix Errors",
-                    "Submit Node",
-                    "Unlock Next Node"
+                    "Implement Logic",
+                    "Verify with Sample",
+                    "Submit for Audit",
+                    "Auto-Unlock Next Node"
                   ].map((step, i) => (
                     <div key={i} className="flex items-center gap-3">
-                      <div className={cn("w-4 h-4 rounded-full border flex items-center justify-center text-[8px] font-black", (i+1) <= (isCurrentSubmitted ? 7 : 3) ? "bg-accent border-accent text-black" : "border-white/20 text-white/20")}>
-                        {(i+1) <= (isCurrentSubmitted ? 7 : 3) ? <Check className="w-2.5 h-2.5" /> : i + 1}
+                      <div className={cn("w-4 h-4 rounded-full border flex items-center justify-center text-[8px] font-black", currentIdx > i ? "bg-accent border-accent text-black" : "border-white/20 text-white/20")}>
+                        {currentIdx > i ? <Check className="w-2.5 h-2.5" /> : i + 1}
                       </div>
-                      <span className={cn("text-[10px] font-bold uppercase tracking-widest", (i+1) <= (isCurrentSubmitted ? 7 : 3) ? "text-white" : "text-white/20")}>{step}</span>
-                      {i < 6 && <ArrowDownCircle className={cn("w-2.5 h-2.5 opacity-10", (i+1) < 3 ? "opacity-40 text-accent" : "")} />}
+                      <span className={cn("text-[10px] font-bold uppercase tracking-widest", currentIdx >= i ? "text-white" : "text-white/20")}>{step}</span>
                     </div>
                   ))}
                 </div>
@@ -453,16 +489,6 @@ export default function CodingEnginePage() {
                 <div className="space-y-3">
                   <h4 className="text-[11px] font-black uppercase tracking-[0.3em] text-accent">PROBLEM NARRATIVE</h4>
                   <p className="text-base text-white/70 leading-relaxed font-light whitespace-pre-wrap">{currentQ?.description}</p>
-                </div>
-                
-                <div className="space-y-3">
-                  <h4 className="text-[11px] font-black uppercase tracking-[0.3em] text-white/30">INPUT PROTOCOL</h4>
-                  <p className="text-sm text-white/50 leading-relaxed italic">{currentQ?.inputFormat}</p>
-                </div>
-                
-                <div className="space-y-3">
-                  <h4 className="text-[11px] font-black uppercase tracking-[0.3em] text-white/30">OUTPUT PROTOCOL</h4>
-                  <p className="text-sm text-white/50 leading-relaxed italic">{currentQ?.outputFormat}</p>
                 </div>
 
                 <div className="space-y-4">
@@ -496,7 +522,7 @@ export default function CodingEnginePage() {
                     <Sparkles className="w-4 h-4" /> AI AUDIT NOTE
                   </h4>
                   <p className="text-xs font-light text-white/50 leading-relaxed italic">
-                    "This challenge evaluates algorithm design, optimization, edge-case handling and production-grade implementation."
+                    "Nodes synchronize automatically upon successful audit. Precision is monitored."
                   </p>
                 </Card>
               </div>
@@ -508,28 +534,41 @@ export default function CodingEnginePage() {
           <Card className="p-6 glass border-accent/20 bg-accent/[0.03] rounded-[2rem] flex items-center justify-between">
             <div className="flex items-center gap-6">
               <div className="w-12 h-12 rounded-2xl bg-accent/20 flex items-center justify-center text-accent">
-                 <Rocket className="w-6 h-6 animate-pulse" />
+                 <Rocket className="w-6 h-6" />
               </div>
               <div>
                 <h3 className="text-sm font-black uppercase tracking-widest text-white">MISSION</h3>
-                <p className="text-[10px] text-white/40 uppercase tracking-widest mt-1">Complete the function provided below. Replace the TODO section.</p>
+                <p className="text-[10px] text-white/40 uppercase tracking-widest mt-1">Complete the algorithm logic. Verification is mandatory for progression.</p>
               </div>
             </div>
-            <div className="flex items-center gap-3 bg-black/40 px-4 py-2 rounded-xl border border-white/5">
-               <Info className="w-4 h-4 text-accent" />
-               <span className="text-[9px] font-bold text-white/60 uppercase tracking-widest">Replace the TODO section</span>
-            </div>
+            {isNavigating && (
+              <div className="flex items-center gap-3 bg-accent/20 px-6 py-2 rounded-xl border border-accent/30 animate-pulse">
+                <Loader2 className="w-4 h-4 text-accent animate-spin" />
+                <span className="text-[9px] font-black text-accent uppercase tracking-widest">LOADING NEXT NODE...</span>
+              </div>
+            )}
           </Card>
 
           <Card className="flex-1 glass border-white/5 bg-[#0b0e1a] flex flex-col relative overflow-hidden rounded-[2.5rem] shadow-2xl">
-            <div className="h-14 border-b border-white/5 bg-white/[0.02] flex items-center px-10 gap-12">
-               <div className="flex items-center gap-3">
-                  <span className="text-[9px] font-black text-white/30 uppercase tracking-widest">Function:</span>
-                  <Badge variant="outline" className="border-accent/30 text-accent text-[10px] font-mono px-3">{currentQ?.functionInfo?.name || 'solve()'}</Badge>
+            <div className="h-14 border-b border-white/5 bg-white/[0.02] flex items-center px-10 gap-12 justify-between">
+               <div className="flex items-center gap-12">
+                 <div className="flex items-center gap-3">
+                    <span className="text-[9px] font-black text-white/30 uppercase tracking-widest">Function:</span>
+                    <Badge variant="outline" className="border-accent/30 text-accent text-[10px] font-mono px-3">{currentQ?.functionInfo?.name || 'solve()'}</Badge>
+                 </div>
+                 <div className="flex items-center gap-3">
+                    <span className="text-[9px] font-black text-white/30 uppercase tracking-widest">Return:</span>
+                    <span className="text-[10px] font-mono text-purple-400">{currentQ?.functionInfo?.returnType || 'void'}</span>
+                 </div>
                </div>
                <div className="flex items-center gap-3">
-                  <span className="text-[9px] font-black text-white/30 uppercase tracking-widest">Return:</span>
-                  <span className="text-[10px] font-mono text-purple-400">{currentQ?.functionInfo?.returnType || 'void'}</span>
+                 <select 
+                   value={selectedLang.id} 
+                   onChange={(e) => setSelectedLang(LANGUAGES.find(l => l.id === e.target.value) || LANGUAGES[0])} 
+                   className="h-8 px-3 glass border-white/10 bg-[#0b0e1a] rounded-lg text-[9px] font-black uppercase tracking-widest outline-none focus:border-accent"
+                 >
+                   {LANGUAGES.map(l => <option key={l.id} value={l.id}>{l.label}</option>)}
+                 </select>
                </div>
             </div>
 
@@ -548,134 +587,89 @@ export default function CodingEnginePage() {
               }} 
             />
 
-            <div className="h-32 border-t border-white/5 bg-white/[0.02] flex items-center justify-between px-10">
-              <div className="flex items-center gap-12">
-                <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button onClick={handleRunCode} disabled={isRunning || isSubmitting || isTimeExpired} className="h-12 px-8 glass border-white/10 bg-white/5 text-[10px] font-black uppercase tracking-widest rounded-xl hover:bg-white/10 transition-all">
-                        {isRunning ? <Loader2 className="w-4 animate-spin mr-2" /> : <Activity className="w-4 h-4 mr-2" />} RUN SAMPLE
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent className="glass border-white/10 bg-[#0b0e1a] text-white">Run against visible sample only.</TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
+            <div className="h-24 border-t border-white/5 bg-white/[0.02] flex items-center justify-between px-10">
+              <div className="flex items-center gap-6">
+                <Button 
+                  onClick={handleRunCode} 
+                  disabled={isRunning || isSubmitting || isTimeExpired || isNavigating} 
+                  className="h-12 px-8 glass border-white/10 bg-white/5 text-[10px] font-black uppercase tracking-widest rounded-xl hover:bg-white/10 transition-all"
+                >
+                  {isRunning ? <Loader2 className="w-4 animate-spin mr-2" /> : <Activity className="w-4 h-4 mr-2" />} RUN SAMPLE
+                </Button>
 
-                <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button onClick={handleSubmitCode} disabled={isRunning || isSubmitting || isTimeExpired} className="h-12 px-8 btn-premium rounded-xl text-[10px] font-black uppercase tracking-widest shadow-2xl">
-                        {isSubmitting ? <Loader2 className="w-4 animate-spin mr-2" /> : <ShieldCheck className="w-4 h-4 mr-2" />} SUBMIT NODE
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent className="glass border-white/10 bg-[#0b0e1a] text-white">Run against all hidden test cases.</TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
+                <Button 
+                  onClick={handleSubmitCode} 
+                  disabled={isRunning || isSubmitting || isTimeExpired || isNavigating} 
+                  className="h-12 px-12 btn-premium rounded-xl text-[10px] font-black uppercase tracking-[0.3em] shadow-2xl group"
+                >
+                  {isSubmitting ? (
+                    <><Loader2 className="w-4 animate-spin mr-2" /> AUDITING TESTS...</>
+                  ) : (
+                    <><ShieldCheck className="w-4 h-4 mr-2 group-hover:scale-110 transition-transform" /> SUBMIT NODE</>
+                  )}
+                </Button>
               </div>
 
               <div className="flex items-center gap-4">
-                <select 
-                  value={selectedLang.id} 
-                  onChange={(e) => setSelectedLang(LANGUAGES.find(l => l.id === e.target.value) || LANGUAGES[0])} 
-                  className="h-11 px-4 glass border-white/10 bg-[#0b0e1a] rounded-xl text-[10px] font-black uppercase tracking-widest outline-none focus:border-accent"
-                >
-                  {LANGUAGES.map(l => <option key={l.id} value={l.id}>{l.label}</option>)}
-                </select>
-
-                {currentIdx < questions.length - 1 ? (
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Button 
-                          onClick={() => setCurrentIdx(prev => prev + 1)} 
-                          disabled={!isCurrentSubmitted} 
-                          className="h-12 px-8 btn-premium rounded-xl text-[10px] font-black uppercase tracking-widest disabled:opacity-20 disabled:grayscale transition-all"
-                        >
-                          NEXT NODE <ChevronRight className="ml-2 w-4 h-4" />
-                        </Button>
-                      </TooltipTrigger>
-                      <TooltipContent className="glass border-white/10 bg-[#0b0e1a] text-white">Available after successful submission.</TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
-                ) : (
+                {isCurrentFailed && (
                   <Button 
-                    onClick={finalizeAssessment} 
-                    disabled={!allNodesSubmitted} 
-                    className="h-12 px-10 bg-accent/20 border border-accent/40 text-accent text-[10px] font-black uppercase tracking-widest rounded-xl hover:bg-accent/30 disabled:opacity-20 transition-all shadow-[0_0_30px_rgba(34,211,238,0.2)]"
+                    onClick={handleSkipQuestion} 
+                    disabled={isNavigating || isSubmitting}
+                    variant="ghost" 
+                    className="h-12 px-6 rounded-xl border border-red-500/20 text-red-400 text-[10px] font-black uppercase tracking-widest hover:bg-red-500/10"
                   >
-                    FINISH SESSION
+                    <FastForward className="w-4 h-4 mr-2" /> SKIP NODE
                   </Button>
                 )}
               </div>
             </div>
           </Card>
 
-          <Card className="h-[35%] glass border-white/5 bg-[#0b0e1a] flex flex-col overflow-hidden rounded-[2.5rem]">
+          <Card className="h-[30%] glass border-white/5 bg-[#0b0e1a] flex flex-col overflow-hidden rounded-[2.5rem]">
             <Tabs value={activeTerminalTab} onValueChange={setActiveTerminalTab} className="h-full flex flex-col">
-              <TabsList className="bg-white/[0.03] px-10 h-14 border-b border-white/5 gap-8">
-                <TabsTrigger value="output" className="text-[10px] font-black uppercase tracking-[0.2em] data-[state=active]:text-accent data-[state=active]:bg-transparent border-b-2 border-transparent data-[state=active]:border-accent rounded-none h-full transition-all">Execution Output</TabsTrigger>
-                <TabsTrigger value="cases" className="text-[10px] font-black uppercase tracking-[0.2em] data-[state=active]:text-accent data-[state=active]:bg-transparent border-b-2 border-transparent data-[state=active]:border-accent rounded-none h-full transition-all">Audit Matrix</TabsTrigger>
+              <TabsList className="bg-white/[0.03] px-10 h-12 border-b border-white/5 gap-8">
+                <TabsTrigger value="output" className="text-[9px] font-black uppercase tracking-[0.2em] data-[state=active]:text-accent data-[state=active]:bg-transparent border-b-2 border-transparent data-[state=active]:border-accent rounded-none h-full transition-all">Console Output</TabsTrigger>
+                <TabsTrigger value="cases" className="text-[9px] font-black uppercase tracking-[0.2em] data-[state=active]:text-accent data-[state=active]:bg-transparent border-b-2 border-transparent data-[state=active]:border-accent rounded-none h-full transition-all">Audit Trace</TabsTrigger>
               </TabsList>
               
               <div className="flex-1 font-mono text-[12px] overflow-hidden bg-black/20">
-                <TabsContent value="output" className="p-10 text-white/60 h-full overflow-y-auto whitespace-pre-wrap leading-relaxed">
+                <TabsContent value="output" className="p-8 text-white/60 h-full overflow-y-auto whitespace-pre-wrap leading-relaxed">
                   {terminalOutput}
                 </TabsContent>
 
-                <TabsContent value="cases" className="p-8 h-full overflow-y-auto space-y-6">
+                <TabsContent value="cases" className="p-8 h-full overflow-y-auto space-y-4">
                   {currentResult ? (
-                    <div className="space-y-6">
-                      <div className={cn("p-6 rounded-2xl border flex items-center justify-between", currentResult.status === 'Solved' ? "bg-green-500/10 border-green-500/20" : "bg-red-500/10 border-red-500/20")}>
+                    <div className="space-y-4">
+                      <div className={cn("p-4 rounded-xl border flex items-center justify-between", 
+                        currentResult.status === 'Solved' ? "bg-green-500/10 border-green-500/20" : 
+                        currentResult.status === 'Skipped' ? "bg-white/5 border-white/10" : "bg-red-500/10 border-red-500/20")}>
                          <div className="flex items-center gap-4">
-                            <div className={cn("w-12 h-12 rounded-xl flex items-center justify-center", currentResult.status === 'Solved' ? "bg-green-500/20 text-green-400" : "bg-red-500/20 text-red-400")}>
-                               {currentResult.status === 'Solved' ? <Trophy className="w-6 h-6" /> : <XCircle className="w-6 h-6" />}
+                            <div className={cn("w-10 h-10 rounded-xl flex items-center justify-center", currentResult.status === 'Solved' ? "bg-green-500/20 text-green-400" : "bg-red-500/20 text-red-400")}>
+                               {currentResult.status === 'Solved' ? <Trophy className="w-5 h-5" /> : <XCircle className="w-5 h-5" />}
                             </div>
                             <div>
-                               <h4 className={cn("text-lg font-bold tracking-tight", currentResult.status === 'Solved' ? "text-green-400" : "text-red-400")}>{currentResult.status === 'Solved' ? "NODE CLEARED" : "NODE FAILED"}</h4>
-                               <p className="text-[9px] font-black text-white/30 uppercase tracking-widest">Audit Trace Summary</p>
+                               <h4 className={cn("text-sm font-bold", currentResult.status === 'Solved' ? "text-green-400" : "text-red-400")}>{currentResult.status.toUpperCase()}</h4>
+                               <p className="text-[8px] font-black text-white/30 uppercase tracking-widest">Audit Nodes Passed: {currentResult.passedCount}/{currentResult.totalCount}</p>
                             </div>
-                         </div>
-                         <div className="text-right">
-                            <p className="text-[8px] font-black text-white/20 uppercase tracking-widest">PASSED NODES</p>
-                            <p className="text-lg font-bold text-white tabular-nums">{currentResult.passedCount}/{currentResult.totalCount}</p>
                          </div>
                       </div>
 
-                      <div className="grid gap-3">
+                      <div className="grid gap-2">
                         {currentResult.results.map((r: any, i: number) => (
-                          <div key={i} className="p-5 glass border-white/5 rounded-xl bg-white/[0.01] space-y-4">
-                            <div className="flex justify-between items-center">
-                              <div className="flex items-center gap-3">
-                                <div className={cn("w-2 h-2 rounded-full", r.passed ? "bg-green-500" : "bg-red-500")} />
-                                <span className="text-[10px] font-black text-white/40 uppercase tracking-widest">Hidden Test #{i + 1}</span>
-                              </div>
-                              <Badge variant="outline" className={cn("text-[8px] uppercase px-2 py-0", r.passed ? "text-green-400 border-green-500/20" : "text-red-400 border-red-500/20")}>{r.status}</Badge>
+                          <div key={i} className="p-3 glass border-white/5 rounded-lg bg-white/[0.01] flex items-center justify-between">
+                            <div className="flex items-center gap-3">
+                              <div className={cn("w-1.5 h-1.5 rounded-full", r.passed ? "bg-green-500" : "bg-red-500")} />
+                              <span className="text-[9px] font-black text-white/40 uppercase tracking-widest">Audit Case #{i + 1}</span>
                             </div>
-
-                            {!r.passed && (
-                              <div className="grid grid-cols-2 gap-4 pt-2">
-                                <div className="space-y-1">
-                                  <p className="text-[8px] uppercase font-bold text-white/20">Input Protocol</p>
-                                  <pre className="p-3 bg-black/40 rounded-lg text-white/60 text-[10px] overflow-x-auto">{r.input}</pre>
-                                </div>
-                                <div className="space-y-1">
-                                  <p className="text-[8px] uppercase font-bold text-white/20">Expected Output</p>
-                                  <pre className="p-3 bg-green-500/5 border border-green-500/10 rounded-lg text-green-400/80 text-[10px] overflow-x-auto">{r.expected}</pre>
-                                </div>
-                                <div className="space-y-1 col-span-2">
-                                  <p className="text-[8px] uppercase font-bold text-white/20">Actual System Output</p>
-                                  <pre className="p-3 bg-red-500/5 border border-red-500/10 rounded-lg text-red-400/80 text-[10px] overflow-x-auto">{r.actual || "Empty Output"}</pre>
-                                </div>
-                              </div>
-                            )}
+                            <Badge variant="outline" className={cn("text-[7px] uppercase py-0", r.passed ? "text-green-400 border-green-500/20" : "text-red-400 border-red-500/20")}>{r.status}</Badge>
                           </div>
                         ))}
                       </div>
                     </div>
                   ) : (
                     <div className="h-full flex flex-col items-center justify-center text-center space-y-4 opacity-20">
-                      <ShieldCheck className="w-12 h-12" />
-                      <p className="text-[11px] font-black text-white uppercase tracking-[0.5em]">Waiting for submission...<br/>Run node to initiate audit.</p>
+                      <ShieldCheck className="w-10 h-10" />
+                      <p className="text-[10px] font-black text-white uppercase tracking-[0.5em]">Awaiting node submission...</p>
                     </div>
                   )}
                 </TabsContent>
@@ -692,7 +686,7 @@ export default function CodingEnginePage() {
               <div className="w-56 h-56 rounded-full border-2 border-accent/20 border-t-accent animate-spin" />
               <Cpu className="w-14 h-14 text-accent absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 animate-pulse" />
             </div>
-            <h2 className="text-5xl font-bold tracking-tighter text-premium uppercase mb-12">Synthesizing Matrix Dossier</h2>
+            <h2 className="text-5xl font-bold tracking-tighter text-premium uppercase mb-12">Finalizing Matrix Dossier</h2>
             <div className="space-y-6 max-w-sm w-full">
               {["Aggregating Node Telemetry...", "Calculating Logic Precision...", "Validating Matrix Metrics...", "Finalizing Performance Audit..."].map((step, idx) => (
                 <div key={idx} className={cn("flex items-center gap-6 transition-opacity duration-500", submitStep >= idx ? "opacity-100" : "opacity-20")}>
