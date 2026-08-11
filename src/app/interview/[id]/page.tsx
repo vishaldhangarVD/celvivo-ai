@@ -101,13 +101,61 @@ function VirtualArenaContent() {
     }
   };
 
-  const toggleMediaCamera = () => {
+  const toggleMediaCamera = async () => {
     const newState = !isCameraOn;
-    setIsCameraOn(newState);
-    if (mediaStreamRef.current) {
-      mediaStreamRef.current.getVideoTracks().forEach(track => {
-        track.enabled = newState;
-      });
+    
+    if (newState) {
+      // Logic for turning ON
+      const stream = mediaStreamRef.current;
+      let videoTrack = stream?.getVideoTracks()[0];
+
+      // If track is missing or ended, try to re-acquire just the video
+      if (!videoTrack || videoTrack.readyState === 'ended') {
+        try {
+          const newStream = await navigator.mediaDevices.getUserMedia({ 
+            video: { width: { ideal: 1280 }, height: { ideal: 720 }, facingMode: "user" }
+          });
+          const newVideoTrack = newStream.getVideoTracks()[0];
+          
+          if (stream) {
+            // Remove old video tracks
+            stream.getVideoTracks().forEach(t => {
+              t.stop();
+              stream.removeTrack(t);
+            });
+            stream.addTrack(newVideoTrack);
+          } else {
+            mediaStreamRef.current = newStream;
+          }
+          videoTrack = newVideoTrack;
+        } catch (error) {
+          console.error("Failed to re-acquire camera:", error);
+          setCameraError("Unable to restart camera. Please check permissions.");
+          return;
+        }
+      } else {
+        videoTrack.enabled = true;
+      }
+
+      setIsCameraOn(true);
+
+      // Re-connect to video element and play
+      if (userVideoRef.current && mediaStreamRef.current) {
+        userVideoRef.current.srcObject = mediaStreamRef.current;
+        try {
+          await userVideoRef.current.play();
+        } catch (e) {
+          console.warn("Play interrupted or failed:", e);
+        }
+      }
+    } else {
+      // Logic for turning OFF
+      setIsCameraOn(false);
+      if (mediaStreamRef.current) {
+        mediaStreamRef.current.getVideoTracks().forEach(track => {
+          track.enabled = false;
+        });
+      }
     }
   };
 
@@ -395,7 +443,6 @@ function VirtualArenaContent() {
     <div className="h-dvh w-full max-h-dvh bg-[#050816] flex flex-col relative overflow-hidden">
       <div className="particles-bg" />
       
-      {/* HEADER SECTION - RESPONSIVE HEIGHT */}
       <header className="h-14 lg:h-16 border-b border-white/5 bg-[#0b0e1a] flex items-center justify-between px-4 lg:px-6 shrink-0 z-50">
         <div className="flex items-center gap-3 lg:gap-6">
            <div className="w-8 h-8 lg:w-9 lg:h-9 rounded-xl bg-blue-500/10 flex items-center justify-center text-blue-500 border border-blue-500/20 font-black text-lg">N</div>
@@ -426,10 +473,7 @@ function VirtualArenaContent() {
         </div>
       </header>
 
-      {/* MAIN CONTENT AREA - FILL REMAINING VIEWPORT */}
       <div className="flex-1 flex overflow-hidden min-h-0">
-        
-        {/* LEFT COLUMN: Sidebar Icons */}
         <div className="w-14 lg:w-[72px] border-r border-white/5 bg-[#0b0e1a] flex flex-col items-center py-4 lg:py-6 gap-6 lg:gap-8 shrink-0">
           <Link href="/">
             <Button variant="ghost" size="icon" className="text-white/20 hover:text-white"><Home className="w-4 h-4 lg:w-5 lg:h-5" /></Button>
@@ -442,34 +486,38 @@ function VirtualArenaContent() {
           </div>
         </div>
 
-        {/* CENTER COLUMN: Video Arena */}
         <div className="flex-1 flex flex-col min-h-0 p-2 lg:p-3 space-y-1.5 overflow-hidden">
           <div className="flex-1 min-h-0 relative rounded-[1.5rem] lg:rounded-[2rem] overflow-hidden bg-black border border-white/5 shadow-2xl">
-            {!isCameraOn ? (
+            {/* Always keep video element mounted to maintain stream reference and avoid ref breakage */}
+            <video
+              ref={userVideoRef}
+              autoPlay
+              playsInline
+              muted
+              className={cn(
+                "w-full h-full object-cover",
+                (!isCameraOn || !!cameraError) && "hidden"
+              )}
+              style={{ transform: 'scaleX(-1)' }}
+            />
+
+            {!isCameraOn && !cameraError && (
               <div className="w-full h-full flex flex-col items-center justify-center bg-[#0b0e1a] text-center p-8 space-y-4">
                 <div className="w-20 h-20 rounded-full bg-white/5 flex items-center justify-center border border-white/10">
                   <VideoOff className="w-10 h-10 text-white/20" />
                 </div>
                 <p className="text-[10px] font-bold text-white/40 uppercase tracking-widest">Camera Paused</p>
               </div>
-            ) : cameraError ? (
+            )}
+            
+            {cameraError && (
               <div className="w-full h-full flex flex-col items-center justify-center bg-[#0b0e1a] text-center p-8 space-y-4">
                 <VideoOff className="w-12 h-12 text-red-400" />
                 <h3 className="text-lg font-bold text-white">Camera Access Required</h3>
                 <Button onClick={startCamera} className="btn-premium px-6 h-10 text-[10px]">Enable Camera</Button>
               </div>
-            ) : (
-              <video
-                ref={userVideoRef}
-                autoPlay
-                playsInline
-                muted
-                className="w-full h-full object-cover"
-                style={{ transform: 'scaleX(-1)' }}
-              />
             )}
 
-            {/* Status Badges */}
             <div className="absolute top-4 left-4 flex items-center gap-2 px-2 py-0.5 lg:px-2.5 lg:py-1 glass rounded-full border-green-500/20 text-green-400">
               <ShieldCheck className="w-2 lg:w-2.5 h-2 lg:h-2.5" />
               <span className="text-[7px] lg:text-[8px] font-black uppercase tracking-widest">Secure Connection</span>
@@ -480,7 +528,6 @@ function VirtualArenaContent() {
               <span className="text-[7px] lg:text-[8px] font-black uppercase tracking-widest">You</span>
             </div>
 
-            {/* Floating Interviewer PiP */}
             <div className="absolute bottom-4 right-4 w-[140px] md:w-[160px] lg:w-[180px] xl:w-[200px] aspect-video rounded-xl lg:rounded-2xl overflow-hidden border border-white/10 shadow-2xl bg-[#0b0e1a]">
               <video
                 ref={aiVideoRef}
@@ -497,7 +544,6 @@ function VirtualArenaContent() {
               </div>
             </div>
 
-            {/* Video Area Bottom Controls */}
             <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex items-center gap-2 lg:gap-3">
               <Button 
                 variant="ghost" 
@@ -518,7 +564,6 @@ function VirtualArenaContent() {
             </div>
           </div>
 
-          {/* Metrics & Quick Actions - COMPACT SHRINK-0 */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-2 shrink-0 pb-1">
             <Card className="glass border-white/5 p-1.5 lg:p-2 flex items-center gap-2">
               <div className="w-6 h-6 lg:w-7 lg:h-7 rounded-lg bg-accent/10 flex items-center justify-center text-accent"><Activity className="w-3 h-3 lg:w-3.5 lg:h-3.5" /></div>
@@ -553,7 +598,6 @@ function VirtualArenaContent() {
           </div>
         </div>
 
-        {/* RIGHT COLUMN: Interview Panel */}
         <div className="w-[260px] md:w-[280px] lg:w-[300px] xl:w-[320px] border-l border-white/5 bg-[#0b0e1a] flex flex-col shrink-0 overflow-hidden">
           <div className="h-10 border-b border-white/5 flex items-center px-4 gap-4 shrink-0">
              <button className="text-[8px] font-black uppercase tracking-widest text-accent border-b-2 border-accent h-full px-2">Interview</button>
@@ -561,10 +605,7 @@ function VirtualArenaContent() {
              <button className="text-[8px] font-black uppercase tracking-widest text-white/30 hover:text-white px-2">Log</button>
           </div>
           
-          {/* CORE CONTENT AREA */}
           <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
-             
-             {/* SCROLLABLE QUESTION ZONE */}
              <div className="flex-1 p-2 lg:p-3 flex flex-col space-y-2 overflow-hidden">
                 <div className="space-y-1 shrink-0">
                    <div className="flex justify-between items-end">
@@ -597,7 +638,6 @@ function VirtualArenaContent() {
                 </div>
              </div>
 
-             {/* Answer Submission Hub - ANCHORED BOTTOM */}
              <div className="p-2 lg:p-3 space-y-2 border-t border-white/5 shrink-0 bg-[#0b0e1a]">
                 <div className="relative group">
                   <Textarea 
@@ -628,7 +668,6 @@ function VirtualArenaContent() {
         </div>
       </div>
 
-      {/* FOOTER: Global Tips Bar - FIXED HEIGHT */}
       <footer className="h-9 lg:h-10 border-t border-white/5 bg-[#0b0e1a] flex items-center px-4 lg:px-8 gap-4 lg:gap-8 shrink-0 z-50 overflow-hidden">
         <div className="flex items-center gap-2 lg:gap-3 shrink-0">
           <Award className="w-3 h-3 lg:w-3.5 lg:h-3.5 text-accent" />
@@ -649,7 +688,6 @@ function VirtualArenaContent() {
         </div>
       </footer>
 
-      {/* OVERLAYS: Initializing & Finalizing */}
       <AnimatePresence>
         {isInitializing && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-[#050816]/95 backdrop-blur-2xl">
