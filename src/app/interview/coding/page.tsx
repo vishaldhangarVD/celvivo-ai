@@ -141,7 +141,7 @@ export default function CodingEnginePage() {
           language: res.language,
           score: res.status === 'Solved' ? 100 : Math.round((res.passedCount / res.totalCount) * 100),
           passedTestCases: res.passedCount,
-          totalTestCases: res.totalCount,
+          totalTestCases: res.totalTestCases,
           status: res.status,
           submittedCode: res.code,
           executionTime,
@@ -444,27 +444,6 @@ export default function CodingEnginePage() {
         <div className="w-[35%] flex flex-col gap-4">
           <Card className="flex-1 glass bg-white/[0.01] border-white/5 p-8 overflow-y-auto custom-scrollbar rounded-[2.5rem]">
             <div className="space-y-10">
-              <div className="p-6 glass border-accent/20 bg-accent/[0.02] rounded-3xl space-y-4">
-                <h4 className="text-[10px] font-black uppercase tracking-[0.3em] text-accent flex items-center gap-2">
-                  <Activity className="w-4 h-4" /> ASSESSMENT PROTOCOL
-                </h4>
-                <div className="flex flex-col gap-2">
-                  {[
-                    "Implement Logic",
-                    "Verify with Sample",
-                    "Submit for Audit",
-                    "Auto-Unlock Next Node"
-                  ].map((step, i) => (
-                    <div key={i} className="flex items-center gap-3">
-                      <div className={cn("w-4 h-4 rounded-full border flex items-center justify-center text-[8px] font-black", currentIdx > i ? "bg-accent border-accent text-black" : "border-white/20 text-white/20")}>
-                        {currentIdx > i ? <Check className="w-2.5 h-2.5" /> : i + 1}
-                      </div>
-                      <span className={cn("text-[10px] font-bold uppercase tracking-widest", currentIdx >= i ? "text-white" : "text-white/20")}>{step}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
               <div className="flex items-center justify-between">
                 <span className="text-[10px] font-black uppercase tracking-widest text-white/40">Question {currentIdx + 1} of {questions.length}</span>
                 <div className="flex items-center gap-2">
