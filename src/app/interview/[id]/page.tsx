@@ -359,7 +359,7 @@ function VirtualArenaContent() {
   };
 
   return (
-    <div className="h-dvh w-screen bg-[#050816] flex flex-col relative overflow-hidden">
+    <div className="h-screen w-full max-h-screen bg-[#050816] flex flex-col relative overflow-hidden">
       <div className="particles-bg" />
       
       {/* HEADER SECTION - RESPONSIVE HEIGHT */}
@@ -397,7 +397,7 @@ function VirtualArenaContent() {
       <div className="flex-1 flex overflow-hidden min-h-0">
         
         {/* LEFT COLUMN: Sidebar Icons */}
-        <div className="w-16 lg:w-[72px] border-r border-white/5 bg-[#0b0e1a] flex flex-col items-center py-4 lg:py-6 gap-6 lg:gap-8 shrink-0">
+        <div className="w-14 lg:w-[72px] border-r border-white/5 bg-[#0b0e1a] flex flex-col items-center py-4 lg:py-6 gap-6 lg:gap-8 shrink-0">
           <Link href="/">
             <Button variant="ghost" size="icon" className="text-white/20 hover:text-white"><Home className="w-4 h-4 lg:w-5 lg:h-5" /></Button>
           </Link>
@@ -500,7 +500,7 @@ function VirtualArenaContent() {
         </div>
 
         {/* RIGHT COLUMN: Interview Panel */}
-        <div className="w-[280px] md:w-[300px] lg:w-[320px] xl:w-[340px] border-l border-white/5 bg-[#0b0e1a] flex flex-col shrink-0 overflow-hidden">
+        <div className="w-[260px] md:w-[280px] lg:w-[300px] xl:w-[320px] border-l border-white/5 bg-[#0b0e1a] flex flex-col shrink-0 overflow-hidden">
           <div className="h-10 border-b border-white/5 flex items-center px-4 gap-4 shrink-0">
              <button className="text-[8px] font-black uppercase tracking-widest text-accent border-b-2 border-accent h-full px-2">Interview</button>
              <button className="text-[8px] font-black uppercase tracking-widest text-white/30 hover:text-white px-2">Notes</button>
@@ -511,8 +511,8 @@ function VirtualArenaContent() {
           <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
              
              {/* SCROLLABLE QUESTION ZONE */}
-             <div className="flex-1 p-3 lg:p-4 flex flex-col space-y-3 overflow-hidden">
-                <div className="space-y-1.5 shrink-0">
+             <div className="flex-1 p-2 lg:p-3 flex flex-col space-y-2 overflow-hidden">
+                <div className="space-y-1 shrink-0">
                    <div className="flex justify-between items-end">
                      <h3 className="text-[8px] lg:text-[9px] font-black uppercase tracking-widest text-white/30">Question {currentIdx} of 10</h3>
                      <span className="text-[8px] lg:text-[9px] font-black text-accent uppercase tracking-widest">{currentIdx}0%</span>
@@ -544,13 +544,13 @@ function VirtualArenaContent() {
              </div>
 
              {/* Answer Submission Hub - ANCHORED BOTTOM */}
-             <div className="p-3 lg:p-4 space-y-2 border-t border-white/5 shrink-0 bg-[#0b0e1a]">
+             <div className="p-2 lg:p-3 space-y-2 border-t border-white/5 shrink-0 bg-[#0b0e1a]">
                 <div className="relative group">
                   <Textarea 
                     value={userAnswer}
                     onChange={(e) => setUserAnswer(e.target.value)}
                     placeholder="Type response..."
-                    className="min-h-[60px] lg:min-h-[80px] xl:min-h-[100px] rounded-xl glass border-white/10 bg-transparent p-2.5 text-sm font-light resize-none focus:border-accent transition-all pr-10 custom-scrollbar"
+                    className="min-h-[50px] lg:min-h-[70px] xl:min-h-[90px] rounded-xl glass border-white/10 bg-transparent p-2.5 text-sm font-light resize-none focus:border-accent transition-all pr-10 custom-scrollbar"
                   />
                   <button 
                     onClick={toggleMic}
@@ -565,7 +565,7 @@ function VirtualArenaContent() {
                 <Button 
                   onClick={handleSend}
                   disabled={isProcessing || !userAnswer.trim()}
-                  className="w-full h-9 lg:h-11 btn-premium rounded-xl text-[8px] lg:text-[9px] font-black uppercase tracking-[0.3em] shadow-2xl group"
+                  className="w-full h-8 lg:h-10 btn-premium rounded-xl text-[8px] lg:text-[9px] font-black uppercase tracking-[0.3em] shadow-2xl group"
                 >
                   {isProcessing ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <>Submit Answer <Send className="ml-2 w-3 h-3 transition-transform group-hover:translate-x-1" /></>}
                 </Button>
@@ -575,7 +575,7 @@ function VirtualArenaContent() {
       </div>
 
       {/* FOOTER: Global Tips Bar - FIXED HEIGHT */}
-      <footer className="h-10 lg:h-11 border-t border-white/5 bg-[#0b0e1a] flex items-center px-4 lg:px-8 gap-4 lg:gap-8 shrink-0 z-50 overflow-hidden">
+      <footer className="h-9 lg:h-10 border-t border-white/5 bg-[#0b0e1a] flex items-center px-4 lg:px-8 gap-4 lg:gap-8 shrink-0 z-50 overflow-hidden">
         <div className="flex items-center gap-2 lg:gap-3 shrink-0">
           <Award className="w-3 h-3 lg:w-3.5 lg:h-3.5 text-accent" />
           <span className="text-[7px] lg:text-[8px] font-black uppercase tracking-widest text-white/30">Interview Tips:</span>
