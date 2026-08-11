@@ -262,7 +262,7 @@ export default function CodingEnginePage() {
       
       if (allPassed) {
         console.log("[CODING] Submission passed. Triggering automatic navigation.");
-        toast({ title: "Node Synchronized", description: "Audit Matrix verified. Moving to next node." });
+        toast({ title: "Verification Success", description: "Algorithm verified. Moving to next question." });
         await goToNextQuestion();
       } else {
         console.log("[CODING] Submission failed.");
@@ -278,7 +278,7 @@ export default function CodingEnginePage() {
 
   const handleSkipQuestion = async () => {
     if (isNavigating || isSubmitting || isRunning || isTimeExpired) return;
-    console.log("[CODING] Skip requested for Node", currentIdx + 1);
+    console.log("[CODING] Skip requested for Question", currentIdx + 1);
     
     const skipReport = { 
       code: code || "// Skipped", 
@@ -359,7 +359,7 @@ export default function CodingEnginePage() {
       const q = questions[currentIdx];
       const saved = sessionResults[currentIdx]?.code;
       setCode(saved || q.starterCode?.[selectedLang.id] || q.starterCode?.["python"] || "");
-      setTerminalOutput(sessionResults[currentIdx] ? "Node submission archived in matrix." : "Waiting for your implementation.");
+      setTerminalOutput(sessionResults[currentIdx] ? "Question submission archived." : "Waiting for your implementation.");
     }
   }, [currentIdx, selectedLang, questions, sessionResults]);
 
@@ -414,7 +414,7 @@ export default function CodingEnginePage() {
           </div>
           <div>
             <h1 className="text-sm font-black uppercase tracking-widest text-premium">Syntax Matrix Protocol</h1>
-            <p className="text-[9px] font-bold text-accent uppercase tracking-widest">Logic Node {currentIdx + 1} of {questions.length}</p>
+            <p className="text-[9px] font-bold text-accent uppercase tracking-widest">Question {currentIdx + 1} of {questions.length}</p>
           </div>
         </div>
         
@@ -466,7 +466,7 @@ export default function CodingEnginePage() {
               </div>
 
               <div className="flex items-center justify-between">
-                <Badge className="bg-purple-500/10 text-purple-400 border-none text-[9px] font-black uppercase tracking-widest">ACTIVE MATRIX NODE 0{currentIdx + 1}</Badge>
+                <span className="text-[10px] font-black uppercase tracking-widest text-white/40">Question {currentIdx + 1} of {questions.length}</span>
                 <div className="flex items-center gap-2">
                   <Clock className="w-3 h-3 text-white/40" />
                   <span className="text-[9px] font-bold text-white/40 uppercase tracking-widest">ESTIMATED: {currentQ?.estimatedTime}</span>
@@ -516,15 +516,6 @@ export default function CodingEnginePage() {
                     </div>
                   </div>
                 </div>
-
-                <Card className="p-6 glass border-purple-500/20 bg-purple-500/[0.02] space-y-3">
-                  <h4 className="text-[11px] font-black uppercase tracking-[0.3em] text-purple-400 flex items-center gap-2">
-                    <Sparkles className="w-4 h-4" /> AI AUDIT NOTE
-                  </h4>
-                  <p className="text-xs font-light text-white/50 leading-relaxed italic">
-                    "Nodes synchronize automatically upon successful audit. Precision is monitored."
-                  </p>
-                </Card>
               </div>
             </div>
           </Card>
@@ -544,7 +535,7 @@ export default function CodingEnginePage() {
             {isNavigating && (
               <div className="flex items-center gap-3 bg-accent/20 px-6 py-2 rounded-xl border border-accent/30 animate-pulse">
                 <Loader2 className="w-4 h-4 text-accent animate-spin" />
-                <span className="text-[9px] font-black text-accent uppercase tracking-widest">LOADING NEXT NODE...</span>
+                <span className="text-[9px] font-black text-accent uppercase tracking-widest">LOADING NEXT QUESTION...</span>
               </div>
             )}
           </Card>
@@ -605,7 +596,7 @@ export default function CodingEnginePage() {
                   {isSubmitting ? (
                     <><Loader2 className="w-4 animate-spin mr-2" /> AUDITING TESTS...</>
                   ) : (
-                    <><ShieldCheck className="w-4 h-4 mr-2 group-hover:scale-110 transition-transform" /> SUBMIT NODE</>
+                    <><ShieldCheck className="w-4 h-4 mr-2 group-hover:scale-110 transition-transform" /> SUBMIT ANSWER</>
                   )}
                 </Button>
               </div>
@@ -618,7 +609,7 @@ export default function CodingEnginePage() {
                     variant="ghost" 
                     className="h-12 px-6 rounded-xl border border-red-500/20 text-red-400 text-[10px] font-black uppercase tracking-widest hover:bg-red-500/10"
                   >
-                    <FastForward className="w-4 h-4 mr-2" /> SKIP NODE
+                    <FastForward className="w-4 h-4 mr-2" /> SKIP QUESTION
                   </Button>
                 )}
               </div>
@@ -669,7 +660,7 @@ export default function CodingEnginePage() {
                   ) : (
                     <div className="h-full flex flex-col items-center justify-center text-center space-y-4 opacity-20">
                       <ShieldCheck className="w-10 h-10" />
-                      <p className="text-[10px] font-black text-white uppercase tracking-[0.5em]">Awaiting node submission...</p>
+                      <p className="text-[10px] font-black text-white uppercase tracking-[0.5em]">Awaiting answer submission...</p>
                     </div>
                   )}
                 </TabsContent>
