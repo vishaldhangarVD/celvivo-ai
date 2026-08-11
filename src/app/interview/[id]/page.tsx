@@ -78,6 +78,10 @@ function VirtualArenaContent() {
   const userVideoRef = useRef<HTMLVideoElement | null>(null);
   const aiVideoRef = useRef<HTMLVideoElement | null>(null);
   const mediaStreamRef = useRef<MediaStream | null>(null);
+  
+  // ElevenLabs Audio Management
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const ttsAbortControllerRef = useRef<AbortController | null>(null);
 
   const formattedName = useMemo(() => {
     if (!user) return 'User';
@@ -90,42 +94,64 @@ function VirtualArenaContent() {
     return lastInterviewer?.text || "Initializing session...";
   }, [transcript]);
 
-  // Audio Synthesis Protocol - Speaks the current question aloud
+  // ElevenLabs Neural Audio Protocol
   useEffect(() => {
     if (!currentInterviewerQuestion || currentInterviewerQuestion === "Initializing session...") return;
 
-    if (typeof window !== 'undefined' && window.speechSynthesis) {
-      window.speechSynthesis.cancel();
-      
-      const speak = () => {
-        const utterance = new SpeechSynthesisUtterance(currentInterviewerQuestion);
-        utterance.lang = "en-IN";
-        utterance.rate = 0.95;
-        utterance.pitch = 1.0;
+    // 1. Cancel previous stale audio generation
+    if (ttsAbortControllerRef.current) {
+      ttsAbortControllerRef.current.abort();
+    }
+    
+    // 2. Stop current playback
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current.src = "";
+    }
+
+    const controller = new AbortController();
+    ttsAbortControllerRef.current = controller;
+
+    async function generateAudio() {
+      try {
+        const response = await fetch('/api/tts', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ text: currentInterviewerQuestion }),
+          signal: controller.signal
+        });
+
+        if (!response.ok) throw new Error('Neural audio sync failed');
+
+        const audioBlob = await response.blob();
+        const audioUrl = URL.createObjectURL(audioBlob);
+
+        const audio = new Audio(audioUrl);
+        audioRef.current = audio;
         
-        const voices = window.speechSynthesis.getVoices();
-        // Target Priority: Female Indian English (en-IN) -> Any Indian English -> Any Female
-        const indianFemaleVoice = 
-          voices.find(v => v.lang === 'en-IN' && /female|woman|girl|sangeeta|vani|heera|neerja|praveena/i.test(v.name)) ||
-          voices.find(v => v.lang === 'en-IN') ||
-          voices.find(v => v.lang.startsWith('en-IN')) ||
-          voices.find(v => /female|woman/i.test(v.name) && v.lang.startsWith('en')) ||
-          voices[0];
+        audio.onended = () => {
+          URL.revokeObjectURL(audioUrl);
+        };
 
-        if (indianFemaleVoice) utterance.voice = indianFemaleVoice;
-        window.speechSynthesis.speak(utterance);
-      };
-
-      if (window.speechSynthesis.getVoices().length === 0) {
-        window.speechSynthesis.onvoiceschanged = speak;
-      } else {
-        speak();
+        await audio.play().catch(err => {
+          console.warn('[Audio Autoplay] Restricted or interrupted:', err);
+        });
+      } catch (error: any) {
+        if (error.name !== 'AbortError') {
+          console.error('[ElevenLabs Integration] Fault:', error);
+        }
       }
     }
 
+    generateAudio();
+
     return () => {
-      if (typeof window !== 'undefined' && window.speechSynthesis) {
-        window.speechSynthesis.cancel();
+      if (ttsAbortControllerRef.current) {
+        ttsAbortControllerRef.current.abort();
+      }
+      if (audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current.src = "";
       }
     };
   }, [currentInterviewerQuestion]);
@@ -473,54 +499,54 @@ function VirtualArenaContent() {
   };
 
   return (
-    <div className="h-dvh w-full max-h-dvh bg-[#050816] flex flex-col relative overflow-hidden">
+    <div className="h-screen w-full max-h-screen bg-[#050816] flex flex-col relative overflow-hidden">
       <div className="particles-bg" />
       
-      <header className="h-14 lg:h-16 border-b border-white/5 bg-[#0b0e1a] flex items-center justify-between px-4 lg:px-6 shrink-0 z-50">
-        <div className="flex items-center gap-3 lg:gap-6">
-           <div className="w-8 h-8 lg:w-9 lg:h-9 rounded-xl bg-blue-500/10 flex items-center justify-center text-blue-500 border border-blue-500/20 font-black text-lg">N</div>
+      <header className="h-16 border-b border-white/5 bg-[#0b0e1a] flex items-center justify-between px-6 shrink-0 z-50">
+        <div className="flex items-center gap-6">
+           <div className="w-9 h-9 rounded-xl bg-blue-500/10 flex items-center justify-center text-blue-500 border border-blue-500/20 font-black text-lg">N</div>
            <div>
-             <h1 className="text-[10px] lg:text-xs font-black uppercase tracking-widest text-white leading-none">NEXVOROAI</h1>
-             <p className="text-[8px] lg:text-[9px] text-white/40 uppercase font-black mt-1">{formattedName}</p>
+             <h1 className="text-xs font-black uppercase tracking-widest text-white leading-none">NEXVOROAI</h1>
+             <p className="text-[9px] text-white/40 uppercase font-black mt-1">{formattedName}</p>
            </div>
         </div>
 
         <div className="text-center">
-          <p className="text-[8px] lg:text-[9px] font-black text-white/30 uppercase tracking-widest mb-0.5">Time Remaining</p>
-          <div className="px-2 lg:px-3 py-0.5 lg:py-1 glass rounded-lg border-accent/20 font-mono text-sm lg:text-base text-accent tabular-nums flex items-center gap-1.5 lg:gap-2">
-            <Timer className="w-3 h-3 lg:w-3.5 lg:h-3.5" /> {formatTime(timeLeft)}
+          <p className="text-[9px] font-black text-white/30 uppercase tracking-widest mb-0.5">Time Remaining</p>
+          <div className="px-3 py-1 glass rounded-lg border-accent/20 font-mono text-base text-accent tabular-nums flex items-center gap-2">
+            <Timer className="w-3.5 h-3.5" /> {formatTime(timeLeft)}
           </div>
         </div>
         
-        <div className="flex items-center gap-1.5 lg:gap-2">
-          <Button variant="ghost" size="icon" className="h-8 w-8 lg:h-9 lg:w-9 text-white/40 hover:text-white"><HelpCircle className="w-3.5 h-3.5 lg:w-4 lg:h-4" /></Button>
-          <Button variant="ghost" size="icon" className="h-8 w-8 lg:h-9 lg:w-9 text-white/40 hover:text-white"><MessageSquare className="w-3.5 h-3.5 lg:w-4 lg:h-4" /></Button>
-          <Button variant="ghost" size="icon" className="h-8 w-8 lg:h-9 lg:w-9 text-white/40 hover:text-white"><Flag className="w-3.5 h-3.5 lg:w-4 lg:h-4" /></Button>
+        <div className="flex items-center gap-2">
+          <Button variant="ghost" size="icon" className="h-9 w-9 text-white/40 hover:text-white"><HelpCircle className="w-4 lg:h-4" /></Button>
+          <Button variant="ghost" size="icon" className="h-9 w-9 text-white/40 hover:text-white"><MessageSquare className="w-4 lg:h-4" /></Button>
+          <Button variant="ghost" size="icon" className="h-9 w-9 text-white/40 hover:text-white"><Flag className="w-4 lg:h-4" /></Button>
           <Button 
             onClick={() => finalizeSession(transcript)}
-            className="h-8 lg:h-9 px-3 lg:px-4 rounded-xl bg-red-500/10 hover:bg-red-500 text-red-500 hover:text-white border border-red-500/20 transition-all font-bold text-[8px] lg:text-[9px] uppercase tracking-widest"
+            className="h-9 px-4 rounded-xl bg-red-500/10 hover:bg-red-500 text-red-500 hover:text-white border border-red-500/20 transition-all font-bold text-[9px] uppercase tracking-widest"
           >
             End Interview
           </Button>
-          <Button variant="ghost" size="icon" className="h-8 w-8 lg:h-9 lg:w-9 text-white/40 hover:text-white"><MoreHorizontal className="w-3.5 h-3.5 lg:w-4 lg:h-4" /></Button>
+          <Button variant="ghost" size="icon" className="h-9 w-9 text-white/40 hover:text-white"><MoreHorizontal className="w-4 lg:h-4" /></Button>
         </div>
       </header>
 
       <div className="flex-1 flex overflow-hidden min-h-0">
-        <div className="w-14 lg:w-[72px] border-r border-white/5 bg-[#0b0e1a] flex flex-col items-center py-4 lg:py-6 gap-6 lg:gap-8 shrink-0">
+        <div className="w-[72px] border-r border-white/5 bg-[#0b0e1a] flex flex-col items-center py-6 gap-8 shrink-0">
           <Link href="/">
-            <Button variant="ghost" size="icon" className="text-white/20 hover:text-white"><Home className="w-4 h-4 lg:w-5 lg:h-5" /></Button>
+            <Button variant="ghost" size="icon" className="text-white/20 hover:text-white"><Home className="w-5 lg:h-5" /></Button>
           </Link>
-          <Button variant="ghost" size="icon" className="text-accent bg-accent/10 rounded-xl"><Mic className="w-4 h-4 lg:w-5 lg:h-5" /></Button>
-          <Button variant="ghost" size="icon" className="text-white/20 hover:text-white"><BarChart4 className="w-4 h-4 lg:w-5 lg:h-5" /></Button>
-          <div className="mt-auto flex flex-col gap-4 lg:gap-6">
-            <Button variant="ghost" size="icon" className="text-white/20 hover:text-white"><HelpCircle className="w-4 h-4 lg:w-5 lg:h-5" /></Button>
-            <Button variant="ghost" size="icon" className="text-white/20 hover:text-white"><Settings className="w-4 h-4 lg:w-5 lg:h-5" /></Button>
+          <Button variant="ghost" size="icon" className="text-accent bg-accent/10 rounded-xl"><Mic className="w-5 lg:h-5" /></Button>
+          <Button variant="ghost" size="icon" className="text-white/20 hover:text-white"><BarChart4 className="w-5 lg:h-5" /></Button>
+          <div className="mt-auto flex flex-col gap-6">
+            <Button variant="ghost" size="icon" className="text-white/20 hover:text-white"><HelpCircle className="w-5 lg:h-5" /></Button>
+            <Button variant="ghost" size="icon" className="text-white/20 hover:text-white"><Settings className="w-5 lg:h-5" /></Button>
           </div>
         </div>
 
-        <div className="flex-1 flex flex-col min-h-0 p-2 lg:p-3 space-y-1.5 overflow-hidden">
-          <div className="flex-1 min-h-0 relative rounded-[1.5rem] lg:rounded-[2rem] overflow-hidden bg-black border border-white/5 shadow-2xl">
+        <div className="flex-1 flex flex-col min-h-0 p-3 space-y-1.5 overflow-hidden">
+          <div className="flex-1 min-h-0 relative rounded-[2rem] overflow-hidden bg-black border border-white/5 shadow-2xl">
             <video
               ref={userVideoRef}
               autoPlay
@@ -550,17 +576,17 @@ function VirtualArenaContent() {
               </div>
             )}
 
-            <div className="absolute top-4 left-4 flex items-center gap-2 px-2 py-0.5 lg:px-2.5 lg:py-1 glass rounded-full border-green-500/20 text-green-400">
-              <ShieldCheck className="w-2 lg:w-2.5 h-2 lg:h-2.5" />
-              <span className="text-[7px] lg:text-[8px] font-black uppercase tracking-widest">Secure Connection</span>
+            <div className="absolute top-4 left-4 flex items-center gap-2 px-2.5 py-1 glass rounded-full border-green-500/20 text-green-400">
+              <ShieldCheck className="w-2.5 h-2.5" />
+              <span className="text-[8px] font-black uppercase tracking-widest">Secure Connection</span>
             </div>
             
-            <div className="absolute bottom-4 left-4 flex items-center gap-2 px-2 py-0.5 lg:px-2.5 lg:py-1 glass rounded-full border-white/10 text-white/60">
-              <User className="w-2 lg:w-2.5 h-2 lg:h-2.5" />
-              <span className="text-[7px] lg:text-[8px] font-black uppercase tracking-widest">You</span>
+            <div className="absolute bottom-4 left-4 flex items-center gap-2 px-2.5 py-1 glass rounded-full border-white/10 text-white/60">
+              <User className="w-2.5 h-2.5" />
+              <span className="text-[8px] font-black uppercase tracking-widest">You</span>
             </div>
 
-            <div className="absolute bottom-4 right-4 w-[140px] md:w-[160px] lg:w-[180px] xl:w-[200px] aspect-video rounded-xl lg:rounded-2xl overflow-hidden border border-white/10 shadow-2xl bg-[#0b0e1a]">
+            <div className="absolute bottom-4 right-4 w-[180px] xl:w-[200px] aspect-video rounded-2xl overflow-hidden border border-white/10 shadow-2xl bg-[#0b0e1a]">
               <video
                 ref={aiVideoRef}
                 src="/interviewer-female.mp4"
@@ -572,65 +598,65 @@ function VirtualArenaContent() {
                 muted
               />
               <div className="absolute bottom-2 left-2 px-2 py-0.5 glass rounded-lg border-white/10">
-                <span className="text-[6px] lg:text-[7px] font-black tracking-widest uppercase text-white/60">Interviewer</span>
+                <span className="text-[7px] font-black tracking-widest uppercase text-white/60">Interviewer</span>
               </div>
             </div>
 
-            <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex items-center gap-2 lg:gap-3">
+            <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex items-center gap-3">
               <Button 
                 variant="ghost" 
                 size="icon" 
                 onClick={toggleMediaMic}
-                className={cn("w-8 h-8 lg:w-9 lg:h-9 rounded-full glass transition-all", isMicOn ? "hover:bg-white/10 text-white" : "bg-red-500/20 text-red-500 border-red-500/30")}
+                className={cn("w-9 h-9 rounded-full glass transition-all", isMicOn ? "hover:bg-white/10 text-white" : "bg-red-500/20 text-red-500 border-red-500/30")}
               >
-                {isMicOn ? <Mic className="w-3.5 h-3.5 lg:w-4 lg:h-4" /> : <MicOff className="w-3.5 h-3.5 lg:w-4 lg:h-4" />}
+                {isMicOn ? <Mic className="w-4 h-4" /> : <MicOff className="w-4 h-4" />}
               </Button>
               <Button 
                 variant="ghost" 
                 size="icon" 
                 onClick={toggleMediaCamera}
-                className={cn("w-8 h-8 lg:w-9 lg:h-9 rounded-full glass transition-all", isCameraOn ? "hover:bg-white/10 text-white" : "bg-red-500/20 text-red-500 border-red-500/30")}
+                className={cn("w-9 h-9 rounded-full glass transition-all", isCameraOn ? "hover:bg-white/10 text-white" : "bg-red-500/20 text-red-500 border-red-500/30")}
               >
-                {isCameraOn ? <Video className="w-3.5 h-3.5 lg:w-4 lg:h-4" /> : <VideoOff className="w-3.5 h-3.5 lg:w-4 lg:h-4" />}
+                {isCameraOn ? <Video className="w-4 h-4" /> : <VideoOff className="w-4 h-4" />}
               </Button>
             </div>
           </div>
 
           <div className="grid grid-cols-2 md:grid-cols-4 gap-2 shrink-0 pb-1">
-            <Card className="glass border-white/5 p-1.5 lg:p-2 flex items-center gap-2">
-              <div className="w-6 h-6 lg:w-7 lg:h-7 rounded-lg bg-accent/10 flex items-center justify-center text-accent"><Activity className="w-3 h-3 lg:w-3.5 lg:h-3.5" /></div>
+            <Card className="glass border-white/5 p-2 flex items-center gap-2">
+              <div className="w-7 h-7 rounded-lg bg-accent/10 flex items-center justify-center text-accent"><Activity className="w-3.5 h-3.5" /></div>
               <div>
-                <p className="text-[6px] lg:text-[7px] font-black text-white/20 uppercase tracking-widest leading-none mb-0.5">Progress</p>
-                <p className="text-[10px] lg:text-[11px] font-bold text-white leading-none">{Math.round((currentIdx / 10) * 100)}%</p>
+                <p className="text-[7px] font-black text-white/20 uppercase tracking-widest leading-none mb-0.5">Progress</p>
+                <p className="text-[11px] font-bold text-white leading-none">{Math.round((currentIdx / 10) * 100)}%</p>
               </div>
             </Card>
-            <Card className="glass border-white/5 p-1.5 lg:p-2 flex items-center gap-2">
-              <div className="w-6 h-6 lg:w-7 lg:h-7 rounded-lg bg-purple-500/10 flex items-center justify-center text-purple-400"><Clock className="w-3 h-3 lg:w-3.5 lg:h-3.5" /></div>
+            <Card className="glass border-white/5 p-2 flex items-center gap-2">
+              <div className="w-7 h-7 rounded-lg bg-purple-500/10 flex items-center justify-center text-purple-400"><Clock className="w-3.5 h-3.5" /></div>
               <div>
-                <p className="text-[6px] lg:text-[7px] font-black text-white/20 uppercase tracking-widest leading-none mb-0.5">Elapsed</p>
-                <p className="text-[10px] lg:text-[11px] font-bold text-white leading-none">05:24</p>
+                <p className="text-[7px] font-black text-white/20 uppercase tracking-widest leading-none mb-0.5">Elapsed</p>
+                <p className="text-[11px] font-bold text-white leading-none">05:24</p>
               </div>
             </Card>
-            <Card className="glass border-white/5 p-1.5 lg:p-2 flex items-center gap-2">
-              <div className="w-6 h-6 lg:w-7 lg:h-7 rounded-lg bg-green-500/10 flex items-center justify-center text-green-400"><Wifi className="w-3 h-3 lg:w-3.5 lg:h-3.5" /></div>
+            <Card className="glass border-white/5 p-2 flex items-center gap-2">
+              <div className="w-7 h-7 rounded-lg bg-green-500/10 flex items-center justify-center text-green-400"><Wifi className="w-3.5 h-3.5" /></div>
               <div>
-                <p className="text-[6px] lg:text-[7px] font-black text-white/20 uppercase tracking-widest leading-none mb-0.5">Status</p>
-                <p className="text-[10px] lg:text-[11px] font-bold text-white leading-none">Optimal</p>
+                <p className="text-[7px] font-black text-white/20 uppercase tracking-widest leading-none mb-0.5">Status</p>
+                <p className="text-[11px] font-bold text-white leading-none">Optimal</p>
               </div>
             </Card>
-            <Card className="glass border-white/5 p-1.5 lg:p-2 flex items-center gap-2">
+            <Card className="glass border-white/5 p-2 flex items-center gap-2">
               <div className="flex -space-x-1.5">
-                 <Button variant="ghost" size="icon" className="w-5 h-5 lg:w-6 lg:h-6 rounded-full glass border-white/10 hover:bg-white/5 p-0"><Calculator className="w-2 h-2 lg:w-2.5 lg:h-2.5" /></Button>
-                 <Button variant="ghost" size="icon" className="w-5 h-5 lg:w-6 lg:h-6 rounded-full glass border-white/10 hover:bg-white/5 p-0"><FileEdit className="w-2 h-2 lg:w-2.5 lg:h-2.5" /></Button>
+                 <Button variant="ghost" size="icon" className="w-6 h-6 rounded-full glass border-white/10 hover:bg-white/5 p-0"><Calculator className="w-2.5 h-2.5" /></Button>
+                 <Button variant="ghost" size="icon" className="w-6 h-6 rounded-full glass border-white/10 hover:bg-white/5 p-0"><FileEdit className="w-2.5 h-2.5" /></Button>
               </div>
               <div className="ml-1">
-                <p className="text-[6px] lg:text-[7px] font-black text-white/20 uppercase tracking-widest leading-none">Quick Tools</p>
+                <p className="text-[7px] font-black text-white/20 uppercase tracking-widest leading-none">Quick Tools</p>
               </div>
             </Card>
           </div>
         </div>
 
-        <div className="w-[260px] md:w-[280px] lg:w-[300px] xl:w-[320px] border-l border-white/5 bg-[#0b0e1a] flex flex-col shrink-0 overflow-hidden">
+        <div className="w-[300px] xl:w-[320px] border-l border-white/5 bg-[#0b0e1a] flex flex-col shrink-0 overflow-hidden">
           <div className="h-10 border-b border-white/5 flex items-center px-4 gap-4 shrink-0">
              <button className="text-[8px] font-black uppercase tracking-widest text-accent border-b-2 border-accent h-full px-2">Interview</button>
              <button className="text-[8px] font-black uppercase tracking-widest text-white/30 hover:text-white px-2">Notes</button>
@@ -638,11 +664,11 @@ function VirtualArenaContent() {
           </div>
           
           <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
-             <div className="flex-1 p-2 lg:p-3 flex flex-col space-y-2 overflow-hidden">
+             <div className="flex-1 p-3 flex flex-col space-y-2 overflow-hidden">
                 <div className="space-y-1 shrink-0">
                    <div className="flex justify-between items-end">
-                     <h3 className="text-[8px] lg:text-[9px] font-black uppercase tracking-widest text-white/30">Question {currentIdx} of 10</h3>
-                     <span className="text-[8px] lg:text-[9px] font-black text-accent uppercase tracking-widest">{currentIdx}0%</span>
+                     <h3 className="text-[9px] font-black uppercase tracking-widest text-white/30">Question {currentIdx} of 10</h3>
+                     <span className="text-[9px] font-black text-accent uppercase tracking-widest">{currentIdx}0%</span>
                    </div>
                    <div className="h-1 w-full bg-white/5 rounded-full overflow-hidden">
                      <div className="h-full bg-accent transition-all duration-500" style={{ width: `${currentIdx}0%` }} />
@@ -650,19 +676,19 @@ function VirtualArenaContent() {
                 </div>
 
                 <div className="flex-1 overflow-y-auto custom-scrollbar pr-1 min-h-0">
-                   <Card className="glass border-white/10 bg-[#08090D]/95 p-3 lg:p-4 space-y-3 rounded-xl lg:rounded-2xl relative overflow-hidden shadow-2xl">
-                       <div className="absolute left-0 top-3 bottom-3 w-0.5 lg:w-1 bg-gradient-to-b from-accent to-purple-600 rounded-full" />
-                       <p className="text-sm lg:text-[15px] font-light text-white leading-relaxed">{currentInterviewerQuestion}</p>
+                   <Card className="glass border-white/10 bg-[#08090D]/95 p-4 space-y-3 rounded-2xl relative overflow-hidden shadow-2xl">
+                       <div className="absolute left-0 top-3 bottom-3 w-1 bg-gradient-to-b from-accent to-purple-600 rounded-full" />
+                       <p className="text-[15px] font-light text-white leading-relaxed">{currentInterviewerQuestion}</p>
                        <div className="pt-2 border-t border-white/5 space-y-2">
                          <div className="flex items-center justify-between">
-                           <span className="text-[7px] lg:text-[8px] font-black text-white/20 uppercase tracking-[0.2em]">Think Time</span>
+                           <span className="text-[8px] font-black text-white/20 uppercase tracking-[0.2em]">Think Time</span>
                            <div className="flex items-center gap-1.5 text-accent">
                               <Timer className="w-3 h-3" />
                               <span className="text-xs font-mono">00:45</span>
                            </div>
                          </div>
-                         <div className="text-[7px] lg:text-[8px] font-black text-white/20 uppercase tracking-[0.2em] flex items-center gap-2">
-                           <span className="w-1 h-1 lg:w-1.5 lg:h-1.5 rounded-full bg-accent animate-pulse" />
+                         <div className="text-[8px] font-black text-white/20 uppercase tracking-[0.2em] flex items-center gap-2">
+                           <span className="w-1.5 h-1.5 rounded-full bg-accent animate-pulse" />
                            AI Interviewer is asking...
                          </div>
                        </div>
@@ -670,13 +696,13 @@ function VirtualArenaContent() {
                 </div>
              </div>
 
-             <div className="p-2 lg:p-3 space-y-2 border-t border-white/5 shrink-0 bg-[#0b0e1a]">
+             <div className="p-3 space-y-2 border-t border-white/5 shrink-0 bg-[#0b0e1a]">
                 <div className="relative group">
                   <Textarea 
                     value={userAnswer}
                     onChange={(e) => setUserAnswer(e.target.value)}
                     placeholder="Type response..."
-                    className="min-h-[50px] lg:min-h-[70px] xl:min-h-[90px] rounded-xl glass border-white/10 bg-transparent p-2.5 text-sm font-light resize-none focus:border-accent transition-all pr-10 custom-scrollbar"
+                    className="min-h-[70px] xl:min-h-[90px] rounded-xl glass border-white/10 bg-transparent p-2.5 text-sm font-light resize-none focus:border-accent transition-all pr-10 custom-scrollbar"
                   />
                   <button 
                     onClick={toggleMic}
@@ -691,7 +717,7 @@ function VirtualArenaContent() {
                 <Button 
                   onClick={handleSend}
                   disabled={isProcessing || !userAnswer.trim()}
-                  className="w-full h-8 lg:h-10 btn-premium rounded-xl text-[8px] lg:text-[9px] font-black uppercase tracking-[0.3em] shadow-2xl group"
+                  className="w-full h-10 btn-premium rounded-xl text-[9px] font-black uppercase tracking-[0.3em] shadow-2xl group"
                 >
                   {isProcessing ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <>Submit Answer <Send className="ml-2 w-3 h-3 transition-transform group-hover:translate-x-1" /></>}
                 </Button>
@@ -700,12 +726,12 @@ function VirtualArenaContent() {
         </div>
       </div>
 
-      <footer className="h-9 lg:h-10 border-t border-white/5 bg-[#0b0e1a] flex items-center px-4 lg:px-8 gap-4 lg:gap-8 shrink-0 z-50 overflow-hidden">
-        <div className="flex items-center gap-2 lg:gap-3 shrink-0">
-          <Award className="w-3 h-3 lg:w-3.5 lg:h-3.5 text-accent" />
-          <span className="text-[7px] lg:text-[8px] font-black uppercase tracking-widest text-white/30">Interview Tips:</span>
+      <footer className="h-10 border-t border-white/5 bg-[#0b0e1a] flex items-center px-8 gap-8 shrink-0 z-50 overflow-hidden">
+        <div className="flex items-center gap-3 shrink-0">
+          <Award className="w-3.5 h-3.5 text-accent" />
+          <span className="text-[8px] font-black uppercase tracking-widest text-white/30">Interview Tips:</span>
         </div>
-        <div className="flex-1 flex items-center gap-6 lg:gap-10 overflow-hidden">
+        <div className="flex-1 flex items-center gap-10 overflow-hidden">
           {[
             "Think Before You Speak",
             "Structure your answers",
@@ -713,8 +739,8 @@ function VirtualArenaContent() {
             "Stay calm & confident"
           ].map((tip, i) => (
             <div key={i} className="flex items-center gap-2 shrink-0">
-              <div className="w-0.5 h-0.5 lg:w-1 lg:h-1 rounded-full bg-accent/40" />
-              <span className="text-[7px] lg:text-[8px] font-bold uppercase tracking-widest text-white/60">{tip}</span>
+              <div className="w-1 rounded-full bg-accent/40" />
+              <span className="text-[8px] font-bold uppercase tracking-widest text-white/60">{tip}</span>
             </div>
           ))}
         </div>
@@ -725,10 +751,10 @@ function VirtualArenaContent() {
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-[#050816]/95 backdrop-blur-2xl">
             <div className="max-w-md w-full text-center space-y-6">
               <div className="relative">
-                <motion.div animate={{ rotate: 360 }} transition={{ duration: 4, repeat: Infinity, ease: "linear" }} className="w-20 h-20 lg:w-24 lg:h-24 rounded-full border-b-2 border-accent mx-auto" />
-                <Brain className="w-8 h-8 lg:w-10 lg:h-10 text-accent absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 animate-pulse" />
+                <motion.div animate={{ rotate: 360 }} transition={{ duration: 4, repeat: Infinity, ease: "linear" }} className="w-24 h-24 rounded-full border-b-2 border-accent mx-auto" />
+                <Brain className="w-10 h-10 text-accent absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 animate-pulse" />
               </div>
-              <h2 className="text-2xl lg:text-3xl font-bold uppercase tracking-tighter text-white">Calibrating Arena</h2>
+              <h2 className="text-3xl font-bold uppercase tracking-tighter text-white">Calibrating Arena</h2>
               <div className="flex items-center justify-center gap-2 text-accent">
                 <Loader2 className="w-4 h-4 animate-spin" />
                 <span className="text-[9px] font-bold uppercase tracking-[0.4em] text-accent">Synthesizing First Node...</span>
@@ -741,10 +767,10 @@ function VirtualArenaContent() {
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-[#050816]/95 backdrop-blur-2xl">
             <div className="max-w-md w-full text-center space-y-6">
               <div className="relative">
-                <motion.div animate={{ rotate: 360 }} transition={{ duration: 4, repeat: Infinity, ease: "linear" }} className="w-20 h-20 lg:w-24 lg:h-24 rounded-full border-b-2 border-accent mx-auto" />
-                <ShieldCheck className="w-8 h-8 lg:w-10 lg:h-10 text-accent absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" />
+                <motion.div animate={{ rotate: 360 }} transition={{ duration: 4, repeat: Infinity, ease: "linear" }} className="w-24 h-24 rounded-full border-b-2 border-accent mx-auto" />
+                <ShieldCheck className="w-10 h-10 text-accent absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" />
               </div>
-              <h2 className="text-2xl lg:text-3xl font-bold uppercase tracking-tighter text-white">Finalizing Audit</h2>
+              <h2 className="text-3xl font-bold uppercase tracking-tighter text-white">Finalizing Audit</h2>
               <div className="flex items-center justify-center gap-2 text-accent">
                 <Loader2 className="w-4 h-4 animate-spin" />
                 <span className="text-[9px] font-bold uppercase tracking-[0.4em] text-accent">Compiling Master Dossier...</span>
