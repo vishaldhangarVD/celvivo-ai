@@ -71,6 +71,8 @@ function VirtualArenaContent() {
   const [isGeneratingReport, setIsGeneratingReport] = useState(false);
   const [assessmentContext, setAssessmentContext] = useState<any>(null);
   const [cameraError, setCameraError] = useState<string | null>(null);
+  const [isMicOn, setIsMicOn] = useState(true);
+  const [isCameraOn, setIsCameraOn] = useState(true);
 
   const [askedQuestions, setAskedQuestions] = useState<string[]>([]);
   const recognitionRef = useRef<any>(null);
@@ -88,6 +90,26 @@ function VirtualArenaContent() {
     const lastInterviewer = [...transcript].reverse().find(t => t.role === 'interviewer');
     return lastInterviewer?.text || "Initializing session...";
   }, [transcript]);
+
+  const toggleMediaMic = () => {
+    const newState = !isMicOn;
+    setIsMicOn(newState);
+    if (mediaStreamRef.current) {
+      mediaStreamRef.current.getAudioTracks().forEach(track => {
+        track.enabled = newState;
+      });
+    }
+  };
+
+  const toggleMediaCamera = () => {
+    const newState = !isCameraOn;
+    setIsCameraOn(newState);
+    if (mediaStreamRef.current) {
+      mediaStreamRef.current.getVideoTracks().forEach(track => {
+        track.enabled = newState;
+      });
+    }
+  };
 
   const stopCamera = () => {
     if (mediaStreamRef.current) {
@@ -147,6 +169,10 @@ function VirtualArenaContent() {
         },
         audio: true,
       });
+
+      // Synchronize new stream with current UI state
+      mediaStream.getAudioTracks().forEach(t => t.enabled = isMicOn);
+      mediaStream.getVideoTracks().forEach(t => t.enabled = isCameraOn);
 
       mediaStreamRef.current = mediaStream;
 
@@ -419,7 +445,14 @@ function VirtualArenaContent() {
         {/* CENTER COLUMN: Video Arena */}
         <div className="flex-1 flex flex-col min-h-0 p-2 lg:p-3 space-y-1.5 overflow-hidden">
           <div className="flex-1 min-h-0 relative rounded-[1.5rem] lg:rounded-[2rem] overflow-hidden bg-black border border-white/5 shadow-2xl">
-            {cameraError ? (
+            {!isCameraOn ? (
+              <div className="w-full h-full flex flex-col items-center justify-center bg-[#0b0e1a] text-center p-8 space-y-4">
+                <div className="w-20 h-20 rounded-full bg-white/5 flex items-center justify-center border border-white/10">
+                  <VideoOff className="w-10 h-10 text-white/20" />
+                </div>
+                <p className="text-[10px] font-bold text-white/40 uppercase tracking-widest">Camera Paused</p>
+              </div>
+            ) : cameraError ? (
               <div className="w-full h-full flex flex-col items-center justify-center bg-[#0b0e1a] text-center p-8 space-y-4">
                 <VideoOff className="w-12 h-12 text-red-400" />
                 <h3 className="text-lg font-bold text-white">Camera Access Required</h3>
@@ -466,8 +499,22 @@ function VirtualArenaContent() {
 
             {/* Video Area Bottom Controls */}
             <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex items-center gap-2 lg:gap-3">
-              <Button variant="ghost" size="icon" className="w-8 h-8 lg:w-9 lg:h-9 rounded-full glass hover:bg-white/10 text-white"><Mic className="w-3.5 h-3.5 lg:w-4 lg:h-4" /></Button>
-              <Button variant="ghost" size="icon" className="w-8 h-8 lg:w-9 lg:h-9 rounded-full glass hover:bg-white/10 text-white"><Video className="w-3.5 h-3.5 lg:w-4 lg:h-4" /></Button>
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                onClick={toggleMediaMic}
+                className={cn("w-8 h-8 lg:w-9 lg:h-9 rounded-full glass transition-all", isMicOn ? "hover:bg-white/10 text-white" : "bg-red-500/20 text-red-500 border-red-500/30")}
+              >
+                {isMicOn ? <Mic className="w-3.5 h-3.5 lg:w-4 lg:h-4" /> : <MicOff className="w-3.5 h-3.5 lg:w-4 lg:h-4" />}
+              </Button>
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                onClick={toggleMediaCamera}
+                className={cn("w-8 h-8 lg:w-9 lg:h-9 rounded-full glass transition-all", isCameraOn ? "hover:bg-white/10 text-white" : "bg-red-500/20 text-red-500 border-red-500/30")}
+              >
+                {isCameraOn ? <Video className="w-3.5 h-3.5 lg:w-4 lg:h-4" /> : <VideoOff className="w-3.5 h-3.5 lg:w-4 lg:h-4" />}
+              </Button>
             </div>
           </div>
 
