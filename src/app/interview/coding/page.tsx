@@ -141,7 +141,7 @@ export default function CodingEnginePage() {
           language: res.language,
           score: res.status === 'Solved' ? 100 : Math.round((res.passedCount / res.totalCount) * 100),
           passedTestCases: res.passedCount,
-          totalTestCases: res.totalTestCases,
+          totalTestCases: res.totalTestCases ?? 0,
           status: res.status,
           submittedCode: res.code,
           executionTime,

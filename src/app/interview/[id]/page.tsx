@@ -121,7 +121,10 @@ function VirtualArenaContent() {
           signal: controller.signal
         });
 
-        if (!response.ok) throw new Error('Neural audio sync failed');
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({ error: `HTTP ${response.status}` }));
+          throw new Error(errorData.error || 'Neural audio sync failed');
+        }
 
         const audioBlob = await response.blob();
         const audioUrl = URL.createObjectURL(audioBlob);
@@ -138,7 +141,7 @@ function VirtualArenaContent() {
         });
       } catch (error: any) {
         if (error.name !== 'AbortError') {
-          console.error('[ElevenLabs Integration] Fault:', error);
+          console.error('[ElevenLabs Integration] Fault:', error.message);
         }
       }
     }

@@ -3,7 +3,7 @@ import { NextResponse } from 'next/server';
 /**
  * @fileOverview Secure ElevenLabs TTS Gateway.
  * Receives text and returns high-fidelity audio data using the Navya Kannan voice.
- * Keeps the API key protected on the server.
+ * Keeps the API key protected on the server and surfaces detailed errors for diagnostics.
  */
 
 export async function POST(req: Request) {
@@ -15,8 +15,11 @@ export async function POST(req: Request) {
 
     const apiKey = process.env.ELEVENLABS_API_KEY;
     if (!apiKey) {
-      console.error('[TTS Gateway] ELEVENLABS_API_KEY is not configured.');
-      return NextResponse.json({ error: 'Neural voice configuration missing.' }, { status: 500 });
+      console.error('[TTS Gateway] ELEVENLABS_API_KEY is not configured on the server.');
+      return NextResponse.json({ 
+        error: 'Neural voice configuration missing. ELEVENLABS_API_KEY not found in environment.',
+        code: 'MISSING_API_KEY'
+      }, { status: 500 });
     }
 
     // ElevenLabs Configuration
@@ -47,8 +50,20 @@ export async function POST(req: Request) {
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error('[ElevenLabs API Error]', response.status, errorText);
-      return NextResponse.json({ error: 'Neural synthesis failure.' }, { status: response.status });
+      let errorDetail;
+      try {
+        errorDetail = JSON.parse(errorText);
+      } catch (e) {
+        errorDetail = { message: errorText };
+      }
+      
+      console.error('[ElevenLabs API Error]', response.status, errorDetail);
+      
+      return NextResponse.json({ 
+        error: errorDetail?.detail?.message || errorDetail?.message || 'ElevenLabs synthesis failure.',
+        status: response.status,
+        code: errorDetail?.detail?.status || 'API_ERROR'
+      }, { status: response.status });
     }
 
     const audioBuffer = await response.arrayBuffer();
@@ -59,8 +74,11 @@ export async function POST(req: Request) {
         'Cache-Control': 'no-cache'
       },
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error('[TTS Gateway] Internal Fault:', error);
-    return NextResponse.json({ error: 'Internal server error.' }, { status: 500 });
+    return NextResponse.json({ 
+      error: 'Internal server error occurred while processing TTS.',
+      details: error.message 
+    }, { status: 500 });
   }
 }
