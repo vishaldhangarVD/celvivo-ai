@@ -1,10 +1,50 @@
 import { NextResponse } from 'next/server';
 
 /**
- * @fileOverview Secure ElevenLabs TTS Gateway.
- * Receives text and returns high-fidelity audio data using the Navya Kannan voice.
- * Keeps the API key protected on the server and surfaces detailed errors for diagnostics.
+ * @fileOverview Secure ElevenLabs TTS Gateway (Free Plan Optimized).
+ * Dynamically selects accessible premade voices for Free tier API usage.
  */
+
+// Cache the selected voice ID to reduce API overhead
+let cachedVoiceId: string | null = null;
+
+async function getAvailableVoice(apiKey: string): Promise<string> {
+  if (cachedVoiceId) return cachedVoiceId;
+
+  try {
+    const response = await fetch('https://api.elevenlabs.io/v1/voices', {
+      headers: { 'xi-api-key': apiKey }
+    });
+
+    if (!response.ok) throw new Error('Failed to fetch ElevenLabs voices');
+
+    const data = await response.json();
+    const voices = data.voices || [];
+
+    // Filter for female voices that are "premade" (Standard voices accessible on Free plan)
+    // Preference: 1. Conversational 2. Female 3. English
+    const eligibleVoice = voices.find((v: any) => 
+      v.category === 'premade' && 
+      v.labels?.gender === 'female' && 
+      (v.labels?.accent === 'indian' || v.labels?.description?.toLowerCase().includes('conversational'))
+    ) || voices.find((v: any) => 
+      v.category === 'premade' && 
+      v.labels?.gender === 'female'
+    ) || voices.find((v: any) => v.category === 'premade');
+
+    if (!eligibleVoice) {
+      // Fallback to a known stable premade ID if the list is empty/restricted
+      return 'Xb7hHqWq15UaYAn73Jc0'; // Alice (Premade)
+    }
+
+    cachedVoiceId = eligibleVoice.voice_id;
+    console.log(`[TTS Gateway] Selected API-accessible voice: ${eligibleVoice.name} (${cachedVoiceId})`);
+    return cachedVoiceId!;
+  } catch (error) {
+    console.warn('[TTS Gateway] Voice discovery failed, using standard fallback.');
+    return 'Xb7hHqWq15UaYAn73Jc0'; // Alice
+  }
+}
 
 export async function POST(req: Request) {
   try {
@@ -22,8 +62,8 @@ export async function POST(req: Request) {
       }, { status: 500 });
     }
 
-    // ElevenLabs Configuration
-    const voiceId = '4uN5YeBITFJsw8t45RIV'; // Navya Kannan - Conversational
+    // Dynamic Voice Selection for Free Plan compatibility
+    const voiceId = await getAvailableVoice(apiKey);
     const modelId = 'eleven_flash_v2_5';
 
     const response = await fetch(
