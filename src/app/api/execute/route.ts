@@ -1,9 +1,9 @@
 import { NextResponse } from 'next/server';
 
 /**
- * @fileOverview JDoodle Neural Execution Gateway v9.0 (Standardized Validation).
+ * @fileOverview JDoodle Neural Execution Gateway v10.0 (Standardized Validation).
  * Securely proxies code execution and performs strict output validation.
- * Supports all 8 languages: Python, Java, C++, JavaScript, C, C#, Go, Rust.
+ * Supports 13 languages: Python, Java, C++, JavaScript, TypeScript, C, C#, Go, Rust, Kotlin, PHP, Swift, Ruby.
  */
 
 const JDOODLE_URL = 'https://api.jdoodle.com/v1/execute';
@@ -46,6 +46,14 @@ const LANGUAGE_CONFIG: Record<string, {
     run: 'node solution.js', 
     file: 'solution.js' 
   },
+  typescript: { 
+    language: 'typescript', 
+    versionIndex: '0', 
+    ext: 'ts', 
+    compile: 'tsc solution.ts --target es6 --module commonjs', 
+    run: 'node solution.js', 
+    file: 'solution.ts' 
+  },
   c: { 
     language: 'c', 
     versionIndex: '4', 
@@ -78,6 +86,36 @@ const LANGUAGE_CONFIG: Record<string, {
     run: './solution', 
     file: 'solution.rs' 
   },
+  kotlin: { 
+    language: 'kotlin', 
+    versionIndex: '3', 
+    ext: 'kt', 
+    compile: 'kotlinc solution.kt -include-runtime -d solution.jar', 
+    run: 'java -jar solution.jar', 
+    file: 'solution.kt' 
+  },
+  php: { 
+    language: 'php', 
+    versionIndex: '4', 
+    ext: 'php', 
+    run: 'php solution.php', 
+    file: 'solution.php' 
+  },
+  swift: { 
+    language: 'swift', 
+    versionIndex: '4', 
+    ext: 'swift', 
+    compile: 'swiftc solution.swift -o solution', 
+    run: './solution', 
+    file: 'solution.swift' 
+  },
+  ruby: { 
+    language: 'ruby', 
+    versionIndex: '4', 
+    ext: 'rb', 
+    run: 'ruby solution.rb', 
+    file: 'solution.rb' 
+  }
 };
 
 /**
@@ -104,7 +142,9 @@ function detectRuntimeError(output: string): boolean {
          lower.includes("runtime error") ||
          lower.includes("segmentation fault") ||
          lower.includes("core dumped") ||
-         lower.includes("panic");
+         lower.includes("panic") ||
+         lower.includes("fatal error") ||
+         lower.includes("unexpected error");
 }
 
 export async function POST(req: Request) {

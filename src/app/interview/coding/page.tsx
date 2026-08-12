@@ -43,10 +43,15 @@ const LANGUAGES = [
   { id: 'java', label: 'Java', monaco: 'java' },
   { id: 'cpp', label: 'C++', monaco: 'cpp' },
   { id: 'javascript', label: 'JavaScript', monaco: 'javascript' },
+  { id: 'typescript', label: 'TypeScript', monaco: 'typescript' },
   { id: 'c', label: 'C', monaco: 'c' },
   { id: 'csharp', label: 'C#', monaco: 'csharp' },
   { id: 'go', label: 'Go', monaco: 'go' },
-  { id: 'rust', label: 'Rust', monaco: 'rust' }
+  { id: 'rust', label: 'Rust', monaco: 'rust' },
+  { id: 'kotlin', label: 'Kotlin', monaco: 'kotlin' },
+  { id: 'php', label: 'PHP', monaco: 'php' },
+  { id: 'swift', label: 'Swift', monaco: 'swift' },
+  { id: 'ruby', label: 'Ruby', monaco: 'ruby' }
 ];
 
 export default function CodingEnginePage() {
