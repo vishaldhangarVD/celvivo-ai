@@ -1,8 +1,8 @@
 import { NextResponse } from 'next/server';
 
 /**
- * @fileOverview Secure ElevenLabs TTS Gateway (Free Plan Optimized).
- * Dynamically selects accessible premade voices for Free tier API usage.
+ * @fileOverview Secure ElevenLabs TTS Gateway (Optimized for Professional Indian English).
+ * Dynamically selects the best available female Indian English voice for the current API account.
  */
 
 // Cache the selected voice ID to reduce API overhead
@@ -21,24 +21,48 @@ async function getAvailableVoice(apiKey: string): Promise<string> {
     const data = await response.json();
     const voices = data.voices || [];
 
-    // Filter for female voices that are "premade" (Standard voices accessible on Free plan)
-    // Preference: 1. Conversational 2. Female 3. English
-    const eligibleVoice = voices.find((v: any) => 
-      v.category === 'premade' && 
+    // Filter for female voices that are "premade" (Standard voices accessible on Free plan via API)
+    const femaleVoices = voices.filter((v: any) => 
       v.labels?.gender === 'female' && 
-      (v.labels?.accent === 'indian' || v.labels?.description?.toLowerCase().includes('conversational'))
-    ) || voices.find((v: any) => 
-      v.category === 'premade' && 
-      v.labels?.gender === 'female'
-    ) || voices.find((v: any) => v.category === 'premade');
+      v.category === 'premade'
+    );
+
+    // Priority 1: Direct accent match in labels (e.g., 'indian', 'en-IN')
+    let eligibleVoice = femaleVoices.find((v: any) => 
+      v.labels?.accent?.toLowerCase() === 'indian' || 
+      v.labels?.description?.toLowerCase().includes('indian') ||
+      v.labels?.language?.toLowerCase() === 'en-in'
+    );
+
+    // Priority 2: Indian identifier in name or description
+    if (!eligibleVoice) {
+      eligibleVoice = femaleVoices.find((v: any) => 
+        v.name?.toLowerCase().includes('indian') || 
+        v.description?.toLowerCase().includes('indian')
+      );
+    }
+
+    // Priority 3: Professional/Conversational fallback
+    if (!eligibleVoice) {
+      eligibleVoice = femaleVoices.find((v: any) => 
+        v.labels?.description?.toLowerCase().includes('conversational') ||
+        v.labels?.description?.toLowerCase().includes('professional')
+      );
+    }
+
+    // Priority 4: Closest available female premade
+    if (!eligibleVoice) {
+      eligibleVoice = femaleVoices.find((v: any) => v.name === 'Alice' || v.name === 'Rachel') || femaleVoices[0];
+    }
 
     if (!eligibleVoice) {
-      // Fallback to a known stable premade ID if the list is empty/restricted
+      // Hard fallback to a known stable premade ID
+      console.warn('[TTS Gateway] No ideal voices found, using system fallback Alice.');
       return 'Xb7hHqWq15UaYAn73Jc0'; // Alice (Premade)
     }
 
     cachedVoiceId = eligibleVoice.voice_id;
-    console.log(`[TTS Gateway] Selected API-accessible voice: ${eligibleVoice.name} (${cachedVoiceId})`);
+    console.log(`[TTS Gateway] Selected optimized voice: ${eligibleVoice.name} (${cachedVoiceId})`);
     return cachedVoiceId!;
   } catch (error) {
     console.warn('[TTS Gateway] Voice discovery failed, using standard fallback.');
@@ -62,7 +86,7 @@ export async function POST(req: Request) {
       }, { status: 500 });
     }
 
-    // Dynamic Voice Selection for Free Plan compatibility
+    // Dynamic Voice Selection for Free Plan compatibility and professional tone
     const voiceId = await getAvailableVoice(apiKey);
     const modelId = 'eleven_flash_v2_5';
 
@@ -79,9 +103,9 @@ export async function POST(req: Request) {
           text: body.text,
           model_id: modelId,
           voice_settings: {
-            stability: 0.5,
-            similarity_boost: 0.75,
-            style: 0.0,
+            stability: 0.65, // Medium/High for professional consistency
+            similarity_boost: 0.85, // High to maintain voice character
+            style: 0.1, // Low/Medium to avoid over-dramatization
             use_speaker_boost: true
           },
         }),
