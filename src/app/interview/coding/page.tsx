@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useEffect, useMemo, useCallback } from 'react';
@@ -11,7 +10,6 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { 
   Code2, 
   ChevronRight, 
@@ -31,9 +29,7 @@ import {
   RotateCcw, 
   Sparkles,
   Timer,
-  Info,
   Rocket,
-  ArrowDownCircle,
   FastForward
 } from 'lucide-react';
 import { useUser, useFirestore, useDoc } from '@/firebase';
@@ -109,7 +105,6 @@ export default function CodingEnginePage() {
   const finalizeAssessment = useCallback(async () => {
     if (isFinalizing || !user || !db || !journey) return;
     setIsFinalizing(true);
-    console.log("[CODING] Coding round completed");
     
     try {
       for (let i = 0; i < 4; i++) {
@@ -121,7 +116,6 @@ export default function CodingEnginePage() {
       const solvedQuestionsCount = resultsArray.filter(([_, r]) => r.status === 'Solved').length;
       const scorePercentage = questions.length > 0 ? Math.round((solvedQuestionsCount / questions.length) * 100) : 0;
       
-      // Update global journey report
       await updateDoc(journeyRef!, {
         codingReport: { 
           score: scorePercentage, 
@@ -150,7 +144,6 @@ export default function CodingEnginePage() {
     setIsNavigating(true);
 
     if (currentIdx < questions.length - 1) {
-      console.log("[CODING] Loading next question: Index", currentIdx + 1);
       setCurrentIdx(prev => prev + 1);
       setTerminalOutput("Waiting for your implementation.");
       setActiveTerminalTab("output");
@@ -179,7 +172,7 @@ export default function CodingEnginePage() {
       userId: user.uid,
       questionId: q.id,
       language: res.language,
-      score: res.status === 'Solved' ? 100 : Math.round((res.passedCount / res.totalCount) * 100),
+      score: res.totalCount > 0 ? Math.round((res.passedCount / res.totalCount) * 100) : 0,
       passedTestCases: res.passedCount,
       totalTestCases: res.totalCount ?? 0,
       status: res.status,
@@ -206,15 +199,17 @@ export default function CodingEnginePage() {
         body: JSON.stringify({ 
           source_code: code, 
           language: selectedLang.id, 
-          stdin: questions[currentIdx]?.sampleInput 
+          stdin: questions[currentIdx]?.sampleInput,
+          expectedOutput: questions[currentIdx]?.sampleOutput
         }),
       });
       const data = await response.json();
       
       if (data.error) {
-        setTerminalOutput(`[SYSTEM ERROR]\n${data.error}`);
+        setTerminalOutput(`[EXECUTION ERROR]\n${data.error}`);
       } else {
-        setTerminalOutput(`[SAMPLE SUCCESS]\n\nOutput Trace:\n${data.stdout}\n\nTemporal Audit: ${data.time}s | Memory Load: ${data.memory}KB`);
+        const statusPrefix = `[${data.status}]`;
+        setTerminalOutput(`${statusPrefix}\n\nOutput Trace:\n${data.stdout}\n\nExpected:\n${questions[currentIdx]?.sampleOutput}\n\nTemporal Audit: ${data.time}s | Memory Load: ${data.memory}KB`);
       }
     } catch (error) {
       setTerminalOutput("[NETWORK FAULT] Execution link interrupted.");
@@ -226,7 +221,6 @@ export default function CodingEnginePage() {
   const handleSubmitCode = async () => {
     if (isSubmitting || isRunning || isTimeExpired || isNavigating || !questions[currentIdx]) return;
     setIsSubmitting(true);
-    console.log("[CODING] Submit started for Node", currentIdx + 1);
     setActiveTerminalTab("cases");
     setTerminalOutput("Running Hidden Test Cases...");
     
@@ -259,14 +253,10 @@ export default function CodingEnginePage() {
         language: selectedLang.label 
       };
 
-      console.log("[CODING] Hidden tests completed. Passed:", allPassed);
       setSessionResults(prev => ({ ...prev, [currentIdx]: submissionReport }));
-      
-      // Persist result immediately as requested
       await saveQuestionResult(currentIdx, submissionReport);
 
       if (allPassed) {
-        console.log("[CODING] Submission passed. Initiating countdown.");
         setCountdown(3);
         const timerId = setInterval(() => {
           setCountdown(prev => {
@@ -280,13 +270,12 @@ export default function CodingEnginePage() {
           });
         }, 1000);
       } else {
-        console.log("[CODING] Submission failed.");
         toast({ variant: "destructive", title: "Audit Fault", description: `Synchronized ${passed}/${total} nodes. Retry or skip.` });
       }
     } catch (error: any) {
       console.error("[CODING] Submission Error:", error);
       setTerminalOutput("[CRITICAL FAULT] Matrix node connection lost.");
-      toast({ variant: "destructive", title: "Submission Error", description: "Failed to persist or verify algorithm." });
+      toast({ variant: "destructive", title: "Submission Error", description: "Failed to verify algorithm." });
     } finally {
       setIsSubmitting(false);
     }
@@ -294,7 +283,6 @@ export default function CodingEnginePage() {
 
   const handleSkipQuestion = async () => {
     if (isNavigating || isSubmitting || isRunning || isTimeExpired) return;
-    console.log("[CODING] Skip requested for Question", currentIdx + 1);
     
     const skipReport = { 
       code: code || "// Skipped", 
@@ -331,10 +319,7 @@ export default function CodingEnginePage() {
         const getFilteredPool = (difficulty: string) => {
           const pool = [...MASTER_QUESTIONS].filter(q => q.difficulty === difficulty);
           let unused = pool.filter(q => !usedIds.includes(q.id));
-          
-          if (unused.length === 0) {
-            return pool;
-          }
+          if (unused.length === 0) return pool;
           return unused;
         };
 
@@ -412,18 +397,6 @@ export default function CodingEnginePage() {
       <div className="particles-bg" />
       <Navbar />
       
-      {process.env.NODE_ENV === 'development' && (
-        <div className="fixed top-2 right-2 z-[200]">
-          <Button 
-            onClick={finalizeAssessment}
-            variant="ghost" 
-            className="h-8 px-3 rounded-lg glass border-white/10 text-[9px] font-black uppercase tracking-widest hover:bg-accent/10 hover:text-accent"
-          >
-            DEV FINISH
-          </Button>
-        </div>
-      )}
-
       <header className="h-[72px] border-b border-white/5 bg-[#0b0e1a]/80 backdrop-blur-xl flex items-center justify-between px-8 z-50">
         <div className="flex items-center gap-6">
           <div className="w-10 h-10 rounded-xl bg-accent/10 flex items-center justify-center border border-accent/20">
@@ -653,7 +626,7 @@ export default function CodingEnginePage() {
                               <span className="text-[9px] font-black text-white/40 uppercase tracking-widest">Audit Case #{i + 1}</span>
                             </div>
                             <Badge variant="outline" className={cn("text-[7px] uppercase py-0", r.passed ? "text-green-400 border-green-500/20" : "text-red-400 border-red-500/20")}>
-                              {r.passed ? "PASSED" : "FAILED"}
+                              {r.status || (r.passed ? "PASSED" : "FAILED")}
                             </Badge>
                           </div>
                         ))}

@@ -1,18 +1,13 @@
 import { NextResponse } from 'next/server';
 
 /**
- * @fileOverview JDoodle Neural Execution Gateway v8.0 (Optimized).
- * Securely proxies code execution requests to JDoodle high-performance nodes.
- * Implements a Batch Execution Harness to minimize credit consumption.
- * Achieves 1-credit per node-submission audit by wrapping logic in a server-side runner.
+ * @fileOverview JDoodle Neural Execution Gateway v9.0 (Standardized Validation).
+ * Securely proxies code execution and performs strict output validation.
+ * Supports all 8 languages: Python, Java, C++, JavaScript, C, C#, Go, Rust.
  */
 
 const JDOODLE_URL = 'https://api.jdoodle.com/v1/execute';
 
-/**
- * Protocol Configuration for JDoodle Nodes.
- * Includes compilation and execution directives for the batch harness.
- */
 const LANGUAGE_CONFIG: Record<string, { 
   language: string; 
   versionIndex: string; 
@@ -87,14 +82,29 @@ const LANGUAGE_CONFIG: Record<string, {
 
 /**
  * Normalizes output for robust logic comparison.
+ * Trims each line, removes trailing empty lines, and normalizes line endings.
  */
 function normalizeOutput(output: string): string {
-  return (output || "")
+  if (!output) return "";
+  return output
+    .replace(/\r\n/g, '\n')
     .split('\n')
-    .map(line => line.trim())
-    .filter(line => line.length > 0)
+    .map(line => line.trimEnd())
     .join('\n')
     .trim();
+}
+
+/**
+ * Identifies if output contains common runtime error markers.
+ */
+function detectRuntimeError(output: string): boolean {
+  const lower = output.toLowerCase();
+  return lower.includes("traceback") || 
+         lower.includes("exception") ||
+         lower.includes("runtime error") ||
+         lower.includes("segmentation fault") ||
+         lower.includes("core dumped") ||
+         lower.includes("panic");
 }
 
 export async function POST(req: Request) {
@@ -102,20 +112,20 @@ export async function POST(req: Request) {
     const body = await req.json().catch(() => null);
     if (!body) return NextResponse.json({ error: "Empty logic payload." }, { status: 400 });
 
-    const { source_code, language, stdin, testCases } = body;
+    const { source_code, language, stdin, testCases, expectedOutput } = body;
     const config = LANGUAGE_CONFIG[language];
 
     const clientId = process.env.JDOODLE_CLIENT_ID;
     const clientSecret = process.env.JDOODLE_CLIENT_SECRET;
 
     if (!clientId || !clientSecret) {
-      return NextResponse.json({ error: "JDoodle credentials missing in environment." }, { status: 500 });
+      return NextResponse.json({ error: "JDoodle credentials missing." }, { status: 500 });
     }
 
     if (!config) return NextResponse.json({ error: `Language "${language}" not supported.` }, { status: 400 });
     if (!source_code) return NextResponse.json({ error: "Implementation buffer empty." }, { status: 400 });
 
-    // Mode A: Single Execution (Run Sample) - Preserves original behavior
+    // Mode A: Single Execution (Run Sample)
     if (!testCases || !Array.isArray(testCases)) {
       const response = await fetch(JDOODLE_URL, {
         method: 'POST',
@@ -133,31 +143,45 @@ export async function POST(req: Request) {
       const data = await response.json();
       if (data.error) return NextResponse.json({ error: data.error }, { status: 500 });
 
+      const stdout = data.output || "";
+      const actualNormalized = normalizeOutput(stdout);
+      const isRuntimeError = detectRuntimeError(stdout);
+      
+      let status = "PASSED";
+      let passed = true;
+
+      if (isRuntimeError) {
+        status = "RUNTIME ERROR";
+        passed = false;
+      } else if (expectedOutput) {
+        const expectedNormalized = normalizeOutput(expectedOutput);
+        if (actualNormalized !== expectedNormalized) {
+          status = "WRONG ANSWER";
+          passed = false;
+        }
+      }
+
       return NextResponse.json({
-        stdout: data.output || "",
-        status: { description: "Finished" },
+        stdout,
+        passed,
+        status,
         time: data.cpuTime || "0.00",
         memory: data.memory || "N/A"
       });
     }
 
     // Mode B: Optimized Batch Execution (Submit Node)
-    // We construct a bash script that handles all test cases in one JDoodle call.
-    
     let bashScript = `cat << 'NEXVORO_CODE_EOF' > ${config.file}\n${source_code}\nNEXVORO_CODE_EOF\n\n`;
     
-    // Compilation Step
     if (config.compile) {
       bashScript += `${config.compile} 2> compile_errors.txt\n`;
       bashScript += `if [ $? -ne 0 ]; then\n  echo "NEXVORO_COMPILE_ERROR"\n  cat compile_errors.txt\n  exit 0\nfi\n\n`;
     }
 
-    // Write all input cases to individual files
     testCases.forEach((tc, idx) => {
       bashScript += `cat << 'NEXVORO_IN_${idx}' > in_${idx}.txt\n${tc.input || ""}\nNEXVORO_IN_${idx}\n`;
     });
 
-    // Run execution loop with delimiters
     bashScript += `\necho "NEXVORO_BATCH_START"\n`;
     testCases.forEach((tc, idx) => {
       bashScript += `echo "NEXVORO_CASE_${idx}_START"\n`;
@@ -183,57 +207,49 @@ export async function POST(req: Request) {
 
     const output = data.output || "";
     
-    // Check for Compilation Error
     if (output.includes("NEXVORO_COMPILE_ERROR")) {
       const compileMsg = output.split("NEXVORO_COMPILE_ERROR")[1]?.trim() || "Compilation failed.";
       return NextResponse.json({
         results: testCases.map(tc => ({
-          input: tc.input,
-          expected: tc.output,
-          actual: compileMsg,
           passed: false,
-          status: "Compilation Error"
+          status: "COMPILATION ERROR",
+          actual: compileMsg
         }))
       });
     }
 
-    // Parse batch output into individual case results
     const auditResults = testCases.map((tc, idx) => {
       const startTag = `NEXVORO_CASE_${idx}_START`;
       const endTag = `NEXVORO_CASE_${idx}_END`;
-      
       const parts = output.split(startTag);
-      if (parts.length < 2) return { input: tc.input, expected: tc.output, actual: "Internal Error", passed: false, status: "Audit Fault" };
+      if (parts.length < 2) return { passed: false, status: "EXECUTION ERROR" };
       
       const caseOutput = parts[1].split(endTag)[0]?.trim() || "";
-      
       const actualNormalized = normalizeOutput(caseOutput);
       const expectedNormalized = normalizeOutput(tc.output);
-      
-      // Determine if there was a runtime error (captured via 2>&1 in bash)
-      const isRuntimeError = caseOutput.toLowerCase().includes("traceback") || 
-                            caseOutput.toLowerCase().includes("exception") ||
-                            caseOutput.toLowerCase().includes("runtime error") ||
-                            caseOutput.toLowerCase().includes("segmentation fault");
+      const isRuntimeError = detectRuntimeError(caseOutput);
+      const isTLE = output.toLowerCase().includes("time limit exceeded");
 
-      const passed = !isRuntimeError && (actualNormalized === expectedNormalized);
+      let status = "PASSED";
+      let passed = !isRuntimeError && !isTLE && (actualNormalized === expectedNormalized);
+
+      if (isTLE) status = "TIME LIMIT EXCEEDED";
+      else if (isRuntimeError) status = "RUNTIME ERROR";
+      else if (!passed) status = "WRONG ANSWER";
 
       return {
-        input: tc.input,
-        expected: expectedNormalized,
+        passed,
+        status,
         actual: actualNormalized,
-        passed: passed,
-        status: isRuntimeError ? "Runtime Error" : passed ? "Verified" : "Logic Mismatch",
         executionTime: (parseFloat(data.cpuTime || "0") / testCases.length).toFixed(2),
-        memory: data.memory || "N/A",
-        rawOutput: caseOutput
+        memory: data.memory || "N/A"
       };
     });
 
     return NextResponse.json({ results: auditResults });
 
   } catch (error: any) {
-    console.error('[JDoodle Optimized Proxy] Fatal Fault:', error);
-    return NextResponse.json({ error: "Internal Batch Audit Failure" }, { status: 500 });
+    console.error('[JDoodle Standardized Proxy] Fatal Fault:', error);
+    return NextResponse.json({ error: "Internal Audit Failure" }, { status: 500 });
   }
 }
