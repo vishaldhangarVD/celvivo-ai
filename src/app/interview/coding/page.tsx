@@ -76,6 +76,7 @@ export default function CodingEnginePage() {
   const [submitStep, setSubmitStep] = useState(0);
   const [terminalOutput, setTerminalOutput] = useState("Waiting for your implementation.");
   const [activeTerminalTab, setActiveTerminalTab] = useState("output");
+  const [countdown, setCountdown] = useState<number | null>(null);
 
   const journeyRef = useMemo(() => {
     if (!db || !user?.uid) return null;
@@ -120,37 +121,7 @@ export default function CodingEnginePage() {
       const solvedQuestionsCount = resultsArray.filter(([_, r]) => r.status === 'Solved').length;
       const scorePercentage = questions.length > 0 ? Math.round((solvedQuestionsCount / questions.length) * 100) : 0;
       
-      for (const [idxStr, res] of resultsArray) {
-        const idx = parseInt(idxStr);
-        const q = questions[idx];
-        
-        const executionTime = res.results?.length > 0 
-          ? Math.max(...res.results.map((r: any) => parseFloat(r.executionTime || 0))) 
-          : 0;
-        const memory = res.results?.length > 0 
-          ? Math.max(...res.results.map((r: any) => {
-              const m = parseInt(r.memory || 0);
-              return isNaN(m) ? 0 : m;
-            })) 
-          : 0;
-
-        await addDoc(collection(db, 'users', user.uid, 'coding_results'), {
-          interviewId: journey.sessionId || "unknown",
-          userId: user.uid,
-          questionId: q.id,
-          language: res.language,
-          score: res.status === 'Solved' ? 100 : Math.round((res.passedCount / res.totalCount) * 100),
-          passedTestCases: res.passedCount,
-          totalTestCases: res.totalTestCases ?? 0,
-          status: res.status,
-          submittedCode: res.code,
-          executionTime,
-          memory,
-          auditTrace: res.results || [],
-          completedAt: serverTimestamp(),
-        });
-      }
-
+      // Update global journey report
       await updateDoc(journeyRef!, {
         codingReport: { 
           score: scorePercentage, 
@@ -189,6 +160,37 @@ export default function CodingEnginePage() {
     }
   }, [currentIdx, questions.length, isNavigating, finalizeAssessment]);
 
+  const saveQuestionResult = async (idx: number, res: any) => {
+    if (!user || !db || !journey) return;
+    const q = questions[idx];
+    
+    const executionTime = res.results?.length > 0 
+      ? Math.max(...res.results.map((r: any) => parseFloat(r.executionTime || 0))) 
+      : 0;
+    const memory = res.results?.length > 0 
+      ? Math.max(...res.results.map((r: any) => {
+          const m = parseInt(r.memory || 0);
+          return isNaN(m) ? 0 : m;
+        })) 
+      : 0;
+
+    await addDoc(collection(db, 'users', user.uid, 'coding_results'), {
+      interviewId: journey.sessionId || "unknown",
+      userId: user.uid,
+      questionId: q.id,
+      language: res.language,
+      score: res.status === 'Solved' ? 100 : Math.round((res.passedCount / res.totalCount) * 100),
+      passedTestCases: res.passedCount,
+      totalTestCases: res.totalCount ?? 0,
+      status: res.status,
+      submittedCode: res.code,
+      executionTime,
+      memory,
+      auditTrace: res.results || [],
+      completedAt: serverTimestamp(),
+    });
+  };
+
   const handleRunCode = async () => {
     if (isRunning || isSubmitting || isTimeExpired || isNavigating) return;
     setIsRunning(true);
@@ -226,7 +228,7 @@ export default function CodingEnginePage() {
     setIsSubmitting(true);
     console.log("[CODING] Submit started for Node", currentIdx + 1);
     setActiveTerminalTab("cases");
-    setTerminalOutput("Connecting to Audit Matrix nodes...");
+    setTerminalOutput("Running Hidden Test Cases...");
     
     try {
       const response = await fetch('/api/execute', {
@@ -260,10 +262,23 @@ export default function CodingEnginePage() {
       console.log("[CODING] Hidden tests completed. Passed:", allPassed);
       setSessionResults(prev => ({ ...prev, [currentIdx]: submissionReport }));
       
+      // Persist result immediately as requested
+      await saveQuestionResult(currentIdx, submissionReport);
+
       if (allPassed) {
-        console.log("[CODING] Submission passed. Triggering automatic navigation.");
-        toast({ title: "Verification Success", description: "Algorithm verified. Moving to next question." });
-        await goToNextQuestion();
+        console.log("[CODING] Submission passed. Initiating countdown.");
+        setCountdown(3);
+        const timerId = setInterval(() => {
+          setCountdown(prev => {
+            if (prev === null || prev <= 1) {
+              clearInterval(timerId);
+              setCountdown(null);
+              goToNextQuestion();
+              return null;
+            }
+            return prev - 1;
+          });
+        }, 1000);
       } else {
         console.log("[CODING] Submission failed.");
         toast({ variant: "destructive", title: "Audit Fault", description: `Synchronized ${passed}/${total} nodes. Retry or skip.` });
@@ -271,6 +286,7 @@ export default function CodingEnginePage() {
     } catch (error: any) {
       console.error("[CODING] Submission Error:", error);
       setTerminalOutput("[CRITICAL FAULT] Matrix node connection lost.");
+      toast({ variant: "destructive", title: "Submission Error", description: "Failed to persist or verify algorithm." });
     } finally {
       setIsSubmitting(false);
     }
@@ -290,6 +306,7 @@ export default function CodingEnginePage() {
     };
 
     setSessionResults(prev => ({ ...prev, [currentIdx]: skipReport }));
+    await saveQuestionResult(currentIdx, skipReport);
     await goToNextQuestion();
   };
 
@@ -511,10 +528,12 @@ export default function CodingEnginePage() {
                 <p className="text-[10px] text-white/40 uppercase tracking-widest mt-1">Complete the algorithm logic. Verification is mandatory for progression.</p>
               </div>
             </div>
-            {isNavigating && (
+            {(isNavigating || countdown !== null) && (
               <div className="flex items-center gap-3 bg-accent/20 px-6 py-2 rounded-xl border border-accent/30 animate-pulse">
                 <Loader2 className="w-4 h-4 text-accent animate-spin" />
-                <span className="text-[9px] font-black text-accent uppercase tracking-widest">LOADING NEXT QUESTION...</span>
+                <span className="text-[9px] font-black text-accent uppercase tracking-widest">
+                  {countdown !== null ? `TRANSITIONING IN ${countdown}S...` : "LOADING NEXT QUESTION..."}
+                </span>
               </div>
             )}
           </Card>
@@ -550,7 +569,7 @@ export default function CodingEnginePage() {
               onChange={(val) => setCode(val || "")} 
               options={{ 
                 fontSize: 15, 
-                readOnly: isTimeExpired || isFinalizing ? true : false, 
+                readOnly: isTimeExpired || isFinalizing || countdown !== null ? true : false, 
                 minimap: { enabled: false },
                 fontFamily: 'JetBrains Mono, monospace',
                 lineHeight: 1.6
@@ -561,7 +580,7 @@ export default function CodingEnginePage() {
               <div className="flex items-center gap-6">
                 <Button 
                   onClick={handleRunCode} 
-                  disabled={isRunning || isSubmitting || isTimeExpired || isNavigating} 
+                  disabled={isRunning || isSubmitting || isTimeExpired || isNavigating || countdown !== null} 
                   className="h-12 px-8 glass border-white/10 bg-white/5 text-[10px] font-black uppercase tracking-widest rounded-xl hover:bg-white/10 transition-all"
                 >
                   {isRunning ? <Loader2 className="w-4 animate-spin mr-2" /> : <Activity className="w-4 h-4 mr-2" />} RUN SAMPLE
@@ -569,7 +588,7 @@ export default function CodingEnginePage() {
 
                 <Button 
                   onClick={handleSubmitCode} 
-                  disabled={isRunning || isSubmitting || isTimeExpired || isNavigating} 
+                  disabled={isRunning || isSubmitting || isTimeExpired || isNavigating || countdown !== null} 
                   className="h-12 px-12 btn-premium rounded-xl text-[10px] font-black uppercase tracking-[0.3em] shadow-2xl group"
                 >
                   {isSubmitting ? (
@@ -581,7 +600,7 @@ export default function CodingEnginePage() {
               </div>
 
               <div className="flex items-center gap-4">
-                {isCurrentFailed && (
+                {isCurrentFailed && countdown === null && (
                   <Button 
                     onClick={handleSkipQuestion} 
                     disabled={isNavigating || isSubmitting}
@@ -618,7 +637,9 @@ export default function CodingEnginePage() {
                                {currentResult.status === 'Solved' ? <Trophy className="w-5 h-5" /> : <XCircle className="w-5 h-5" />}
                             </div>
                             <div>
-                               <h4 className={cn("text-sm font-bold", currentResult.status === 'Solved' ? "text-green-400" : "text-red-400")}>{currentResult.status.toUpperCase()}</h4>
+                               <h4 className={cn("text-sm font-bold", currentResult.status === 'Solved' ? "text-green-400" : "text-red-400")}>
+                                {currentResult.status === 'Solved' ? "SUBMISSION ACCEPTED" : "SUBMISSION FAILED"}
+                               </h4>
                                <p className="text-[8px] font-black text-white/30 uppercase tracking-widest">Audit Nodes Passed: {currentResult.passedCount}/{currentResult.totalCount}</p>
                             </div>
                          </div>
@@ -631,10 +652,21 @@ export default function CodingEnginePage() {
                               <div className={cn("w-1.5 h-1.5 rounded-full", r.passed ? "bg-green-500" : "bg-red-500")} />
                               <span className="text-[9px] font-black text-white/40 uppercase tracking-widest">Audit Case #{i + 1}</span>
                             </div>
-                            <Badge variant="outline" className={cn("text-[7px] uppercase py-0", r.passed ? "text-green-400 border-green-500/20" : "text-red-400 border-red-500/20")}>{r.status}</Badge>
+                            <Badge variant="outline" className={cn("text-[7px] uppercase py-0", r.passed ? "text-green-400 border-green-500/20" : "text-red-400 border-red-500/20")}>
+                              {r.passed ? "PASSED" : "FAILED"}
+                            </Badge>
                           </div>
                         ))}
                       </div>
+
+                      {countdown !== null && (
+                        <div className="mt-8 p-6 glass rounded-2xl border-accent/20 bg-accent/5 flex items-center justify-center gap-4 animate-pulse">
+                          <Timer className="w-6 h-6 text-accent" />
+                          <p className="text-sm font-bold uppercase tracking-widest text-white">
+                            Next question in <span className="text-accent text-lg">{countdown}</span> seconds...
+                          </p>
+                        </div>
+                      )}
                     </div>
                   ) : (
                     <div className="h-full flex flex-col items-center justify-center text-center space-y-4 opacity-20">
