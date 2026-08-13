@@ -575,19 +575,19 @@ export default function CodingEnginePage() {
                     <><ShieldCheck className="w-4 h-4 mr-2 group-hover:scale-110 transition-transform" /> SUBMIT ANSWER</>
                   )}
                 </Button>
+
+                <Button 
+                  onClick={handleSkipQuestion} 
+                  disabled={isRunning || isSubmitting || isTimeExpired || isNavigating || countdown !== null}
+                  variant="ghost" 
+                  className="h-12 px-6 rounded-xl border border-white/10 text-white/40 text-[10px] font-black uppercase tracking-widest hover:bg-white/5 hover:text-white transition-all"
+                >
+                  <FastForward className="w-4 h-4 mr-2" /> SKIP QUESTION
+                </Button>
               </div>
 
               <div className="flex items-center gap-4">
-                {isCurrentFailed && countdown === null && (
-                  <Button 
-                    onClick={handleSkipQuestion} 
-                    disabled={isNavigating || isSubmitting}
-                    variant="ghost" 
-                    className="h-12 px-6 rounded-xl border border-red-500/20 text-red-400 text-[10px] font-black uppercase tracking-widest hover:bg-red-500/10"
-                  >
-                    <FastForward className="w-4 h-4 mr-2" /> SKIP QUESTION
-                  </Button>
-                )}
+                {/* Reserved for telemetry or system alerts */}
               </div>
             </div>
           </Card>
@@ -616,7 +616,7 @@ export default function CodingEnginePage() {
                             </div>
                             <div>
                                <h4 className={cn("text-sm font-bold", currentResult.status === 'Solved' ? "text-green-400" : "text-red-400")}>
-                                {currentResult.status === 'Solved' ? "SUBMISSION ACCEPTED" : "SUBMISSION FAILED"}
+                                {currentResult.status === 'Solved' ? "SUBMISSION ACCEPTED" : currentResult.status === 'Skipped' ? "QUESTION SKIPPED" : "SUBMISSION FAILED"}
                                </h4>
                                <p className="text-[8px] font-black text-white/30 uppercase tracking-widest">Audit Nodes Passed: {currentResult.passedCount}/{currentResult.totalCount}</p>
                             </div>
@@ -643,6 +643,19 @@ export default function CodingEnginePage() {
                           <p className="text-sm font-bold uppercase tracking-widest text-white">
                             Next question in <span className="text-accent text-lg">{countdown}</span> seconds...
                           </p>
+                        </div>
+                      )}
+
+                      {isCurrentFailed && countdown === null && (
+                        <div className="mt-8 flex flex-col items-center gap-4">
+                           <p className="text-[10px] text-red-400 font-bold uppercase tracking-widest">Protocol mismatch detected.</p>
+                           <Button 
+                             onClick={handleSkipQuestion}
+                             variant="outline"
+                             className="h-12 px-8 border-red-500/20 text-red-400 hover:bg-red-500/10 rounded-xl text-[10px] font-bold uppercase tracking-widest"
+                           >
+                             Skip This Question
+                           </Button>
                         </div>
                       )}
                     </div>
