@@ -511,7 +511,7 @@ export const MASTER_QUESTIONS: CodingQuestion[] = [
     estimatedTime: "20 mins",
     company: "Google",
     tags: ["Arrays", "Hash Map"],
-    inputFormat: "Line 1: N.\nLine 2: N integers.\nLine 3: T.",
+    inputFormat: "Line 1: N\nLine 2: N integers\nLine 3: T",
     outputFormat: "Two indices separated by space.",
     constraints: ["2 <= N <= 100000"],
     sampleInput: "4\n2 7 11 15\n9",
@@ -519,19 +519,19 @@ export const MASTER_QUESTIONS: CodingQuestion[] = [
     explanation: "2+7 = 9.",
     functionInfo: { name: "twoSum", params: "n, arr, t", returnType: "void", goal: "Find indices" },
     starterCode: {
-      python: `import sys\n\ndef two_sum(n, arr, t):\n    # TODO\n    pass\n\nif __name__ == "__main__":\n    data = sys.stdin.read().split()\n    if len(data) >= 3:\n        n = int(data[0]); arr = [int(x) for x in data[1:n+1]]; t = int(data[n+1]); two_sum(n, arr, t)`,
-      java: `import java.util.*;\n\npublic class Main {\n    public static void twoSum(int n, int[] arr, int t) {\n        // TODO\n    }\n\n    public static void main(String[] args) {\n        Scanner sc = new Scanner(System.in);\n        if (sc.hasNextInt()) {\n            int n = sc.nextInt(); int[] arr = new int[n]; for (int i = 0; i < n; i++) arr[i] = sc.nextInt();\n            if (sc.hasNextInt()) { int t = sc.nextInt(); twoSum(n, arr, t); }\n        }\n    }\n}`,
-      cpp: `#include <iostream>\n#include <vector>\n#include <unordered_map>\n\nusing namespace std;\n\nvoid twoSum(int n, const vector<int>& arr, int t) {\n    unordered_map<int, int> m;\n    for(int i=0; i<n; i++) {\n        int d = t - arr[i];\n        if(m.count(d)) {\n            cout << m[d] << " " << i << endl;\n            return;\n        }\n        m[arr[i]] = i;\n    }\n}\n\nint main() {\n    int n, t;\n    if (cin >> n) {\n        vector<int> arr(n); for (int i = 0; i < n; i++) cin >> arr[i];\n        if (cin >> t) twoSum(n, arr, t);\n    }\n    return 0;\n}`,
-      javascript: `const fs = require('fs');\n\nfunction twoSum(n, arr, t) {\n    // TODO\n}\n\nconst input = fs.readFileSync(0, 'utf8').split(/\\s+/);\nif (input.length >= 3) {\n    const n = parseInt(input[0]); const arr = input.slice(1, n + 1).map(Number); const t = parseInt(input[n + 1]); twoSum(n, arr, t);\n}`,
-      typescript: `const fs = require('fs');\n\nfunction twoSum(n: number, arr: number[], t: number): void {\n    // TODO\n}\n\nconst input = fs.readFileSync(0, 'utf8').split(/\\s+/);\nif (input.length >= 3) {\n    const n = parseInt(input[0]); const arr = input.slice(1, n + 1).map(Number); const t = parseInt(input[n + 1]); twoSum(n, arr, t);\n}`,
-      c: `#include <stdio.h>\n\nvoid twoSum(int n, int* arr, int t) {\n    for(int i=0; i<n; i++) {\n        for(int j=i+1; j<n; j++) {\n            if(arr[i] + arr[j] == t) {\n                printf("%d %d\\n", i, j);\n                return;\n            }\n        }\n    }\n}\n\nint main() {\n    int n, t;\n    if (scanf("%d", &n) != EOF) {\n        int arr[100001];\n        for (int i = 0; i < n; i++) scanf("%d", &arr[i]);\n        if (scanf("%d", &t) != EOF) twoSum(n, arr, t);\n    }\n    return 0;\n}`,
-      csharp: `using System; using System.Linq; using System.Collections.Generic;\n\nclass Program {\n    static void TwoSum(int n, int[] arr, int t) {\n        // TODO\n    }\n\n    static void Main() {\n        string l = Console.ReadLine(); if (l == null) return;\n        int n = int.Parse(l); int[] arr = Console.ReadLine().Split(new[]{' '}, StringSplitOptions.RemoveEmptyEntries).Select(int.Parse).ToArray();\n        int t = int.Parse(Console.ReadLine()); TwoSum(n, arr, t);\n    }\n}`,
-      go: `package main\n\nimport "fmt"\n\nfunc twoSum(n int, arr []int, t int) {\n    // TODO\n}\n\nfunc main() {\n    var n, t int; fmt.Scan(&n)\n    arr := make([]int, n); for i := 0; i < n; i++ { fmt.Scan(&arr[i]) }\n    fmt.Scan(&t); twoSum(n, arr, t)\n}`,
-      rust: `use std::io::{self, Read};\nuse std::collections::HashMap;\n\nfn two_sum(n: usize, arr: Vec<i32>, t: i32) {\n    // TODO\n}\n\nfn main() {\n    let mut input = String::new();\n    if io::stdin().read_to_string(&mut input).is_ok() {\n        let mut words = input.split_whitespace();\n        if let Some(n_str) = words.next() {\n            let n: usize = n_str.parse().unwrap(); let mut arr = Vec::new();\n            for _ in 0..n { arr.push(words.next().unwrap().parse().unwrap()); }\n            if let Some(t_str) = words.next() { two_sum(n, arr, t_str.parse().unwrap()); }\n        }\n    }\n}`,
-      kotlin: `import java.util.*;\n\nfun twoSum(n: Int, arr: IntArray, t: Int) {\n    // TODO\n}\n\nfun main(args: Array<String>) {\n    val sc = Scanner(System.\`in\`)\n    if (sc.hasNextInt()) {\n        val n = sc.nextInt(); val arr = IntArray(n); for (i in 0 until n) arr[i] = sc.nextInt()\n        if (sc.hasNextInt()) { val t = sc.nextInt(); twoSum(n, arr, t) }\n    }\n}`,
-      php: `<?php\n\nfunction twoSum($n, $arr, $t) {\n    // TODO\n}\n\n$input = preg_split('/\\s+/', file_get_contents("php://stdin"));\nif (count($input) >= 3) {\n    $n = (int)$input[0]; $arr = array_map('intval', array_slice($input, 1, $n)); $t = (int)$input[$n + 1]; twoSum($n, $arr, $t);\n}\n?>`,
-      swift: `import Foundation\n\nfunc twoSum(_ n: Int, _ arr: [Int], _ t: Int) {\n    // TODO\n}\n\nif let line1 = readLine(), let n = Int(line1) {\n    if let line2 = readLine() {\n        let arr = line2.split(separator: " ").compactMap { Int($0) }\n        if let line3 = readLine(), let t = Int(line3) { twoSum(n, arr, t) }\n    }\n}`,
-      ruby: `def two_sum(n, arr, t)\n    # TODO\nend\n\nn_line = gets\nif n_line\n    n = n_line.to_i; arr = gets.split.map(&:to_i); t = gets.to_i; two_sum(n, arr, t)\nend`
+      python: `import sys\n\ndef two_sum(n, arr, t):\n    # TODO: Implement two-sum logic\n    pass\n\nif __name__ == "__main__":\n    data = sys.stdin.read().split()\n    if len(data) >= 3:\n        n = int(data[0])\n        arr = [int(x) for x in data[1:n+1]]\n        t = int(data[n+1])\n        two_sum(n, arr, t)`,
+      java: `import java.util.*;\n\npublic class Main {\n    public static void twoSum(int n, int[] arr, int t) {\n        // TODO: Implement logic and print i + " " + j\n    }\n\n    public static void main(String[] args) {\n        Scanner sc = new Scanner(System.in);\n        if (sc.hasNextInt()) {\n            int n = sc.nextInt();\n            int[] arr = new int[n];\n            for (int i = 0; i < n; i++) arr[i] = sc.nextInt();\n            int t = sc.nextInt();\n            twoSum(n, arr, t);\n        }\n    }\n}`,
+      cpp: `#include <iostream>\n#include <vector>\n#include <unordered_map>\n\nusing namespace std;\n\nvoid twoSum(int n, vector<int>& arr, int t) {\n    // TODO: Implement logic and print i << " " << j\n}\n\nint main() {\n    int n, t;\n    if (cin >> n) {\n        vector<int> arr(n);\n        for (int i = 0; i < n; i++) cin >> arr[i];\n        cin >> t;\n        twoSum(n, arr, t);\n    }\n    return 0;\n}`,
+      javascript: `const fs = require('fs');\n\nfunction twoSum(n, arr, t) {\n    // TODO: Implement logic and console.log(i + " " + j)\n}\n\nconst input = fs.readFileSync(0, 'utf8').trim().split(/\\s+/);\nif (input.length >= 3) {\n    const n = parseInt(input[0]);\n    const arr = input.slice(1, n + 1).map(Number);\n    const t = parseInt(input[n + 1]);\n    twoSum(n, arr, t);\n}`,
+      typescript: `const fs = require('fs');\n\nfunction twoSum(n: number, arr: number[], t: number): void {\n    // TODO\n}\n\nconst input = fs.readFileSync(0, 'utf8').trim().split(/\\s+/);\nif (input.length >= 3) {\n    const n = parseInt(input[0]);\n    const arr = input.slice(1, n + 1).map(Number);\n    const t = parseInt(input[n + 1]);\n    twoSum(n, arr, t);\n}`,
+      c: `#include <stdio.h>\n\nvoid twoSum(int n, int* arr, int t) {\n    // TODO: Print i and j\n}\n\nint main() {\n    int n, t;\n    if (scanf("%d", &n) != EOF) {\n        int arr[100005];\n        for (int i = 0; i < n; i++) scanf("%d", &arr[i]);\n        scanf("%d", &t);\n        twoSum(n, arr, t);\n    }\n    return 0;\n}`,
+      csharp: `using System;\nusing System.Linq;\nusing System.Collections.Generic;\n\nclass Program {\n    static void TwoSum(int n, int[] arr, int t) {\n        // TODO: Console.WriteLine(i + " " + j)\n    }\n\n    static void Main() {\n        string l = Console.ReadLine();\n        if (l != null) {\n            int n = int.Parse(l);\n            int[] arr = Console.ReadLine().Split(new[]{' '}, StringSplitOptions.RemoveEmptyEntries).Select(int.Parse).ToArray();\n            int t = int.Parse(Console.ReadLine());\n            TwoSum(n, arr, t);\n        }\n    }\n}`,
+      go: `package main\n\nimport "fmt"\n\nfunc twoSum(n int, arr []int, t int) {\n    // TODO\n}\n\nfunc main() {\n    var n, t int\n    fmt.Scan(&n)\n    arr := make([]int, n)\n    for i := 0; i < n; i++ { fmt.Scan(&arr[i]) }\n    fmt.Scan(&t)\n    twoSum(n, arr, t)\n}`,
+      rust: `use std::io::{self, Read};\nuse std::collections::HashMap;\n\nfn two_sum(n: usize, arr: Vec<i32>, t: i32) {\n    // TODO\n}\n\nfn main() {\n    let mut input = String::new();\n    io::stdin().read_to_string(&mut input).unwrap();\n    let mut words = input.split_whitespace();\n    if let Some(n_str) = words.next() {\n        let n: usize = n_str.parse().unwrap();\n        let mut arr = Vec::with_capacity(n);\n        for _ in 0..n { arr.push(words.next().unwrap().parse().unwrap()); }\n        let t: i32 = words.next().unwrap().parse().unwrap();\n        two_sum(n, arr, t);\n    }\n}`,
+      kotlin: `import java.util.Scanner\n\nfun twoSum(n: Int, arr: IntArray, t: Int) {\n    // TODO\n}\n\nfun main(args: Array<String>) {\n    val sc = Scanner(System.\`in\`)\n    if (sc.hasNextInt()) {\n        val n = sc.nextInt()\n        val arr = IntArray(n)\n        for (i in 0 until n) arr[i] = sc.nextInt()\n        val t = sc.nextInt()\n        twoSum(n, arr, t)\n    }\n}`,
+      php: `<?php\n\nfunction twoSum($n, $arr, $t) {\n    // TODO\n}\n\n$input = file_get_contents("php://stdin");\n$data = preg_split('/\\s+/', trim($input));\nif (count($data) >= 3) {\n    $n = (int)$data[0];\n    $arr = array_map('intval', array_slice($data, 1, $n));\n    $t = (int)$data[$n + 1];\n    twoSum($n, $arr, $t);\n}\n?>`,
+      swift: `import Foundation\n\nfunc twoSum(n: Int, arr: [Int], t: Int) {\n    // TODO\n}\n\nlet input = FileHandle.standardInput.readDataToEndOfFile()\nif let str = String(data: input, encoding: .utf8) {\n    let words = str.components(separatedBy: .whitespacesAndNewlines).filter { !$0.isEmpty }\n    if words.count >= 3 {\n        let n = Int(words[0])!\n        let arr = words[1...n].compactMap { Int($0) }\n        let t = Int(words[n+1])!\n        twoSum(n: n, arr: arr, t: t)\n    }\n}`,
+      ruby: `def two_sum(n, arr, t)\n    # TODO\nend\n\ninput = ARGF.read.split\nif input.length >= 3\n    n = input[0].to_i\n    arr = input[1..n].map(&:to_i)\n    t = input[n+1].to_i\n    two_sum(n, arr, t)\nend`
     },
     hiddenTestCases: [
       { input: "2\n1 2\n3", output: "0 1" },
@@ -713,7 +713,7 @@ export const MASTER_QUESTIONS: CodingQuestion[] = [
       go: `package main\n\nimport ("fmt")\n\nfunc main() {\n    // TODO\n}`,
       rust: `use std::io::{self, Read};\n\nfn main() {\n    // TODO\n}`,
       kotlin: `import java.util.Scanner\n\nfun main(args: Array<String>) {\n    val sc = Scanner(System.\`in\`)\n    // TODO\n}`,
-      php: `<?php\n\nfunction mergeArrays($n1, $a1, $n2, $a2) {\n    // TODO\n    return [];\n}\n\n$input = preg_split('/\\s+/', file_get_contents("php://stdin"));\nif (count($input) >= 4) {\n    $n1 = (int)$input[0]; $a1 = array_map('intval', array_slice($input, 1, $n1));\n    $n2 = (int)$input[$n1 + 1]; $a2 = array_map('intval', array_slice($input, $n1 + 2, $n2));\n    echo implode(' ', mergeArrays($n1, $a1, $n2, $a2));\n}\n?>`,
+      php: `<?php\n\nfunction mergeArrays($n1, $a1, $n2, $a2) {\n    // TODO\n    return [];\n}\n\n$input = preg_split('/\\s+/', file_get_contents("php://stdin"));\nif (count($input) >= 4) {\n    $n1 = (int)$input[0]; $a1 = array_map('intval', array_slice($data, 1, $n1));\n    $n2 = (int)$input[$n1 + 1]; $a2 = array_map('intval', array_slice($input, $n1 + 2, $n2));\n    echo implode(' ', mergeArrays($n1, $a1, $n2, $a2));\n}\n?>`,
       swift: `import Foundation\n\n// TODO`,
       ruby: `def merge_arrays(n1, a1, n2, a2)\n    # TODO\nend\n\n# TODO`
     },
@@ -759,7 +759,7 @@ export const MASTER_QUESTIONS: CodingQuestion[] = [
       go: `package main\n\nimport "fmt"\n\nfunc binarySearch(n int, arr []int, t int) int {\n    // TODO\n    return -1\n}\n\nfunc main() {\n    // TODO\n}`,
       rust: `use std::io::{self, Read};\n\nfn binary_search(n: usize, arr: Vec<i32>, t: i32) -> i32 {\n    // TODO\n    -1\n}\n\nfn main() {\n    // TODO\n}`,
       kotlin: `import java.util.Scanner\n\nfun binarySearch(n: Int, arr: IntArray, t: Int): Int {\n    // TODO\n    return -1\n}\n\nfun main(args: Array<String>) {\n    val sc = Scanner(System.\`in\`)\n    // TODO\n}`,
-      php: `<?php\n\nfunction binarySearch($n, $arr, $t) {\n    // TODO\n    return -1;\n}\n\n$input = preg_split('/\\s+/', file_get_contents("php://stdin"));\nif (count($input) >= 3) {\n    $n = (int)$input[0]; $arr = array_map('intval', array_slice($input, 1, $n));\n    $t = (int)$input[$n + 1]; echo binarySearch($n, $arr, $t);\n}\n?>`,
+      php: `<?php\n\nfunction binarySearch($n, $arr, $t) {\n    // TODO\n    return -1;\n}\n\n$input = preg_split('/\\s+/', file_get_contents("php://stdin"));\nif (count($input) >= 3) {\n    $n = (int)$input[0]; $arr = array_map('intval', array_slice($data, 1, $n));\n    $t = (int)$input[$n + 1]; echo binarySearch($n, $arr, $t);\n}\n?>`,
       swift: `import Foundation\n\n// TODO`,
       ruby: `def binary_search(n, arr, t)\n    # TODO\n    -1\nend\n\n# TODO`
     },
@@ -805,7 +805,7 @@ export const MASTER_QUESTIONS: CodingQuestion[] = [
       go: `package main\n\nimport "fmt"\n\nfunc maxSumK(n int, k int, arr []int) int64 {\n    // TODO\n    return 0\n}\n\nfunc main() {\n    // TODO\n}`,
       rust: `use std::io::{self, Read};\n\nfn max_sum_k(n: usize, k: usize, arr: Vec<i32>) -> i64 {\n    // TODO\n    0\n}\n\nfn main() {\n    // TODO\n}`,
       kotlin: `import java.util.Scanner\n\nfun maxSumK(n: Int, k: Int, arr: IntArray): Long {\n    // TODO\n    return 0L\n}\n\nfun main(args: Array<String>) {\n    // TODO\n}`,
-      php: `<?php\n\nfunction maxSumK($n, $k, $arr) {\n    // TODO\n    return 0;\n}\n\n$input = preg_split('/\\s+/', file_get_contents("php://stdin"));\nif (count($input) >= 3) {\n    $n = (int)$input[0]; $k = (int)$input[1];\n    $arr = array_map('intval', array_slice($input, 2, $n)); echo maxSumK($n, $k, $arr);\n}\n?>`,
+      php: `<?php\n\nfunction maxSumK($n, $k, $arr) {\n    // TODO\n    return 0;\n}\n\n$input = preg_split('/\\s+/', file_get_contents("php://stdin"));\nif (count($input) >= 3) {\n    $n = (int)$input[0]; $k = (int)$input[1];\n    $arr = array_map('intval', array_slice($data, 2, $n)); echo maxSumK($n, $k, $arr);\n}\n?>`,
       swift: `import Foundation\n\n// TODO`,
       ruby: `def max_sum_k(n, k, arr)\n    # TODO\n    0\nend\n\n# TODO`
     },
@@ -851,7 +851,7 @@ export const MASTER_QUESTIONS: CodingQuestion[] = [
       go: `package main\n\nimport "fmt"\n\nfunc findEquilibrium(n int, arr []int) int {\n    // TODO\n    return -1\n}\n\nfunc main() {\n    // TODO\n}`,
       rust: `use std::io::{self, Read};\n\nfn find_equilibrium(n: usize, arr: Vec<i32>) -> i32 {\n    // TODO\n    -1\n}\n\nfn main() {\n    // TODO\n}`,
       kotlin: `import java.util.Scanner\n\nfun findEquilibrium(n: Int, arr: IntArray): Int {\n    // TODO\n    return -1\n}\n\nfun main(args: Array<String>) {\n    val sc = Scanner(System.\`in\`)\n    if (sc.hasNextInt()) {\n        val n = sc.nextInt()\n        val arr = IntArray(n)\n        for (i in 0 until n) arr[i] = sc.nextInt()\n        println(findEquilibrium(n, arr))\n    }\n}`,
-      php: `<?php\n\nfunction findEquilibrium($n, $arr) {\n    // TODO\n    return -1;\n}\n\n$input = preg_split('/\\s+/', file_get_contents("php://stdin"));\nif (count($input) >= 2) {\n    $n = (int)$input[0]; $arr = array_map('intval', array_slice($input, 1, $n));\n    echo findEquilibrium($n, $arr);\n}\n?>`,
+      php: `<?php\n\nfunction findEquilibrium($n, $arr) {\n    // TODO\n    return -1;\n}\n\n$input = preg_split('/\\s+/', file_get_contents("php://stdin"));\nif (count($input) >= 2) {\n    $n = (int)$input[0]; $arr = array_map('intval', array_slice($data, 1, $n));\n    echo findEquilibrium($n, $arr);\n}\n?>`,
       swift: `import Foundation\n\n// TODO`,
       ruby: `def find_equilibrium(n, arr)\n    # TODO\n    -1\nend\n\n# TODO`
     },
@@ -897,7 +897,7 @@ export const MASTER_QUESTIONS: CodingQuestion[] = [
       go: `package main\n\nimport "fmt"\n\nfunc rotate(n int, k int, arr []int) {\n    // TODO\n}\n\nfunc main() {\n    // TODO\n}`,
       rust: `use std::io::{self, Read};\n\nfn rotate(n: usize, k: usize, arr: &mut [i32]) {\n    // TODO\n}\n\nfn main() {\n    // TODO\n}`,
       kotlin: `import java.util.Scanner\n\nfun rotate(n: Int, k: Int, arr: IntArray) {\n    // TODO\n}\n\nfun main(args: Array<String>) {\n    val sc = Scanner(System.\`in\`)\n    // TODO\n}`,
-      php: `<?php\n\nfunction rotate($n, $k, &$arr) {\n    // TODO\n}\n\n$input = preg_split('/\\s+/', file_get_contents("php://stdin"));\nif (count($input) >= 3) {\n    $n = (int)$input[0]; $k = (int)$input[1];\n    $arr = array_map('intval', array_slice($input, 2, $n)); rotate($n, $k, $arr);\n    echo implode(' ', $arr);\n}\n?>`,
+      php: `<?php\n\nfunction rotate($n, $k, &$arr) {\n    // TODO\n    return false;\n}\n\n$input = preg_split('/\\s+/', file_get_contents("php://stdin"));\nif (count($input) >= 3) {\n    $n = (int)$input[0]; $k = (int)$input[1];\n    $arr = array_map('intval', array_slice($data, 2, $n)); rotate($n, $k, $arr);\n    echo implode(' ', $arr);\n}\n?>`,
       swift: `import Foundation\n\n// TODO`,
       ruby: `def rotate(n, k, arr)\n    # TODO\nend\n\n# TODO`
     },
@@ -1034,7 +1034,7 @@ export const MASTER_QUESTIONS: CodingQuestion[] = [
       cpp: `#include <iostream>\n#include <vector>\n#include <algorithm>\nusing namespace std;\nint main() {\n    int n; if(cin >> n) {\n        vector<pair<int, int>> a(n);\n        for(int i=0; i<n; i++) cin >> a[i].first >> a[i].second;\n        sort(a.begin(), a.end());\n        vector<pair<int, int>> res;\n        pair<int, int> cur = a[0];\n        for(int i=1; i<n; i++) {\n            if(a[i].first <= cur.second) cur.second = max(cur.second, a[i].second);\n            else { res.push_back(cur); cur = a[i]; }\n        }\n        res.push_back(cur);\n        for(auto& r : res) cout << r.first << " " << r.second << endl;\n    }\n    return 0;\n}`,
       javascript: `const fs = require('fs');\n\nfunction mergeIntervals(n, intervals) {\n    // TODO\n}\n\nconst input = fs.readFileSync(0, 'utf8').split(/\\s+/);\nif (input.length >= 1) {\n    const n = parseInt(input[0]); const intervals = [];\n    for (let i = 0; i < n; i++) intervals.push([parseInt(input[2*i+1]), parseInt(input[2*i+2])]);\n    const res = mergeIntervals(n, intervals);\n    res.forEach(r => console.log(r[0] + ' ' + r[1]));\n}`,
       typescript: `const fs = require('fs');\n\nfunction mergeIntervals(n: number, intervals: number[][]): number[][] {\n    // TODO\n    return [];\n}\n\nconst input = fs.readFileSync(0, 'utf8').split(/\\s+/);\nif (input.length >= 1) {\n    const n = parseInt(input[0]); const intervals: number[][] = [];\n    for (let i = 0; i < n; i++) intervals.push([parseInt(input[2*i+1]), parseInt(input[2*i+2])]);\n    const res = mergeIntervals(n, intervals);\n    res.forEach(r => console.log(r[0] + ' ' + r[1]));\n}`,
-      c: `#include <stdio.h>\n#include <stdlib.h>\n\n// TODO\n\nint main() {\n    int n; if(scanf("%d", &n) != EOF) {\n        // TODO\n    }\n    return 0;\n}`,
+      c: `#include <stdio.h>\n#include <stdlib.h>\n\n// TODO\n\nint main() { return 0; }`,
       csharp: `using System; using System.Collections.Generic; using System.Linq;\n\nclass Program {\n    static void Main() {\n        // TODO\n    }\n}`,
       go: `package main\n\nimport ("fmt"; "sort")\n\nfunc main() {\n    // TODO\n}`,
       rust: `use std::io::{self, Read};\n\nfn main() {\n    // TODO\n}`,
@@ -1080,12 +1080,12 @@ export const MASTER_QUESTIONS: CodingQuestion[] = [
       cpp: `#include <iostream>\n#include <vector>\n#include <unordered_map>\n#include <algorithm>\nusing namespace std;\nint main() {\n    int n, k; if(cin >> n >> k) {\n        unordered_map<int, int> m;\n        for(int i=0, x; i<n; i++) { cin >> x; m[x]++; }\n        vector<pair<int, int>> v;\n        for(auto& p : m) v.push_back({p.second, p.first});\n        sort(v.begin(), v.end(), [](auto& a, auto& b) {\n            if(a.first != b.first) return a.first > b.first;\n            return a.second < b.second;\n        });\n        for(int i=0; i<k; i++) cout << v[i].second << (i==k-1?"":" ");\n        cout << endl;\n    }\n    return 0;\n}`,
       javascript: `const fs = require('fs');\n\nfunction topK(n, k, arr) {\n    // TODO\n}\n\nconst input = fs.readFileSync(0, 'utf8').split(/\\s+/);\nif (input.length >= 2) {\n    const n = parseInt(input[0]); const k = parseInt(input[1]);\n    const arr = input.slice(2, n + 2).map(Number); topK(n, k, arr);\n}`,
       typescript: `const fs = require('fs');\n\nfunction topK(n: number, k: number, arr: number[]): void {\n    // TODO\n    return ;\n}\n\nconst input = fs.readFileSync(0, 'utf8').split(/\\s+/);\nif (input.length >= 2) {\n    const n = parseInt(input[0]); const k = parseInt(input[1]);\n    const arr = input.slice(2, n + 2).map(Number); topK(n, k, arr);\n}`,
-      c: `#include <stdio.h>\n#include <stdlib.h>\n\n// TODO\n\nint main() {\n    // TODO\n    return 0;\n}`,
+      c: `#include <stdio.h>\n#include <stdlib.h>\n\n// TODO\n\nint main() { return 0; }`,
       csharp: `using System; using System.Collections.Generic; using System.Linq;\n\nclass Program {\n    static void Main() {\n        // TODO\n    }\n}`,
       go: `package main\n\nimport ("fmt"; "sort")\n\nfunc main() {\n    // TODO\n}`,
       rust: `use std::io::{self, Read};\nuse std::collections::HashMap;\n\nfn main() {\n    // TODO\n}`,
       kotlin: `import java.util.*\n\nfun main(args: Array<String>) {\n    val sc = Scanner(System.\`in\`)\n    // TODO\n}`,
-      php: `<?php\n\nfunction topK($n, $k, $arr) {\n    // TODO\n}\n\n$input = preg_split('/\\s+/', file_get_contents("php://stdin"));\nif (count($input) >= 2) {\n    $n = (int)$input[0]; $k = (int)$input[1];\n    $arr = array_map('intval', array_slice($input, 2, $n)); topK($n, $k, $arr);\n}\n?>`,
+      php: `<?php\n\nfunction topK($n, $k, $arr) {\n    // TODO\n}\n\n$input = preg_split('/\\s+/', file_get_contents("php://stdin"));\nif (count($input) >= 2) {\n    $n = (int)$input[0]; $k = (int)$input[1];\n    $arr = array_map('intval', array_slice($data, 2, $n)); topK($n, $k, $arr);\n}\n?>`,
       swift: `import Foundation\n\n// TODO`,
       ruby: `def top_k(n, k, arr)\n    # TODO\nend\n\n# TODO`
     },
@@ -1177,7 +1177,7 @@ export const MASTER_QUESTIONS: CodingQuestion[] = [
       go: `package main\n\nimport ("fmt")\n\nfunc main() {\n    // TODO\n}`,
       rust: `use std::io::{self, Read};\n\nfn main() {\n    // TODO\n}`,
       kotlin: `import java.util.*\n\nfun main(args: Array<String>) {\n    val sc = Scanner(System.\`in\`)\n    // TODO\n}`,
-      php: `<?php\n\nfunction longestConsecutive($n, $arr) {\n    // TODO\n    return 0;\n}\n\n$input = preg_split('/\\s+/', file_get_contents("php://stdin"));\nif (count($input) >= 2) {\n    $n = (int)$input[0]; $arr = array_map('intval', array_slice($input, 1, $n));\n    echo longestConsecutive($n, $arr);\n}\n?>`,
+      php: `<?php\n\nfunction longestConsecutive($n, $arr) {\n    // TODO\n    return 0;\n}\n\n$input = preg_split('/\\s+/', file_get_contents("php://stdin"));\nif (count($input) >= 2) {\n    $n = (int)$input[0]; $arr = array_map('intval', array_slice($data, 1, $n));\n    echo longestConsecutive($n, $arr);\n}\n?>`,
       swift: `import Foundation\n\n// TODO`,
       ruby: `def longest_consecutive(n, arr)\n    # TODO\n    0\nend\n\n# TODO`
     },
@@ -1223,7 +1223,7 @@ export const MASTER_QUESTIONS: CodingQuestion[] = [
       go: `package main\n\nimport ("fmt")\n\nfunc main() {\n    // TODO\n}`,
       rust: `use std::io::{self, Read};\n\nfn main() {\n    // TODO\n}`,
       kotlin: `import java.util.*\n\nfun main(args: Array<String>) {\n    val sc = Scanner(System.\`in\`)\n    // TODO\n}`,
-      php: `<?php\n\nfunction hasPath($n, $grid) {\n    // TODO\n    return false;\n}\n\n$input = preg_split('/\\s+/', file_get_contents("php://stdin"));\nif (count($input) >= 1) {\n    $n = (int)$input[0]; $grid = [];\n    for ($i = 0; $i < $n; $i++) $grid[] = array_map('intval', array_slice($input, 1 + $i*$n, $n));\n    echo hasPath($n, $grid) ? "YES" : "NO";\n}\n?>`,
+      php: `<?php\n\nfunction hasPath($n, $grid) {\n    // TODO\n    return false;\n}\n\n$input = preg_split('/\\s+/', file_get_contents("php://stdin"));\nif (count($input) >= 1) {\n    $n = (int)$input[0]; $grid = [];\n    for ($i = 0; $i < $n; $i++) $grid[] = array_map('intval', array_slice($data, 1 + $i*$n, $n));\n    echo hasPath($n, $grid) ? "YES" : "NO";\n}\n?>`,
       swift: `import Foundation\n\n// TODO`,
       ruby: `def has_path(n, grid)\n    # TODO\n    false\nend\n\n# TODO`
     },
@@ -1266,10 +1266,10 @@ export const MASTER_QUESTIONS: CodingQuestion[] = [
       typescript: `const fs = require('fs');\n\nfunction shortestPath(n: number, grid: number[][]): number {\n    // TODO\n    return -1;\n}\n\nconst input = fs.readFileSync(0, 'utf8').split(/\\s+/);\nif (input.length >= 1) {\n    const n = parseInt(input[0]); const grid: number[][] = [];\n    for (let i = 0; i < n; i++) grid.push(input.slice(1 + i*n, 1 + (i+1)*n).map(Number));\n    console.log(shortestPath(n, grid));\n}`,
       c: `#include <stdio.h>\n\n// TODO\n\nint main() { return 0; }`,
       csharp: `using System; using System.Collections.Generic; using System.Linq;\n\nclass Program {\n    static int ShortestPath(int n, int[][] grid) {\n        // TODO\n        return -1;\n    }\n    static void Main() {\n        // TODO\n    }\n}`,
-      go: `package main\n\nimport ("fmt")\n\nfunc main() {\n    // TODO\n}`,
+      go: `package main\n\nimport "fmt"\n\nfunc main() {\n    // TODO\n}`,
       rust: `use std::io::{self, Read};\n\nfn main() {\n    // TODO\n}`,
       kotlin: `import java.util.*\n\nfun main(args: Array<String>) {\n    val sc = Scanner(System.\`in\`)\n    // TODO\n}`,
-      php: `<?php\n\nfunction shortestPath($n, $grid) {\n    // TODO\n    return -1;\n}\n\n$input = preg_split('/\\s+/', file_get_contents("php://stdin"));\nif (count($input) >= 1) {\n    $n = (int)$input[0]; $grid = [];\n    for ($i = 0; $i < $n; $i++) $grid[] = array_map('intval', array_slice($input, 1 + $i*$n, $n));\n    echo shortestPath($n, $grid) ? "YES" : "NO";\n}\n?>`,
+      php: `<?php\n\nfunction shortestPath($n, $grid) {\n    // TODO\n    return -1;\n}\n\n$input = preg_split('/\\s+/', file_get_contents("php://stdin"));\nif (count($input) >= 1) {\n    $n = (int)$input[0]; $grid = [];\n    for ($i = 0; $i < $n; $i++) $grid[] = array_map('intval', array_slice($data, 1 + $i*$n, $n));\n    echo shortestPath($n, $grid) ? "YES" : "NO";\n}\n?>`,
       swift: `import Foundation\n\n// TODO`,
       ruby: `def shortest_path(n, grid)\n    # TODO\n    -1\nend\n\n# TODO`
     },
@@ -1312,7 +1312,7 @@ export const MASTER_QUESTIONS: CodingQuestion[] = [
       typescript: `const fs = require('fs');\n\nfunction lcs(s: string, t: string): number {\n    // TODO\n    return 0;\n}\n\nconst lines = fs.readFileSync(0, 'utf8').split('\\n');\nif (lines.length >= 2) console.log(lcs(lines[0].trim(), lines[1].trim()));`,
       c: `#include <stdio.h>\n#include <string.h>\n\n// TODO\n\nint main() { return 0; }`,
       csharp: `using System; using System.Collections.Generic; using System.Linq;\n\nclass Program {\n    static int Lcs(string s1, string s2) {\n        // TODO\n        return 0;\n    }\n    static void Main() {\n        // TODO\n    }\n}`,
-      go: `package main\n\nimport ("fmt")\n\nfunc main() {\n    // TODO\n}`,
+      go: `package main\n\nimport "fmt"\n\nfunc main() {\n    // TODO\n}`,
       rust: `use std::io::{self, BufRead};\n\nfn main() {\n    // TODO\n}`,
       kotlin: `import java.util.*\n\nfun main(args: Array<String>) {\n    val sc = Scanner(System.\`in\`)\n    // TODO\n}`,
       php: `<?php\n\nfunction lcs($s1, $s2) {\n    // TODO\n    return 0;\n}\n\n$lines = explode("\\n", trim(file_get_contents("php://stdin")));\nif (count($lines) >= 2) echo lcs(trim($lines[0]), trim($lines[1]));\n?>`,
@@ -1358,10 +1358,10 @@ export const MASTER_QUESTIONS: CodingQuestion[] = [
       typescript: `const fs = require('fs');\n\nfunction coinChange(n: number, t: number, coins: number[]): number {\n    // TODO\n    return -1;\n}\n\nconst input = fs.readFileSync(0, 'utf8').split(/\\s+/);\nif (input.length >= 2) {\n    const n = parseInt(input[0]); const t = parseInt(input[1]);\n    const coins = input.slice(2, n+2).map(Number);\n    console.log(coinChange(n, t, coins));\n}`,
       c: `#include <stdio.h>\n#include <string.h>\n\n// TODO\n\nint main() { return 0; }`,
       csharp: `using System; using System.Collections.Generic; using System.Linq;\n\nclass Program {\n    static int CoinChange(int n, int t, int[] coins) {\n        // TODO\n        return -1;\n    }\n    static void Main() {\n        // TODO\n    }\n}`,
-      go: `package main\n\nimport ("fmt")\n\nfunc main() {\n    // TODO\n}`,
+      go: `package main\n\nimport "fmt"\n\nfunc main() {\n    // TODO\n}`,
       rust: `use std::io::{self, Read};\n\nfn main() {\n    // TODO\n}`,
       kotlin: `import java.util.*\n\nfun main(args: Array<String>) {\n    val sc = Scanner(System.\`in\`)\n    // TODO\n}`,
-      php: `<?php\n\nfunction coinChange($n, $t, $coins) {\n    // TODO\n    return -1;\n}\n\n$input = preg_split('/\\s+/', file_get_contents("php://stdin"));\nif (count($input) >= 2) {\n    $n = (int)$input[0]; $t = (int)$input[1];\n    $coins = array_map('intval', array_slice($input, 2, $n));\n    echo coinChange($n, $t, $coins);\n}\n?>`,
+      php: `<?php\n\nfunction coinChange($n, $t, $coins) {\n    // TODO\n    return -1;\n}\n\n$input = preg_split('/\\s+/', file_get_contents("php://stdin"));\nif (count($input) >= 2) {\n    $n = (int)$input[0]; $t = (int)$input[1];\n    $coins = array_map('intval', array_slice($data, 2, $n));\n    echo coinChange($n, $t, $coins);\n}\n?>`,
       swift: `import Foundation\n\n// TODO`,
       ruby: `def coin_change(n, t, coins)\n    # TODO\n    -1\nend\n\n# TODO`
     },
@@ -1407,7 +1407,7 @@ export const MASTER_QUESTIONS: CodingQuestion[] = [
       go: `package main\n\nimport ("fmt")\n\nfunc main() {\n    // TODO\n}`,
       rust: `use std::io::{self, Read};\n\nfn main() {\n    // TODO\n}`,
       kotlin: `import java.util.*\n\nfun main(args: Array<String>) {\n    val sc = Scanner(System.\`in\`)\n    // TODO\n}`,
-      php: `<?php\n\nfunction trap($n, $arr) {\n    // TODO\n    return 0;\n}\n\n$input = preg_split('/\\s+/', file_get_contents("php://stdin"));\nif (count($input) >= 2) {\n    $n = (int)$input[0]; $arr = array_map('intval', array_slice($input, 1, $n));\n    echo trap($n, $arr);\n}\n?>`,
+      php: `<?php\n\nfunction trap($n, $arr) {\n    // TODO\n    return 0;\n}\n\n$input = preg_split('/\\s+/', file_get_contents("php://stdin"));\nif (count($input) >= 2) {\n    $n = (int)$input[0]; $arr = array_map('intval', array_slice($data, 1, $n));\n    echo trap($n, $arr);\n}\n?>`,
       swift: `import Foundation\n\n// TODO`,
       ruby: `def trap(n, arr)\n    # TODO\n    0\nend\n\n# TODO`
     },
@@ -1426,3 +1426,4 @@ export const MASTER_QUESTIONS: CodingQuestion[] = [
     timeLimit: "1s", memoryLimit: "256MB", languageSupport: ["python", "java", "cpp", "javascript", "typescript", "c", "csharp", "go", "rust", "kotlin", "php", "swift", "ruby"]
   }
 ];
+
