@@ -86,7 +86,8 @@ export default function CodingEnginePage() {
 
   const { data: journey, loading: journeyLoading } = useDoc(journeyRef);
 
-  const getDifficultyColor = (diff: string) => {
+  const getDifficultyColor = (diff?: string) => {
+    if (!diff) return 'text-accent border-accent/20 bg-accent/5';
     switch (diff) {
       case 'Easy': return 'text-green-400 border-green-500/20 bg-green-500/5';
       case 'Medium': return 'text-yellow-400 border-yellow-500/20 bg-yellow-500/5';
@@ -95,17 +96,29 @@ export default function CodingEnginePage() {
     }
   };
 
-  const getTopicLabel = (topic: string) => {
+  const getTopicLabel = (topic?: string | null) => {
     const map: Record<string, string> = {
       'Strings': 'STRING ENGINE',
       'Arrays': 'DATA STRUCTURES',
       'Stack': 'ALGORITHM CORE',
       'Hash Map': 'HASH ENGINE',
       'Sorting': 'OPTIMIZATION CORE',
-      'Searching': 'SCAN PROTOCOL'
+      'Searching': 'SCAN PROTOCOL',
+      'Data Structures': 'DATA STRUCTURES',
+      'Algorithms': 'ALGORITHM CORE'
     };
+
+    if (!topic || typeof topic !== 'string') {
+      return 'ALGORITHM CORE';
+    }
+
     return map[topic] || topic.toUpperCase();
   };
+
+  const currentQ = useMemo(() => {
+    if (!questions || questions.length === 0) return null;
+    return questions[currentIdx] || null;
+  }, [questions, currentIdx]);
 
   const finalizeAssessment = useCallback(async () => {
     if (isFinalizing || !user || !db || !journey) return;
@@ -118,14 +131,15 @@ export default function CodingEnginePage() {
       }
       
       const resultsArray = Object.entries(sessionResults);
-      const solvedQuestionsCount = resultsArray.filter(([_, r]) => r.status === 'Solved').length;
-      const scorePercentage = questions.length > 0 ? Math.round((solvedQuestionsCount / questions.length) * 100) : 0;
+      const solvedQuestionsCount = resultsArray.filter(([_, r]) => r && r.status === 'Solved').length;
+      const totalQuestions = questions?.length || 0;
+      const scorePercentage = totalQuestions > 0 ? Math.round((solvedQuestionsCount / totalQuestions) * 100) : 0;
       
       await updateDoc(journeyRef!, {
         codingReport: { 
           score: scorePercentage, 
           status: scorePercentage >= 60 ? 'Pass' : 'Fail', 
-          totalQuestions: questions.length, 
+          totalQuestions: totalQuestions, 
           passedQuestions: solvedQuestionsCount, 
           submissionTime: new Date().toLocaleTimeString()
         },
@@ -148,7 +162,8 @@ export default function CodingEnginePage() {
     if (isNavigating) return;
     setIsNavigating(true);
 
-    if (currentIdx < questions.length - 1) {
+    const totalQuestions = questions?.length || 0;
+    if (currentIdx < totalQuestions - 1) {
       setCurrentIdx(prev => prev + 1);
       setTerminalOutput("Waiting for your implementation.");
       setActiveTerminalTab("output");
@@ -156,10 +171,10 @@ export default function CodingEnginePage() {
     } else {
       await finalizeAssessment();
     }
-  }, [currentIdx, questions.length, isNavigating, finalizeAssessment]);
+  }, [currentIdx, questions, isNavigating, finalizeAssessment]);
 
   const saveQuestionResult = async (idx: number, res: any) => {
-    if (!user || !db || !journey) return;
+    if (!user || !db || !journey || !questions || !questions[idx]) return;
     const q = questions[idx];
     
     const executionTime = res.results?.length > 0 
@@ -172,25 +187,35 @@ export default function CodingEnginePage() {
         })) 
       : 0;
 
-    await addDoc(collection(db, 'users', user.uid, 'coding_results'), {
-      interviewId: journey.sessionId || "unknown",
-      userId: user.uid,
-      questionId: q.id,
-      language: res.language,
-      score: res.totalCount > 0 ? Math.round((res.passedCount / res.totalCount) * 100) : 0,
-      passedTestCases: res.passedCount,
-      totalTestCases: res.totalCount ?? 0,
-      status: res.status,
-      submittedCode: res.code,
-      executionTime,
-      memory,
-      auditTrace: res.results || [],
-      completedAt: serverTimestamp(),
-    });
+    try {
+      await addDoc(collection(db, 'users', user.uid, 'coding_results'), {
+        interviewId: journey.sessionId || "unknown",
+        userId: user.uid,
+        questionId: q.id || "unknown",
+        language: res.language || "Unknown",
+        score: res.totalCount > 0 ? Math.round((res.passedCount / res.totalCount) * 100) : 0,
+        passedTestCases: res.passedCount || 0,
+        totalTestCases: res.totalCount ?? 0,
+        status: res.status || "Unknown",
+        submittedCode: res.code || "",
+        executionTime,
+        memory,
+        auditTrace: res.results || [],
+        completedAt: serverTimestamp(),
+      });
+    } catch (e) {
+      console.error("Error saving coding result:", e);
+    }
   };
 
   const handleRunCode = async () => {
-    if (isRunning || isSubmitting || isTimeExpired || isNavigating) return;
+    if (isRunning || isSubmitting || isTimeExpired || isNavigating || !currentQ) return;
+    
+    if (!code || code.trim().length === 0) {
+      toast({ variant: "destructive", title: "Empty Payload", description: "Please implement logic before running." });
+      return;
+    }
+
     setIsRunning(true);
     setActiveTerminalTab("output");
     setTerminalOutput("Initializing system sample execution...");
@@ -204,8 +229,8 @@ export default function CodingEnginePage() {
         body: JSON.stringify({ 
           source_code: code, 
           language: selectedLang.id, 
-          stdin: questions[currentIdx]?.sampleInput,
-          expectedOutput: questions[currentIdx]?.sampleOutput
+          stdin: currentQ.sampleInput || "",
+          expectedOutput: currentQ.sampleOutput || ""
         }),
       });
       const data = await response.json();
@@ -213,8 +238,8 @@ export default function CodingEnginePage() {
       if (data.error) {
         setTerminalOutput(`[EXECUTION ERROR]\n${data.error}`);
       } else {
-        const statusPrefix = `[${data.status}]`;
-        setTerminalOutput(`${statusPrefix}\n\nOutput Trace:\n${data.stdout}\n\nExpected:\n${questions[currentIdx]?.sampleOutput}\n\nTemporal Audit: ${data.time}s | Memory Load: ${data.memory}KB`);
+        const statusPrefix = `[${data.status || 'DONE'}]`;
+        setTerminalOutput(`${statusPrefix}\n\nOutput Trace:\n${data.stdout || ''}\n\nExpected:\n${currentQ.sampleOutput || ''}\n\nTemporal Audit: ${data.time || '0.00'}s | Memory Load: ${data.memory || 'N/A'}KB`);
       }
     } catch (error) {
       setTerminalOutput("[NETWORK FAULT] Execution link interrupted.");
@@ -224,7 +249,13 @@ export default function CodingEnginePage() {
   };
 
   const handleSubmitCode = async () => {
-    if (isSubmitting || isRunning || isTimeExpired || isNavigating || !questions[currentIdx]) return;
+    if (isSubmitting || isRunning || isTimeExpired || isNavigating || !currentQ) return;
+
+    if (!code || code.trim().length === 0) {
+      toast({ variant: "destructive", title: "Empty Payload", description: "Please implement logic before submitting." });
+      return;
+    }
+
     setIsSubmitting(true);
     setActiveTerminalTab("cases");
     setTerminalOutput("Running Hidden Test Cases...");
@@ -238,7 +269,7 @@ export default function CodingEnginePage() {
         body: JSON.stringify({ 
           source_code: code, 
           language: selectedLang.id, 
-          testCases: questions[currentIdx].hiddenTestCases || [] 
+          testCases: currentQ.hiddenTestCases || [] 
         }),
       });
 
@@ -246,7 +277,7 @@ export default function CodingEnginePage() {
       const data = await response.json();
       const results = data.results || [];
       const passed = results.filter((r: any) => r.passed).length;
-      const total = results.length || 1;
+      const total = results.length || (currentQ.hiddenTestCases?.length ?? 1);
       const allPassed = passed === total && total > 0;
 
       const submissionReport = { 
@@ -287,14 +318,14 @@ export default function CodingEnginePage() {
   };
 
   const handleSkipQuestion = async () => {
-    if (isNavigating || isSubmitting || isRunning || isTimeExpired) return;
+    if (isNavigating || isSubmitting || isRunning || isTimeExpired || !currentQ) return;
     
     const skipReport = { 
       code: code || "// Skipped", 
       results: [], 
       status: 'Skipped', 
       passedCount: 0, 
-      totalCount: questions[currentIdx].hiddenTestCases?.length || 1, 
+      totalCount: currentQ.hiddenTestCases?.length || 1, 
       language: selectedLang.label 
     };
 
@@ -305,7 +336,7 @@ export default function CodingEnginePage() {
 
   useEffect(() => {
     async function initEnvironment() {
-      if (!db || !user || !journey || questions.length > 0) return;
+      if (!db || !user || !journey || (questions && questions.length > 0)) return;
       
       if (journey.codingQuestions && 
           journey.codingQuestions.length > 0 && 
@@ -359,16 +390,16 @@ export default function CodingEnginePage() {
       }
     }
     initEnvironment();
-  }, [db, user, journey, journeyRef, questions.length, toast]);
+  }, [db, user, journey, journeyRef, questions, toast]);
 
   useEffect(() => {
-    if (questions[currentIdx]) {
-      const q = questions[currentIdx];
+    if (currentQ) {
       const saved = sessionResults[currentIdx]?.code;
-      setCode(saved || q.starterCode?.[selectedLang.id] || q.starterCode?.["python"] || "");
+      const starter = currentQ.starterCode?.[selectedLang.id] || currentQ.starterCode?.["python"] || "// Starter code unavailable for this language.";
+      setCode(saved || starter);
       setTerminalOutput(sessionResults[currentIdx] ? "Question submission archived." : "Waiting for your implementation.");
     }
-  }, [currentIdx, selectedLang, questions, sessionResults]);
+  }, [currentIdx, selectedLang, currentQ, sessionResults]);
 
   useEffect(() => {
     if (isInitializing || isFinalizing || isTimeExpired) return;
@@ -391,11 +422,16 @@ export default function CodingEnginePage() {
     return `${m}:${s.toString().padStart(2, '0')}`;
   };
 
-  if (isInitializing || journeyLoading) return <div className="h-screen bg-[#050816] flex flex-col items-center justify-center space-y-12"><Brain className="w-12 h-12 text-accent animate-pulse" /><p className="text-[10px] font-black uppercase tracking-[0.5em] text-accent">Neural Core Synchronizing...</p></div>;
+  if (isInitializing || journeyLoading) return (
+    <div className="h-screen bg-[#050816] flex flex-col items-center justify-center space-y-12">
+      <Brain className="w-12 h-12 text-accent animate-pulse" />
+      <p className="text-[10px] font-black uppercase tracking-[0.5em] text-accent">Neural Core Synchronizing...</p>
+    </div>
+  );
 
-  const currentQ = questions[currentIdx];
   const currentResult = sessionResults[currentIdx];
   const isCurrentFailed = !!currentResult && currentResult.status !== 'Solved' && currentResult.status !== 'Skipped';
+  const progressPercent = questions?.length > 0 ? Math.round(((currentIdx + 1) / questions.length) * 100) : 0;
 
   return (
     <div className="h-screen bg-[#050816] flex flex-col overflow-hidden relative">
@@ -409,7 +445,7 @@ export default function CodingEnginePage() {
           </div>
           <div>
             <h1 className="text-sm font-black uppercase tracking-widest text-premium">Syntax Matrix Protocol</h1>
-            <p className="text-[9px] font-bold text-accent uppercase tracking-widest">Question {currentIdx + 1} of {questions.length}</p>
+            <p className="text-[9px] font-bold text-accent uppercase tracking-widest">Question {currentIdx + 1} of {questions?.length || 0}</p>
           </div>
         </div>
         
@@ -419,7 +455,7 @@ export default function CodingEnginePage() {
              <span className="text-[8px] font-black uppercase tracking-widest text-accent">α → α → β → β → Ω</span>
           </div>
           <div className="h-1 bg-white/5 rounded-full overflow-hidden flex gap-0.5">
-            {questions.map((_, s) => (
+            {(questions || []).map((_, s) => (
               <div key={s} className={cn("flex-1 h-full transition-all duration-500", currentIdx >= s ? "bg-accent shadow-[0_0_8px_#22d3ee]" : "bg-white/5")} />
             ))}
           </div>
@@ -438,60 +474,69 @@ export default function CodingEnginePage() {
       <main className="flex-1 container-fluid flex overflow-hidden p-4 gap-4">
         <div className="w-[35%] flex flex-col gap-4">
           <Card className="flex-1 glass bg-white/[0.01] border-white/5 p-8 overflow-y-auto custom-scrollbar rounded-[2.5rem]">
-            <div className="space-y-10">
-              <div className="flex items-center justify-between">
-                <span className="text-[10px] font-black uppercase tracking-widest text-white/40">Question {currentIdx + 1} of {questions.length}</span>
-                <div className="flex items-center gap-2">
-                  <Clock className="w-3 h-3 text-white/40" />
-                  <span className="text-[9px] font-bold text-white/40 uppercase tracking-widest">ESTIMATED: {currentQ?.estimatedTime}</span>
-                </div>
-              </div>
-
-              <div className="space-y-6">
-                <h2 className="text-3xl font-bold tracking-tight text-white">{currentQ?.title}</h2>
-                <div className="flex gap-3">
-                  <Badge variant="outline" className={cn("text-[10px] uppercase px-4 py-1 font-black tracking-widest", getDifficultyColor(currentQ?.difficulty))}>
-                    {currentQ?.difficulty === 'Easy' ? 'LEVEL α' : currentQ?.difficulty === 'Medium' ? 'LEVEL β' : 'LEVEL Ω'}
-                  </Badge>
-                  <Badge variant="outline" className="text-white/40 text-[10px] uppercase border-white/10 px-4 py-1 font-black tracking-widest flex items-center gap-1.5">
-                    <Target className="w-3 h-3" /> {getTopicLabel(currentQ?.topic)}
-                  </Badge>
-                </div>
-              </div>
-
-              <div className="space-y-8">
-                <div className="space-y-3">
-                  <h4 className="text-[11px] font-black uppercase tracking-[0.3em] text-accent">PROBLEM NARRATIVE</h4>
-                  <p className="text-base text-white/70 leading-relaxed font-light whitespace-pre-wrap">{currentQ?.description}</p>
+            {currentQ ? (
+              <div className="space-y-10">
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] font-black uppercase tracking-widest text-white/40">Question {currentIdx + 1} of {questions?.length || 0}</span>
+                  <div className="flex items-center gap-2">
+                    <Clock className="w-3 h-3 text-white/40" />
+                    <span className="text-[9px] font-bold text-white/40 uppercase tracking-widest">ESTIMATED: {currentQ.estimatedTime || '15m'}</span>
+                  </div>
                 </div>
 
-                <div className="space-y-4">
-                  <h4 className="text-[11px] font-black uppercase tracking-[0.3em] text-white/30">BOUNDARY CONSTRAINTS</h4>
-                  <ul className="space-y-2">
-                    {currentQ?.constraints.map((c: string, i: number) => (
-                      <li key={i} className="text-sm text-white/50 flex items-start gap-3">
-                        <div className="w-1.5 h-1.5 rounded-full bg-accent mt-2 shrink-0 shadow-[0_0_8px_#22d3ee]" />
-                        {c}
-                      </li>
-                    ))}
-                  </ul>
+                <div className="space-y-6">
+                  <h2 className="text-3xl font-bold tracking-tight text-white">{currentQ.title || 'Untitled Node'}</h2>
+                  <div className="flex gap-3">
+                    <Badge variant="outline" className={cn("text-[10px] uppercase px-4 py-1 font-black tracking-widest", getDifficultyColor(currentQ.difficulty))}>
+                      {currentQ.difficulty === 'Easy' ? 'LEVEL α' : currentQ.difficulty === 'Medium' ? 'LEVEL β' : 'LEVEL Ω'}
+                    </Badge>
+                    <Badge variant="outline" className="text-white/40 text-[10px] uppercase border-white/10 px-4 py-1 font-black tracking-widest flex items-center gap-1.5">
+                      <Target className="w-3 h-3" /> {getTopicLabel(currentQ.topic)}
+                    </Badge>
+                  </div>
                 </div>
 
-                <div className="space-y-4 p-6 glass border-white/5 rounded-3xl bg-black/40">
-                  <h4 className="text-[11px] font-black uppercase tracking-[0.3em] text-accent">SYSTEM SAMPLE</h4>
-                  <div className="space-y-5 font-mono text-[11px]">
-                    <div className="space-y-2">
-                      <p className="text-white/20 uppercase tracking-widest text-[9px]">INPUT</p>
-                      <pre className="text-accent whitespace-pre-wrap p-4 glass rounded-xl bg-white/5 border border-white/5">{currentQ?.sampleInput}</pre>
+                <div className="space-y-8">
+                  <div className="space-y-3">
+                    <h4 className="text-[11px] font-black uppercase tracking-[0.3em] text-accent">PROBLEM NARRATIVE</h4>
+                    <p className="text-base text-white/70 leading-relaxed font-light whitespace-pre-wrap">{currentQ.description || 'No description provided.'}</p>
+                  </div>
+
+                  {currentQ.constraints && currentQ.constraints.length > 0 && (
+                    <div className="space-y-4">
+                      <h4 className="text-[11px] font-black uppercase tracking-[0.3em] text-white/30">BOUNDARY CONSTRAINTS</h4>
+                      <ul className="space-y-2">
+                        {currentQ.constraints.map((c: string, i: number) => (
+                          <li key={i} className="text-sm text-white/50 flex items-start gap-3">
+                            <div className="w-1.5 h-1.5 rounded-full bg-accent mt-2 shrink-0 shadow-[0_0_8px_#22d3ee]" />
+                            {c}
+                          </li>
+                        ))}
+                      </ul>
                     </div>
-                    <div className="space-y-2">
-                      <p className="text-white/20 uppercase tracking-widest text-[9px]">EXPECTED OUTPUT</p>
-                      <pre className="text-green-400 whitespace-pre-wrap p-4 glass rounded-xl bg-white/5 border border-white/5">{currentQ?.sampleOutput}</pre>
+                  )}
+
+                  <div className="space-y-4 p-6 glass border-white/5 rounded-3xl bg-black/40">
+                    <h4 className="text-[11px] font-black uppercase tracking-[0.3em] text-accent">SYSTEM SAMPLE</h4>
+                    <div className="space-y-5 font-mono text-[11px]">
+                      <div className="space-y-2">
+                        <p className="text-white/20 uppercase tracking-widest text-[9px]">INPUT</p>
+                        <pre className="text-accent whitespace-pre-wrap p-4 glass rounded-xl bg-white/5 border border-white/5">{currentQ.sampleInput || 'N/A'}</pre>
+                      </div>
+                      <div className="space-y-2">
+                        <p className="text-white/20 uppercase tracking-widest text-[9px]">EXPECTED OUTPUT</p>
+                        <pre className="text-green-400 whitespace-pre-wrap p-4 glass rounded-xl bg-white/5 border border-white/5">{currentQ.sampleOutput || 'N/A'}</pre>
+                      </div>
                     </div>
                   </div>
                 </div>
               </div>
-            </div>
+            ) : (
+              <div className="h-full flex flex-col items-center justify-center opacity-40">
+                <Loader2 className="w-8 h-8 animate-spin mb-4" />
+                <p className="text-[10px] font-bold uppercase tracking-widest">Question Unavailable</p>
+              </div>
+            )}
           </Card>
         </div>
 
@@ -521,7 +566,9 @@ export default function CodingEnginePage() {
                <div className="flex items-center gap-12">
                  <div className="flex items-center gap-3">
                     <span className="text-[9px] font-black text-white/30 uppercase tracking-widest">Function:</span>
-                    <Badge variant="outline" className="border-accent/30 text-accent text-[10px] font-mono px-3">{currentQ?.functionInfo?.name || 'solve()'}</Badge>
+                    <Badge variant="outline" className="border-accent/30 text-accent text-[10px] font-mono px-3">
+                      {currentQ?.functionInfo?.name || 'solve()'}
+                    </Badge>
                  </div>
                  <div className="flex items-center gap-3">
                     <span className="text-[9px] font-black text-white/30 uppercase tracking-widest">Return:</span>
@@ -585,10 +632,6 @@ export default function CodingEnginePage() {
                   <FastForward className="w-4 h-4 mr-2" /> SKIP QUESTION
                 </Button>
               </div>
-
-              <div className="flex items-center gap-4">
-                {/* Reserved for telemetry or system alerts */}
-              </div>
             </div>
           </Card>
 
@@ -624,7 +667,7 @@ export default function CodingEnginePage() {
                       </div>
 
                       <div className="grid gap-2">
-                        {currentResult.results.map((r: any, i: number) => (
+                        {(currentResult.results || []).map((r: any, i: number) => (
                           <div key={i} className="p-3 glass border-white/5 rounded-lg bg-white/[0.01] flex items-center justify-between">
                             <div className="flex items-center gap-3">
                               <div className={cn("w-1.5 h-1.5 rounded-full", r.passed ? "bg-green-500" : "bg-red-500")} />
@@ -693,6 +736,7 @@ export default function CodingEnginePage() {
           </motion.div>
         )}
       </AnimatePresence>
+      <NavigationControls onHome={() => router.push('/')} onBack={() => router.push('/dashboard')} />
     </div>
   );
 }
