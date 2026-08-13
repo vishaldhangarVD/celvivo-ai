@@ -109,7 +109,7 @@ export default function CodingResultTerminal() {
     return "FAIL";
   }, [result]);
 
-  const isPassed = result?.status === 'Pass' || (result?.score || 0) >= 70;
+  const isPassed = result?.status === 'Pass' || (result?.score || 0) >= 60;
 
   const getQuestionTitle = (questionId: string) => {
     return MASTER_QUESTIONS.find(q => q.id === questionId)?.title || "Protocol Node";
@@ -179,7 +179,7 @@ export default function CodingResultTerminal() {
 
             <Card className="premium-card bg-white/[0.01] border-white/5 p-8 space-y-6 relative overflow-hidden group">
                <div className="absolute top-0 right-0 p-8 opacity-5 group-hover:opacity-10 transition-opacity">
-                 <Gavel className="w-24 h-24 text-accent" />
+                 <Target className="w-24 h-24 text-accent" />
                </div>
                <div className="space-y-2 relative z-10">
                  <h3 className="text-[10px] font-black uppercase tracking-[0.3em] text-accent flex items-center gap-3">
@@ -216,7 +216,7 @@ export default function CodingResultTerminal() {
                   <p className="text-xs font-light text-white/60 leading-relaxed">
                     {isPassed 
                       ? "Your algorithmic logic has been verified. The Virtual HR Arena is now unlocked for final deployment."
-                      : "Your score is below the 70% proficiency threshold required for elite track progression."}
+                      : "Your score is below the 60% proficiency threshold required for track progression."}
                   </p>
                 </div>
               </div>
@@ -246,9 +246,9 @@ export default function CodingResultTerminal() {
               
               <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-4 shrink-0">
                 {[
-                  { label: "Total Questions", val: result?.totalQuestions || 0, icon: Layers, color: "text-blue-400" },
+                  { label: "Total Questions", val: result?.totalQuestions || 5, icon: Layers, color: "text-blue-400" },
                   { label: "Correct Nodes", val: result?.passedQuestions || 0, icon: CheckCircle2, color: "text-green-400" },
-                  { label: "Failed Probes", val: (result?.totalQuestions || 0) - (result?.passedQuestions || 0), icon: XCircle, color: "text-red-400" },
+                  { label: "Failed Probes", val: (result?.totalQuestions || 5) - (result?.passedQuestions || 0), icon: XCircle, color: "text-red-400" },
                   { label: "Execution Status", val: "Success", icon: Activity, color: "text-accent" },
                   { label: "Code Integrity", val: "Optimal", icon: Cpu, color: "text-purple-400" },
                   { label: "Master Score", val: `${result?.score}%`, icon: Trophy, color: "text-yellow-400" }
@@ -275,7 +275,7 @@ export default function CodingResultTerminal() {
                 
                 <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
                   {[
-                    { label: "Correctness", val: `${result?.score || 0}%`, status: result?.score >= 70 ? "OPTIMAL" : "CRITICAL", icon: CheckCircle2 },
+                    { label: "Correctness", val: `${result?.score || 0}%`, status: (result?.score || 0) >= 60 ? "OPTIMAL" : "CRITICAL", icon: CheckCircle2 },
                     { label: "Test Case Success", val: `${aggregateStats?.successRate || 0}%`, sub: `${aggregateStats?.passedTests || 0}/${aggregateStats?.totalTests || 0} Nodes`, icon: Target },
                     { label: "Execution Time", val: aggregateStats?.maxTime && aggregateStats.maxTime !== "0.00" ? `${aggregateStats.maxTime}s` : "N/A", sub: "Peak Latency", icon: Clock },
                     { label: "Memory Usage", val: aggregateStats?.maxMemory && aggregateStats.maxMemory !== "N/A" ? `${aggregateStats.maxMemory}KB` : "N/A", sub: "Peak Allocation", icon: Cpu },
@@ -418,7 +418,7 @@ export default function CodingResultTerminal() {
             <div className="flex justify-end gap-4 shrink-0 pt-4 border-t border-white/5">
               <Button 
                 onClick={handleContinueToInterview}
-                className="h-12 px-10 btn-premium rounded-xl text-[10px] font-black uppercase tracking-widest shadow-2xl flex items-center gap-2"
+                className="h-12 px-10 btn-premium rounded-xl text-[10px] font-black uppercase tracking-[0.3em] shadow-2xl flex items-center gap-2"
               >
                 CONTINUE TO INTERVIEW <ArrowRight className="w-4 h-4" />
               </Button>
@@ -431,26 +431,5 @@ export default function CodingResultTerminal() {
         </div>
       </main>
     </div>
-  );
-}
-
-function Gavel({ className }: { className?: string }) {
-  return (
-    <svg 
-      className={className}
-      viewBox="0 0 24 24" 
-      fill="none" 
-      stroke="currentColor" 
-      strokeWidth="2" 
-      strokeLinecap="round" 
-      strokeLinejoin="round"
-    >
-      <path d="m14.5 12.5-8 8a2.11 2.11 0 1 1-3-3l8-8" />
-      <path d="m16 16 2 2" />
-      <path d="m2 2 16 16" />
-      <path d="m15 2 6 6" />
-      <path d="m9 2 8 8" />
-      <path d="m17 2 5 5" />
-    </svg>
   );
 }

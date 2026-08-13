@@ -132,14 +132,14 @@ export default function CodingEnginePage() {
       
       const resultsArray = Object.entries(sessionResults);
       const solvedQuestionsCount = resultsArray.filter(([_, r]) => r && r.status === 'Solved').length;
-      const totalQuestions = questions?.length || 0;
-      const scorePercentage = totalQuestions > 0 ? Math.round((solvedQuestionsCount / totalQuestions) * 100) : 0;
+      const totalQuestionsCount = questions?.length || 5;
+      const scorePercentage = totalQuestionsCount > 0 ? Math.round((solvedQuestionsCount / totalQuestionsCount) * 100) : 0;
       
       await updateDoc(journeyRef!, {
         codingReport: { 
           score: scorePercentage, 
           status: scorePercentage >= 60 ? 'Pass' : 'Fail', 
-          totalQuestions: totalQuestions, 
+          totalQuestions: totalQuestionsCount, 
           passedQuestions: solvedQuestionsCount, 
           submissionTime: new Date().toLocaleTimeString()
         },
@@ -162,8 +162,8 @@ export default function CodingEnginePage() {
     if (isNavigating) return;
     setIsNavigating(true);
 
-    const totalQuestions = questions?.length || 0;
-    if (currentIdx < totalQuestions - 1) {
+    const totalQuestionsCount = questions?.length || 0;
+    if (currentIdx < totalQuestionsCount - 1) {
       setCurrentIdx(prev => prev + 1);
       setTerminalOutput("Waiting for your implementation.");
       setActiveTerminalTab("output");
@@ -336,10 +336,11 @@ export default function CodingEnginePage() {
 
   useEffect(() => {
     async function initEnvironment() {
-      if (!db || !user || !journey || (questions && questions.length > 0)) return;
+      if (!db || !user || !journey || (questions && questions.length === 5)) return;
       
+      // Attempt to load existing session questions
       if (journey.codingQuestions && 
-          journey.codingQuestions.length > 0 && 
+          journey.codingQuestions.length === 5 && 
           journey.questionsSessionId === journey.sessionId) {
         setQuestions(journey.codingQuestions);
         setIsInitializing(false);
@@ -352,22 +353,34 @@ export default function CodingEnginePage() {
         const userData = userSnap.data();
         const usedIds = Array.isArray(userData?.codingQuestionHistory) ? userData.codingQuestionHistory : [];
         
-        const getFilteredPool = (difficulty: string) => {
+        // Helper to select exactly n questions from a pool, prioritizing unused ones
+        const pickQuestions = (difficulty: string, count: number) => {
           const pool = [...MASTER_QUESTIONS].filter(q => q.difficulty === difficulty);
-          let unused = pool.filter(q => !usedIds.includes(q.id));
-          if (unused.length === 0) return pool;
-          return unused;
+          // Shuffle the full pool first
+          const shuffledPool = pool.sort(() => Math.random() - 0.5);
+          
+          // Separate into unused and used
+          const unused = shuffledPool.filter(q => !usedIds.includes(q.id));
+          const used = shuffledPool.filter(q => usedIds.includes(q.id));
+          
+          // Combine prioritizing unused, then taking as many as needed to fill 'count'
+          const combined = [...unused, ...used];
+          return combined.slice(0, count);
         };
 
-        const easyPool = getFilteredPool('Easy');
-        const medPool = getFilteredPool('Medium');
-        const hardPool = getFilteredPool('Hard');
-
-        const selectedEasy = easyPool.sort(() => 0.5 - Math.random()).slice(0, 2);
-        const selectedMed = medPool.sort(() => 0.5 - Math.random()).slice(0, 2);
-        const selectedHard = hardPool.sort(() => 0.5 - Math.random()).slice(0, 1);
+        const selectedEasy = pickQuestions('Easy', 2);
+        const selectedMed = pickQuestions('Medium', 2);
+        const selectedHard = pickQuestions('Hard', 1);
 
         const finalQuestions = [...selectedEasy, ...selectedMed, ...selectedHard];
+        
+        // Final sanity check: if for some reason we didn't get 5, just take random ones from master
+        if (finalQuestions.length < 5) {
+          const fallback = MASTER_QUESTIONS.sort(() => Math.random() - 0.5).slice(0, 5);
+          setQuestions(fallback);
+          return;
+        }
+
         const newIds = finalQuestions.map(q => q.id);
         
         await updateDoc(journeyRef!, {
@@ -431,7 +444,6 @@ export default function CodingEnginePage() {
 
   const currentResult = sessionResults[currentIdx];
   const isCurrentFailed = !!currentResult && currentResult.status !== 'Solved' && currentResult.status !== 'Skipped';
-  const progressPercent = questions?.length > 0 ? Math.round(((currentIdx + 1) / questions.length) * 100) : 0;
 
   return (
     <div className="h-screen bg-[#050816] flex flex-col overflow-hidden relative">
@@ -445,7 +457,7 @@ export default function CodingEnginePage() {
           </div>
           <div>
             <h1 className="text-sm font-black uppercase tracking-widest text-premium">Syntax Matrix Protocol</h1>
-            <p className="text-[9px] font-bold text-accent uppercase tracking-widest">Question {currentIdx + 1} of {questions?.length || 0}</p>
+            <p className="text-[9px] font-bold text-accent uppercase tracking-widest">Question {currentIdx + 1} of {questions?.length || 5}</p>
           </div>
         </div>
         
@@ -477,7 +489,7 @@ export default function CodingEnginePage() {
             {currentQ ? (
               <div className="space-y-10">
                 <div className="flex items-center justify-between">
-                  <span className="text-[10px] font-black uppercase tracking-widest text-white/40">Question {currentIdx + 1} of {questions?.length || 0}</span>
+                  <span className="text-[10px] font-black uppercase tracking-widest text-white/40">Question {currentIdx + 1} of {questions?.length || 5}</span>
                   <div className="flex items-center gap-2">
                     <Clock className="w-3 h-3 text-white/40" />
                     <span className="text-[9px] font-bold text-white/40 uppercase tracking-widest">ESTIMATED: {currentQ.estimatedTime || '15m'}</span>
