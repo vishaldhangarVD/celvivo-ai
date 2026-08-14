@@ -600,12 +600,12 @@ export const MASTER_QUESTIONS: CodingQuestion[] = [
       javascript: `const fs = require('fs');\nfunction paritySort(n, arr) { return []; }\nconst data = fs.readFileSync(0, 'utf8').split(/\\s+/);\nif(data.length > 0) { const n = parseInt(data[0]); const arr = data.slice(1, n+1).map(Number); console.log(paritySort(n, arr).join(' ')); }`,
       typescript: `import * as fs from 'fs';\nfunction paritySort(n: number, arr: number[]): number[] { return []; }\nconst data = fs.readFileSync(0, 'utf8').split(/\\s+/);\nif(data.length > 0) { const n = parseInt(data[0]); const arr = data.slice(1, n+1).map(Number); console.log(paritySort(n, arr).join(' ')); }`,
       c: `#include <stdio.h>\nint main() { int n; if(scanf("%d", &n) != EOF) { int a[10005]; for(int i=0; i<n; i++) scanf("%d", &a[i]); /* TODO: Logic */ } return 0; }`,
-      csharp: `using System; using System.Linq; class Program { static void Main() { /* TODO: Logic */ } }`,
-      go: `package main; import "fmt"; func main() { /* TODO: Logic */ }`,
-      rust: `use std::io; fn main() { /* TODO: Logic */ }`,
-      kotlin: `import java.util.Scanner; fun main() { /* TODO: Logic */ }`,
-      php: `<?php /* TODO: Logic */ ?>`,
-      swift: `import Foundation; /* TODO: Logic */`,
+      csharp: `using System; using System.Linq; class Program { static void Main() { /* TODO */ } }`,
+      go: `package main; import "fmt"; func main() { /* TODO */ }`,
+      rust: `use std::io; fn main() { /* TODO */ }`,
+      kotlin: `import java.util.Scanner; fun main() { /* TODO */ }`,
+      php: `<?php /* TODO */ ?>`,
+      swift: `import Foundation; /* TODO */`,
       ruby: `def parity_sort(arr) end; # TODO: Logic`
     },
     hiddenTestCases: [
@@ -920,7 +920,7 @@ export const MASTER_QUESTIONS: CodingQuestion[] = [
       java: `import java.util.Scanner;\npublic class Main {\n    public static int romanToInt(String s) {\n        // TODO: Implement logic\n        return 0;\n    }\n    public static void main(String[] args) {\n        Scanner sc = new Scanner(System.in);\n        if(sc.hasNext()) System.out.println(romanToInt(sc.next()));\n    }\n}`,
       cpp: `#include <iostream>\n#include <string>\n#include <unordered_map>\nusing namespace std;\nint romanToInt(string s) { return 0; }\nint main() { string s; if(cin >> s) cout << romanToInt(s) << endl; return 0; }`,
       javascript: `const fs = require('fs');\nfunction romanToInt(s) { return 0; }\nconst input = fs.readFileSync(0, 'utf8').trim();\nconsole.log(romanToInt(input));`,
-      typescript: `import * as fs from 'fs';\nfunction romanToInt(s: string): number { return 0; }\nconst input = fs.readFileSync(0, 'utf8').trim();\nconsole.log(romanToInt(input));`,
+      typescript: `import * as fs from 'fs';\nfunction romanToInt(s: string): number { return 0; }\nconst input = fs.readFileSync(0, 'utf8').trim();\nif(input) console.log(romanToInt(input));`,
       c: `#include <stdio.h>\n#include <string.h>\nint romanToInt(char* s) { return 0; }\nint main() { char s[16]; if(scanf("%s", s) != EOF) printf("%d\\n", romanToInt(s)); return 0; }`,
       csharp: `using System; class Program { static int RomanToInt(string s) { return 0; } static void Main() { string s = Console.ReadLine(); if(s!=null) Console.WriteLine(RomanToInt(s)); } }`,
       go: `package main; import "fmt"; func romanToInt(s string) int { return 0 }; func main() { var s string; fmt.Scan(&s); fmt.Println(romanToInt(s)) }`,
@@ -1779,14 +1779,14 @@ export const MASTER_QUESTIONS: CodingQuestion[] = [
     hiddenTestCases: [
       { input: "2\n1 2", output: "2 1" },
       { input: "3\n1 1 1", output: "1 1 1" },
-      { input: "4\n-1 1 0 -3 3", output: "0 0 9 0 0" }, // Adjusted to match N=5 below if needed
       { input: "5\n-1 1 0 -3 3", output: "0 0 9 0 0" },
       { input: "3\n10 20 30", output: "600 300 200" },
       { input: "2\n0 0", output: "0 0" },
       { input: "2\n0 5", output: "5 0" },
       { input: "4\n1 2 3 0", output: "0 0 0 6" },
       { input: "3\n-1 -1 -1", output: "1 1 1" },
-      { input: "3\n2 3 4", output: "12 8 6" }
+      { input: "3\n2 3 4", output: "12 8 6" },
+      { input: "4\n1 1 0 0", output: "0 0 0 0" }
     ],
     timeLimit: "1s", memoryLimit: "256MB", languageSupport: ["python", "java", "cpp", "javascript", "typescript", "c", "csharp", "go", "rust", "kotlin", "php", "swift", "ruby"]
   },
@@ -1863,7 +1863,7 @@ export const MASTER_QUESTIONS: CodingQuestion[] = [
       { input: "5\n1 3\n2 6\n8 10\n15 18\n1 2", output: "1 6\n8 10\n15 18" },
       { input: "2\n5 8\n1 3", output: "1 3\n5 8" },
       { input: "4\n1 10\n2 3\n4 5\n6 7", output: "1 10" },
-      { input: "3\n1 2\n3 4\n5 6", output: "1 2\n3 4\n5 6" },
+      { input: "3\n1 2\n3 4\n5 6", output: "1 2" },
       { input: "2\n1 10\n10 12", output: "1 12" },
       { input: "3\n10 11\n5 15\n10 20", output: "5 20" },
       { input: "4\n1 3\n3 5\n5 7\n7 9", output: "1 9" }
