@@ -64,7 +64,7 @@ export default function CodingEnginePage() {
   const [currentIdx, setCurrentIdx] = useState(0);
   const [selectedLang, setSelectedLang] = useState(LANGUAGES[0]);
   const [code, setCode] = useState("");
-  const [timeLeft, setTimeLeft] = useState(30 * 60); 
+  const [timeLeft, setTimeLeft] = useState(10 * 60); 
   const [isTimeExpired, setIsTimeExpired] = useState(false);
   
   const [sessionResults, setSessionResults] = useState<Record<number, any>>({});
@@ -414,6 +414,13 @@ export default function CodingEnginePage() {
     }
   }, [currentIdx, selectedLang, currentQ, sessionResults]);
 
+  // Timer reset effect: Runs when the question index changes
+  useEffect(() => {
+    setTimeLeft(10 * 60);
+    setIsTimeExpired(false);
+  }, [currentIdx]);
+
+  // Timer interval effect: Handles the live countdown and auto-progression
   useEffect(() => {
     if (isInitializing || isFinalizing || isTimeExpired) return;
     const timer = setInterval(() => {
@@ -421,13 +428,15 @@ export default function CodingEnginePage() {
         if (prev <= 1) {
           clearInterval(timer);
           setIsTimeExpired(true);
+          // Trigger the existing next question mechanism upon timeout
+          goToNextQuestion();
           return 0;
         }
         return prev - 1;
       });
     }, 1000);
     return () => clearInterval(timer);
-  }, [isInitializing, isFinalizing, isTimeExpired]);
+  }, [isInitializing, isFinalizing, isTimeExpired, goToNextQuestion]);
 
   const formatTime = (seconds: number) => {
     const m = Math.floor(seconds / 60);
@@ -492,7 +501,7 @@ export default function CodingEnginePage() {
                   <span className="text-[10px] font-black uppercase tracking-widest text-white/40">Question {currentIdx + 1} of {questions?.length || 5}</span>
                   <div className="flex items-center gap-2">
                     <Clock className="w-3 h-3 text-white/40" />
-                    <span className="text-[9px] font-bold text-white/40 uppercase tracking-widest">ESTIMATED: {currentQ.estimatedTime || '15m'}</span>
+                    <span className="text-[9px] font-bold text-white/40 uppercase tracking-widest">REMAINING: {formatTime(timeLeft)}</span>
                   </div>
                 </div>
 
