@@ -28,7 +28,8 @@ import {
   ArrowRight,
   Mic,
   MessageSquare,
-  Loader2
+  Loader2,
+  FastForward
 } from 'lucide-react';
 import { useUser, useFirestore, useDoc } from '@/firebase';
 import { doc } from 'firebase/firestore';
@@ -47,22 +48,24 @@ export default function CodingResultPage() {
 
   const { data: journey, loading: journeyLoading } = useDoc(journeyRef);
 
-  // Result Data (Uses Firestore data if available, otherwise mocks for UI preview)
+  // Result Data (Uses Firestore data if available, otherwise mocks with zeros for UI preview)
   const result = useMemo(() => {
-    if (!journey) return null;
-    return journey.codingReport || {
-      score: 82,
-      status: 'Pass',
-      total: 5,
-      passed: 3,
-      failed: 2,
-      time: "14:25",
-      accuracy: 82,
-      submissionTime: new Date().toLocaleTimeString(),
+    if (journey?.codingReport) return journey.codingReport;
+    
+    return {
+      score: 0,
+      status: 'Awaiting',
+      totalQuestions: 5,
+      passedQuestions: 0,
+      failedQuestions: 0,
+      skippedQuestions: 0,
+      accuracy: 0,
+      submissionTime: "N/A",
+      time: "00:00"
     };
   }, [journey]);
 
-  const isPassed = (result?.score || 0) >= 70;
+  const isPassed = (result?.score || 0) >= 60;
 
   if (journeyLoading) return (
     <div className="h-screen flex items-center justify-center bg-[#050816]">
@@ -118,11 +121,11 @@ export default function CodingResultPage() {
           {/* Performance Summary Grid */}
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
             {[
-              { label: "Total Questions", val: "05", icon: Layers, color: "text-blue-400" },
-              { label: "Correct Solutions", val: `0${result?.passed || 3}`, icon: CheckCircle2, color: "text-green-400" },
-              { label: "Failed Solutions", val: `0${result?.failed || 2}`, icon: XCircle, color: "text-red-400" },
-              { label: "Execution Status", val: "Success", icon: Activity, color: "text-accent" },
-              { label: "Code Submitted", val: "Verified", icon: Cpu, color: "text-purple-400" },
+              { label: "Total Questions", val: `0${result?.totalQuestions || 5}`, icon: Layers, color: "text-blue-400" },
+              { label: "Correct Solutions", val: `0${result?.passedQuestions || 0}`, icon: CheckCircle2, color: "text-green-400" },
+              { label: "Failed Solutions", val: `0${result?.failedQuestions || 0}`, icon: XCircle, color: "text-red-400" },
+              { label: "Skipped Nodes", val: `0${result?.skippedQuestions || 0}`, icon: FastForward, color: "text-orange-400" },
+              { label: "Accuracy Index", val: `${result?.score}%`, icon: Target, color: "text-accent" },
               { label: "Overall Score", val: `${result?.score}%`, icon: Trophy, color: "text-yellow-400" }
             ].map((stat, i) => (
               <motion.div
@@ -142,7 +145,7 @@ export default function CodingResultPage() {
           </div>
 
           <div className="grid lg:grid-cols-12 gap-12">
-            {/* Left: Answer Review */}
+            {/* Left: Answer Review (Dynamic placeholders based on real session results can go here) */}
             <div className="lg:col-span-8 space-y-8">
               <div className="flex items-center justify-between px-4">
                  <h3 className="text-xl font-bold flex items-center gap-3">
@@ -152,29 +155,10 @@ export default function CodingResultPage() {
               </div>
               
               <div className="space-y-4">
-                {[1, 2, 3, 4, 5].map((idx) => {
-                  const isCorrect = idx % 2 !== 0; // Simulated pattern for mock
-                  return (
-                    <Card key={idx} className="glass p-8 rounded-[2rem] border-white/5 hover:bg-white/[0.02] transition-all flex items-center justify-between group">
-                      <div className="flex items-center gap-6">
-                        <div className="w-12 h-12 rounded-2xl bg-white/5 flex items-center justify-center text-[12px] font-black group-hover:text-accent transition-colors">0{idx}</div>
-                        <div>
-                          <p className="text-lg font-bold text-white/90">Technical Question Node {idx}</p>
-                          <p className="text-[10px] text-white/30 uppercase tracking-widest mt-1">Implementation Logic Check</p>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-6">
-                        <div className="text-right">
-                          <p className={cn("text-xs font-black uppercase tracking-widest", !isCorrect ? "text-red-400" : "text-green-400")}>
-                            {!isCorrect ? "Wrong" : "Correct"}
-                          </p>
-                          <p className="text-[8px] text-white/20 uppercase tracking-tighter">Evaluation Status</p>
-                        </div>
-                        <div className={cn("w-2 h-2 rounded-full", !isCorrect ? "bg-red-400 shadow-[0_0_10px_rgba(248,113,113,0.5)]" : "bg-green-400 shadow-[0_0_10px_rgba(74,222,128,0.5)]")} />
-                      </div>
-                    </Card>
-                  );
-                })}
+                <Card className="glass p-12 rounded-[2rem] border-white/5 flex flex-col items-center justify-center text-center opacity-50 bg-white/[0.01]">
+                    <History className="w-12 h-12 text-white/10 mb-6" />
+                    <p className="text-xs font-bold uppercase tracking-widest text-white/40">Launch the Terminal to View Detailed Trace Logs</p>
+                </Card>
               </div>
             </div>
 
@@ -190,11 +174,11 @@ export default function CodingResultPage() {
 
                 <div className="space-y-4">
                   {[
-                    { label: "Correct Answers", val: `0${result?.passed || 3}`, color: "text-green-400" },
-                    { label: "Wrong Answers", val: `0${result?.failed || 2}`, color: "text-red-400" },
-                    { label: "Accuracy Rate", val: `${result?.score || 82}%`, color: "text-white" },
-                    { label: "Time Taken", val: result?.time || "14:25s", color: "text-white" },
-                    { label: "Submission", val: result?.submissionTime || "11:42 PM", color: "text-white/40" }
+                    { label: "Correct Answers", val: `0${result?.passedQuestions || 0}`, color: "text-green-400" },
+                    { label: "Wrong Answers", val: `0${result?.failedQuestions || 0}`, color: "text-red-400" },
+                    { label: "Accuracy Rate", val: `${result?.score || 0}%`, color: "text-white" },
+                    { label: "Time Taken", val: result?.time || "N/A", color: "text-white" },
+                    { label: "Submission", val: result?.submissionTime || "N/A", color: "text-white/40" }
                   ].map((s, i) => (
                     <div key={i} className="flex justify-between items-center py-3 border-b border-white/5 last:border-0">
                       <span className="text-[10px] font-bold uppercase tracking-widest text-white/40">{s.label}</span>
@@ -229,10 +213,10 @@ export default function CodingResultPage() {
                        <span className="text-[10px] font-black uppercase tracking-widest">🟢 Coding Round Passed</span>
                     </div>
                     <Button 
-                      onClick={() => router.push('/interview/hr')}
+                      onClick={() => router.push('/dashboard')}
                       className="w-full h-20 btn-premium rounded-[2rem] text-lg font-black uppercase tracking-[0.3em] shadow-[0_20px_80px_rgba(147,51,234,0.3)] group"
                     >
-                      Start HR Interview <Mic className="ml-4 w-6 h-6 transition-transform group-hover:scale-110" />
+                      Return to Dashboard <ArrowRight className="ml-4 w-6 h-6 transition-transform group-hover:translate-x-1" />
                     </Button>
                   </div>
                 ) : (

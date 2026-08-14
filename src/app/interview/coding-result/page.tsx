@@ -35,7 +35,8 @@ import {
   Terminal,
   ChevronDown,
   PieChart,
-  ArrowRight
+  ArrowRight,
+  FastForward
 } from 'lucide-react';
 import { useUser, useFirestore, useDoc, useCollection } from '@/firebase';
 import { doc, collection, query, where, orderBy } from 'firebase/firestore';
@@ -75,6 +76,8 @@ export default function CodingResultTerminal() {
       status: 'Awaiting',
       totalQuestions: 5,
       passedQuestions: 0,
+      failedQuestions: 0,
+      skippedQuestions: 0,
       submissionTime: "N/A"
     };
   }, [journey]);
@@ -227,7 +230,7 @@ export default function CodingResultTerminal() {
                     onClick={handleContinueToInterview}
                     className="w-full h-16 btn-premium rounded-2xl text-xs font-black uppercase tracking-[0.3em] shadow-[0_20px_60px_rgba(147,51,234,0.3)] group"
                   >
-                    CONTINUE TO INTERVIEW <ArrowRight className="ml-3 w-5 h-5 transition-transform group-hover:scale-110" />
+                    CONTINUE TO INTERVIEW <ArrowRight className="ml-3 w-5 h-5 transition-transform group-hover:translate-x-1" />
                   </Button>
                 ) : (
                   <Button 
@@ -248,10 +251,10 @@ export default function CodingResultTerminal() {
                 {[
                   { label: "Total Questions", val: result?.totalQuestions || 5, icon: Layers, color: "text-blue-400" },
                   { label: "Correct Nodes", val: result?.passedQuestions || 0, icon: CheckCircle2, color: "text-green-400" },
-                  { label: "Failed Probes", val: (result?.totalQuestions || 5) - (result?.passedQuestions || 0), icon: XCircle, color: "text-red-400" },
-                  { label: "Execution Status", val: "Success", icon: Activity, color: "text-accent" },
-                  { label: "Code Integrity", val: "Optimal", icon: Cpu, color: "text-purple-400" },
-                  { label: "Master Score", val: `${result?.score}%`, icon: Trophy, color: "text-yellow-400" }
+                  { label: "Failed Probes", val: result?.failedQuestions || 0, icon: XCircle, color: "text-red-400" },
+                  { label: "Skipped Nodes", val: result?.skippedQuestions || 0, icon: FastForward, color: "text-orange-400" },
+                  { label: "Accuracy Index", val: `${result?.score || 0}%`, icon: Target, color: "text-accent" },
+                  { label: "Master Score", val: `${result?.score || 0}%`, icon: Trophy, color: "text-yellow-400" }
                 ].map((stat, i) => (
                   <div key={i} className="p-4 glass rounded-2xl border-white/5 flex flex-col items-center text-center group hover:bg-white/[0.03] transition-all">
                     <div className={cn("w-8 h-8 rounded-lg flex items-center justify-center mb-3 bg-white/5", stat.color)}>
@@ -326,7 +329,7 @@ export default function CodingResultTerminal() {
                         <div className="flex items-center gap-6">
                           <div className="text-right">
                             <p className={cn("text-xs font-black uppercase tracking-widest", res.status === 'Solved' ? "text-green-400" : "text-red-400")}>
-                              {res.status === 'Solved' ? 'PASSED' : 'FAILED'}
+                              {res.status === 'Solved' ? 'PASSED' : res.status === 'Skipped' ? 'SKIPPED' : 'FAILED'}
                             </p>
                             <p className="text-[8px] text-white/20 uppercase tracking-tighter">Audit Status</p>
                           </div>

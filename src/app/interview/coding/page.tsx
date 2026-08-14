@@ -131,17 +131,33 @@ export default function CodingEnginePage() {
         await new Promise(r => setTimeout(r, 800));
       }
       
-      const resultsArray = Object.entries(sessionResults);
-      const solvedQuestionsCount = resultsArray.filter(([_, r]) => r && r.status === 'Solved').length;
-      const totalQuestionsCount = questions?.length || 5;
-      const scorePercentage = totalQuestionsCount > 0 ? Math.round((solvedQuestionsCount / totalQuestionsCount) * 100) : 0;
+      const total = questions?.length || 5;
+      let passed = 0;
+      let failed = 0;
+      let skipped = 0;
+      
+      for (let i = 0; i < total; i++) {
+        const r = sessionResults[i];
+        if (r) {
+          if (r.status === 'Solved') passed++;
+          else if (r.status === 'Skipped') skipped++;
+          else failed++;
+        } else {
+          // No result stored means question was timed out or bypassed
+          failed++;
+        }
+      }
+      
+      const scorePercentage = total > 0 ? Math.round((passed / total) * 100) : 0;
       
       await updateDoc(journeyRef!, {
         codingReport: { 
           score: scorePercentage, 
           status: scorePercentage >= 60 ? 'Pass' : 'Fail', 
-          totalQuestions: totalQuestionsCount, 
-          passedQuestions: solvedQuestionsCount, 
+          totalQuestions: total, 
+          passedQuestions: passed, 
+          failedQuestions: failed,
+          skippedQuestions: skipped,
           submissionTime: new Date().toLocaleTimeString()
         },
         codingRoundCompleted: true,
