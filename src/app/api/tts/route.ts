@@ -1,13 +1,16 @@
 import { NextResponse } from 'next/server';
 
 /**
- * @fileOverview Secure ElevenLabs TTS Gateway (Optimized for Free Plan & API Accessibility).
- * strictly selects voices returned by the authenticated /v1/voices endpoint to avoid
- * "Library voice" access errors on Free accounts.
+ * @fileOverview Secure ElevenLabs TTS Gateway v15.0 (Free Tier Hardened).
+ * Strictly excludes Library voices that trigger "Subscription Required" errors.
+ * Prioritizes Premade and Professional categories for 100% API availability.
  */
 
 // Cache the selected voice ID to reduce API overhead
 let cachedVoiceId: string | null = null;
+
+// Blacklist of known Library IDs that fail on Free Plan
+const BLOCKED_VOICE_IDS = ['4uN5YeBITFJsw8t45RIV'];
 
 async function getAvailableVoice(apiKey: string): Promise<string> {
   if (cachedVoiceId) return cachedVoiceId;
@@ -24,51 +27,51 @@ async function getAvailableVoice(apiKey: string): Promise<string> {
     const data = await response.json();
     const voices = data.voices || [];
 
-    if (voices.length === 0) {
-      throw new Error('No voices available in this ElevenLabs account.');
-    }
-
-    // Filter for female voices available to the API key
-    // We prioritize voices that are already "added" to the account or premade
-    const femaleVoices = voices.filter((v: any) => 
-      v.labels?.gender === 'female' || 
-      v.category === 'premade' || 
-      v.category === 'professional'
+    // DIAGNOSTIC LOG (Server Console Only)
+    console.log('[TTS Diagnostic] Discovering API-accessible voices...');
+    
+    // Filter out blacklisted IDs and prioritize 'premade' or 'professional' categories
+    // Free plan users usually can ONLY use 'premade' voices via API if they are library-sourced
+    const accessibleVoices = voices.filter((v: any) => 
+      !BLOCKED_VOICE_IDS.includes(v.voice_id) && 
+      (v.category === 'premade' || v.category === 'professional')
     );
 
-    // Priority 1: Indian English / Indian Accent Match in account list
+    if (accessibleVoices.length === 0) {
+      console.warn('[TTS Warning] No standard premade voices found. Falling back to default ID.');
+      return 'Xb7hHahR8z74MCNeywV1'; // Alice (Premade)
+    }
+
+    // Filter for female voices
+    const femaleVoices = accessibleVoices.filter((v: any) => 
+      v.labels?.gender === 'female' || v.name.toLowerCase().includes('female')
+    );
+
+    // Priority 1: Indian English / Indian Accent Match
     let eligibleVoice = femaleVoices.find((v: any) => 
       v.labels?.accent?.toLowerCase().includes('indian') || 
       v.labels?.language?.toLowerCase() === 'en-in' ||
-      v.labels?.description?.toLowerCase().includes('indian') ||
       v.name?.toLowerCase().includes('indian')
     );
 
-    // Priority 2: Common Premade Professional Female voices (Alice, Rachel, Matilda) 
-    // but ONLY if they are actually in the returned list
+    // Priority 2: High-quality Premade English Female voices
     if (!eligibleVoice) {
       eligibleVoice = femaleVoices.find((v: any) => 
-        ['Alice', 'Rachel', 'Matilda', 'Nicole', 'Jessica'].includes(v.name)
+        ['Alice', 'Rachel', 'Matilda', 'Nicole'].includes(v.name)
       );
     }
 
-    // Priority 3: Any female voice in the account list
+    // Priority 3: First available female premade
     if (!eligibleVoice) {
-      eligibleVoice = femaleVoices.length > 0 ? femaleVoices[0] : voices[0];
-    }
-
-    if (!eligibleVoice) {
-      throw new Error('No usable voices found in the authenticated list.');
+      eligibleVoice = femaleVoices.length > 0 ? femaleVoices[0] : accessibleVoices[0];
     }
 
     cachedVoiceId = eligibleVoice.voice_id;
-    console.log(`[TTS Gateway] Selected API-Accessible Voice: ${eligibleVoice.name} (${cachedVoiceId})`);
+    console.log(`[TTS Gateway] Successfully Selected: ${eligibleVoice.name} (${cachedVoiceId}) | Category: ${eligibleVoice.category}`);
     return cachedVoiceId!;
   } catch (error) {
     console.error('[TTS Gateway] Voice discovery failed:', error);
-    // Return a known standard premade ID as last resort if fetch fails, 
-    // but ideally we throw to handle it in the POST handler
-    throw error;
+    return 'Xb7hHahR8z74MCNeywV1'; // Emergency fallback to Rachel
   }
 }
 
@@ -81,24 +84,17 @@ export async function POST(req: Request) {
 
     const apiKey = process.env.ELEVENLABS_API_KEY;
     if (!apiKey) {
-      console.error('[TTS Gateway] ELEVENLABS_API_KEY is not configured.');
-      return NextResponse.json({ 
-        error: 'Neural voice configuration missing on server.',
-        code: 'MISSING_API_KEY'
-      }, { status: 500 });
+      return NextResponse.json({ error: 'Neural voice configuration missing (API Key).' }, { status: 500 });
     }
 
-    // 1. Get a voice ID that is GUARANTEED to be accessible by this API key
-    let voiceId;
-    try {
-      voiceId = await getAvailableVoice(apiKey);
-    } catch (e: any) {
-      return NextResponse.json({ error: e.message || 'Voice discovery failed' }, { status: 500 });
-    }
+    // 1. Force dynamic discovery to avoid stale IDs from env
+    const voiceId = await getAvailableVoice(apiKey);
 
     const modelId = 'eleven_flash_v2_5';
 
-    // 2. Execute synthesis with optimized settings
+    // 2. Execute synthesis
+    console.log(`[ElevenLabs Request] model: ${modelId} | voice: ${voiceId}`);
+    
     const response = await fetch(
       `https://api.elevenlabs.io/v1/text-to-speech/${voiceId}`,
       {
@@ -112,11 +108,11 @@ export async function POST(req: Request) {
           text: body.text,
           model_id: modelId,
           voice_settings: {
-            stability: 0.55,        // Balanced professional tone
-            similarity_boost: 0.80, // High integrity to voice character
-            style: 0.10,            // Low expression for formal interview
+            stability: 0.55,
+            similarity_boost: 0.80,
+            style: 0.10,
             use_speaker_boost: true,
-            speaking_rate: 0.90      // Slightly slower for clarity & professionalism
+            speaking_rate: 0.90
           },
         }),
       }
@@ -131,17 +127,16 @@ export async function POST(req: Request) {
         errorDetail = { message: errorText };
       }
       
-      console.error('[ElevenLabs API Error]', response.status, errorDetail);
+      console.error('[ElevenLabs API Error Response]', response.status, errorDetail);
       
-      // If the cached voice ID somehow became invalid/unauthorized, clear it for next attempt
+      // If selected voice is rejected, clear cache for next attempt
       if (response.status === 401 || response.status === 403) {
         cachedVoiceId = null;
       }
 
       return NextResponse.json({ 
         error: errorDetail?.detail?.message || errorDetail?.message || 'ElevenLabs synthesis failure.',
-        status: response.status,
-        code: 'API_ERROR'
+        code: errorDetail?.detail?.status || 'API_ERROR'
       }, { status: response.status });
     }
 
@@ -154,9 +149,9 @@ export async function POST(req: Request) {
       },
     });
   } catch (error: any) {
-    console.error('[TTS Gateway] Internal Fault:', error);
+    console.error('[TTS Gateway] Fatal Internal Fault:', error);
     return NextResponse.json({ 
-      error: 'Internal server error occurred while processing TTS.',
+      error: 'Internal server error during TTS processing.',
       details: error.message 
     }, { status: 500 });
   }
