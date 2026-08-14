@@ -64,7 +64,7 @@ export default function CodingEnginePage() {
   const [currentIdx, setCurrentIdx] = useState(0);
   const [selectedLang, setSelectedLang] = useState(LANGUAGES[0]);
   const [code, setCode] = useState("");
-  const [timeLeft, setTimeLeft] = useState(10 * 60); 
+  const [timeLeft, setTimeLeft] = useState(600); 
   const [isTimeExpired, setIsTimeExpired] = useState(false);
   
   const [sessionResults, setSessionResults] = useState<Record<number, any>>({});
@@ -117,7 +117,8 @@ export default function CodingEnginePage() {
 
   const currentQ = useMemo(() => {
     if (!questions || questions.length === 0) return null;
-    return questions[currentIdx] || null;
+    if (currentIdx < 0 || currentIdx >= questions.length) return questions[0];
+    return questions[currentIdx];
   }, [questions, currentIdx]);
 
   const finalizeAssessment = useCallback(async () => {
@@ -162,7 +163,7 @@ export default function CodingEnginePage() {
     if (isNavigating) return;
     setIsNavigating(true);
 
-    const totalQuestionsCount = questions?.length || 0;
+    const totalQuestionsCount = (questions || []).length;
     if (currentIdx < totalQuestionsCount - 1) {
       setCurrentIdx(prev => prev + 1);
       setTerminalOutput("Waiting for your implementation.");
@@ -177,10 +178,10 @@ export default function CodingEnginePage() {
     if (!user || !db || !journey || !questions || !questions[idx]) return;
     const q = questions[idx];
     
-    const executionTime = res.results?.length > 0 
+    const executionTime = (res.results || []).length > 0 
       ? Math.max(...res.results.map((r: any) => parseFloat(r.executionTime || 0))) 
       : 0;
-    const memory = res.results?.length > 0 
+    const memory = (res.results || []).length > 0 
       ? Math.max(...res.results.map((r: any) => {
           const m = parseInt(r.memory || 0);
           return isNaN(m) ? 0 : m;
@@ -209,7 +210,7 @@ export default function CodingEnginePage() {
   };
 
   const handleRunCode = async () => {
-    if (isRunning || isSubmitting || isTimeExpired || isNavigating || !currentQ) return;
+    if (isRunning || isSubmitting || isTimeExpired || isNavigating || !currentQ || countdown !== null) return;
     
     if (!code || code.trim().length === 0) {
       toast({ variant: "destructive", title: "Empty Payload", description: "Please implement logic before running." });
@@ -249,7 +250,7 @@ export default function CodingEnginePage() {
   };
 
   const handleSubmitCode = async () => {
-    if (isSubmitting || isRunning || isTimeExpired || isNavigating || !currentQ) return;
+    if (isSubmitting || isRunning || isTimeExpired || isNavigating || !currentQ || countdown !== null) return;
 
     if (!code || code.trim().length === 0) {
       toast({ variant: "destructive", title: "Empty Payload", description: "Please implement logic before submitting." });
@@ -318,7 +319,7 @@ export default function CodingEnginePage() {
   };
 
   const handleSkipQuestion = async () => {
-    if (isNavigating || isSubmitting || isRunning || isTimeExpired || !currentQ) return;
+    if (isNavigating || isSubmitting || isRunning || isTimeExpired || !currentQ || countdown !== null) return;
     
     const skipReport = { 
       code: code || "// Skipped", 
@@ -338,7 +339,6 @@ export default function CodingEnginePage() {
     async function initEnvironment() {
       if (!db || !user || !journey || (questions && questions.length === 5)) return;
       
-      // Attempt to load existing session questions
       if (journey.codingQuestions && 
           journey.codingQuestions.length === 5 && 
           journey.questionsSessionId === journey.sessionId) {
@@ -353,17 +353,13 @@ export default function CodingEnginePage() {
         const userData = userSnap.data();
         const usedIds = Array.isArray(userData?.codingQuestionHistory) ? userData.codingQuestionHistory : [];
         
-        // Helper to select exactly n questions from a pool, prioritizing unused ones
         const pickQuestions = (difficulty: string, count: number) => {
           const pool = [...MASTER_QUESTIONS].filter(q => q.difficulty === difficulty);
-          // Shuffle the full pool first
           const shuffledPool = pool.sort(() => Math.random() - 0.5);
           
-          // Separate into unused and used
           const unused = shuffledPool.filter(q => !usedIds.includes(q.id));
           const used = shuffledPool.filter(q => usedIds.includes(q.id));
           
-          // Combine prioritizing unused, then taking as many as needed to fill 'count'
           const combined = [...unused, ...used];
           return combined.slice(0, count);
         };
@@ -374,7 +370,6 @@ export default function CodingEnginePage() {
 
         const finalQuestions = [...selectedEasy, ...selectedMed, ...selectedHard];
         
-        // Final sanity check: if for some reason we didn't get 5, just take random ones from master
         if (finalQuestions.length < 5) {
           const fallback = MASTER_QUESTIONS.sort(() => Math.random() - 0.5).slice(0, 5);
           setQuestions(fallback);
@@ -414,13 +409,11 @@ export default function CodingEnginePage() {
     }
   }, [currentIdx, selectedLang, currentQ, sessionResults]);
 
-  // Timer reset effect: Runs when the question index changes
   useEffect(() => {
-    setTimeLeft(10 * 60);
+    setTimeLeft(600);
     setIsTimeExpired(false);
   }, [currentIdx]);
 
-  // Timer interval effect: Handles the live countdown and auto-progression
   useEffect(() => {
     if (isInitializing || isFinalizing || isTimeExpired) return;
     const timer = setInterval(() => {
@@ -428,7 +421,6 @@ export default function CodingEnginePage() {
         if (prev <= 1) {
           clearInterval(timer);
           setIsTimeExpired(true);
-          // Trigger the existing next question mechanism upon timeout
           goToNextQuestion();
           return 0;
         }
@@ -466,7 +458,7 @@ export default function CodingEnginePage() {
           </div>
           <div>
             <h1 className="text-sm font-black uppercase tracking-widest text-premium">Syntax Matrix Protocol</h1>
-            <p className="text-[9px] font-bold text-accent uppercase tracking-widest">Question {currentIdx + 1} of {questions?.length || 5}</p>
+            <p className="text-[9px] font-bold text-accent uppercase tracking-widest">Question {currentIdx + 1} of {(questions || []).length || 5}</p>
           </div>
         </div>
         
@@ -485,7 +477,8 @@ export default function CodingEnginePage() {
         <div className="flex items-center gap-8">
           <div className={cn(
             "px-6 py-2 rounded-xl glass border-white/10 font-mono text-xl tabular-nums tracking-widest flex items-center gap-3",
-            timeLeft < 300 ? "text-red-500 animate-pulse shadow-[0_0_20px_rgba(34,211,238,0.2)]" : "text-accent"
+            "text-red-500",
+            timeLeft < 300 && "animate-pulse shadow-[0_0_20px_rgba(34,211,238,0.2)]"
           )}>
             <Timer className="w-5 h-5" /> {formatTime(timeLeft)}
           </div>
@@ -498,10 +491,10 @@ export default function CodingEnginePage() {
             {currentQ ? (
               <div className="space-y-10">
                 <div className="flex items-center justify-between">
-                  <span className="text-[10px] font-black uppercase tracking-widest text-white/40">Question {currentIdx + 1} of {questions?.length || 5}</span>
+                  <span className="text-[10px] font-black uppercase tracking-widest text-white/40">Question {currentIdx + 1} of {(questions || []).length || 5}</span>
                   <div className="flex items-center gap-2">
                     <Clock className="w-3 h-3 text-white/40" />
-                    <span className="text-[9px] font-bold text-white/40 uppercase tracking-widest">REMAINING: {formatTime(timeLeft)}</span>
+                    <span className="text-[9px] font-bold text-white/40 uppercase tracking-widest">TIME LEFT: {formatTime(timeLeft)}</span>
                   </div>
                 </div>
 
@@ -512,7 +505,7 @@ export default function CodingEnginePage() {
                       {currentQ.difficulty === 'Easy' ? 'LEVEL α' : currentQ.difficulty === 'Medium' ? 'LEVEL β' : 'LEVEL Ω'}
                     </Badge>
                     <Badge variant="outline" className="text-white/40 text-[10px] uppercase border-white/10 px-4 py-1 font-black tracking-widest flex items-center gap-1.5">
-                      <Target className="w-3 h-3" /> {getTopicLabel(currentQ.topic)}
+                      <Target className="w-3 h-3" /> {getTopicLabel(currentQ?.topic)}
                     </Badge>
                   </div>
                 </div>
@@ -520,10 +513,10 @@ export default function CodingEnginePage() {
                 <div className="space-y-8">
                   <div className="space-y-3">
                     <h4 className="text-[11px] font-black uppercase tracking-[0.3em] text-accent">PROBLEM NARRATIVE</h4>
-                    <p className="text-base text-white/70 leading-relaxed font-light whitespace-pre-wrap">{currentQ.description || 'No description provided.'}</p>
+                    <p className="text-base text-white/70 leading-relaxed font-light whitespace-pre-wrap">{currentQ.description || 'Solve the given programming problem.'}</p>
                   </div>
 
-                  {currentQ.constraints && currentQ.constraints.length > 0 && (
+                  {(currentQ.constraints || []).length > 0 && (
                     <div className="space-y-4">
                       <h4 className="text-[11px] font-black uppercase tracking-[0.3em] text-white/30">BOUNDARY CONSTRAINTS</h4>
                       <ul className="space-y-2">
@@ -542,11 +535,11 @@ export default function CodingEnginePage() {
                     <div className="space-y-5 font-mono text-[11px]">
                       <div className="space-y-2">
                         <p className="text-white/20 uppercase tracking-widest text-[9px]">INPUT</p>
-                        <pre className="text-accent whitespace-pre-wrap p-4 glass rounded-xl bg-white/5 border border-white/5">{currentQ.sampleInput || 'N/A'}</pre>
+                        <pre className="text-accent whitespace-pre-wrap p-4 glass rounded-xl bg-white/5 border border-white/5">{currentQ.sampleInput || ''}</pre>
                       </div>
                       <div className="space-y-2">
                         <p className="text-white/20 uppercase tracking-widest text-[9px]">EXPECTED OUTPUT</p>
-                        <pre className="text-green-400 whitespace-pre-wrap p-4 glass rounded-xl bg-white/5 border border-white/5">{currentQ.sampleOutput || 'N/A'}</pre>
+                        <pre className="text-green-400 whitespace-pre-wrap p-4 glass rounded-xl bg-white/5 border border-white/5">{currentQ.sampleOutput || ''}</pre>
                       </div>
                     </div>
                   </div>
@@ -585,20 +578,24 @@ export default function CodingEnginePage() {
           <Card className="flex-1 glass border-white/5 bg-[#0b0e1a] flex flex-col relative overflow-hidden rounded-[2.5rem] shadow-2xl">
             <div className="h-14 border-b border-white/5 bg-white/[0.02] flex items-center px-10 gap-12 justify-between">
                <div className="flex items-center gap-12">
-                 <div className="flex items-center gap-3">
-                    <span className="text-[9px] font-black text-white/30 uppercase tracking-widest">Function:</span>
-                    <Badge variant="outline" className="border-accent/30 text-accent text-[10px] font-mono px-3">
-                      {currentQ?.functionInfo?.name || 'solve()'}
-                    </Badge>
-                 </div>
-                 <div className="flex items-center gap-3">
-                    <span className="text-[9px] font-black text-white/30 uppercase tracking-widest">Return:</span>
-                    <span className="text-[10px] font-mono text-purple-400">{currentQ?.functionInfo?.returnType || 'void'}</span>
-                 </div>
+                 {currentQ?.functionInfo && (
+                   <>
+                     <div className="flex items-center gap-3">
+                        <span className="text-[9px] font-black text-white/30 uppercase tracking-widest">Function:</span>
+                        <Badge variant="outline" className="border-accent/30 text-accent text-[10px] font-mono px-3">
+                          {currentQ.functionInfo.name || 'solve()'}
+                        </Badge>
+                     </div>
+                     <div className="flex items-center gap-3">
+                        <span className="text-[9px] font-black text-white/30 uppercase tracking-widest">Return:</span>
+                        <span className="text-[10px] font-mono text-purple-400">{currentQ.functionInfo.returnType || 'void'}</span>
+                     </div>
+                   </>
+                 )}
                </div>
                <div className="flex items-center gap-3">
                  <select 
-                   value={selectedLang.id} 
+                   value={selectedLang?.id || LANGUAGES[0].id} 
                    onChange={(e) => setSelectedLang(LANGUAGES.find(l => l.id === e.target.value) || LANGUAGES[0])} 
                    className="h-8 px-3 glass border-white/10 bg-[#0b0e1a] rounded-lg text-[9px] font-black uppercase tracking-widest outline-none focus:border-accent"
                  >
@@ -610,7 +607,7 @@ export default function CodingEnginePage() {
             <Editor 
               height="100%" 
               theme="vs-dark" 
-              language={selectedLang.monaco} 
+              language={selectedLang?.monaco || 'python'} 
               value={code} 
               onChange={(val) => setCode(val || "")} 
               options={{ 
@@ -626,7 +623,7 @@ export default function CodingEnginePage() {
               <div className="flex items-center gap-6">
                 <Button 
                   onClick={handleRunCode} 
-                  disabled={isRunning || isSubmitting || isTimeExpired || isNavigating || countdown !== null} 
+                  disabled={isRunning || isSubmitting || isTimeExpired || isNavigating || !currentQ || countdown !== null} 
                   className="h-12 px-8 glass border-white/10 bg-white/5 text-[10px] font-black uppercase tracking-widest rounded-xl hover:bg-white/10 transition-all"
                 >
                   {isRunning ? <Loader2 className="w-4 animate-spin mr-2" /> : <Activity className="w-4 h-4 mr-2" />} RUN SAMPLE
@@ -634,7 +631,7 @@ export default function CodingEnginePage() {
 
                 <Button 
                   onClick={handleSubmitCode} 
-                  disabled={isRunning || isSubmitting || isTimeExpired || isNavigating || countdown !== null} 
+                  disabled={isRunning || isSubmitting || isTimeExpired || isNavigating || !currentQ || countdown !== null} 
                   className="h-12 px-12 btn-premium rounded-xl text-[10px] font-black uppercase tracking-[0.3em] shadow-2xl group"
                 >
                   {isSubmitting ? (
@@ -646,7 +643,7 @@ export default function CodingEnginePage() {
 
                 <Button 
                   onClick={handleSkipQuestion} 
-                  disabled={isRunning || isSubmitting || isTimeExpired || isNavigating || countdown !== null}
+                  disabled={isRunning || isSubmitting || isTimeExpired || isNavigating || !currentQ || countdown !== null}
                   variant="ghost" 
                   className="h-12 px-6 rounded-xl border border-white/10 text-white/40 text-[10px] font-black uppercase tracking-widest hover:bg-white/5 hover:text-white transition-all"
                 >
