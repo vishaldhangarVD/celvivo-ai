@@ -91,7 +91,7 @@ export default function CodingEnginePage() {
     switch (diff) {
       case 'Easy': return 'text-green-400 border-green-500/20 bg-green-500/5';
       case 'Medium': return 'text-yellow-400 border-yellow-500/20 bg-yellow-500/5';
-      case 'Hard': return 'text-red-400 border-red-500/20 bg-red-500/5';
+      case 'Hard': return 'text-red-400 border-red-500/20 bg-red-500/20';
       default: return 'text-accent border-accent/20 bg-accent/5';
     }
   };
@@ -477,9 +477,8 @@ export default function CodingEnginePage() {
         <div className="flex items-center gap-8">
           <div className={cn(
             "px-6 py-2 rounded-xl glass border-white/10 font-mono text-xl tabular-nums tracking-widest flex items-center gap-3",
-            "text-red-500",
             timeLeft < 300 && "animate-pulse shadow-[0_0_20px_rgba(34,211,238,0.2)]"
-          )}>
+          )} style={{ color: '#ef4444' }}>
             <Timer className="w-5 h-5" /> {formatTime(timeLeft)}
           </div>
         </div>
@@ -494,7 +493,7 @@ export default function CodingEnginePage() {
                   <span className="text-[10px] font-black uppercase tracking-widest text-white/40">Question {currentIdx + 1} of {(questions || []).length || 5}</span>
                   <div className="flex items-center gap-2">
                     <Clock className="w-3 h-3 text-white/40" />
-                    <span className="text-[9px] font-bold text-white/40 uppercase tracking-widest">TIME LEFT: {formatTime(timeLeft)}</span>
+                    <span className="text-[9px] font-bold uppercase tracking-widest" style={{ color: '#ef4444' }}>TIME LEFT: {formatTime(timeLeft)}</span>
                   </div>
                 </div>
 
