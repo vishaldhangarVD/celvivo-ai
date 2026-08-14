@@ -21,17 +21,16 @@ async function getAvailableVoice(apiKey: string): Promise<string> {
     const data = await response.json();
     const voices = data.voices || [];
 
-    // Filter for female voices that are "premade" (Standard voices accessible on Free plan via API)
+    // Filter for female voices that are "premade" or professional clones
     const femaleVoices = voices.filter((v: any) => 
-      v.labels?.gender === 'female' && 
-      v.category === 'premade'
+      v.labels?.gender === 'female'
     );
 
-    // Priority 1: Direct accent match in labels (e.g., 'indian', 'en-IN')
+    // Priority 1: Direct accent match in labels (Indian English, en-IN)
     let eligibleVoice = femaleVoices.find((v: any) => 
-      v.labels?.accent?.toLowerCase() === 'indian' || 
-      v.labels?.description?.toLowerCase().includes('indian') ||
-      v.labels?.language?.toLowerCase() === 'en-in'
+      v.labels?.accent?.toLowerCase().includes('indian') || 
+      v.labels?.language?.toLowerCase() === 'en-in' ||
+      v.labels?.description?.toLowerCase().includes('indian english')
     );
 
     // Priority 2: Indian identifier in name or description
@@ -42,22 +41,20 @@ async function getAvailableVoice(apiKey: string): Promise<string> {
       );
     }
 
-    // Priority 3: Professional/Conversational fallback
+    // Priority 3: Professional/Conversational fallback with neutral accent capability
     if (!eligibleVoice) {
       eligibleVoice = femaleVoices.find((v: any) => 
-        v.labels?.description?.toLowerCase().includes('conversational') ||
-        v.labels?.description?.toLowerCase().includes('professional')
+        v.name === 'Alice' || v.name === 'Rachel' || v.name === 'Matilda'
       );
     }
 
     // Priority 4: Closest available female premade
     if (!eligibleVoice) {
-      eligibleVoice = femaleVoices.find((v: any) => v.name === 'Alice' || v.name === 'Rachel') || femaleVoices[0];
+      eligibleVoice = femaleVoices[0];
     }
 
     if (!eligibleVoice) {
-      // Hard fallback to a known stable premade ID
-      console.warn('[TTS Gateway] No ideal voices found, using system fallback Alice.');
+      console.warn('[TTS Gateway] No ideal voices found, using system fallback.');
       return 'Xb7hHqWq15UaYAn73Jc0'; // Alice (Premade)
     }
 
@@ -86,7 +83,7 @@ export async function POST(req: Request) {
       }, { status: 500 });
     }
 
-    // Dynamic Voice Selection for Free Plan compatibility and professional tone
+    // Dynamic Voice Selection for Indian English professional tone
     const voiceId = await getAvailableVoice(apiKey);
     const modelId = 'eleven_flash_v2_5';
 
@@ -103,10 +100,11 @@ export async function POST(req: Request) {
           text: body.text,
           model_id: modelId,
           voice_settings: {
-            stability: 0.65, // Medium/High for professional consistency
-            similarity_boost: 0.85, // High to maintain voice character
-            style: 0.1, // Low/Medium to avoid over-dramatization
-            use_speaker_boost: true
+            stability: 0.55, // Calibrated for clear, professional interview speech
+            similarity_boost: 0.80, // Maintains voice character integrity
+            style: 0.10, // Neutral professional style
+            use_speaker_boost: true,
+            speaking_rate: 0.90 // Reduced speed for professional clarity
           },
         }),
       }
