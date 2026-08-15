@@ -50,7 +50,7 @@ const LANGUAGE_CONFIG: Record<string, {
     language: 'typescript', 
     versionIndex: '0', 
     ext: 'ts', 
-    compile: 'tsc solution.ts --target es6 --module commonjs', 
+    compile: 'tsc solution.ts --target es6 --module commonjs --skipLibCheck', 
     run: 'node solution.js', 
     file: 'solution.ts' 
   },
