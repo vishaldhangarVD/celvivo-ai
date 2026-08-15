@@ -143,7 +143,6 @@ export default function CodingEnginePage() {
           else if (r.status === 'Skipped') skipped++;
           else failed++;
         } else {
-          // No result stored means question was timed out or bypassed
           failed++;
         }
       }
@@ -625,6 +624,28 @@ export default function CodingEnginePage() {
               language={selectedLang?.monaco || 'python'} 
               value={code} 
               onChange={(val) => setCode(val || "")} 
+              onMount={(editor, monaco) => {
+                // Set global defaults for TypeScript language to support Node.js APIs in the editor
+                monaco.languages.typescript.typescriptDefaults.setCompilerOptions({
+                  target: monaco.languages.typescript.ScriptTarget.ES2017,
+                  moduleResolution: monaco.languages.typescript.ModuleResolutionKind.NodeJs,
+                  module: monaco.languages.typescript.ModuleKind.CommonJS,
+                  allowNonTsExtensions: true,
+                  noEmit: true,
+                });
+                
+                // Minimal Node.js typings for standard coding environments
+                monaco.languages.typescript.typescriptDefaults.addExtraLib(`
+                  declare module "fs" {
+                    export function readFileSync(fd: number, encoding: string): string;
+                    export function readFileSync(path: string, encoding: string): string;
+                  }
+                  declare var process: {
+                    stdin: { fd: number };
+                    stdout: { write: (s: string) => void };
+                  };
+                `, 'node.d.ts');
+              }}
               options={{ 
                 fontSize: 15, 
                 readOnly: isTimeExpired || isFinalizing || countdown !== null ? true : false, 

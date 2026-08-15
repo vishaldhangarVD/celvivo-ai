@@ -50,7 +50,7 @@ const LANGUAGE_CONFIG: Record<string, {
     language: 'typescript', 
     versionIndex: '0', 
     ext: 'ts', 
-    compile: 'tsc solution.ts --target es6 --module commonjs --skipLibCheck', 
+    compile: 'tsc solution.ts --target es2017 --module commonjs --moduleResolution node --skipLibCheck', 
     run: 'node solution.js', 
     file: 'solution.ts' 
   },
@@ -167,16 +167,29 @@ export async function POST(req: Request) {
 
     // Mode A: Single Execution (Run Sample)
     if (!testCases || !Array.isArray(testCases)) {
+      let script = source_code;
+      let targetLang = config.language;
+      let targetVersion = config.versionIndex;
+      let finalStdin = stdin || "";
+
+      // Special handling for TypeScript to ensure Node APIs compile and run correctly via bash proxy
+      if (language === 'typescript') {
+        targetLang = 'bash';
+        targetVersion = '4';
+        finalStdin = ""; // Passed via HEREDOC in bash script
+        script = `cat << 'NEXVORO_CODE_EOF' > solution.ts\n${source_code}\nNEXVORO_CODE_EOF\n\ntsc solution.ts --target es2017 --module commonjs --moduleResolution node --skipLibCheck 2> compile_errors.txt\nif [ $? -ne 0 ]; then\n  cat compile_errors.txt\n  exit 0\nfi\nnode solution.js << 'NEXVORO_INPUT_EOF'\n${stdin || ""}\nNEXVORO_INPUT_EOF\n`;
+      }
+
       const response = await fetch(JDOODLE_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           clientId,
           clientSecret,
-          script: source_code,
-          stdin: stdin || "",
-          language: config.language,
-          versionIndex: config.versionIndex,
+          script,
+          stdin: finalStdin,
+          language: targetLang,
+          versionIndex: targetVersion,
         }),
       });
 
