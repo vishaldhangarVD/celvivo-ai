@@ -415,12 +415,30 @@ export default function CodingEnginePage() {
     initEnvironment();
   }, [db, user, journey, journeyRef, questions, toast]);
 
+  // Load language-specific starter code or saved work
   useEffect(() => {
     if (currentQ) {
-      const saved = sessionResults[currentIdx]?.code;
-      const starter = currentQ.starterCode?.[selectedLang.id] || currentQ.starterCode?.["python"] || "// Starter code unavailable for this language.";
-      setCode(saved || starter);
-      setTerminalOutput(sessionResults[currentIdx] ? "Question submission archived." : "Waiting for your implementation.");
+      // Check if we have a saved result for the current question index in the same language
+      const savedResult = sessionResults[currentIdx];
+      const isSameLanguage = savedResult?.language === selectedLang.label;
+      const savedCode = isSameLanguage ? savedResult.code : null;
+
+      // Immediately load the current question's correct starter code for the selected language
+      const starterCode = currentQ.starterCode?.[selectedLang.id] || 
+                          currentQ.starterCode?.["python"] || 
+                          "// Starter code unavailable for this language.";
+
+      // Prioritize saved work if it exists and matches the language, otherwise use starter code
+      setCode(savedCode || starterCode);
+
+      // Update UI state based on whether work is "fresh" or "archived"
+      if (isSameLanguage) {
+        setTerminalOutput("Question submission archived.");
+        setActiveTerminalTab("cases");
+      } else {
+        setTerminalOutput("Waiting for your implementation.");
+        setActiveTerminalTab("output");
+      }
     }
   }, [currentIdx, selectedLang, currentQ, sessionResults]);
 
