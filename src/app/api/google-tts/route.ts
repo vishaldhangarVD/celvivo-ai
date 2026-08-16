@@ -2,9 +2,12 @@ import { NextResponse } from 'next/server';
 import { GoogleAuth } from 'google-auth-library';
 
 /**
- * @fileOverview Secure Google Cloud TTS Gateway for comparison tests.
- * Targeted at en-IN-Wavenet-A (Female, Indian English).
- * Uses OAuth2 authentication via Google Application Default Credentials.
+ * @fileOverview Secure Google Cloud TTS Gateway (Test Only).
+ * Implements a prioritized authentication chain:
+ * 1. Application Default Credentials (ADC)
+ * 2. GOOGLE_SERVICE_ACCOUNT_JSON environment variable
+ * 
+ * Target Voice: en-IN-Wavenet-A (Female, Indian English).
  */
 
 export async function POST(req: Request) {
@@ -16,15 +19,21 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Text payload missing." }, { status: 400 });
     }
 
-    console.log(`[Google TTS OAuth2 Request]
-- Voice: en-IN-Wavenet-A
-- Speed: 0.90
-- Text length: ${text.length} chars`);
-
-    // Initialize Google Auth with the required scope for Text-to-Speech
-    const auth = new GoogleAuth({
+    // Initialize Google Auth options
+    const authOptions: any = {
       scopes: 'https://www.googleapis.com/auth/cloud-platform'
-    });
+    };
+
+    // Support for explicit service account JSON via environment variable
+    if (process.env.GOOGLE_SERVICE_ACCOUNT_JSON) {
+      try {
+        authOptions.credentials = JSON.parse(process.env.GOOGLE_SERVICE_ACCOUNT_JSON);
+      } catch (parseError) {
+        console.error('[Google TTS] Failed to parse GOOGLE_SERVICE_ACCOUNT_JSON environment variable.');
+      }
+    }
+
+    const auth = new GoogleAuth(authOptions);
 
     let accessToken: string | null = null;
     try {
@@ -34,9 +43,8 @@ export async function POST(req: Request) {
     } catch (authError: any) {
       console.error('[Google TTS Auth Error]:', authError.message);
       return NextResponse.json({ 
-        error: "Google Cloud authentication failed. Ensure service account credentials (ADC) are configured.",
-        status: "AUTH_ERROR",
-        details: authError.message
+        error: "Google Cloud authentication failed. Configure ADC or GOOGLE_SERVICE_ACCOUNT_JSON.",
+        status: "AUTH_ERROR"
       }, { status: 500 });
     }
 
@@ -46,6 +54,11 @@ export async function POST(req: Request) {
         status: "TOKEN_ERROR"
       }, { status: 500 });
     }
+
+    console.log(`[Google TTS Test Request]
+- Voice: en-IN-Wavenet-A
+- Speed: 0.90
+- Text length: ${text.length} chars`);
 
     const response = await fetch(
       `https://texttospeech.googleapis.com/v1/text:synthesize`,
