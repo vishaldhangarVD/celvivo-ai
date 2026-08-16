@@ -205,12 +205,12 @@ export default function Navbar() {
                 <div className="flex items-center gap-4">
                   <Link href="/login">
                     <Button variant="ghost" className="text-[10px] font-bold tracking-[0.2em] uppercase text-white/50 hover:text-white">
-                      Access
+                      LOGIN
                     </Button>
                   </Link>
                   <Link href="/signup">
                     <Button className="h-10 px-6 btn-premium text-[9px] tracking-[0.2em] uppercase rounded-xl border border-white/10">
-                      Begin Session
+                      SIGN IN
                     </Button>
                   </Link>
                 </div>
@@ -266,10 +266,10 @@ export default function Navbar() {
               ) : (
                 <>
                   <Link href="/login" onClick={() => setIsOpen(false)}>
-                    <Button variant="outline" className="w-full h-16 rounded-2xl glass border-white/10 font-bold uppercase tracking-widest text-xs">Login</Button>
+                    <Button variant="outline" className="w-full h-16 rounded-2xl glass border-white/10 font-bold uppercase tracking-widest text-xs">LOGIN</Button>
                   </Link>
                   <Link href="/signup" onClick={() => setIsOpen(false)}>
-                    <Button className="w-full h-16 btn-premium font-bold uppercase tracking-widest text-xs">Start Session</Button>
+                    <Button className="w-full h-16 btn-premium font-bold uppercase tracking-widest text-xs">SIGN IN</Button>
                   </Link>
                 </>
               )}
