@@ -91,7 +91,7 @@ export async function POST(req: Request) {
     console.log(`[ElevenLabs TTS Request]
 - Voice ID: ${voiceId}
 - Model: ${modelId}
-- Settings: { stability: 0.65, similarity: 0.80, style: 0.05, speed: 0.82 }
+- Settings: { stability: 0.65, similarity: 0.80, style: 0.05, speed: 0.90 }
 - Text Length: ${body.text.length} chars
 - Indian Accent Detected: ${isNativeIndianVoice}`);
 
@@ -112,7 +112,7 @@ export async function POST(req: Request) {
             similarity_boost: 0.80,
             style: 0.05,
             use_speaker_boost: true,
-            speed: 0.82
+            speed: 0.90
           },
         }),
       }
