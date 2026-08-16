@@ -338,8 +338,7 @@ export default function AptitudeEnginePage() {
                             {String.fromCharCode(65 + i)}
                           </div>
                           <span className="text-sm font-medium leading-relaxed">{opt}</span>
-                        </div>
-                      </button>
+                        </button>
                       ))}
                     </div>
                   </div>
@@ -421,7 +420,7 @@ export default function AptitudeEnginePage() {
           )}
         </AnimatePresence>
       </main>
-      <NavigationControls onHome={() => router.push('/')} />
+      <NavigationControls onHome={() => router.push('/')} onBack={() => router.push('/dashboard')} />
     </div>
   );
 }
