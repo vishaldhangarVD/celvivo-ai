@@ -35,7 +35,8 @@ import {
   Award, 
   Lightbulb, 
   MoreHorizontal, 
-  Clock
+  Clock,
+  FlaskConical
 } from "lucide-react";
 import { aiMockInterview } from "@/ai/flows/ai-mock-interview-v2";
 import { generateInterviewFeedback } from "@/ai/flows/ai-interview-feedback";
@@ -95,23 +96,20 @@ function VirtualArenaContent() {
     return lastInterviewer?.text || "Initializing session...";
   }, [transcript]);
 
-  // ElevenLabs Neural Audio Protocol
+  // ElevenLabs Neural Audio Protocol (PRIMARY PRODUCTION)
   useEffect(() => {
     if (!currentInterviewerQuestion || currentInterviewerQuestion === "Initializing session...") return;
 
-    // 1. CANCEL PREVIOUS PENDING REQUESTS
     if (ttsAbortControllerRef.current) {
       ttsAbortControllerRef.current.abort();
     }
     
-    // 2. STOP AND CLEAR CURRENT AUDIO IMMEDIATELY
     if (audioRef.current) {
       audioRef.current.pause();
       audioRef.current.src = "";
-      audioRef.current.load(); // Force reset
+      audioRef.current.load();
     }
 
-    // 3. REVOKE OLD OBJECT URL TO PREVENT MEMORY LEAKS/CACHING
     if (currentAudioUrlRef.current) {
       URL.revokeObjectURL(currentAudioUrlRef.current);
       currentAudioUrlRef.current = null;
@@ -166,6 +164,54 @@ function VirtualArenaContent() {
       }
     };
   }, [currentInterviewerQuestion]);
+
+  // MANUAL TTS COMPARISON TESTER
+  const triggerManualTTS = async (endpoint: string) => {
+    if (!currentInterviewerQuestion || currentInterviewerQuestion === "Initializing session...") {
+      toast({ title: "Signal Lost", description: "Interviewer has not generated a prompt yet." });
+      return;
+    }
+
+    // Reset current audio stream
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current.src = "";
+      audioRef.current.load();
+    }
+
+    toast({ title: "Protocol Test", description: `Fetching comparison audio from ${endpoint === '/api/tts' ? 'ElevenLabs' : 'Google Cloud'}...` });
+
+    try {
+      const response = await fetch(endpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text: currentInterviewerQuestion }),
+      });
+
+      if (!response.ok) {
+        const err = await response.json();
+        throw new Error(err.error || "Synthesis Node Failed");
+      }
+
+      const audioBlob = await response.blob();
+      const audioUrl = URL.createObjectURL(audioBlob);
+      
+      // Memory cleanup for previous test audio if any
+      if (currentAudioUrlRef.current) URL.revokeObjectURL(currentAudioUrlRef.current);
+      currentAudioUrlRef.current = audioUrl;
+
+      const audio = new Audio(audioUrl);
+      audioRef.current = audio;
+      await audio.play();
+    } catch (e: any) {
+      console.error(`[TTS COMPARISON FAULT] ${endpoint}:`, e.message);
+      toast({ 
+        variant: "destructive", 
+        title: "Test Node Error", 
+        description: e.message 
+      });
+    }
+  };
 
   const toggleMediaMic = () => {
     const newState = !isMicOn;
@@ -557,7 +603,7 @@ function VirtualArenaContent() {
         </div>
 
         <div className="flex-1 flex flex-col min-h-0 p-3 space-y-1.5 overflow-hidden">
-          <div className="flex-1 min-h-0 relative rounded-[2rem] overflow-hidden bg-black border border-white/5 shadow-2xl">
+          <div className="flex-1 min-0 relative rounded-[2rem] overflow-hidden bg-black border border-white/5 shadow-2xl">
             <video
               ref={userVideoRef}
               autoPlay
@@ -614,6 +660,26 @@ function VirtualArenaContent() {
             </div>
 
             <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex items-center gap-3">
+              {/* COMPARISON TEST TOOLS */}
+              <div className="flex items-center gap-2 mr-4 border-r border-white/10 pr-4">
+                <Button 
+                  variant="ghost" 
+                  size="sm"
+                  onClick={() => triggerManualTTS('/api/tts')}
+                  className="h-9 px-3 rounded-xl glass border-blue-500/20 text-blue-400 text-[7px] font-black uppercase tracking-widest hover:bg-blue-500/10 flex gap-2"
+                >
+                  <FlaskConical className="w-3 h-3" /> Test ElevenLabs
+                </Button>
+                <Button 
+                  variant="ghost" 
+                  size="sm"
+                  onClick={() => triggerManualTTS('/api/google-tts')}
+                  className="h-9 px-3 rounded-xl glass border-green-500/20 text-green-400 text-[7px] font-black uppercase tracking-widest hover:bg-green-500/10 flex gap-2"
+                >
+                  <FlaskConical className="w-3 h-3" /> Test Google TTS
+                </Button>
+              </div>
+
               <Button 
                 variant="ghost" 
                 size="icon" 
