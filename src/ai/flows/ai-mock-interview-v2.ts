@@ -36,6 +36,8 @@ const AiMockInterviewInputSchema = z.object({
   codingScore: z.number().optional(),
   askedQuestions: z.array(z.string()).optional(),
   debugMode: z.boolean().optional(),
+  currentStage: z.enum(["INTRODUCTION", "TECHNICAL", "HR", "CLOSING"]).optional(),
+  currentDifficulty: z.enum(["EASY", "MEDIUM", "HARD"]).optional(),
 });
 export type AiMockInterviewInput = z.infer<typeof AiMockInterviewInputSchema>;
 
@@ -66,6 +68,10 @@ CRITICAL PERSONA RULES:
 - KEEP QUESTIONS SHORT AND SHARP.
 - NEVER generate bullet points, lists, or bold text.
 - NEVER reveal numeric scores, ATS percentages, or specific performance ratings to the candidate.
+
+SIMULATION STATE:
+- CURRENT STAGE: {{{currentStage}}}
+- CURRENT DIFFICULTY: {{{currentDifficulty}}}
 
 MASTER PROTOCOL (KNOWLEDGE NODES):
 1. RESUME & PROJECTS:
@@ -136,6 +142,8 @@ const aiMockInterviewFlow = ai.defineFlow(
       const { output } = await runWithResilience(prompt, {
         ...input,
         askedQuestions: input.askedQuestions || [],
+        currentStage: input.currentStage || "INTRODUCTION",
+        currentDifficulty: input.currentDifficulty || "MEDIUM",
       });
 
       if (!output) throw new Error("Neural synthesis failed.");
@@ -149,8 +157,8 @@ const aiMockInterviewFlow = ai.defineFlow(
       const bankIndex = Math.max(0, input.currentMainQuestionIndex - 1) % FALLBACK_QUESTIONS.length;
       return {
         nextQuestion: FALLBACK_QUESTIONS[bankIndex],
-        difficulty: "MEDIUM",
-        stage: "TECHNICAL",
+        difficulty: input.currentDifficulty || "MEDIUM",
+        stage: input.currentStage || "TECHNICAL",
         isInterviewComplete: input.currentMainQuestionIndex >= 12,
       };
     }

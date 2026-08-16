@@ -40,7 +40,7 @@ import {
 import { aiMockInterview } from "@/ai/flows/ai-mock-interview-v2";
 import { generateInterviewFeedback } from "@/ai/flows/ai-interview-feedback";
 import { useUser, useFirestore } from "@/firebase";
-import { doc, serverTimestamp, collection, addDoc, getDoc, deleteDoc } from "firebase/firestore";
+import { doc, serverTimestamp, collection, addDoc, getDoc, deleteDoc, updateDoc } from "firebase/firestore";
 import { useToast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
@@ -70,6 +70,11 @@ function VirtualArenaContent() {
   const [isGeneratingReport, setIsGeneratingReport] = useState(false);
   const [assessmentContext, setAssessmentContext] = useState<any>(null);
   const [cameraError, setCameraError] = useState<string | null>(null);
+  
+  // Neural Simulation State
+  const [currentSimStage, setCurrentSimStage] = useState<string>("INTRODUCTION");
+  const [currentSimDifficulty, setCurrentSimDifficulty] = useState<string>("MEDIUM");
+
   const [isMicOn, setIsMicOn] = useState(true);
   const [isCameraOn, setIsCameraOn] = useState(true);
 
@@ -79,6 +84,11 @@ function VirtualArenaContent() {
   const aiVideoRef = useRef<HTMLVideoElement | null>(null);
   const mediaStreamRef = useRef<MediaStream | null>(null);
   
+  const journeyRef = useMemo(() => {
+    if (!db || !user?.uid) return null;
+    return doc(db, 'users', user.uid, 'journey', 'active');
+  }, [db, user?.uid]);
+
   // ElevenLabs Audio Management
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const currentAudioUrlRef = useRef<string | null>(null);
@@ -95,7 +105,7 @@ function VirtualArenaContent() {
     return lastInterviewer?.text || "Initializing session...";
   }, [transcript]);
 
-  // ElevenLabs Neural Audio Protocol (PRIMARY PRODUCTION)
+  // ElevenLabs Neural Audio Protocol
   useEffect(() => {
     if (!currentInterviewerQuestion || currentInterviewerQuestion === "Initializing session...") return;
 
@@ -366,6 +376,12 @@ function VirtualArenaContent() {
         const data = snap.data();
         setAssessmentContext(data);
         
+        // Initialize Sim State from Data or Defaults
+        const startStage = data.simStage || "INTRODUCTION";
+        const startDiff = data.simDifficulty || "MEDIUM";
+        setCurrentSimStage(startStage);
+        setCurrentSimDifficulty(startDiff);
+        
         try {
           if (transcript.length === 0) {
             const response = await aiMockInterview({
@@ -377,11 +393,22 @@ function VirtualArenaContent() {
               aptitudeScore: data.aptitudeReport?.overallScore || 0,
               codingScore: data.codingReport?.score || 0,
               askedQuestions: [],
-              debugMode: data.debugMode
+              debugMode: data.debugMode,
+              currentStage: startStage as any,
+              currentDifficulty: startDiff as any
             });
 
             setTranscript([{ role: 'interviewer', text: response.nextQuestion }]);
             setAskedQuestions([response.nextQuestion]);
+            
+            // Sync state transitions back to Firestore
+            setCurrentSimStage(response.stage);
+            setCurrentSimDifficulty(response.difficulty);
+            updateDoc(docRef, {
+              simStage: response.stage,
+              simDifficulty: response.difficulty
+            });
+
             playAiVideo();
           }
         } catch (e) {
@@ -425,13 +452,30 @@ function VirtualArenaContent() {
         aptitudeScore: assessmentContext.aptitudeReport?.overallScore || 0,
         codingScore: assessmentContext.codingReport?.score || 0,
         askedQuestions: askedQuestions,
-        debugMode: assessmentContext?.debugMode
+        debugMode: assessmentContext?.debugMode,
+        currentStage: currentSimStage as any,
+        currentDifficulty: currentSimDifficulty as any
       });
+
+      // Log Adaptive Transitions
+      console.log(`[Interviewer Brain] Stage: ${currentSimStage} → ${response.stage}`);
+      console.log(`[Interviewer Brain] Difficulty: ${currentSimDifficulty} → ${response.difficulty}`);
 
       const updatedTranscript = [...newTranscript, { role: 'interviewer' as const, text: response.nextQuestion }];
       setTranscript(updatedTranscript);
       setAskedQuestions(prev => [...prev, response.nextQuestion]);
       setCurrentIdx(prev => prev + 1);
+      
+      // Persist Adaptive State for Continuity
+      setCurrentSimStage(response.stage);
+      setCurrentSimDifficulty(response.difficulty);
+      if (journeyRef) {
+        updateDoc(journeyRef, {
+          simStage: response.stage,
+          simDifficulty: response.difficulty,
+          updatedAt: serverTimestamp()
+        });
+      }
 
       playAiVideo();
 
@@ -447,7 +491,7 @@ function VirtualArenaContent() {
   };
 
   const finalizeSession = async (currentTranscript: any[]) => {
-    if (!user || !db || isGeneratingReport) return;
+    if (!user || !db || !journeyRef || isGeneratingReport) return;
     setIsGeneratingReport(true);
     setIsSimulationComplete(true);
     
@@ -483,7 +527,7 @@ function VirtualArenaContent() {
         createdAt: serverTimestamp(),
       });
       
-      await deleteDoc(doc(db, 'users', user.uid, 'journey', 'active'));
+      await deleteDoc(journeyRef);
       stopCamera();
       router.push(`/feedback/${docRef.id}`);
     } catch (e) {
