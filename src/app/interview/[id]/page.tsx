@@ -81,6 +81,7 @@ function VirtualArenaContent() {
   
   // ElevenLabs Audio Management
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const currentAudioUrlRef = useRef<string | null>(null);
   const ttsAbortControllerRef = useRef<AbortController | null>(null);
 
   const formattedName = useMemo(() => {
@@ -98,15 +99,22 @@ function VirtualArenaContent() {
   useEffect(() => {
     if (!currentInterviewerQuestion || currentInterviewerQuestion === "Initializing session...") return;
 
-    // 1. Cancel previous stale audio generation
+    // 1. CANCEL PREVIOUS PENDING REQUESTS
     if (ttsAbortControllerRef.current) {
       ttsAbortControllerRef.current.abort();
     }
     
-    // 2. Stop current playback
+    // 2. STOP AND CLEAR CURRENT AUDIO IMMEDIATELY
     if (audioRef.current) {
       audioRef.current.pause();
       audioRef.current.src = "";
+      audioRef.current.load(); // Force reset
+    }
+
+    // 3. REVOKE OLD OBJECT URL TO PREVENT MEMORY LEAKS/CACHING
+    if (currentAudioUrlRef.current) {
+      URL.revokeObjectURL(currentAudioUrlRef.current);
+      currentAudioUrlRef.current = null;
     }
 
     const controller = new AbortController();
@@ -128,14 +136,11 @@ function VirtualArenaContent() {
 
         const audioBlob = await response.blob();
         const audioUrl = URL.createObjectURL(audioBlob);
+        currentAudioUrlRef.current = audioUrl;
 
         const audio = new Audio(audioUrl);
         audioRef.current = audio;
         
-        audio.onended = () => {
-          URL.revokeObjectURL(audioUrl);
-        };
-
         await audio.play().catch(err => {
           console.warn('[Audio Autoplay] Restricted or interrupted:', err);
         });
@@ -155,6 +160,9 @@ function VirtualArenaContent() {
       if (audioRef.current) {
         audioRef.current.pause();
         audioRef.current.src = "";
+      }
+      if (currentAudioUrlRef.current) {
+        URL.revokeObjectURL(currentAudioUrlRef.current);
       }
     };
   }, [currentInterviewerQuestion]);
