@@ -35,8 +35,7 @@ import {
   Award, 
   Lightbulb, 
   MoreHorizontal, 
-  Clock,
-  FlaskConical
+  Clock
 } from "lucide-react";
 import { aiMockInterview } from "@/ai/flows/ai-mock-interview-v2";
 import { generateInterviewFeedback } from "@/ai/flows/ai-interview-feedback";
@@ -164,54 +163,6 @@ function VirtualArenaContent() {
       }
     };
   }, [currentInterviewerQuestion]);
-
-  // MANUAL TTS COMPARISON TESTER
-  const triggerManualTTS = async (endpoint: string) => {
-    if (!currentInterviewerQuestion || currentInterviewerQuestion === "Initializing session...") {
-      toast({ title: "Signal Lost", description: "Interviewer has not generated a prompt yet." });
-      return;
-    }
-
-    // Reset current audio stream
-    if (audioRef.current) {
-      audioRef.current.pause();
-      audioRef.current.src = "";
-      audioRef.current.load();
-    }
-
-    toast({ title: "Protocol Test", description: `Fetching comparison audio from ${endpoint === '/api/tts' ? 'ElevenLabs' : 'Google Cloud'}...` });
-
-    try {
-      const response = await fetch(endpoint, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text: currentInterviewerQuestion }),
-      });
-
-      if (!response.ok) {
-        const err = await response.json();
-        throw new Error(err.error || "Synthesis Node Failed");
-      }
-
-      const audioBlob = await response.blob();
-      const audioUrl = URL.createObjectURL(audioBlob);
-      
-      // Memory cleanup for previous test audio if any
-      if (currentAudioUrlRef.current) URL.revokeObjectURL(currentAudioUrlRef.current);
-      currentAudioUrlRef.current = audioUrl;
-
-      const audio = new Audio(audioUrl);
-      audioRef.current = audio;
-      await audio.play();
-    } catch (e: any) {
-      console.error(`[TTS COMPARISON FAULT] ${endpoint}:`, e.message);
-      toast({ 
-        variant: "destructive", 
-        title: "Test Node Error", 
-        description: e.message 
-      });
-    }
-  };
 
   const toggleMediaMic = () => {
     const newState = !isMicOn;
@@ -660,26 +611,6 @@ function VirtualArenaContent() {
             </div>
 
             <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex items-center gap-3">
-              {/* COMPARISON TEST TOOLS */}
-              <div className="flex items-center gap-2 mr-4 border-r border-white/10 pr-4">
-                <Button 
-                  variant="ghost" 
-                  size="sm"
-                  onClick={() => triggerManualTTS('/api/tts')}
-                  className="h-9 px-3 rounded-xl glass border-blue-500/20 text-blue-400 text-[7px] font-black uppercase tracking-widest hover:bg-blue-500/10 flex gap-2"
-                >
-                  <FlaskConical className="w-3 h-3" /> Test ElevenLabs
-                </Button>
-                <Button 
-                  variant="ghost" 
-                  size="sm"
-                  onClick={() => triggerManualTTS('/api/google-tts')}
-                  className="h-9 px-3 rounded-xl glass border-green-500/20 text-green-400 text-[7px] font-black uppercase tracking-widest hover:bg-green-500/10 flex gap-2"
-                >
-                  <FlaskConical className="w-3 h-3" /> Test Google TTS
-                </Button>
-              </div>
-
               <Button 
                 variant="ghost" 
                 size="icon" 
