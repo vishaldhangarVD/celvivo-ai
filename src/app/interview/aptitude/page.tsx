@@ -56,7 +56,6 @@ export default function AptitudeEnginePage() {
   const [result, setResult] = useState<any>(null);
   
   const [timeLeft, setTimeLeft] = useState(45 * 60);
-  const [warnings, setWarnings] = useState(0);
 
   const initGuard = useRef(false);
 
@@ -79,23 +78,41 @@ export default function AptitudeEnginePage() {
       
       const data = snap.data();
       
-      if (data.aptitudeQuestions && data.aptitudeQuestions.length > 0) {
+      // PERSISTENCE: If questions already exist and round is not finished, restore them.
+      if (data.aptitudeQuestions && data.aptitudeQuestions.length > 0 && !data.aptitudeReport) {
         setQuestions(data.aptitudeQuestions);
         setAnswers(data.aptitudeAnswers || {});
         setCurrentIdx(data.aptitudeCurrentIndex || 0);
         setTimeLeft(data.aptitudeTimeLeft ?? 45 * 60);
-        if (data.aptitudeReport) setResult(data.aptitudeReport);
         setIsInitializing(false);
         initGuard.current = true;
         return;
       }
 
+      // If already finished and we land here, show the result.
+      if (data.aptitudeReport) {
+        setQuestions(data.aptitudeQuestions);
+        setAnswers(data.aptitudeAnswers || {});
+        setResult(data.aptitudeReport);
+        setIsInitializing(false);
+        initGuard.current = true;
+        return;
+      }
+
+      // NEW ATTEMPT: Initialize fresh test
       initGuard.current = true;
       try {
+        // Exclude previously used questions where practical
+        const userRef = doc(db, 'users', user.uid);
+        const userSnap = await getDoc(userRef);
+        const userData = userSnap.data();
+        const usedIds = Array.isArray(userData?.aptitudeQuestionHistory) ? userData.aptitudeQuestionHistory : [];
+
         const response = await generateAptitudeTest({
           role: data.role,
           company: data.company,
           experienceLevel: data.experience,
+          usedQuestionIds: usedIds
         });
         
         const freshQuestions = response.questions;
@@ -107,6 +124,12 @@ export default function AptitudeEnginePage() {
           aptitudeCurrentIndex: 0,
           aptitudeTimeLeft: 45 * 60,
           updatedAt: serverTimestamp()
+        });
+
+        // Update history tracking
+        const newIds = freshQuestions.map(q => q.id);
+        await updateDoc(userRef, {
+          aptitudeQuestionHistory: Array.from(new Set([...usedIds, ...newIds])).slice(-200)
         });
 
       } catch (e) {
@@ -197,6 +220,25 @@ export default function AptitudeEnginePage() {
     if (!journeyRef || result) return;
     setCurrentIdx(newIdx);
     updateDoc(journeyRef, { aptitudeCurrentIndex: newIdx });
+  };
+
+  const handleRetry = async () => {
+    if (!journeyRef) return;
+    setIsInitializing(true);
+    try {
+      await updateDoc(journeyRef, {
+        aptitudeQuestions: null,
+        aptitudeAnswers: null,
+        aptitudeCurrentIndex: 0,
+        aptitudeTimeLeft: 45 * 60,
+        aptitudeReport: null,
+        updatedAt: serverTimestamp()
+      });
+      window.location.reload();
+    } catch (e) {
+      console.error(e);
+      setIsInitializing(false);
+    }
   };
 
   useEffect(() => {
@@ -292,13 +334,12 @@ export default function AptitudeEnginePage() {
                     <div className="grid md:grid-cols-2 gap-4">
                       {questions[currentIdx]?.options.map((opt: string, i: number) => (
                         <button key={i} onClick={() => handleOptionSelect(i)} className={cn("p-6 rounded-2xl border text-left transition-all group", answers[currentIdx] === i ? "bg-accent/20 border-accent text-accent shadow-[0_0_30px_rgba(34,211,238,0.1)]" : "glass border-white/5 hover:border-white/20 text-white/60")}>
-                          <div className="flex items-center gap-5">
-                            <div className={cn("w-10 h-10 rounded-xl border flex items-center justify-center text-xs font-black", answers[currentIdx] === i ? "bg-accent border-accent text-black" : "border-white/10 group-hover:border-white/30")}>
-                              {String.fromCharCode(65 + i)}
-                            </div>
-                            <span className="text-sm font-medium leading-relaxed">{opt}</span>
+                          <div className={cn("w-10 h-10 rounded-xl border flex items-center justify-center text-xs font-black", answers[currentIdx] === i ? "bg-accent border-accent text-black" : "border-white/10 group-hover:border-white/30")}>
+                            {String.fromCharCode(65 + i)}
                           </div>
-                        </button>
+                          <span className="text-sm font-medium leading-relaxed">{opt}</span>
+                        </div>
+                      </button>
                       ))}
                     </div>
                   </div>
@@ -358,7 +399,7 @@ export default function AptitudeEnginePage() {
                   {[
                     { label: "Correct Nodes", val: result.correctCount, icon: CheckCircle2, color: "text-green-400" },
                     { label: "Failed Probes", val: result.wrongCount, icon: XCircle, color: "text-red-400" },
-                    { label: "Audit Time", val: formatTime((45 * 60) - timeLeft), icon: Clock, color: "text-purple-400" },
+                    { label: "Audit Time", val: "N/A", icon: Clock, color: "text-purple-400" },
                     { label: "Verification", val: result.status, icon: ShieldCheck, color: "text-accent" }
                   ].map((s, i) => (
                     <div key={i} className="space-y-3">
@@ -369,11 +410,11 @@ export default function AptitudeEnginePage() {
                 </div>
               </Card>
 
-              <div className="flex justify-center pt-8">
+              <div className="flex justify-center gap-6 pt-8">
                 {result.status === 'Pass' ? (
                   <Button onClick={() => router.push('/interview/coding')} className="h-20 px-24 btn-premium rounded-[2.5rem] text-xl font-black uppercase tracking-[0.4em] shadow-2xl group">Enter Syntax Matrix <ChevronRight className="ml-4 w-8 h-8 group-hover:translate-x-2 transition-transform" /></Button>
                 ) : (
-                  <Button onClick={() => window.location.reload()} className="h-20 px-16 glass border-white/10 rounded-[2.5rem] text-xl font-black uppercase tracking-widest hover:bg-white/5"><RotateCcw className="mr-4 w-8 h-8" /> Re-initialize Assessment</Button>
+                  <Button onClick={handleRetry} className="h-20 px-16 glass border-white/10 rounded-[2.5rem] text-xl font-black uppercase tracking-widest hover:bg-white/5"><RotateCcw className="mr-4 w-8 h-8" /> Re-initialize Assessment</Button>
                 )}
               </div>
             </motion.div>

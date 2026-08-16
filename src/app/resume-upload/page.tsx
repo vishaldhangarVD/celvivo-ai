@@ -97,14 +97,30 @@ export default function ResumeUploadPage() {
     }
     
     try {
-      // Save full analysis to the session document
-      await updateDoc(journeyRef!, {
+      // PROD-GRADE LIFECYCLE:
+      // If the user is at step 3 or higher AND already has a report, 
+      // clicking "Enter Aptitude" means they want a NEW attempt.
+      // If it was just interrupted (incomplete), we resume by NOT clearing fields.
+      const isAptitudeCompleted = !!journey.aptitudeReport;
+      
+      const updateData: any = {
         currentStage: "Aptitude Assessment",
         resumeName: file.name,
         resumeAnalysis: analysisResult,
         updatedAt: serverTimestamp(),
         step: 3
-      });
+      };
+
+      if (isAptitudeCompleted) {
+        // Start a fresh 20-question set
+        updateData.aptitudeQuestions = null;
+        updateData.aptitudeAnswers = null;
+        updateData.aptitudeCurrentIndex = 0;
+        updateData.aptitudeTimeLeft = 45 * 60;
+        updateData.aptitudeReport = null;
+      }
+
+      await updateDoc(journeyRef!, updateData);
 
       router.push('/interview/aptitude');
     } catch (e) {
@@ -237,7 +253,7 @@ export default function ResumeUploadPage() {
                   disabled={!isUploaded || isVerifying}
                   className="w-full h-20 btn-premium rounded-2xl text-lg font-black uppercase tracking-[0.3em] shadow-[0_20px_60px_rgba(147,51,234,0.3)] group"
                  >
-                   ENTER APTITUDE TEST <ArrowRight className="ml-4 w-6 h-6 transition-transform group-hover:translate-x-2" />
+                   {!!journey?.aptitudeReport ? "RESTART APTITUDE TEST" : "ENTER APTITUDE TEST"} <ArrowRight className="ml-4 w-6 h-6 transition-transform group-hover:translate-x-2" />
                  </Button>
                </div>
             </Card>

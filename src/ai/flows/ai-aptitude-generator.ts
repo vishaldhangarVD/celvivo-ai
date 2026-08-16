@@ -1,8 +1,9 @@
 'use server';
 /**
- * @fileOverview Nexvoro AI Master Aptitude Generator v15.0.
+ * @fileOverview Nexvoro AI Master Aptitude Generator v16.0.
  * Dynamically synthesizes high-fidelity logic nodes using Google Gemini.
  * Implements strict category distribution, difficulty mapping, and a 30-node unique fallback bank.
+ * Enhanced with cross-session duplicate protection via usedQuestionIds.
  */
 
 import { ai, runWithResilience } from '@/ai/genkit';
@@ -23,6 +24,7 @@ const AptitudeInputSchema = z.object({
   company: z.string(),
   experienceLevel: z.string(),
   resumeSummary: z.string().optional(),
+  usedQuestionIds: z.array(z.string()).optional().describe("List of question IDs already used in previous sessions to prevent repeats."),
 });
 
 const AptitudeOutputSchema = z.object({
@@ -39,6 +41,10 @@ const prompt = ai.definePrompt({
   output: { schema: AptitudeOutputSchema },
   prompt: `You are an elite Recruitment Architect at {{{company}}}. 
 Generate a professional 20-question Aptitude Assessment for a {{{role}}} candidate ({{{experienceLevel}}}).
+
+### UNIQUE IDENTITY PROTOCOL:
+- DO NOT use any questions that overlap with these previously asked question IDs: {{{usedQuestionIds}}}
+- Every question MUST have a unique 10-character alphanumeric ID.
 
 ### CURRICULUM ARCHITECTURE (Exactly 20 Nodes):
 1. QUANTITATIVE (5 Nodes): Focus on profit/loss, speed-distance, probability, and percentages.
@@ -110,7 +116,14 @@ const aptitudeFlow = ai.defineFlow(
       return output;
     } catch (error) {
       console.error("[Aptitude Flow] Neural Fault. Deploying verified unique repository.");
-      return { questions: FALLBACK_BANK.slice(0, 20) as any };
+      // Filter out used questions from fallback bank if possible
+      const usedIds = new Set(input.usedQuestionIds || []);
+      const availableFallback = FALLBACK_BANK.filter(q => !usedIds.has(q.id));
+      
+      // If we have enough unique ones, use them, otherwise just take first 20
+      const finalBank = availableFallback.length >= 20 ? availableFallback.slice(0, 20) : FALLBACK_BANK.slice(0, 20);
+      
+      return { questions: finalBank as any };
     }
   }
 );
