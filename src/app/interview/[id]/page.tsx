@@ -72,8 +72,8 @@ function VirtualArenaContent() {
   const [cameraError, setCameraError] = useState<string | null>(null);
   
   // Neural Simulation State
-  const [currentSimStage, setCurrentSimStage] = useState<string>("INTRODUCTION");
-  const [currentSimDifficulty, setCurrentSimDifficulty] = useState<string>("MEDIUM");
+  const [currentSimStage, setCurrentSimStage] = useState<any>("INTRODUCTION");
+  const [currentSimDifficulty, setCurrentSimDifficulty] = useState<any>("MEDIUM");
 
   const [isMicOn, setIsMicOn] = useState(true);
   const [isCameraOn, setIsCameraOn] = useState(true);
@@ -376,7 +376,7 @@ function VirtualArenaContent() {
         const data = snap.data();
         setAssessmentContext(data);
         
-        // INTERVIEW RESUME DEBUG LOG
+        // Simulation Context Verification
         const rs = data.resumeAnalysis?.skillAnalysis || [];
         const rp = data.resumeAnalysis?.sections?.projects || [];
         console.log("[INTERVIEW RESUME DEBUG]", {
@@ -390,7 +390,7 @@ function VirtualArenaContent() {
            console.warn("[RESUME PIPELINE ERROR] Resume data is empty before Gemini generation.");
         }
 
-        // Initialize Sim State from Data or Defaults
+        // Initialize Sim State
         const startStage = data.simStage || "INTRODUCTION";
         const startDiff = data.simDifficulty || "MEDIUM";
         setCurrentSimStage(startStage);
@@ -401,6 +401,7 @@ function VirtualArenaContent() {
             const response = await aiMockInterview({
               role, experienceLevel: exp, roundType: round, currentMainQuestionIndex: 1, 
               history: [], targetCompany: company,
+              candidateName: user.displayName || undefined,
               resumeSkills: rs.map((s: any) => s.skill),
               resumeProjects: rp,
               resumeSummary: data.resumeAnalysis?.summary || "",
@@ -415,7 +416,7 @@ function VirtualArenaContent() {
             setTranscript([{ role: 'interviewer', text: response.nextQuestion }]);
             setAskedQuestions([response.nextQuestion]);
             
-            // Sync state transitions back to Firestore
+            // Sync initial adaptive state
             setCurrentSimStage(response.stage);
             setCurrentSimDifficulty(response.difficulty);
             updateDoc(docRef, {
@@ -463,6 +464,7 @@ function VirtualArenaContent() {
         role, experienceLevel: exp, roundType: round, currentMainQuestionIndex: currentIdx + 1,
         history: chatHistory,
         userAnswer: currentAns, targetCompany: company,
+        candidateName: user?.displayName || undefined,
         resumeSkills: rs.map((s: any) => s.skill),
         resumeProjects: rp,
         resumeSummary: assessmentContext.resumeAnalysis?.summary || "",
@@ -474,16 +476,14 @@ function VirtualArenaContent() {
         currentDifficulty: currentSimDifficulty as any
       });
 
-      // Log Adaptive Transitions
-      console.log(`[Interviewer Brain] Stage: ${currentSimStage} → ${response.stage}`);
-      console.log(`[Interviewer Brain] Difficulty: ${currentSimDifficulty} → ${response.difficulty}`);
+      console.log(`[Interviewer Brain] Transition: ${currentSimStage} → ${response.stage} | Difficulty: ${currentSimDifficulty} → ${response.difficulty}`);
 
       const updatedTranscript = [...newTranscript, { role: 'interviewer' as const, text: response.nextQuestion }];
       setTranscript(updatedTranscript);
       setAskedQuestions(prev => [...prev, response.nextQuestion]);
       setCurrentIdx(prev => prev + 1);
       
-      // Persist Adaptive State for Continuity
+      // Persist State Loop
       setCurrentSimStage(response.stage);
       setCurrentSimDifficulty(response.difficulty);
       if (journeyRef) {
@@ -501,7 +501,7 @@ function VirtualArenaContent() {
       }
     } catch (error) {
       console.error(error);
-      toast({ variant: "destructive", title: "Logic Sync Error" });
+      toast({ variant: "destructive", title: "Neural Link Sync Fault" });
     } finally {
       setIsProcessing(false);
     }
@@ -549,7 +549,7 @@ function VirtualArenaContent() {
       router.push(`/feedback/${docRef.id}`);
     } catch (e) {
       console.error(e);
-      toast({ variant: "destructive", title: "Final Audit Failed" });
+      toast({ variant: "destructive", title: "Final Audit Protocol Failure" });
     } finally {
       setIsGeneratingReport(false);
     }
@@ -702,8 +702,8 @@ function VirtualArenaContent() {
             <Card className="glass border-white/5 p-2 flex items-center gap-2">
               <div className="w-7 h-7 rounded-lg bg-purple-500/10 flex items-center justify-center text-purple-400"><Clock className="w-3.5 h-3.5" /></div>
               <div>
-                <p className="text-[7px] font-black text-white/20 uppercase tracking-widest leading-none mb-0.5">Elapsed</p>
-                <p className="text-[11px] font-bold text-white leading-none">05:24</p>
+                <p className="text-[7px] font-black text-white/20 uppercase tracking-widest leading-none mb-0.5">Stage</p>
+                <p className="text-[11px] font-bold text-white leading-none truncate">{currentSimStage}</p>
               </div>
             </Card>
             <Card className="glass border-white/5 p-2 flex items-center gap-2">
@@ -750,15 +750,14 @@ function VirtualArenaContent() {
                        <p className="text-[15px] font-light text-white leading-relaxed">{currentInterviewerQuestion}</p>
                        <div className="pt-2 border-t border-white/5 space-y-2">
                          <div className="flex items-center justify-between">
-                           <span className="text-[8px] font-black text-white/20 uppercase tracking-[0.2em]">Think Time</span>
+                           <span className="text-[8px] font-black text-white/20 uppercase tracking-[0.2em]">Context</span>
                            <div className="flex items-center gap-1.5 text-accent">
-                              <Timer className="w-3 h-3" />
-                              <span className="text-xs font-mono">00:45</span>
+                              <Badge variant="outline" className="border-accent/30 text-accent text-[7px] uppercase px-1.5 py-0">{currentSimStage}</Badge>
                            </div>
                          </div>
                          <div className="text-[8px] font-black text-white/20 uppercase tracking-[0.2em] flex items-center gap-2">
                            <span className="w-1.5 h-1.5 rounded-full bg-accent animate-pulse" />
-                           AI Interviewer is asking...
+                           Awaiting your response...
                          </div>
                        </div>
                    </Card>
@@ -823,10 +822,10 @@ function VirtualArenaContent() {
                 <motion.div animate={{ rotate: 360 }} transition={{ duration: 4, repeat: Infinity, ease: "linear" }} className="w-24 h-24 rounded-full border-b-2 border-accent mx-auto" />
                 <Brain className="w-10 h-10 text-accent absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 animate-pulse" />
               </div>
-              <h2 className="text-3xl font-bold uppercase tracking-tighter text-white">Calibrating Arena</h2>
+              <h2 className="text-3xl font-bold uppercase tracking-tighter text-white">Initializing Brain</h2>
               <div className="flex items-center justify-center gap-2 text-accent">
                 <Loader2 className="w-4 h-4 animate-spin" />
-                <span className="text-[9px] font-bold uppercase tracking-[0.4em] text-accent">Synthesizing First Node...</span>
+                <span className="text-[9px] font-bold uppercase tracking-[0.4em] text-accent">Personalizing Simulation...</span>
               </div>
             </div>
           </motion.div>

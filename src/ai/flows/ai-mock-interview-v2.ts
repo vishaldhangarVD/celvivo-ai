@@ -1,9 +1,9 @@
 'use server';
 /**
- * @fileOverview Nexvoro AI Virtual Interview Agent (Elite Senior Interviewer v8.0).
+ * @fileOverview Nexvoro AI Virtual Interview Agent (Elite Senior Interviewer v9.0).
  * MASTER PROTOCOL: Calibrated for zero-chatbot behavior. Mimics a Lead Engineer at a Tier-1 tech firm.
  * Integrates Resume, Projects, Coding Score, Aptitude Score, and Conversation History.
- * Implements strict adaptive friction, firm-specific style, and dynamic termination.
+ * Implements granular stage progression: INTRO -> RESUME -> PROJECT -> TECHNICAL -> SCENARIO -> CLOSING.
  */
 
 import { ai, runWithResilience } from '@/ai/genkit';
@@ -29,6 +29,7 @@ const AiMockInterviewInputSchema = z.object({
   })),
   userAnswer: z.string().optional(),
   targetCompany: z.string().optional(),
+  candidateName: z.string().optional(),
   resumeSkills: z.array(z.string()).optional(),
   resumeProjects: z.array(z.string()).optional(),
   resumeSummary: z.string().optional(),
@@ -36,7 +37,17 @@ const AiMockInterviewInputSchema = z.object({
   codingScore: z.number().optional(),
   askedQuestions: z.array(z.string()).optional(),
   debugMode: z.boolean().optional(),
-  currentStage: z.enum(["INTRODUCTION", "TECHNICAL", "HR", "CLOSING"]).optional(),
+  currentStage: z.enum([
+    "INTRODUCTION",
+    "RESUME",
+    "PROJECT",
+    "TECHNICAL",
+    "SCENARIO",
+    "FOLLOW_UP",
+    "BEHAVIOUR",
+    "RAPID_FIRE",
+    "CLOSING"
+  ]).optional(),
   currentDifficulty: z.enum(["EASY", "MEDIUM", "HARD"]).optional(),
 });
 export type AiMockInterviewInput = z.infer<typeof AiMockInterviewInputSchema>;
@@ -44,7 +55,17 @@ export type AiMockInterviewInput = z.infer<typeof AiMockInterviewInputSchema>;
 const AiMockInterviewOutputSchema = z.object({
   nextQuestion: z.string(),
   difficulty: z.enum(["EASY", "MEDIUM", "HARD"]),
-  stage: z.enum(["INTRODUCTION", "TECHNICAL", "HR", "CLOSING"]),
+  stage: z.enum([
+    "INTRODUCTION",
+    "RESUME",
+    "PROJECT",
+    "TECHNICAL",
+    "SCENARIO",
+    "FOLLOW_UP",
+    "BEHAVIOUR",
+    "RAPID_FIRE",
+    "CLOSING"
+  ]),
   isInterviewComplete: z.boolean(),
 });
 export type AiMockInterviewOutput = z.infer<typeof AiMockInterviewOutputSchema>;
@@ -73,36 +94,43 @@ SIMULATION STATE:
 - CURRENT STAGE: {{{currentStage}}}
 - CURRENT DIFFICULTY: {{{currentDifficulty}}}
 
-MASTER PROTOCOL (RESUME & PROJECT PRIORITY):
-1. CANDIDATE DOSSIER:
-   - SUMMARY: {{{resumeSummary}}}
-   - SKILLS: {{#each resumeSkills}}{{{this}}}, {{/each}}
-   - PROJECTS: {{#each resumeProjects}}{{{this}}}, {{/each}}
+CANDIDATE DOSSIER:
+- NAME: {{{candidateName}}}
+- SUMMARY: {{{resumeSummary}}}
+- SKILLS: {{#each resumeSkills}}{{{this}}}, {{/each}}
+- PROJECTS: {{#each resumeProjects}}{{{this}}}, {{/each}}
 
-2. QUESTIONING PROTOCOL:
-   - FIRST PRIORITY: Ask deep, architectural questions about the candidate's listed PROJECTS.
-   - SECOND PRIORITY: Ask practical technical questions based on the candidate's specific SKILLS.
-   - THIRD PRIORITY: Connect the candidate's experience to the target role ({{{role}}}).
-   - Avoid generic textbook questions. If they mention a technology in their resume, probe for "How" and "Why" regarding its use in their projects.
+INTERVIEW FLOW PROTOCOL:
 
-3. DATA NODE INTEGRATION:
-   - CODING SCORE: {{{codingScore}}}%
-   - APTITUDE SCORE: {{{aptitudeScore}}}%
-   - Adjust difficulty based on these scores and the quality of their previous answers.
+STAGE 1: INTRODUCTION (Node 1 ONLY)
+- Greet the candidate naturally (use {{{candidateName}}} if available).
+- Start with an open-ended professional introduction question calibrated for a {{{role}}} at the {{{experienceLevel}}} level.
+- DO NOT use the same "Tell me about yourself" every time. Be conversational.
+- Example: "Hi {{{candidateName}}}, let's get started. Could you briefly walk me through your background and what led you to specialize in {{{role}}}?"
+
+STAGE 2: RESUME & PROJECT (Nodes 2-4)
+- Acknowledge the candidate's introduction.
+- Transition naturally to their resume. 
+- PRIORITIZE: Deep, architectural questions about their specific PROJECTS. Ask "Why that stack?" or "How did you handle [Constraint] in your [Project Name]?".
+- Connect their skills to the target role ({{{role}}}).
+
+STAGE 3: TECHNICAL & SCENARIO (Nodes 5-7)
+- Probe technical reasoning and systems thinking.
+- Use their previous project answers as context for scenarios.
+- CODING/APTITUDE DATA: Use Coding Score ({{{codingScore}}}%) and Aptitude Score ({{{aptitudeScore}}}%) to calibrate difficulty.
 
 ADAPTIVE BEHAVIOR:
 - Confidence: If candidate is confident, INCREASE friction. Probe edge cases.
-- Struggle: If candidate struggles, encourage slightly with a professional bridge and SIMPLIFY the next node.
-- Memory: Remember previous mistakes or gaps. Circle back naturally to verify learning agility.
+- Struggle: If candidate struggles, provide a professional bridge (e.g. "I understand that can be complex. Let's look at it from this angle...") and adjust.
+- Continuity: Every new question MUST acknowledge or follow up on the previous answer when appropriate.
 
-TERMINATION PROTOCOL (NATURAL CONCLUSION):
+TERMINATION PROTOCOL:
 - MINIMUM questions: 7.
 - MAXIMUM questions: 12.
-- You decide when to finish based on data density. If index >= 7 and you have sufficient data for a final audit, set "isInterviewComplete": true.
-- Final Question: If closing, provide a professional human sign-off (e.g., "I appreciate your time. This concludes our session. It was good speaking with you.").
+- Set "isInterviewComplete": true if index >= 7 and you have sufficient data for a final audit.
+- Final Question: Provide a professional human sign-off (e.g., "I appreciate your time. This concludes our session. It was good speaking with you.").
 
 SESSION INTEGRITY:
-- "Tell me about yourself" is Node 1 ONLY.
 - NEVER repeat a question listed in "Previously Asked Questions".
 - History:
 {{#each history}}
@@ -113,7 +141,7 @@ Candidate: {{{this.answer}}}
 LATEST CANDIDATE RESPONSE:
 {{{userAnswer}}}
 
-Based on the RESUME context and candidate answers, output the next logical question as JSON.`,
+Based on the protocol and candidate response, output the next logical question as JSON.`,
 });
 
 const aiMockInterviewFlow = ai.defineFlow(
