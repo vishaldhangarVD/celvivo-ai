@@ -29,7 +29,8 @@ import {
   Target,
   XCircle,
   Lock,
-  Search
+  Search,
+  ArrowRight
 } from 'lucide-react';
 import { useUser, useFirestore, useDoc } from '@/firebase';
 import { doc, updateDoc, serverTimestamp } from 'firebase/firestore';
@@ -195,6 +196,20 @@ export default function AptitudeEnginePage() {
     });
   };
 
+  const handleSkipToInterview = () => {
+    if (!journey || !journey.sessionId) {
+      toast({
+        variant: "destructive",
+        title: "Session Not Found",
+        description: "Interview session could not be found."
+      });
+      return;
+    }
+
+    // Use the existing dynamic navigation route
+    router.push(`/interview/${journey.sessionId}?role=${encodeURIComponent(journey.role || '')}&company=${encodeURIComponent(journey.company || '')}&exp=${encodeURIComponent(journey.experience || '')}&round=HR%20Round`);
+  };
+
   const formatTime = (seconds: number) => {
     const m = Math.floor(seconds / 60);
     const s = seconds % 60;
@@ -221,6 +236,22 @@ export default function AptitudeEnginePage() {
       <div className="particles-bg" />
       <Navbar />
       
+      {/* Floating Skip Button */}
+      {!result && !isEvaluating && (
+        <motion.div 
+          initial={{ opacity: 0, x: 20 }}
+          animate={{ opacity: 1, x: 0 }}
+          className="fixed right-0 top-1/2 -translate-y-1/2 z-[60] flex items-center pr-4 md:pr-8"
+        >
+          <Button 
+            onClick={handleSkipToInterview}
+            className="h-10 px-4 md:h-12 md:px-5 rounded-l-2xl rounded-r-none btn-premium text-[9px] font-black uppercase tracking-widest shadow-2xl flex items-center gap-2 transition-all hover:scale-105 active:scale-95 group border-r-0"
+          >
+            SKIP <ArrowRight className="w-3.5 h-3.5 transition-transform group-hover:translate-x-0.5" /> INTERVIEW
+          </Button>
+        </motion.div>
+      )}
+
       <header className="h-20 border-b border-white/5 bg-[#0b0e1a]/80 backdrop-blur-xl flex items-center justify-between px-8 z-50 sticky top-0">
         <div className="flex items-center gap-6">
           <div className="w-10 h-10 rounded-xl bg-accent/10 flex items-center justify-center text-accent border border-accent/20">
