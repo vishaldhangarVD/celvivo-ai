@@ -1,15 +1,16 @@
 import { NextResponse } from 'next/server';
 
 /**
- * @fileOverview Secure ElevenLabs TTS Gateway v16.0 (Strict Free Tier).
+ * @fileOverview Secure ElevenLabs TTS Gateway v17.0 (Optimized for Professional Delivery).
  * Strictly excludes 'Library' and 'Professional' voices to prevent subscription errors.
- * Uses ONLY 'premade' voices which are 100% accessible on Free accounts.
+ * Uses ONLY 'premade' voices accessible on Free accounts.
+ * Calibrated for a calm, professional interview pace (0.85 speed).
  */
 
 // Cache the selected voice ID to reduce API overhead
-let cachedVoiceId: string | null = null;
+let cachedVoiceId: null | string = null;
 
-// Blacklist of known IDs that trigger "Subscription Required" on Free Plan
+// Blacklist of known IDs that trigger "Subscription Required" on Free Plan (Library voices)
 const BLOCKED_VOICE_IDS = ['4uN5YeBITFJsw8t45RIV'];
 
 async function getAvailableVoice(apiKey: string): Promise<string> {
@@ -27,8 +28,7 @@ async function getAvailableVoice(apiKey: string): Promise<string> {
     const data = await response.json();
     const voices = data.voices || [];
 
-    // CRITICAL FIX: Only allow 'premade' voices for Free Tier API access.
-    // Professional and Library voices added to the account are restricted on Free plan API.
+    // CRITICAL: Only allow 'premade' voices for Free Tier API access.
     const accessibleVoices = voices.filter((v: any) => 
       !BLOCKED_VOICE_IDS.includes(v.voice_id) && 
       v.category === 'premade'
@@ -48,10 +48,11 @@ async function getAvailableVoice(apiKey: string): Promise<string> {
     let eligibleVoice = femaleVoices.find((v: any) => 
       v.labels?.accent?.toLowerCase().includes('indian') || 
       v.labels?.language?.toLowerCase() === 'en-in' ||
-      v.name?.toLowerCase().includes('indian')
+      v.name?.toLowerCase().includes('indian') ||
+      v.labels?.language?.toLowerCase()?.includes('indian')
     );
 
-    // Priority 2: Standard Premade English Female voices
+    // Priority 2: Standard Reliable Premade English Female voices
     if (!eligibleVoice) {
       eligibleVoice = femaleVoices.find((v: any) => 
         ['Alice', 'Rachel', 'Matilda', 'Nicole'].includes(v.name)
@@ -64,7 +65,7 @@ async function getAvailableVoice(apiKey: string): Promise<string> {
     }
 
     cachedVoiceId = eligibleVoice.voice_id;
-    console.log(`[ElevenLabs] Selected Voice: ${eligibleVoice.name} | ID: ${cachedVoiceId} | Category: ${eligibleVoice.category}`);
+    console.log(`[ElevenLabs] Successfully Tuned Voice: ${eligibleVoice.name} | ID: ${cachedVoiceId} | Category: ${eligibleVoice.category}`);
     return cachedVoiceId!;
   } catch (error) {
     console.error('[ElevenLabs] Voice discovery fault:', error);
@@ -88,7 +89,7 @@ export async function POST(req: Request) {
     const voiceId = await getAvailableVoice(apiKey);
     const modelId = 'eleven_flash_v2_5';
 
-    // 2. Execute synthesis
+    // 2. Execute synthesis with professionally calibrated settings
     const response = await fetch(
       `https://api.elevenlabs.io/v1/text-to-speech/${voiceId}`,
       {
@@ -102,17 +103,17 @@ export async function POST(req: Request) {
           text: body.text,
           model_id: modelId,
           voice_settings: {
-            stability: 0.55,
-            similarity_boost: 0.80,
-            style: 0.10,
+            stability: 0.60,          // Calm and consistent
+            similarity_boost: 0.80,   // High fidelity
+            style: 0.05,              // Minimal, professional interview tone
             use_speaker_boost: true,
-            speaking_rate: 0.90
+            speaking_rate: 0.85       // Measured and clear pace
           },
         }),
       }
     );
 
-    console.log(`[ElevenLabs] Request status: ${response.status} | model: ${modelId} | category: premade`);
+    console.log(`[ElevenLabs] model: ${modelId} | status: ${response.status} | pace: 0.85`);
 
     if (!response.ok) {
       const errorText = await response.text();
