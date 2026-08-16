@@ -1,7 +1,8 @@
 'use server';
 /**
- * @fileOverview Nexvoro AI Master Performance Auditor (Elite v15.0).
+ * @fileOverview Nexvoro AI Master Performance Auditor (Elite v16.0).
  * Synthesizes the final comprehensive report from all interview rounds.
+ * Implements strict 40/60 weighting between validated nodes and verbal performance.
  */
 
 import { ai, runWithResilience } from '@/ai/genkit';
@@ -27,9 +28,9 @@ const InterviewFeedbackInputSchema = z.object({
   }).optional(),
   codingContext: z.object({
     score: z.number(),
-    readability: z.number(),
-    timeComplexity: z.string(),
-    spaceComplexity: z.string(),
+    readability: z.number().optional(),
+    timeComplexity: z.string().optional(),
+    spaceComplexity: z.string().optional(),
     status: z.string(),
   }).optional(),
 });
@@ -103,44 +104,47 @@ FULL CANDIDATE DOSSIER:
 {{{interviewTranscript}}}
 
 AUDIT REQUIREMENTS:
-1. OVERALL SCORE: Weighted average of all rounds.
+1. OVERALL SCORE CALCULATION: 
+   - Pre-validated Nodes (Aptitude Score + Coding Score) represent 40% of the total weight.
+   - Virtual Interview Evaluation (derived from transcript analysis) represents 60% of the total weight.
+   - Calculate a REAL weighted percentage. Do not invent arbitrary numbers.
 2. HIRING RECOMMENDATION: Use Excellent (>85), Good (70-85), Average (50-70), Needs Improvement (<50).
-3. DETAILED ANALYTICS: Provide 0-100 scores for Technical Knowledge, Communication, Confidence, and Problem Solving based on the transcript.
-4. SKILL GAP: Identify missing nodes based on the target role/company benchmarks.
+3. DETAILED ANALYTICS: Provide 0-100 scores for Technical Knowledge, Communication, Confidence, and Problem Solving based EXCLUSIVELY on the transcript.
+4. SKILL GAP: Identify missing nodes based on the target role/company benchmarks and candidate's demonstrated performance.
 5. LEARNING PLAN: Create a high-fidelity 30-day roadmap for remediation.
 
-Return a structured intelligence report.`,
+Return a structured intelligence report based ONLY on this specific candidate's data. No generic filler.`,
 });
 
 function generateFallbackFeedback(input: InterviewFeedbackInput): InterviewFeedbackOutput {
   return {
-    overallScore: 72,
-    interviewReadiness: 75,
-    hiringRecommendation: "Good",
+    overallScore: 0,
+    interviewReadiness: 0,
+    hiringRecommendation: "Needs Improvement",
     virtualInterviewResult: {
-      technicalKnowledge: 70,
-      communication: 75,
-      confidence: 80,
-      hrSkills: 75,
-      problemSolving: 65,
-      professionalism: 85,
+      technicalKnowledge: 0,
+      communication: 0,
+      confidence: 0,
+      hrSkills: 0,
+      problemSolving: 0,
+      professionalism: 0,
     },
     aiFeedback: {
-      performanceSummary: "Candidate demonstrates strong professional presence but requires deeper architectural logic scaling.",
-      strongSkills: ["Communication", "Professionalism", "Basic Concepts"],
-      weakSkills: ["System Design", "Scalability", "Big-O Analysis"],
-      mistakesMade: ["Generalizing technical answers", "Delayed response on edge cases"],
-      suggestedImprovements: ["Practice STAR method", "Deep dive into distributed systems"],
+      performanceSummary: "SYSTEM ERROR: Neural Auditor failed to synthesize results. Manual review required. No real scores were generated for this session.",
+      strongSkills: [],
+      weakSkills: [],
+      mistakesMade: [],
+      suggestedImprovements: [],
     },
     skillGap: {
-      missingSkills: input.resumeContext?.missingSkills || ["Cloud Native", "Advanced DSA"],
-      criticalGaps: ["Architecture scaling"],
+      missingSkills: input.resumeContext?.missingSkills || [],
+      criticalGaps: [],
     },
     learningPlan: {
-      topicsToStudy: ["Distributed Systems", "API Security"],
-      codingPractice: ["Dynamic Programming", "Graph Theory"],
-      interviewPractice: ["Leadership Principles", "Conflict Resolution"],
-      resumeImprovements: ["Quantify impact nodes", "Add certification anchors"],
+      topicsToStudy: [],
+      codingPractice: [],
+      interviewPractice: [],
+      resumeImprovements: [],
     },
     isOffline: true
   };

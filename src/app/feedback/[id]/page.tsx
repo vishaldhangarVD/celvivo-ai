@@ -143,6 +143,28 @@ export default function FinalReportPage() {
                 </Button>
               </Card>
 
+              {/* Aptitude Performance Card */}
+              {feedback.aptitudeContext && (
+                <Card className="premium-card bg-white/[0.01] border-white/5 p-8 space-y-6">
+                   <h3 className="text-[10px] font-bold uppercase tracking-[0.4em] text-white/30 flex items-center gap-3">
+                     <BrainCircuit className="w-4 h-4 text-accent" /> Cognitive Node Audit
+                   </h3>
+                   <div className="flex items-center justify-between">
+                      <div className="text-4xl font-black text-accent tabular-nums">{feedback.aptitudeContext.overallScore || 0}%</div>
+                      <Badge variant="outline" className="text-[8px] font-black uppercase border-white/10 text-white/40">Verified Audit</Badge>
+                   </div>
+                   <div className="space-y-4">
+                      <div className="flex justify-between text-[9px] font-bold uppercase text-white/30">
+                         <span>Logic Precision</span>
+                         <span className="text-white/60">{feedback.aptitudeContext.overallScore || 0}%</span>
+                      </div>
+                      <div className="h-1 bg-white/5 rounded-full overflow-hidden">
+                         <motion.div initial={{ width: 0 }} animate={{ width: `${feedback.aptitudeContext.overallScore || 0}%` }} className="h-full bg-accent" />
+                      </div>
+                   </div>
+                </Card>
+              )}
+
               {/* Coding Performance Card */}
               <Card className="premium-card bg-white/[0.01] border-white/5 p-8 space-y-6">
                  <h3 className="text-[10px] font-bold uppercase tracking-[0.4em] text-white/30 flex items-center gap-3">
@@ -207,11 +229,15 @@ export default function FinalReportPage() {
                     <CircleCheck className="w-6 h-6" /> Strategic Strengths
                   </h3>
                   <div className="space-y-4">
-                    {feedback.aiFeedback.strongSkills.map((s: string, i: number) => (
-                      <div key={i} className="flex gap-4 text-sm font-light text-white/80">
-                        <div className="w-1.5 h-1.5 rounded-full bg-accent mt-2 shrink-0" /> {s}
-                      </div>
-                    ))}
+                    {(feedback.aiFeedback.strongSkills || []).length > 0 ? (
+                      feedback.aiFeedback.strongSkills.map((s: string, i: number) => (
+                        <div key={i} className="flex gap-4 text-sm font-light text-white/80">
+                          <div className="w-1.5 h-1.5 rounded-full bg-accent mt-2 shrink-0" /> {s}
+                        </div>
+                      ))
+                    ) : (
+                      <p className="text-xs text-white/40 italic">No specific strengths extracted.</p>
+                    )}
                   </div>
                 </Card>
                 <Card className="glass p-8 rounded-[2.5rem] border-red-500/10 space-y-6">
@@ -219,11 +245,15 @@ export default function FinalReportPage() {
                     <CircleAlert className="w-6 h-6" /> Delta Gaps
                   </h3>
                   <div className="space-y-4">
-                    {feedback.aiFeedback.weakSkills.map((w: string, i: number) => (
-                      <div key={i} className="flex gap-4 text-sm font-light text-white/80">
-                        <div className="w-1.5 h-1.5 rounded-full bg-red-400 mt-2 shrink-0" /> {w}
-                      </div>
-                    ))}
+                    {(feedback.aiFeedback.weakSkills || []).length > 0 ? (
+                      feedback.aiFeedback.weakSkills.map((w: string, i: number) => (
+                        <div key={i} className="flex gap-4 text-sm font-light text-white/80">
+                          <div className="w-1.5 h-1.5 rounded-full bg-red-400 mt-2 shrink-0" /> {w}
+                        </div>
+                      ))
+                    ) : (
+                      <p className="text-xs text-white/40 italic">No specific gaps identified.</p>
+                    )}
                   </div>
                 </Card>
               </div>
@@ -247,7 +277,7 @@ export default function FinalReportPage() {
                           <Layers className="w-4 h-4 text-purple-400" /> Topics to Study
                        </h4>
                        <div className="flex flex-wrap gap-2">
-                          {feedback.learningPlan.topicsToStudy.slice(0, 4).map((topic: string, i: number) => (
+                          {(feedback.learningPlan.topicsToStudy || []).slice(0, 4).map((topic: string, i: number) => (
                              <Badge key={i} variant="outline" className="text-[8px] border-white/10 uppercase py-1">{topic}</Badge>
                           ))}
                        </div>
@@ -257,12 +287,20 @@ export default function FinalReportPage() {
                           <Cpu className="w-4 h-4 text-accent" /> Skill Gaps
                        </h4>
                        <div className="flex flex-wrap gap-2">
-                          {feedback.skillGap.criticalGaps.slice(0, 4).map((gap: string, i: number) => (
+                          {(feedback.skillGap.criticalGaps || []).slice(0, 4).map((gap: string, i: number) => (
                              <Badge key={i} variant="outline" className="text-[8px] border-red-500/20 text-red-400 uppercase py-1">{gap}</Badge>
                           ))}
                        </div>
                     </div>
                  </div>
+              </Card>
+
+              {/* AI Performance Summary */}
+              <Card className="glass p-10 rounded-[30px] border-white/5 bg-white/[0.01]">
+                <h3 className="text-xs font-bold uppercase tracking-widest text-accent mb-6">AI Auditor Executive Summary</h3>
+                <p className="text-lg font-light leading-relaxed text-white/80 italic">
+                  "{feedback.aiFeedback.performanceSummary || "The interview analysis could not be completed."}"
+                </p>
               </Card>
             </div>
           </div>

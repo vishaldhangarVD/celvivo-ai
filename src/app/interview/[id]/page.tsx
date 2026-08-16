@@ -514,6 +514,11 @@ function VirtualArenaContent() {
     
     try {
       const transcriptStr = currentTranscript.map(t => `${t.role.toUpperCase()}: ${t.text}`).join('\n\n');
+      
+      // REAL DATA MAPPING FROM ASSESSMENT CONTEXT
+      const aptitudeReport = assessmentContext.aptitudeReport;
+      const codingReport = assessmentContext.codingReport;
+
       const finalAudit = await generateInterviewFeedback({
         role, company, experienceLevel: exp, interviewTranscript: transcriptStr,
         resumeContext: {
@@ -522,12 +527,16 @@ function VirtualArenaContent() {
           weaknesses: assessmentContext.resumeAnalysis?.analysis?.weaknesses || [],
           missingSkills: assessmentContext.resumeAnalysis?.analysis?.missingSkills || [],
         },
+        aptitudeContext: {
+          overallScore: aptitudeReport?.overallScore || 0,
+          quantitative: aptitudeReport?.accuracy || 0,
+          logical: aptitudeReport?.accuracy || 0,
+          english: aptitudeReport?.accuracy || 0,
+          status: aptitudeReport?.status || "Verified"
+        },
         codingContext: {
-          score: assessmentContext.codingReport?.score || 0,
-          readability: 85,
-          timeComplexity: "O(n)",
-          spaceComplexity: "O(1)",
-          status: assessmentContext.codingReport?.status || "N/A"
+          score: codingReport?.score || 0,
+          status: codingReport?.status || "N/A"
         }
       });
 
