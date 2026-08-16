@@ -1,16 +1,16 @@
 import { NextResponse } from 'next/server';
 
 /**
- * @fileOverview Secure ElevenLabs TTS Gateway v17.0 (Optimized for Professional Delivery).
- * Strictly excludes 'Library' and 'Professional' voices to prevent subscription errors.
- * Uses ONLY 'premade' voices accessible on Free accounts.
- * Calibrated for a calm, professional interview pace (0.85 speed).
+ * @fileOverview Secure ElevenLabs TTS Gateway v18.0 (Optimized for Indian User Clarity).
+ * Strictly filters for 'premade' voices to ensure Free Tier compatibility.
+ * Calibrated for a calm, professional interview delivery with a clear, measured pace.
  */
 
 // Cache the selected voice ID to reduce API overhead
 let cachedVoiceId: null | string = null;
+let isNativeIndianVoice = false;
 
-// Blacklist of known IDs that trigger "Subscription Required" on Free Plan (Library voices)
+// Blacklist of known IDs that trigger "Subscription Required" on Free Plan
 const BLOCKED_VOICE_IDS = ['4uN5YeBITFJsw8t45RIV'];
 
 async function getAvailableVoice(apiKey: string): Promise<string> {
@@ -35,7 +35,7 @@ async function getAvailableVoice(apiKey: string): Promise<string> {
     );
 
     if (accessibleVoices.length === 0) {
-      console.warn('[ElevenLabs] No premade voices found in account. Using default fallback.');
+      console.warn('[ElevenLabs] No premade voices found in account. Using default fallback (Alice).');
       return 'Xb7hHahR8z74MCNeywV1'; // Alice (Premade)
     }
 
@@ -44,28 +44,36 @@ async function getAvailableVoice(apiKey: string): Promise<string> {
       v.labels?.gender === 'female' || v.name.toLowerCase().includes('female')
     );
 
-    // Priority 1: Indian English / Indian Accent within the 'premade' set
-    let eligibleVoice = femaleVoices.find((v: any) => 
-      v.labels?.accent?.toLowerCase().includes('indian') || 
-      v.labels?.language?.toLowerCase() === 'en-in' ||
-      v.name?.toLowerCase().includes('indian') ||
-      v.labels?.language?.toLowerCase()?.includes('indian')
-    );
+    // Priority 1: Indian English / Native Indian Accent within the 'premade' set
+    // This looks for 'en-IN', 'India', or 'Indian' in labels or names
+    let eligibleVoice = femaleVoices.find((v: any) => {
+      const labels = JSON.stringify(v.labels || {}).toLowerCase();
+      const name = v.name.toLowerCase();
+      return labels.includes('indian') || labels.includes('en-in') || labels.includes('india') ||
+             name.includes('indian') || name.includes('india');
+    });
 
-    // Priority 2: Standard Reliable Premade English Female voices
-    if (!eligibleVoice) {
+    if (eligibleVoice) {
+      isNativeIndianVoice = true;
+      console.log(`[ElevenLabs] Native Indian-English voice detected: ${eligibleVoice.name}`);
+    } else {
+      isNativeIndianVoice = false;
+      console.log('[ElevenLabs] No native Indian-English premade voice found. Selecting clearest International female voice.');
+      
+      // Priority 2: Standard Reliable Premade English Female voices with neutral pronunciation
       eligibleVoice = femaleVoices.find((v: any) => 
-        ['Alice', 'Rachel', 'Matilda', 'Nicole'].includes(v.name)
+        ['Alice', 'Rachel', 'Nicole', 'Matilda'].includes(v.name)
       );
     }
 
-    // Priority 3: First available female premade
+    // Final Fallback: First available female premade
     if (!eligibleVoice) {
       eligibleVoice = femaleVoices.length > 0 ? femaleVoices[0] : accessibleVoices[0];
     }
 
     cachedVoiceId = eligibleVoice.voice_id;
-    console.log(`[ElevenLabs] Successfully Tuned Voice: ${eligibleVoice.name} | ID: ${cachedVoiceId} | Category: ${eligibleVoice.category}`);
+    console.log(`[ElevenLabs] Successfully Tuned Voice: ${eligibleVoice.name} | ID: ${cachedVoiceId} | Native Indian: ${isNativeIndianVoice}`);
+    
     return cachedVoiceId!;
   } catch (error) {
     console.error('[ElevenLabs] Voice discovery fault:', error);
@@ -89,7 +97,7 @@ export async function POST(req: Request) {
     const voiceId = await getAvailableVoice(apiKey);
     const modelId = 'eleven_flash_v2_5';
 
-    // 2. Execute synthesis with professionally calibrated settings
+    // 2. Execute synthesis with settings optimized for clarity and Indian user comprehension
     const response = await fetch(
       `https://api.elevenlabs.io/v1/text-to-speech/${voiceId}`,
       {
@@ -103,17 +111,15 @@ export async function POST(req: Request) {
           text: body.text,
           model_id: modelId,
           voice_settings: {
-            stability: 0.60,          // Calm and consistent
-            similarity_boost: 0.80,   // High fidelity
-            style: 0.05,              // Minimal, professional interview tone
+            stability: 0.65,          // Calm, consistent professional delivery
+            similarity_boost: 0.80,   // High fidelity identity
+            style: 0.05,              // Minimal, neutral interview tone
             use_speaker_boost: true,
-            speaking_rate: 0.85       // Measured and clear pace
+            speaking_rate: 0.82       // Clear, slightly slow pace for comprehension
           },
         }),
       }
     );
-
-    console.log(`[ElevenLabs] model: ${modelId} | status: ${response.status} | pace: 0.85`);
 
     if (!response.ok) {
       const errorText = await response.text();
@@ -136,6 +142,8 @@ export async function POST(req: Request) {
         code: errorDetail?.detail?.status || 'API_ERROR'
       }, { status: response.status });
     }
+
+    console.log(`[ElevenLabs] Synthesis SUCCESS | model: ${modelId} | pace: 0.82 | status: 200`);
 
     const audioBuffer = await response.arrayBuffer();
 
