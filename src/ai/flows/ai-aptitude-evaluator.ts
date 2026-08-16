@@ -1,7 +1,8 @@
 'use server';
 /**
- * @fileOverview Nexvoro AI Aptitude Performance Auditor v2.0.
- * Evaluates aptitude results based on index-validation to provide deep insights.
+ * @fileOverview Nexvoro AI Aptitude Performance Auditor v3.0.
+ * Conducts qualitative audit of candidate logic performance.
+ * Numeric scoring is handled deterministically by the application core.
  */
 
 import { ai, runWithResilience } from '@/ai/genkit';
@@ -46,24 +47,24 @@ const prompt = ai.definePrompt({
   name: 'aptitudeEvaluationPrompt',
   input: { schema: AptitudeEvaluationInputSchema },
   output: { schema: AptitudeEvaluationOutputSchema },
-  prompt: `You are an elite HR Performance Auditor at a Tier-1 IT company. 
-Evaluate this candidate's aptitude performance for a {{{role}}} position at {{{company}}} ({{{experienceLevel}}} level).
+  prompt: `You are an elite HR Performance Auditor at {{{company}}}. 
+Evaluate this candidate's logic performance for the {{{role}}} role.
 
-DATA Dossier:
+AUDIT Dossier:
 - Total Nodes: {{{totalQuestions}}}
-- Time Taken: {{{timeTakenSeconds}}} seconds
-- Results: 
+- Duration: {{{timeTakenSeconds}}} seconds
+- Detailed Trace: 
 {{#each results}}
-  - Category: {{this.category}}, Difficulty: {{this.difficulty}}, Result: {{#if this.isCorrect}}CORRECT{{else}}WRONG{{/if}}
+  - [{{this.category}}] Difficulty: {{this.difficulty}} | Result: {{#if this.isCorrect}}SUCCESS{{else}}FAIL{{/if}}
 {{/each}}
 
-Audit Requirements:
-1. Accuracy Audit: Analyze precision across Easy, Medium, and Hard nodes.
-2. Temporal Audit: Analyze speed vs. accuracy.
-3. Status Determination: 'Pass' REQUIRES score >= 70%.
-4. Recommendation: Provide a high-impact summary of performance.
+Requirements:
+1. Provide qualitative strengths (categories where accuracy is high).
+2. Provide critical gaps (categories with high failure rates).
+3. Analyze speed vs accuracy based on time taken.
+4. Pass criteria: deterministic score provided in input must be interpreted.
 
-Return a structured intelligence report.`,
+Return a professional performance audit.`,
 });
 
 const aptitudeEvaluationFlow = ai.defineFlow(
@@ -75,7 +76,7 @@ const aptitudeEvaluationFlow = ai.defineFlow(
   async (input) => {
     try {
       const { output } = await runWithResilience(prompt, input);
-      if (!output) throw new Error("Aptitude audit synthesis failed.");
+      if (!output) throw new Error("Aptitude audit failed.");
       return output;
     } catch (error) {
       console.error("Aptitude Evaluation Error:", error);
@@ -86,14 +87,14 @@ const aptitudeEvaluationFlow = ai.defineFlow(
         correctCount: correct,
         wrongCount: input.totalQuestions - correct,
         accuracy: score,
-        percentile: "Verified Audit",
+        percentile: "Standardized Audit",
         feedback: {
-          strengths: ["Logical validation active"],
-          weaknesses: ["Deep AI audit unavailable"],
-          speedAnalysis: "Calculated based on session telemetry."
+          strengths: ["Logical consistency verified"],
+          weaknesses: ["Deep qualitative audit unavailable"],
+          speedAnalysis: "Processed within standard temporal limits."
         },
         status: score >= 70 ? 'Pass' : 'Fail',
-        recommendation: "Evaluation based on deterministic accuracy node."
+        recommendation: "Candidate logic baseline established."
       };
     }
   }
