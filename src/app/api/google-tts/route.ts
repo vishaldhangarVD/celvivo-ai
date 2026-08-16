@@ -1,8 +1,10 @@
 import { NextResponse } from 'next/server';
+import { GoogleAuth } from 'google-auth-library';
 
 /**
- * @fileOverview Temporary Google Cloud TTS Gateway for comparison tests.
- * Targeted at en-IN-Wavenet-A (Female, Indian English) for high-fidelity evaluation.
+ * @fileOverview Secure Google Cloud TTS Gateway for comparison tests.
+ * Targeted at en-IN-Wavenet-A (Female, Indian English).
+ * Uses OAuth2 authentication via Google Application Default Credentials.
  */
 
 export async function POST(req: Request) {
@@ -14,28 +16,44 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Text payload missing." }, { status: 400 });
     }
 
-    // Reuse existing Google keys if available, prioritizing a dedicated GOOGLE_API_KEY
-    const apiKey = process.env.GOOGLE_API_KEY || process.env.GOOGLE_GENAI_API_KEY;
-
-    if (!apiKey) {
-      return NextResponse.json({ 
-        error: "GOOGLE_API_KEY is not configured in the system environment.",
-        status: "CONFIG_ERROR",
-        setup: "Enable 'Cloud Text-to-Speech API' in Google Cloud Console and add GOOGLE_API_KEY to .env"
-      }, { status: 500 });
-    }
-
-    console.log(`[Google TTS Diagnostic Request]
+    console.log(`[Google TTS OAuth2 Request]
 - Voice: en-IN-Wavenet-A
 - Speed: 0.90
 - Text length: ${text.length} chars`);
 
+    // Initialize Google Auth with the required scope for Text-to-Speech
+    const auth = new GoogleAuth({
+      scopes: 'https://www.googleapis.com/auth/cloud-platform'
+    });
+
+    let accessToken: string | null = null;
+    try {
+      const client = await auth.getClient();
+      const tokenResponse = await client.getAccessToken();
+      accessToken = tokenResponse.token || null;
+    } catch (authError: any) {
+      console.error('[Google TTS Auth Error]:', authError.message);
+      return NextResponse.json({ 
+        error: "Google Cloud authentication failed. Ensure service account credentials (ADC) are configured.",
+        status: "AUTH_ERROR",
+        details: authError.message
+      }, { status: 500 });
+    }
+
+    if (!accessToken) {
+      return NextResponse.json({ 
+        error: "Could not retrieve access token. Check project permissions.",
+        status: "TOKEN_ERROR"
+      }, { status: 500 });
+    }
+
     const response = await fetch(
-      `https://texttospeech.googleapis.com/v1/text:synthesize?key=${apiKey}`,
+      `https://texttospeech.googleapis.com/v1/text:synthesize`,
       {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${accessToken}`,
         },
         body: JSON.stringify({
           input: { text },
@@ -55,18 +73,12 @@ export async function POST(req: Request) {
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({ message: "Unknown Google API error" }));
-      
-      // LOG THE FULL ERROR SERVER-SIDE FOR DEVELOPER INSPECTION
       console.error('[Google TTS API Error Response]:', JSON.stringify(errorData, null, 2));
 
-      // Extract a meaningful message for the client-side toast
-      const apiMessage = errorData.error?.message || errorData.message || "The Google TTS API rejected the request.";
-      const apiStatus = errorData.error?.status || "API_ERROR";
-
       return NextResponse.json({ 
-        error: `Google API Error: ${apiMessage}`,
+        error: `Google API Error: ${errorData.error?.message || errorData.message || "Request rejected"}`,
         details: errorData,
-        apiStatus: apiStatus
+        apiStatus: errorData.error?.status || "API_ERROR"
       }, { status: response.status });
     }
 
