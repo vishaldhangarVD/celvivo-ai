@@ -15,19 +15,20 @@ export async function POST(req: Request) {
     }
 
     // Reuse existing Google keys if available, prioritizing a dedicated GOOGLE_API_KEY
-    const apiKey = process.env.GOOGLE_API_KEY || process.env.GOOGLE_GENAI_API_KEY || process.env.GOOGLE_API_KEY;
+    const apiKey = process.env.GOOGLE_API_KEY || process.env.GOOGLE_GENAI_API_KEY;
 
     if (!apiKey) {
       return NextResponse.json({ 
-        error: "Google API Key missing.",
+        error: "GOOGLE_API_KEY is not configured in the system environment.",
+        status: "CONFIG_ERROR",
         setup: "Enable 'Cloud Text-to-Speech API' in Google Cloud Console and add GOOGLE_API_KEY to .env"
       }, { status: 500 });
     }
 
-    console.log(`[Google TTS Test Request]
-- Voice: en-IN-Wavenet-A (Female, Indian English)
+    console.log(`[Google TTS Diagnostic Request]
+- Voice: en-IN-Wavenet-A
 - Speed: 0.90
-- Text: "${text.substring(0, 40)}..."`);
+- Text length: ${text.length} chars`);
 
     const response = await fetch(
       `https://texttospeech.googleapis.com/v1/text:synthesize?key=${apiKey}`,
@@ -53,11 +54,19 @@ export async function POST(req: Request) {
     );
 
     if (!response.ok) {
-      const errorData = await response.json();
-      console.error('[Google TTS API Error Response]:', errorData);
+      const errorData = await response.json().catch(() => ({ message: "Unknown Google API error" }));
+      
+      // LOG THE FULL ERROR SERVER-SIDE FOR DEVELOPER INSPECTION
+      console.error('[Google TTS API Error Response]:', JSON.stringify(errorData, null, 2));
+
+      // Extract a meaningful message for the client-side toast
+      const apiMessage = errorData.error?.message || errorData.message || "The Google TTS API rejected the request.";
+      const apiStatus = errorData.error?.status || "API_ERROR";
+
       return NextResponse.json({ 
-        error: 'Google TTS API rejected the request.',
-        details: errorData 
+        error: `Google API Error: ${apiMessage}`,
+        details: errorData,
+        apiStatus: apiStatus
       }, { status: response.status });
     }
 
@@ -78,6 +87,9 @@ export async function POST(req: Request) {
     });
   } catch (error: any) {
     console.error('[Google TTS Gateway Internal Fault]:', error);
-    return NextResponse.json({ error: 'Internal server error.' }, { status: 500 });
+    return NextResponse.json({ 
+      error: `Internal Gateway Fault: ${error.message || 'Unknown error'}`,
+      status: 500 
+    }, { status: 500 });
   }
 }
