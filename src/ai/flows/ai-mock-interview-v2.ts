@@ -73,26 +73,22 @@ SIMULATION STATE:
 - CURRENT STAGE: {{{currentStage}}}
 - CURRENT DIFFICULTY: {{{currentDifficulty}}}
 
-MASTER PROTOCOL (KNOWLEDGE NODES):
-1. RESUME & PROJECTS:
-   - Carefully read the candidate dossier.
-   - If resume contains React, Firebase, Python, or Power BI, you MUST prioritize probes into these specific tech stacks.
-   - Anchor questions in the architectural decisions of their listed projects.
-2. SYNTAX MATRIX INTEGRATION:
+MASTER PROTOCOL (RESUME & PROJECT PRIORITY):
+1. CANDIDATE DOSSIER:
+   - SUMMARY: {{{resumeSummary}}}
+   - SKILLS: {{#each resumeSkills}}{{{this}}}, {{/each}}
+   - PROJECTS: {{#each resumeProjects}}{{{this}}}, {{/each}}
+
+2. QUESTIONING PROTOCOL:
+   - FIRST PRIORITY: Ask deep, architectural questions about the candidate's listed PROJECTS.
+   - SECOND PRIORITY: Ask practical technical questions based on the candidate's specific SKILLS.
+   - THIRD PRIORITY: Connect the candidate's experience to the target role ({{{role}}}).
+   - Avoid generic textbook questions. If they mention a technology in their resume, probe for "How" and "Why" regarding its use in their projects.
+
+3. DATA NODE INTEGRATION:
    - CODING SCORE: {{{codingScore}}}%
-   - If >90%: Bypassing syntax. Ask about System Architecture, Scalability, and Distributed constraints.
-   - If <60%: Present Debugging scenarios. Ask how they identify/resolve bottlenecks.
-   - If <40%: Validate basic Syntax and Core Fundamentals.
-3. COGNITIVE CALIBRATION:
    - APTITUDE SCORE: {{{aptitudeScore}}}%
-   - If >85%: Increase logical reasoning complexity. Use abstract multi-variable constraints.
-   - If <60%: Avoid extremely difficult or theoretical nodes. Focus on practical implementation.
-4. FIRM-SPECIFIC RUBRIC ({{{targetCompany}}}):
-   - Google: System Design, Scalability, "Why" probes, DSA trade-offs.
-   - Amazon: Leadership Principles (Ownership, Customer Obsession) woven into tech probes.
-   - Microsoft: Architecture, Clean Code, maintainability.
-   - TCS: Core Concepts (OOP, SQL, DBMS) and Project walkthroughs.
-   - Startup: Practical delivery, Impact, High velocity development.
+   - Adjust difficulty based on these scores and the quality of their previous answers.
 
 ADAPTIVE BEHAVIOR:
 - Confidence: If candidate is confident, INCREASE friction. Probe edge cases.
@@ -103,12 +99,10 @@ TERMINATION PROTOCOL (NATURAL CONCLUSION):
 - MINIMUM questions: 7.
 - MAXIMUM questions: 12.
 - You decide when to finish based on data density. If index >= 7 and you have sufficient data for a final audit, set "isInterviewComplete": true.
-- If index >= 12, you MUST finish immediately.
 - Final Question: If closing, provide a professional human sign-off (e.g., "I appreciate your time. This concludes our session. It was good speaking with you.").
 
 SESSION INTEGRITY:
 - "Tell me about yourself" is Node 1 ONLY.
-- "Strengths" or "Weaknesses" allowed ONCE total.
 - NEVER repeat a question listed in "Previously Asked Questions".
 - History:
 {{#each history}}
@@ -119,7 +113,7 @@ Candidate: {{{this.answer}}}
 LATEST CANDIDATE RESPONSE:
 {{{userAnswer}}}
 
-Based on EVERY node above, output the valid JSON.`,
+Based on the RESUME context and candidate answers, output the next logical question as JSON.`,
 });
 
 const aiMockInterviewFlow = ai.defineFlow(

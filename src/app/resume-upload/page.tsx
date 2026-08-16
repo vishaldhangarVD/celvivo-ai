@@ -27,6 +27,7 @@ import { useUser, useFirestore, useDoc } from '@/firebase';
 import { doc, updateDoc, serverTimestamp, collection, addDoc } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
+import { analyzeResume } from '@/ai/flows/ai-resume-analysis';
 
 export default function ResumeUploadPage() {
   const router = useRouter();
@@ -37,6 +38,7 @@ export default function ResumeUploadPage() {
   const [file, setFile] = useState<File | null>(null);
   const [isVerifying, setIsVerifying] = useState(false);
   const [isUploaded, setIsUploaded] = useState(false);
+  const [analysisResult, setAnalysisResult] = useState<any>(null);
 
   // Fetch active journey context
   const journeyRef = useMemo(() => {
@@ -63,23 +65,43 @@ export default function ResumeUploadPage() {
       setFile(selected);
       setIsVerifying(true);
       
-      // Simulate fast neural verification
-      await new Promise(r => setTimeout(r, 1500));
-      
-      setIsVerifying(false);
-      setIsUploaded(true);
-      toast({ title: "Blueprint Verified", description: "Neural registration complete." });
+      try {
+        const base64 = await new Promise<string>((res) => {
+          const reader = new FileReader();
+          reader.onload = () => res(reader.result as string);
+          reader.readAsDataURL(selected);
+        });
+
+        // Trigger AI Analysis for the interview dossier
+        const result = await analyzeResume({ 
+          resumeDataUri: base64, 
+          targetRole: journey?.role || "Software Engineer" 
+        });
+        
+        setAnalysisResult(result);
+        setIsUploaded(true);
+        toast({ title: "Blueprint Verified", description: "Neural registration complete." });
+      } catch (error) {
+        console.error("Resume Verification Error:", error);
+        toast({ variant: "destructive", title: "Verification Failed", description: "Neural engine could not parse blueprint." });
+      } finally {
+        setIsVerifying(false);
+      }
     }
   };
 
   const handleEnterAptitude = async () => {
-    if (!file || !user || !db || !journey) return;
+    if (!file || !user || !db || !journey || !analysisResult) {
+      toast({ variant: "destructive", title: "Dossier Incomplete", description: "Please upload and verify your resume first." });
+      return;
+    }
     
     try {
-      // Save basic resume info to session
+      // Save full analysis to the session document
       await updateDoc(journeyRef!, {
         currentStage: "Aptitude Assessment",
         resumeName: file.name,
+        resumeAnalysis: analysisResult,
         updatedAt: serverTimestamp(),
         step: 3
       });
@@ -102,18 +124,6 @@ export default function ResumeUploadPage() {
       <div className="particles-bg" />
       <Navbar />
       <NavigationControls onHome={() => router.push('/')} />
-
-      {process.env.NODE_ENV === 'development' && (
-        <div className="fixed top-24 right-8 z-[100]">
-          <Button 
-            onClick={() => router.push('/interview/coding')}
-            variant="ghost" 
-            className="h-8 px-3 rounded-lg glass border-white/10 text-[9px] font-black uppercase tracking-widest hover:bg-accent/10 hover:text-accent"
-          >
-            Skip → Coding
-          </Button>
-        </div>
-      )}
 
       <main className="flex-1 container mx-auto px-6 flex items-center justify-center relative z-10 pt-16">
         <div className="grid lg:grid-cols-12 gap-8 max-w-6xl w-full">
@@ -146,7 +156,7 @@ export default function ResumeUploadPage() {
                     <div className="w-20 h-20 rounded-full border-2 border-accent/10 border-t-accent animate-spin" />
                     <ShieldCheck className="w-8 h-8 text-accent absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 animate-pulse" />
                   </div>
-                  <p className="text-[10px] font-black text-accent uppercase tracking-[0.4em]">Verifying Blueprint...</p>
+                  <p className="text-[10px] font-black text-accent uppercase tracking-[0.4em]">Extracting Intelligence...</p>
                 </div>
               ) : !isUploaded ? (
                 <div className="space-y-6">
@@ -174,13 +184,13 @@ export default function ResumeUploadPage() {
                     </div>
                     <div className="space-y-2">
                        <div className="flex items-center justify-center gap-2 text-green-400/60">
-                         <Check className="w-3 h-3" /> <span className="text-[9px] font-bold uppercase tracking-widest">Resume Uploaded Successfully</span>
+                         <Check className="w-3 h-3" /> <span className="text-[9px] font-bold uppercase tracking-widest">Resume Analyzed Successfully</span>
                        </div>
                        <div className="flex items-center justify-center gap-2 text-green-400/60">
-                         <Check className="w-3 h-3" /> <span className="text-[9px] font-bold uppercase tracking-widest">Resume Verified</span>
+                         <Check className="w-3 h-3" /> <span className="text-[9px] font-bold uppercase tracking-widest">Skills & Projects Extracted</span>
                        </div>
                        <div className="flex items-center justify-center gap-2 text-green-400/60">
-                         <Check className="w-3 h-3" /> <span className="text-[9px] font-bold uppercase tracking-widest">Candidate Registered</span>
+                         <Check className="w-3 h-3" /> <span className="text-[9px] font-bold uppercase tracking-widest">Dossier Registered</span>
                        </div>
                     </div>
                   </div>
@@ -222,15 +232,6 @@ export default function ResumeUploadPage() {
                </div>
 
                <div className="space-y-4">
-                 {/* TEMP TEST BUTTON - REMOVE BEFORE PRODUCTION */}
-                 <Button 
-                  variant="outline"
-                  onClick={() => router.push(`/interview/hr?role=${encodeURIComponent(journey?.role || '')}&company=${encodeURIComponent(journey?.company || '')}&exp=${encodeURIComponent(journey?.experience || '')}&round=HR%20Round`)}
-                  className="w-full h-10 glass border-white/10 text-[9px] font-bold uppercase tracking-widest hover:bg-white/5"
-                 >
-                   Skip to HR →
-                 </Button>
-
                  <Button 
                   onClick={handleEnterAptitude}
                   disabled={!isUploaded || isVerifying}

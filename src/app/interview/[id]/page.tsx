@@ -376,6 +376,20 @@ function VirtualArenaContent() {
         const data = snap.data();
         setAssessmentContext(data);
         
+        // INTERVIEW RESUME DEBUG LOG
+        const rs = data.resumeAnalysis?.skillAnalysis || [];
+        const rp = data.resumeAnalysis?.sections?.projects || [];
+        console.log("[INTERVIEW RESUME DEBUG]", {
+          resumeSkills: rs.length,
+          resumeProjects: rp.length,
+          resumeSummary: data.resumeAnalysis?.summary ? "PRESENT" : "EMPTY",
+          role: data.role
+        });
+
+        if (rs.length === 0 && rp.length === 0 && process.env.NODE_ENV === 'development') {
+           console.warn("[RESUME PIPELINE ERROR] Resume data is empty before Gemini generation.");
+        }
+
         // Initialize Sim State from Data or Defaults
         const startStage = data.simStage || "INTRODUCTION";
         const startDiff = data.simDifficulty || "MEDIUM";
@@ -387,8 +401,8 @@ function VirtualArenaContent() {
             const response = await aiMockInterview({
               role, experienceLevel: exp, roundType: round, currentMainQuestionIndex: 1, 
               history: [], targetCompany: company,
-              resumeSkills: data.resumeAnalysis?.skillAnalysis?.map((s: any) => s.skill) || [],
-              resumeProjects: data.resumeAnalysis?.sections?.projects || [],
+              resumeSkills: rs.map((s: any) => s.skill),
+              resumeProjects: rp,
               resumeSummary: data.resumeAnalysis?.summary || "",
               aptitudeScore: data.aptitudeReport?.overallScore || 0,
               codingScore: data.codingReport?.score || 0,
@@ -442,12 +456,15 @@ function VirtualArenaContent() {
         };
       });
 
+      const rs = assessmentContext.resumeAnalysis?.skillAnalysis || [];
+      const rp = assessmentContext.resumeAnalysis?.sections?.projects || [];
+
       const response = await aiMockInterview({
         role, experienceLevel: exp, roundType: round, currentMainQuestionIndex: currentIdx + 1,
         history: chatHistory,
         userAnswer: currentAns, targetCompany: company,
-        resumeSkills: assessmentContext.resumeAnalysis?.skillAnalysis?.map((s: any) => s.skill) || [],
-        resumeProjects: assessmentContext.resumeAnalysis?.sections?.projects || [],
+        resumeSkills: rs.map((s: any) => s.skill),
+        resumeProjects: rp,
         resumeSummary: assessmentContext.resumeAnalysis?.summary || "",
         aptitudeScore: assessmentContext.aptitudeReport?.overallScore || 0,
         codingScore: assessmentContext.codingReport?.score || 0,
