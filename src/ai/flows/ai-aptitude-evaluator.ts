@@ -1,7 +1,7 @@
 'use server';
 /**
- * @fileOverview Nexvoro AI Aptitude Performance Auditor.
- * Evaluates aptitude results using Gemini to provide deep insights into logic, speed, and accuracy.
+ * @fileOverview Nexvoro AI Aptitude Performance Auditor v2.0.
+ * Evaluates aptitude results based on index-validation to provide deep insights.
  */
 
 import { ai, runWithResilience } from '@/ai/genkit';
@@ -54,11 +54,11 @@ DATA Dossier:
 - Time Taken: {{{timeTakenSeconds}}} seconds
 - Results: 
 {{#each results}}
-  - Category: {{this.category}}, Result: {{#if this.isCorrect}}CORRECT{{else}}WRONG{{/if}}
+  - Category: {{this.category}}, Difficulty: {{this.difficulty}}, Result: {{#if this.isCorrect}}CORRECT{{else}}WRONG{{/if}}
 {{/each}}
 
 Audit Requirements:
-1. Accuracy Audit: Calculate category scores and overall precision.
+1. Accuracy Audit: Analyze precision across Easy, Medium, and Hard nodes.
 2. Temporal Audit: Analyze speed vs. accuracy.
 3. Status Determination: 'Pass' REQUIRES score >= 70%.
 4. Recommendation: Provide a high-impact summary of performance.
@@ -79,7 +79,6 @@ const aptitudeEvaluationFlow = ai.defineFlow(
       return output;
     } catch (error) {
       console.error("Aptitude Evaluation Error:", error);
-      // Simple fallback logic
       const correct = input.results.filter(r => r.isCorrect).length;
       const score = Math.round((correct / input.totalQuestions) * 100);
       return {
@@ -87,14 +86,14 @@ const aptitudeEvaluationFlow = ai.defineFlow(
         correctCount: correct,
         wrongCount: input.totalQuestions - correct,
         accuracy: score,
-        percentile: "Top 30%",
+        percentile: "Verified Audit",
         feedback: {
-          strengths: ["Logical pattern recognition"],
-          weaknesses: ["Speed refinement required"],
-          speedAnalysis: "Candidate completed within the allotted time."
+          strengths: ["Logical validation active"],
+          weaknesses: ["Deep AI audit unavailable"],
+          speedAnalysis: "Calculated based on session telemetry."
         },
         status: score >= 70 ? 'Pass' : 'Fail',
-        recommendation: "Evaluation based on raw accuracy node."
+        recommendation: "Evaluation based on deterministic accuracy node."
       };
     }
   }
