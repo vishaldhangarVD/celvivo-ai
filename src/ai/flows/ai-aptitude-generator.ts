@@ -1,6 +1,6 @@
 'use server';
 /**
- * @fileOverview Nexvoro AI Master Aptitude Generator v17.0.
+ * @fileOverview Nexvoro AI Master Aptitude Generator v18.0.
  * Dynamically synthesizes high-fidelity logic nodes using Google Gemini.
  * Implements strict category distribution, difficulty mapping, and a 30-node unique fallback bank.
  * Enhanced with cross-session duplicate protection and strict schema validation.
@@ -46,26 +46,25 @@ Generate a professional 20-question Aptitude Assessment for a {{{role}}} candida
 - DO NOT use any questions that overlap with these previously asked question IDs: {{{usedQuestionIds}}}
 - Every question MUST have a unique 10-character alphanumeric ID.
 
-### CURRICULUM ARCHITECTURE (Exactly 20 Nodes):
-1. QUANTITATIVE (5 Nodes): Focus on profit/loss, speed-distance, probability, and percentages.
-2. LOGICAL (4 Nodes): Syllogisms, arrangements, and series.
-3. VERBAL (3 Nodes): Grammar, vocabulary in context, and comprehension logic.
-4. DATA INTERPRETATION (3 Nodes): Provide a small structured dataset (e.g., 'Table: Year | Revenue | Profit') and ask a multi-step calculation question.
-5. PROBLEM SOLVING (3 Nodes): Resource allocation or scheduling scenarios.
-6. CS APTITUDE (2 Nodes): Algorithms, databases, or system fundamentals.
+### CURRICULUM ARCHITECTURE (Exactly 20 Nodes - Use EXACT Category Labels):
+1. Quantitative Aptitude (5 Nodes): Focus on profit/loss, speed-distance, probability, and percentages.
+2. Logical Reasoning (4 Nodes): Syllogisms, arrangements, and series.
+3. English Communication (3 Nodes): Grammar, vocabulary in context, and comprehension logic.
+4. Data Interpretation (3 Nodes): Provide a small structured dataset (e.g., 'Table: Year | Revenue | Profit') and ask a multi-step calculation question.
+5. Analytical Reasoning (3 Nodes): Resource allocation or scheduling scenarios.
+6. CS Aptitude (2 Nodes): Algorithms, databases, or system fundamentals.
 
 ### DIFFICULTY PROGRESSION PROTOCOL:
-- Q1-Q5: EASY (Foundational logic)
-- Q6-Q12: MEDIUM (Analytical depth)
-- Q13-Q17: MEDIUM/HARD (Complex multi-step reasoning)
-- Q18-Q20: HARD (Edge case scenarios & high-pressure logic)
+- Q1-Q5: Easy (Foundational logic)
+- Q6-Q12: Medium (Analytical depth)
+- Q13-Q17: Medium (Complex multi-step reasoning)
+- Q18-Q20: Hard (Edge case scenarios & high-pressure logic)
 
 ### NEURAL INTEGRITY RULES:
 - NO duplicate questions.
-- NO trivial arithmetic. Questions must require reasoning.
-- Every correctOptionIndex MUST point to the mathematically correct option.
+- Every category field MUST match exactly one of: 'Quantitative Aptitude', 'Logical Reasoning', 'English Communication', 'Analytical Reasoning', 'Critical Thinking', 'Pattern Recognition', 'Data Interpretation', 'CS Aptitude'.
+- Every correctOptionIndex MUST point to the mathematically correct option in the 'options' array.
 - Options must be unique and plausible.
-- If experience is 5+ years, prioritize system-thinking and optimization scenarios.
 
 Return ONLY a valid JSON object containing the 'questions' array.`,
 });
@@ -90,7 +89,7 @@ const FALLBACK_BANK = [
   { id: 'fb-17', category: 'Quantitative Aptitude', difficulty: 'Hard', question: 'A train 100m long passes a platform 200m long in 10 seconds. What is the speed of the train in km/h?', options: ['30 km/h', '60 km/h', '108 km/h', '120 km/h'], correctOptionIndex: 2 },
   { id: 'fb-18', category: 'Analytical Reasoning', difficulty: 'Hard', question: 'All cats are mammals. No mammals are reptiles. Therefore:', options: ['Some cats are reptiles.', 'All cats are reptiles.', 'No cats are reptiles.', 'All reptiles are cats.'], correctOptionIndex: 2 },
   { id: 'fb-19', category: 'Critical Thinking', difficulty: 'Hard', question: 'If "If P then Q" is true, which of the following must also be true?', options: ['If not P then not Q', 'If Q then P', 'If not Q then not P', 'P and not Q'], correctOptionIndex: 2 },
-  { id: 'fb-20', category: 'Problem Solving', difficulty: 'Hard', question: 'You have 3 buckets with capacities 12L, 8L, and 5L. The 12L bucket is full. How many steps to get exactly 6L in the 12L bucket?', options: ['3', '5', '7', 'None of these'], correctOptionIndex: 1 },
+  { id: 'fb-20', category: 'Data Interpretation', difficulty: 'Hard', question: 'You have 3 buckets with capacities 12L, 8L, and 5L. The 12L bucket is full. How many steps to get exactly 6L in the 12L bucket?', options: ['3', '5', '7', 'None of these'], correctOptionIndex: 1 },
   { id: 'fb-21', category: 'Quantitative Aptitude', difficulty: 'Easy', question: 'What is 15% of 200 plus 25% of 100?', options: ['45', '55', '60', '70'], correctOptionIndex: 1 },
   { id: 'fb-22', category: 'Logical Reasoning', difficulty: 'Easy', question: 'If North becomes North-East, what does West become?', options: ['North-West', 'South-West', 'South-East', 'North'], correctOptionIndex: 0 },
   { id: 'fb-23', category: 'English Communication', difficulty: 'Easy', question: 'Select the antonym for "Fragile":', options: ['Delicate', 'Sturdy', 'Weak', 'Broken'], correctOptionIndex: 1 },
@@ -100,7 +99,7 @@ const FALLBACK_BANK = [
   { id: 'fb-27', category: 'Logical Reasoning', difficulty: 'Medium', question: 'Statements: 1. All pencils are pens. 2. Some pens are markers. Conclusion: Some pencils are markers.', options: ['True', 'False', 'Insufficient Data', 'None'], correctOptionIndex: 1 },
   { id: 'fb-28', category: 'Quantitative Aptitude', difficulty: 'Hard', question: 'A sum of money doubles itself in 8 years at simple interest. In how many years will it triple itself?', options: ['12 years', '14 years', '16 years', '20 years'], correctOptionIndex: 2 },
   { id: 'fb-29', category: 'CS Aptitude', difficulty: 'Hard', question: 'In networking, which layer of the OSI model is responsible for encryption?', options: ['Application', 'Presentation', 'Session', 'Transport'], correctOptionIndex: 1 },
-  { id: 'fb-30', category: 'Problem Solving', difficulty: 'Hard', question: 'Four friends (A, B, C, D) need to cross a bridge at night. They have one torch. Max 2 people can cross. A takes 1m, B takes 2m, C takes 5m, D takes 10m. Min time?', options: ['15m', '17m', '19m', '21m'], correctOptionIndex: 1 },
+  { id: 'fb-30', category: 'Analytical Reasoning', difficulty: 'Hard', question: 'Four friends (A, B, C, D) need to cross a bridge at night. They have one torch. Max 2 people can cross. A takes 1m, B takes 2m, C takes 5m, D takes 10m. Min time?', options: ['15m', '17m', '19m', '21m'], correctOptionIndex: 1 },
 ];
 
 const aptitudeFlow = ai.defineFlow(
@@ -112,10 +111,10 @@ const aptitudeFlow = ai.defineFlow(
   async (input) => {
     try {
       const { output } = await runWithResilience(prompt, input);
-      if (!output || !output.questions || output.questions.length === 0) throw new Error("Aptitude synthesis failed.");
+      if (!output || !output.questions || output.questions.length === 0) throw new Error("Aptitude synthesis failed validation.");
       return output;
     } catch (error) {
-      console.error("[Aptitude Flow] Neural Fault. Deploying verified unique repository.");
+      console.error("[Aptitude Flow] Neural Fault or Validation Error. Deploying verified unique repository.", error);
       // Filter out used questions from fallback bank if possible
       const usedIds = new Set(input.usedQuestionIds || []);
       const availableFallback = FALLBACK_BANK.filter(q => !usedIds.has(q.id));

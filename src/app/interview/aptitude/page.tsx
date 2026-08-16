@@ -70,16 +70,20 @@ export default function AptitudeEnginePage() {
     async function init() {
       if (!db || !user?.uid || !journeyRef || initGuard.current) return;
       
+      console.log("[Aptitude Init] Logic Sequence Started.");
       const snap = await getDoc(journeyRef);
       if (!snap.exists()) {
+        console.error("[Aptitude Init] Journey document missing.");
         router.push('/interview');
         return;
       }
       
       const data = snap.data();
+      console.log("[Aptitude Init] Firestore Data Loaded.", { status: data.aptitudeStatus });
       
-      // RESUME LOGIC: Check for existing in-progress set
+      // RESUME LOGIC: Restore existing 20-question set if in progress
       if (data.aptitudeQuestions && data.aptitudeQuestions.length === 20 && !data.aptitudeReport) {
+        console.log("[Aptitude Init] Resuming existing session.");
         setQuestions(data.aptitudeQuestions);
         setAnswers(data.aptitudeAnswers || {});
         setCurrentIdx(data.aptitudeCurrentIndex || 0);
@@ -91,6 +95,7 @@ export default function AptitudeEnginePage() {
 
       // COMPLETED LOGIC: If landing on page while already done, show results
       if (data.aptitudeReport) {
+        console.log("[Aptitude Init] Displaying existing report.");
         setQuestions(data.aptitudeQuestions || []);
         setAnswers(data.aptitudeAnswers || {});
         setResult(data.aptitudeReport);
@@ -99,7 +104,8 @@ export default function AptitudeEnginePage() {
         return;
       }
 
-      // FRESH START LOGIC: One generation per active session
+      // FRESH START LOGIC
+      console.log("[Aptitude Init] Generating new assessment nodes.");
       initGuard.current = true;
       try {
         const userRef = doc(db, 'users', user.uid);
@@ -115,15 +121,18 @@ export default function AptitudeEnginePage() {
         });
         
         const freshQuestions = response.questions;
-        if (!freshQuestions || freshQuestions.length !== 20) throw new Error("Invalid node count.");
+        if (!freshQuestions || freshQuestions.length !== 20) {
+           throw new Error(`Invalid question count received: ${freshQuestions?.length}`);
+        }
 
-        setQuestions(freshQuestions);
+        console.log("[Aptitude Init] AI Synthesis Success. Persisting to Cloud.");
         
         await updateDoc(journeyRef, {
           aptitudeQuestions: freshQuestions,
           aptitudeAnswers: {},
           aptitudeCurrentIndex: 0,
           aptitudeTimeLeft: 45 * 60,
+          aptitudeStatus: "in_progress",
           updatedAt: serverTimestamp()
         });
 
@@ -132,11 +141,12 @@ export default function AptitudeEnginePage() {
           aptitudeQuestionHistory: Array.from(new Set([...usedIds, ...newIds])).slice(-200)
         });
 
-      } catch (e) {
-        console.error(e);
-        toast({ variant: "destructive", title: "Neural Sync Error", description: "Assessment calibration failure. Retrying or using fallback..." });
-        // Fallback is handled inside the generateAptitudeTest flow itself
-      } finally {
+        setQuestions(freshQuestions);
+        setIsInitializing(false);
+
+      } catch (e: any) {
+        console.error("[Aptitude Init] Critical failure:", e);
+        toast({ variant: "destructive", title: "Neural Sync Error", description: "Assessment calibration failure. Please restart." });
         setIsInitializing(false);
       }
     }
@@ -151,6 +161,8 @@ export default function AptitudeEnginePage() {
     if (submissionGuard.current || isEvaluating || !journey || !journeyRef || result) return;
     submissionGuard.current = true;
     setIsEvaluating(true);
+
+    console.log("[Aptitude Submit] Initiating Audit.");
 
     let correctCount = 0;
     const formattedResults = questions.map((q, idx) => {
@@ -186,7 +198,6 @@ export default function AptitudeEnginePage() {
         results: formattedResults
       });
 
-      // Override AI guessed score with deterministic application score
       const finalReport = {
         ...report,
         overallScore: finalNumericScore,
@@ -200,13 +211,16 @@ export default function AptitudeEnginePage() {
       
       await updateDoc(journeyRef, {
         aptitudeReport: finalReport,
+        aptitudeStatus: "completed",
         currentStage: finalReport.status === 'Pass' ? 'Coding Assessment' : 'Aptitude Assessment',
         step: finalReport.status === 'Pass' ? 4 : 3,
         updatedAt: serverTimestamp()
       });
 
+      console.log("[Aptitude Submit] Report Archived Successfully.");
+
     } catch (e) {
-      console.error(e);
+      console.error("[Aptitude Submit] Submission Fault:", e);
       toast({ variant: "destructive", title: "Audit Protocol Fault" });
     } finally {
       setIsEvaluating(false);
@@ -232,6 +246,7 @@ export default function AptitudeEnginePage() {
   const handleRetry = async () => {
     if (!journeyRef || !user) return;
     setIsInitializing(true);
+    initGuard.current = false;
     try {
       await updateDoc(journeyRef, {
         aptitudeQuestions: null,
@@ -239,6 +254,7 @@ export default function AptitudeEnginePage() {
         aptitudeCurrentIndex: 0,
         aptitudeTimeLeft: 45 * 60,
         aptitudeReport: null,
+        aptitudeStatus: "not_started",
         updatedAt: serverTimestamp()
       });
       window.location.reload();
@@ -272,7 +288,6 @@ export default function AptitudeEnginePage() {
     return `${m}:${s.toString().padStart(2, '0')}`;
   };
 
-  // UI STATE GUARDS
   if (isInitializing || journeyLoading) {
     return (
       <div className="h-screen bg-[#050816] flex flex-col items-center justify-center space-y-8">
@@ -282,20 +297,24 @@ export default function AptitudeEnginePage() {
         </div>
         <div className="text-center space-y-2">
           <h2 className="text-2xl font-bold tracking-tighter text-premium uppercase">Synthesizing Curriculum</h2>
-          <p className="text-[10px] font-black uppercase tracking-[0.4em] text-accent animate-pulse">Personalizing Nodes for {journey?.company || "Standard Tech"}</p>
+          <p className="text-[10px] font-black uppercase tracking-[0.4em] text-accent animate-pulse">
+            Personalizing Nodes for {journey?.company || "Standard Tech"}
+          </p>
         </div>
       </div>
     );
   }
 
-  // PREVENT EMPTY RENDER
+  // Final check for desync error
   if (questions.length === 0 && !result && !isEvaluating) {
      return (
        <div className="h-screen bg-[#050816] flex flex-col items-center justify-center p-12 text-center">
          <XCircle className="w-16 h-16 text-red-500 mb-6" />
          <h2 className="text-2xl font-bold text-white mb-2">Protocol Desynchronization</h2>
-         <p className="text-muted-foreground mb-8">System node failed to load questions. Please restart the session.</p>
-         <Button onClick={() => router.push('/interview')} className="btn-premium px-12 h-14">Return to Setup</Button>
+         <p className="text-muted-foreground mb-8 text-sm max-w-md">
+            System node failed to load logic nodes. Please verify your connection and restart the session.
+         </p>
+         <Button onClick={handleRetry} className="btn-premium px-12 h-14 uppercase tracking-widest text-xs">Restart Session</Button>
        </div>
      );
   }
@@ -361,8 +380,15 @@ export default function AptitudeEnginePage() {
 
                     <div className="grid md:grid-cols-2 gap-4">
                       {currentQ?.options?.map((opt: string, i: number) => (
-                        <button key={i} onClick={() => handleOptionSelect(i)} className={cn("p-6 rounded-2xl border text-left transition-all group flex items-center gap-6", answers[currentIdx] === i ? "bg-accent/20 border-accent text-accent shadow-[0_0_30px_rgba(34,211,238,0.1)]" : "glass border-white/5 hover:border-white/20 text-white/60")}>
-                          <div className={cn("w-10 h-10 rounded-xl border flex items-center justify-center text-xs font-black shrink-0", answers[currentIdx] === i ? "bg-accent border-accent text-black" : "border-white/10 group-hover:border-white/30")}>
+                        <button 
+                          key={i} 
+                          onClick={() => handleOptionSelect(i)} 
+                          className={cn("p-6 rounded-2xl border text-left transition-all group flex items-center gap-6", 
+                          answers[currentIdx] === i ? "bg-accent/20 border-accent text-accent shadow-[0_0_30px_rgba(34,211,238,0.1)]" : "glass border-white/5 hover:border-white/20 text-white/60")}
+                        >
+                          <div className={cn("w-10 h-10 rounded-xl border flex items-center justify-center text-xs font-black shrink-0", 
+                            answers[currentIdx] === i ? "bg-accent border-accent text-black" : "border-white/10 group-hover:border-white/30")}
+                          >
                             {String.fromCharCode(65 + i)}
                           </div>
                           <span className="text-sm font-medium leading-relaxed">{opt}</span>
@@ -439,7 +465,7 @@ export default function AptitudeEnginePage() {
 
               <div className="flex justify-center gap-6 pt-8">
                 {result.status === 'Pass' ? (
-                  <Button onClick={() => router.push('/interview/coding')} className="h-20 px-24 btn-premium rounded-[2.5rem] text-xl font-black uppercase tracking-[0.4em] shadow-2xl group">Enter Syntax Matrix <ChevronRight className="ml-4 w-8 h-8 group-hover:translate-x-2 transition-transform" /></Button>
+                  <Button onClick={() => journey?.sessionId && router.push(`/interview/${journey.sessionId}?role=${encodeURIComponent(journey.role)}&company=${encodeURIComponent(journey.company)}&exp=${encodeURIComponent(journey.experience)}&round=HR%20Round`)} className="h-20 px-24 btn-premium rounded-[2.5rem] text-xl font-black uppercase tracking-[0.4em] shadow-2xl group">Proceed to Arena <ChevronRight className="ml-4 w-8 h-8 group-hover:translate-x-2 transition-transform" /></Button>
                 ) : (
                   <Button onClick={handleRetry} className="h-20 px-16 glass border-white/10 rounded-[2.5rem] text-xl font-black uppercase tracking-widest hover:bg-white/5"><RotateCcw className="mr-4 w-8 h-8" /> Re-initialize Assessment</Button>
                 )}
