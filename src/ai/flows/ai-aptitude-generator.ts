@@ -1,9 +1,9 @@
 'use server';
 /**
- * @fileOverview Nexvoro AI Master Aptitude Generator v16.0.
+ * @fileOverview Nexvoro AI Master Aptitude Generator v17.0.
  * Dynamically synthesizes high-fidelity logic nodes using Google Gemini.
  * Implements strict category distribution, difficulty mapping, and a 30-node unique fallback bank.
- * Enhanced with cross-session duplicate protection via usedQuestionIds.
+ * Enhanced with cross-session duplicate protection and strict schema validation.
  */
 
 import { ai, runWithResilience } from '@/ai/genkit';

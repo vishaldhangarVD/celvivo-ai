@@ -13,7 +13,6 @@ import {
   Command, 
   Clock, 
   CheckCircle2, 
-  AlertTriangle, 
   ShieldCheck, 
   ChevronRight, 
   ChevronLeft,
@@ -28,7 +27,6 @@ import {
   Trophy,
   Target,
   XCircle,
-  Lock,
   ArrowRight,
   Timer
 } from 'lucide-react';
@@ -58,6 +56,7 @@ export default function AptitudeEnginePage() {
   const [timeLeft, setTimeLeft] = useState(45 * 60);
 
   const initGuard = useRef(false);
+  const submissionGuard = useRef(false);
 
   const journeyRef = useMemo(() => {
     if (!db || !user?.uid) return null;
@@ -66,6 +65,7 @@ export default function AptitudeEnginePage() {
 
   const { data: journey, loading: journeyLoading } = useDoc(journeyRef);
 
+  // LIFECYCLE: Initialization & Persistence
   useEffect(() => {
     async function init() {
       if (!db || !user?.uid || !journeyRef || initGuard.current) return;
@@ -78,8 +78,8 @@ export default function AptitudeEnginePage() {
       
       const data = snap.data();
       
-      // PERSISTENCE: If questions already exist and round is not finished, restore them.
-      if (data.aptitudeQuestions && data.aptitudeQuestions.length > 0 && !data.aptitudeReport) {
+      // RESUME LOGIC: Check for existing in-progress set
+      if (data.aptitudeQuestions && data.aptitudeQuestions.length === 20 && !data.aptitudeReport) {
         setQuestions(data.aptitudeQuestions);
         setAnswers(data.aptitudeAnswers || {});
         setCurrentIdx(data.aptitudeCurrentIndex || 0);
@@ -89,9 +89,9 @@ export default function AptitudeEnginePage() {
         return;
       }
 
-      // If already finished and we land here, show the result.
+      // COMPLETED LOGIC: If landing on page while already done, show results
       if (data.aptitudeReport) {
-        setQuestions(data.aptitudeQuestions);
+        setQuestions(data.aptitudeQuestions || []);
         setAnswers(data.aptitudeAnswers || {});
         setResult(data.aptitudeReport);
         setIsInitializing(false);
@@ -99,10 +99,9 @@ export default function AptitudeEnginePage() {
         return;
       }
 
-      // NEW ATTEMPT: Initialize fresh test
+      // FRESH START LOGIC: One generation per active session
       initGuard.current = true;
       try {
-        // Exclude previously used questions where practical
         const userRef = doc(db, 'users', user.uid);
         const userSnap = await getDoc(userRef);
         const userData = userSnap.data();
@@ -116,6 +115,8 @@ export default function AptitudeEnginePage() {
         });
         
         const freshQuestions = response.questions;
+        if (!freshQuestions || freshQuestions.length !== 20) throw new Error("Invalid node count.");
+
         setQuestions(freshQuestions);
         
         await updateDoc(journeyRef, {
@@ -126,7 +127,6 @@ export default function AptitudeEnginePage() {
           updatedAt: serverTimestamp()
         });
 
-        // Update history tracking
         const newIds = freshQuestions.map(q => q.id);
         await updateDoc(userRef, {
           aptitudeQuestionHistory: Array.from(new Set([...usedIds, ...newIds])).slice(-200)
@@ -134,7 +134,8 @@ export default function AptitudeEnginePage() {
 
       } catch (e) {
         console.error(e);
-        toast({ variant: "destructive", title: "Neural Sync Error", description: "Assessment calibration failure." });
+        toast({ variant: "destructive", title: "Neural Sync Error", description: "Assessment calibration failure. Retrying or using fallback..." });
+        // Fallback is handled inside the generateAptitudeTest flow itself
       } finally {
         setIsInitializing(false);
       }
@@ -145,8 +146,10 @@ export default function AptitudeEnginePage() {
     }
   }, [db, user?.uid, journey, journeyLoading, journeyRef, router, toast]);
 
+  // SCORING: Deterministic Index-Based Submission
   const handleSubmit = useCallback(async () => {
-    if (isEvaluating || !journey || !journeyRef || result) return;
+    if (submissionGuard.current || isEvaluating || !journey || !journeyRef || result) return;
+    submissionGuard.current = true;
     setIsEvaluating(true);
 
     let correctCount = 0;
@@ -161,17 +164,16 @@ export default function AptitudeEnginePage() {
         difficulty: q.difficulty,
         userAnswer: userSelectedIdx !== undefined ? q.options[userSelectedIdx] : "Not Answered",
         correctAnswer: q.options[q.correctOptionIndex],
-        isCorrect: isCorrect
+        isCorrect: isCorrect,
       };
     });
 
     const finalNumericScore = Math.round((correctCount / questions.length) * 100);
 
     const steps = ["Auditing Quantitative Accuracy...", "Mapping Logical Consistency...", "Verbal Capability Synthesis...", "Finalizing Performance Dossier..."];
-
     for (let i = 0; i < steps.length; i++) {
       setEvaluationStep(i);
-      await new Promise(r => setTimeout(r, 1200));
+      await new Promise(r => setTimeout(r, 1000));
     }
 
     try {
@@ -184,17 +186,22 @@ export default function AptitudeEnginePage() {
         results: formattedResults
       });
 
-      report.overallScore = finalNumericScore;
-      report.correctCount = correctCount;
-      report.wrongCount = questions.length - correctCount;
-      report.accuracy = finalNumericScore;
+      // Override AI guessed score with deterministic application score
+      const finalReport = {
+        ...report,
+        overallScore: finalNumericScore,
+        correctCount,
+        wrongCount: questions.length - correctCount,
+        accuracy: finalNumericScore,
+        status: finalNumericScore >= 60 ? 'Pass' : 'Fail'
+      };
 
-      setResult(report);
+      setResult(finalReport);
       
       await updateDoc(journeyRef, {
-        aptitudeReport: report,
-        currentStage: report.status === 'Pass' ? 'Coding Assessment' : 'Aptitude Assessment',
-        step: report.status === 'Pass' ? 4 : 3,
+        aptitudeReport: finalReport,
+        currentStage: finalReport.status === 'Pass' ? 'Coding Assessment' : 'Aptitude Assessment',
+        step: finalReport.status === 'Pass' ? 4 : 3,
         updatedAt: serverTimestamp()
       });
 
@@ -223,7 +230,7 @@ export default function AptitudeEnginePage() {
   };
 
   const handleRetry = async () => {
-    if (!journeyRef) return;
+    if (!journeyRef || !user) return;
     setIsInitializing(true);
     try {
       await updateDoc(journeyRef, {
@@ -241,17 +248,23 @@ export default function AptitudeEnginePage() {
     }
   };
 
+  // TIMER PERSISTENCE
   useEffect(() => {
     if (isInitializing || isEvaluating || result) return;
     const timer = setInterval(() => {
       setTimeLeft(prev => {
-        const next = Math.max(0, prev - 1);
+        if (prev <= 1) {
+          clearInterval(timer);
+          handleSubmit();
+          return 0;
+        }
+        const next = prev - 1;
         if (next % 30 === 0 && journeyRef) updateDoc(journeyRef, { aptitudeTimeLeft: next });
         return next;
       });
     }, 1000);
     return () => clearInterval(timer);
-  }, [isInitializing, isEvaluating, result, journeyRef]);
+  }, [isInitializing, isEvaluating, result, journeyRef, handleSubmit]);
 
   const formatTime = (seconds: number) => {
     const m = Math.floor(seconds / 60);
@@ -259,6 +272,7 @@ export default function AptitudeEnginePage() {
     return `${m}:${s.toString().padStart(2, '0')}`;
   };
 
+  // UI STATE GUARDS
   if (isInitializing || journeyLoading) {
     return (
       <div className="h-screen bg-[#050816] flex flex-col items-center justify-center space-y-8">
@@ -268,11 +282,25 @@ export default function AptitudeEnginePage() {
         </div>
         <div className="text-center space-y-2">
           <h2 className="text-2xl font-bold tracking-tighter text-premium uppercase">Synthesizing Curriculum</h2>
-          <p className="text-[10px] font-black uppercase tracking-[0.4em] text-accent animate-pulse">Personalizing Nodes for {journey?.company}</p>
+          <p className="text-[10px] font-black uppercase tracking-[0.4em] text-accent animate-pulse">Personalizing Nodes for {journey?.company || "Standard Tech"}</p>
         </div>
       </div>
     );
   }
+
+  // PREVENT EMPTY RENDER
+  if (questions.length === 0 && !result && !isEvaluating) {
+     return (
+       <div className="h-screen bg-[#050816] flex flex-col items-center justify-center p-12 text-center">
+         <XCircle className="w-16 h-16 text-red-500 mb-6" />
+         <h2 className="text-2xl font-bold text-white mb-2">Protocol Desynchronization</h2>
+         <p className="text-muted-foreground mb-8">System node failed to load questions. Please restart the session.</p>
+         <Button onClick={() => router.push('/interview')} className="btn-premium px-12 h-14">Return to Setup</Button>
+       </div>
+     );
+  }
+
+  const currentQ = questions[currentIdx];
 
   return (
     <div className="min-h-screen bg-[#050816] flex flex-col relative overflow-y-auto custom-scrollbar">
@@ -296,12 +324,12 @@ export default function AptitudeEnginePage() {
             <Command className="w-5 h-5" />
           </div>
           <div>
-            <h1 className="text-sm font-black uppercase tracking-widest text-premium">{journey?.company} COGNITIVE AUDIT</h1>
-            <p className="text-[9px] font-bold text-white/40 uppercase tracking-widest mt-0.5">{journey?.role} • SESSION ACTIVE</p>
+            <h1 className="text-sm font-black uppercase tracking-widest text-premium">{journey?.company || "Standard Tech"} COGNITIVE AUDIT</h1>
+            <p className="text-[9px] font-bold text-white/40 uppercase tracking-widest mt-0.5">{journey?.role || "Protocol"} • SESSION ACTIVE</p>
           </div>
         </div>
         {!result && (
-          <div className={cn("px-6 py-2 rounded-xl glass border-white/10 font-mono text-xl tabular-nums", timeLeft < 60 ? "text-red-500 animate-pulse" : "text-accent")}>
+          <div className={cn("px-6 py-2 rounded-xl glass border-white/10 font-mono text-xl tabular-nums", timeLeft < 300 ? "text-red-500 animate-pulse" : "text-accent")}>
             <Timer className="w-5 h-5 inline-block mr-2" /> {formatTime(timeLeft)}
           </div>
         )}
@@ -322,19 +350,19 @@ export default function AptitudeEnginePage() {
 
                 <Card className="premium-card bg-white/[0.01] border-white/5 p-12 min-h-[480px] relative flex flex-col justify-center">
                   <div className="absolute top-0 right-0 p-8">
-                    <Badge variant="outline" className="border-accent/20 text-accent text-[9px] font-black uppercase px-3">{questions[currentIdx]?.difficulty}</Badge>
+                    <Badge variant="outline" className="border-accent/20 text-accent text-[9px] font-black uppercase px-3">{currentQ?.difficulty || "Medium"}</Badge>
                   </div>
                   
                   <div className="max-w-3xl mx-auto w-full space-y-10">
                     <div className="space-y-4">
-                      <Badge className="bg-purple-500/10 text-purple-400 border-none text-[9px] font-black uppercase tracking-widest">{questions[currentIdx]?.category}</Badge>
-                      <h2 className="text-3xl font-bold tracking-tight text-white/90 leading-tight whitespace-pre-wrap">{questions[currentIdx]?.question}</h2>
+                      <Badge className="bg-purple-500/10 text-purple-400 border-none text-[9px] font-black uppercase tracking-widest">{currentQ?.category || "Logic"}</Badge>
+                      <h2 className="text-3xl font-bold tracking-tight text-white/90 leading-tight whitespace-pre-wrap">{currentQ?.question}</h2>
                     </div>
 
                     <div className="grid md:grid-cols-2 gap-4">
-                      {questions[currentIdx]?.options.map((opt: string, i: number) => (
-                        <button key={i} onClick={() => handleOptionSelect(i)} className={cn("p-6 rounded-2xl border text-left transition-all group", answers[currentIdx] === i ? "bg-accent/20 border-accent text-accent shadow-[0_0_30px_rgba(34,211,238,0.1)]" : "glass border-white/5 hover:border-white/20 text-white/60")}>
-                          <div className={cn("w-10 h-10 rounded-xl border flex items-center justify-center text-xs font-black", answers[currentIdx] === i ? "bg-accent border-accent text-black" : "border-white/10 group-hover:border-white/30")}>
+                      {currentQ?.options?.map((opt: string, i: number) => (
+                        <button key={i} onClick={() => handleOptionSelect(i)} className={cn("p-6 rounded-2xl border text-left transition-all group flex items-center gap-6", answers[currentIdx] === i ? "bg-accent/20 border-accent text-accent shadow-[0_0_30px_rgba(34,211,238,0.1)]" : "glass border-white/5 hover:border-white/20 text-white/60")}>
+                          <div className={cn("w-10 h-10 rounded-xl border flex items-center justify-center text-xs font-black shrink-0", answers[currentIdx] === i ? "bg-accent border-accent text-black" : "border-white/10 group-hover:border-white/30")}>
                             {String.fromCharCode(65 + i)}
                           </div>
                           <span className="text-sm font-medium leading-relaxed">{opt}</span>
@@ -398,7 +426,7 @@ export default function AptitudeEnginePage() {
                   {[
                     { label: "Correct Nodes", val: result.correctCount, icon: CheckCircle2, color: "text-green-400" },
                     { label: "Failed Probes", val: result.wrongCount, icon: XCircle, color: "text-red-400" },
-                    { label: "Audit Time", val: "N/A", icon: Clock, color: "text-purple-400" },
+                    { label: "Total Probes", val: questions.length, icon: Clock, color: "text-purple-400" },
                     { label: "Verification", val: result.status, icon: ShieldCheck, color: "text-accent" }
                   ].map((s, i) => (
                     <div key={i} className="space-y-3">
