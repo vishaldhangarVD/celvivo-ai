@@ -1,9 +1,8 @@
 'use server';
 /**
- * @fileOverview Nexvoro AI Master Aptitude Generator v26.0.
+ * @fileOverview Nexvoro AI Master Aptitude Generator v28.0.
  * Dynamically synthesizes high-fidelity logic nodes using Google Gemini.
- * Implements a PROGRAMMATIC QUALITY GATE: NO AMBIGUITY / NO UNSOLVABLE QUESTIONS.
- * Includes a verified 30-node professional-grade fallback bank.
+ * Implements persistent history awareness and semantic duplicate prevention.
  */
 
 import { ai, runWithResilience } from '@/ai/genkit';
@@ -11,7 +10,7 @@ import { z } from 'genkit';
 
 const AptitudeQuestionSchema = z.object({
   id: z.string().describe("Unique identifier for the question node."),
-  question: z.string().describe("The text of the question, including any data tables or scenarios."),
+  question: z.string().describe("The text of the question."),
   options: z.array(z.string()).length(4).describe("Exactly four unique multiple choice options."),
   correctOptionIndex: z.number().min(0).max(3).describe("Zero-based index of the correct option."),
   category: z.string().describe("The logic category."),
@@ -25,18 +24,13 @@ const AptitudeInputSchema = z.object({
   role: z.string(),
   company: z.string(),
   experienceLevel: z.string(),
-  resumeSummary: z.string().optional(),
-  usedQuestionIds: z.array(z.string()).optional().describe("List of question IDs already used in previous sessions to prevent repeats."),
+  usedQuestionFingerprints: z.array(z.string()).optional().describe("Fingerprints of previously used questions to prevent repeats."),
 });
 
-// Relaxed schema for initial LLM parsing to avoid brittle Genkit errors
 const AptitudeOutputSchema = z.object({
   questions: z.array(AptitudeQuestionSchema),
 });
 
-/**
- * Programmatic Rejection Criteria for Ambiguous or Trivial Logic
- */
 const FORBIDDEN_CONCEPTS = [
   "velocity doubles",
   "growth doubles",
@@ -52,13 +46,11 @@ const VALID_CATEGORIES = [
   'Logical Reasoning', 
   'English Communication', 
   'Analytical Reasoning', 
-  'Critical Thinking', 
-  'Pattern Recognition', 
   'Data Interpretation', 
   'CS Aptitude'
 ];
 
-const CATEGORY_NORMALIZATION: Record<string, string> = {
+const CATEGORY_MAP: Record<string, string> = {
   "Verbal Ability": "English Communication",
   "Verbal Reasoning": "English Communication",
   "Verbal": "English Communication",
@@ -67,58 +59,49 @@ const CATEGORY_NORMALIZATION: Record<string, string> = {
 };
 
 /**
- * Validates a single question node for logical, structural, and complexity integrity.
+ * Normalizes question text for fingerprinting.
  */
-function validateAptitudeQuestion(q: any, existingTexts?: Set<string>): { valid: boolean; reason?: string; normalized?: AptitudeQuestion } {
-  if (!q.question || q.question.trim().length < 15) return { valid: false, reason: "Question text too short or empty." };
+function normalizeQuestion(text: string): string {
+  return text
+    .toLowerCase()
+    .replace(/[^\w\s]/g, "") // Remove punctuation
+    .replace(/\s+/g, " ")    // Normalize whitespace
+    .trim();
+}
+
+/**
+ * Validates a single question node for logical and structural integrity.
+ */
+function validateAptitudeQuestion(q: any, existingFingerprints: Set<string>): { valid: boolean; reason?: string; normalized?: AptitudeQuestion } {
+  if (!q.question || q.question.trim().length < 20) return { valid: false, reason: "Question text too short or empty." };
   if (!q.options || q.options.length !== 4) return { valid: false, reason: "Invalid options count." };
   
-  // Unique options check
   const uniqueOpts = new Set(q.options.map((o: any) => String(o).trim().toLowerCase()));
   if (uniqueOpts.size !== 4) return { valid: false, reason: "Duplicate options detected." };
 
-  // Answer index check
   if (q.correctOptionIndex < 0 || q.correctOptionIndex > 3) return { valid: false, reason: "Correct index out of bounds." };
   if (!q.options[q.correctOptionIndex] || String(q.options[q.correctOptionIndex]).trim() === "") return { valid: false, reason: "Correct index points to empty option." };
 
-  // Category Normalization
   let cat = q.category;
-  if (CATEGORY_NORMALIZATION[cat]) cat = CATEGORY_NORMALIZATION[cat];
+  if (CATEGORY_MAP[cat]) cat = CATEGORY_MAP[cat];
   if (!VALID_CATEGORIES.includes(cat)) {
-    // Attempt fallback mapping
     const closest = VALID_CATEGORIES.find(v => cat.toLowerCase().includes(v.toLowerCase().split(' ')[0]));
-    if (closest) cat = closest;
-    else return { valid: false, reason: `Invalid category: ${cat}` };
+    cat = closest || "Logical Reasoning";
   }
 
-  // Difficulty Normalization
-  let diff = q.difficulty;
-  if (typeof diff === 'string') {
-    diff = diff.charAt(0).toUpperCase() + diff.slice(1).toLowerCase();
-  }
-  if (!['Easy', 'Medium', 'Hard'].includes(diff)) diff = "Medium";
-
-  // Forbidden concept check (Hard Rejection)
-  const normalizedText = q.question.toLowerCase();
+  const normalizedText = normalizeQuestion(q.question);
   for (const concept of FORBIDDEN_CONCEPTS) {
-    if (normalizedText.includes(concept)) {
-      return { valid: false, reason: `Question contains forbidden pattern: ${concept}` };
-    }
+    if (normalizedText.includes(concept)) return { valid: false, reason: `Question contains forbidden pattern: ${concept}` };
   }
 
-  // Duplicate question check
-  if (existingTexts) {
-    const normalizedQuestion = normalizedText.replace(/[^\w\s]/g, "").replace(/\s+/g, " ").trim();
-    if (existingTexts.has(normalizedQuestion)) return { valid: false, reason: "Duplicate question content detected." };
-    existingTexts.add(normalizedQuestion);
-  }
+  if (existingFingerprints.has(normalizedText)) return { valid: false, reason: "Duplicate question content detected." };
+  existingFingerprints.add(normalizedText);
 
   return { 
     valid: true, 
     normalized: {
       ...q,
       category: cat,
-      difficulty: diff,
       id: q.id || Math.random().toString(36).substring(2, 12)
     } 
   };
@@ -168,19 +151,24 @@ const prompt = ai.definePrompt({
   prompt: `You are an elite Recruitment Architect at {{{company}}}. 
 Generate a professional 20-question Aptitude Assessment for a {{{role}}} candidate ({{{experienceLevel}}}).
 
-### CATEGORY DISTRIBUTION (Strictly 20 Nodes):
-- Quantitative Aptitude (5): Multi-step percentages, probability, time/work with changing rates, profit/loss.
-- Logical Reasoning (4): Syllogisms, arrangements, conditional deduction.
-- English Communication (3): Contextual vocabulary, sentence logic, grammar inference.
-- Data Interpretation (3): Multi-step calculation based on a provided small dataset.
-- Analytical Reasoning (3): Resource allocation, optimization, or scheduling.
-- CS Aptitude (2): Data structures, Big-O, networking.
+### CATEGORY DISTRIBUTION (Exactly 20 Nodes):
+- Quantitative Aptitude (5)
+- Logical Reasoning (4)
+- English Communication (3)
+- Data Interpretation (3)
+- Analytical Reasoning (3)
+- CS Aptitude (2)
 
-### NEURAL QUALITY GATE PROTOCOL:
-1. **SOLVE & VERIFY**: You MUST solve every question yourself. Ensure exactly ONE option is correct.
-2. **NON-TRIVIAL**: Reject any question solvable by one simple arithmetic operation (e.g., direct division). Require multi-step reasoning.
-3. **NO AMBIGUITY**: Ensure all premises are provided. No unstated assumptions.
-4. **UNIQUE**: Do not repeat questions or patterns. Avoid IDs: {{{usedQuestionIds}}}.
+### VARIETY PROTOCOL:
+- DO NOT generate any question that matches the logic or text of these previous questions: {{{usedQuestionFingerprints}}}
+- Ensure every question uses a unique reasoning pattern.
+- Quantitative: Include ratios, probabilities, profit/loss, and mixtures.
+- Data Interpretation: Create mini-datasets (tables) that require 2-step calculations.
+
+### QUALITY GATE:
+- Reject trivial one-step arithmetic.
+- Every question must have EXACTLY one correct answer.
+- correctOptionIndex MUST point to that answer.
 
 ### DIFFICULTY PROGRESSION:
 - Q1-Q5: Easy
@@ -198,44 +186,45 @@ const aptitudeFlow = ai.defineFlow(
     outputSchema: AptitudeOutputSchema,
   },
   async (input) => {
-    const MAX_RETRIES = 3;
-    let attempts = 0;
+    const historySet = new Set(input.usedQuestionFingerprints || []);
+    const validQuestions: AptitudeQuestion[] = [];
+    const currentFingerprints = new Set<string>();
 
-    while (attempts < MAX_RETRIES) {
+    let attempts = 0;
+    while (attempts < 3 && validQuestions.length < 20) {
       try {
-        console.log(`[Aptitude Flow] Attempt ${attempts + 1}: Synthesizing dynamic nodes for ${input.company}`);
+        console.log(`[Aptitude Flow] Synthesis Attempt ${attempts + 1} for ${input.company}`);
         const { output } = await runWithResilience(prompt, input);
         
-        if (!output || !output.questions || output.questions.length === 0) {
-          throw new Error("Empty logic payload received.");
-        }
-
-        const validQuestions: AptitudeQuestion[] = [];
-        const questionTexts = new Set<string>();
-
-        for (const rawQ of output.questions) {
-          const validation = validateAptitudeQuestion(rawQ, questionTexts);
-          if (validation.valid && validation.normalized) {
-            validQuestions.push(validation.normalized);
+        if (output?.questions) {
+          for (const q of output.questions) {
+            if (validQuestions.length >= 20) break;
+            
+            const val = validateAptitudeQuestion(q, currentFingerprints);
+            if (val.valid && val.normalized) {
+              const fingerprint = normalizeQuestion(val.normalized.question);
+              if (!historySet.has(fingerprint)) {
+                validQuestions.push(val.normalized);
+                currentFingerprints.add(fingerprint);
+              }
+            }
           }
         }
-
-        if (validQuestions.length >= 20) {
-          console.log(`[Aptitude Flow] SUCCESS. Source: GEMINI. Count: ${validQuestions.length}`);
-          return { questions: validQuestions.slice(0, 20) };
-        }
-
-        console.warn(`[Aptitude Flow] Partial success (${validQuestions.length}/20). Retrying...`);
-        attempts++;
-      } catch (error) {
-        console.error(`[Aptitude Flow] Neural sync fault on attempt ${attempts + 1}:`, error);
-        attempts++;
+      } catch (e) {
+        console.error("[Aptitude Flow] Neural synthesis fault:", e);
       }
+      attempts++;
     }
 
-    console.error("[Aptitude Flow] Max retries exhausted. Source: FALLBACK.");
-    const usedIds = new Set(input.usedQuestionIds || []);
-    const finalBank = FALLBACK_BANK.filter(q => !usedIds.has(q.id)).slice(0, 20);
-    return { questions: finalBank.length === 20 ? finalBank : FALLBACK_BANK.slice(0, 20) };
+    if (validQuestions.length >= 20) {
+      return { questions: validQuestions.slice(0, 20) };
+    }
+
+    console.warn("[Aptitude Flow] Insufficient dynamic nodes. Injecting unique fallback nodes.");
+    const filteredFallback = FALLBACK_BANK.filter(q => !historySet.has(normalizeQuestion(q.question)));
+    const needed = 20 - validQuestions.length;
+    validQuestions.push(...filteredFallback.slice(0, needed));
+
+    return { questions: validQuestions.slice(0, 20) };
   }
 );

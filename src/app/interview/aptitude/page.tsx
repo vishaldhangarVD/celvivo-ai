@@ -30,7 +30,7 @@ import {
   Timer
 } from 'lucide-react';
 import { useUser, useFirestore, useDoc } from '@/firebase';
-import { doc, updateDoc, serverTimestamp, getDoc } from 'firebase/firestore';
+import { doc, updateDoc, serverTimestamp, getDoc, arrayUnion } from 'firebase/firestore';
 import { generateAptitudeTest, type AptitudeQuestion } from '@/ai/flows/ai-aptitude-generator';
 import { evaluateAptitude } from '@/ai/flows/ai-aptitude-evaluator';
 import { useToast } from '@/hooks/use-toast';
@@ -46,22 +46,16 @@ const FORBIDDEN_CONCEPTS = [
   "missing information",
 ];
 
-const VALID_CATEGORIES = [
-  'Quantitative Aptitude', 
-  'Logical Reasoning', 
-  'English Communication', 
-  'Analytical Reasoning', 
-  'Critical Thinking', 
-  'Pattern Recognition', 
-  'Data Interpretation', 
-  'CS Aptitude'
-];
+function normalizeQuestion(text: string): string {
+  return text
+    .toLowerCase()
+    .replace(/[^\w\s]/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
+}
 
-/**
- * Client-side validation for Firestore restored data and incoming sets.
- */
 function validateAptitudeQuestion(q: any): boolean {
-  if (!q.question || q.question.trim().length < 15) return false;
+  if (!q.question || q.question.trim().length < 20) return false;
   if (!q.options || q.options.length !== 4) return false;
   
   const uniqueOpts = new Set(q.options.map((o: any) => String(o).trim().toLowerCase()));
@@ -70,9 +64,7 @@ function validateAptitudeQuestion(q: any): boolean {
   if (q.correctOptionIndex < 0 || q.correctOptionIndex > 3) return false;
   if (!q.options[q.correctOptionIndex]) return false;
 
-  if (!VALID_CATEGORIES.includes(q.category)) return false;
-
-  const normalizedText = q.question.toLowerCase();
+  const normalizedText = normalizeQuestion(q.question);
   for (const concept of FORBIDDEN_CONCEPTS) {
     if (normalizedText.includes(concept)) return false;
   }
@@ -108,11 +100,6 @@ export default function AptitudeEnginePage() {
 
   const { data: journey, loading: journeyLoading } = useDoc(journeyRef);
 
-  const validateQuestionSet = (qs: any[]): boolean => {
-    if (!qs || qs.length !== 20) return false;
-    return qs.every(q => validateAptitudeQuestion(q));
-  };
-
   useEffect(() => {
     async function init() {
       if (!db || !user?.uid || !journeyRef || initGuard.current) return;
@@ -126,9 +113,10 @@ export default function AptitudeEnginePage() {
       
       const data = snap.data();
       const existingQuestions = data.aptitudeQuestions || [];
-      const isValidSet = validateQuestionSet(existingQuestions);
+      const isValidSet = existingQuestions.length === 20 && existingQuestions.every(validateAptitudeQuestion);
 
-      if (isValidSet && !data.aptitudeReport && data.aptitudeStatus !== 'completed') {
+      // RESUME LOGIC: If test is in progress and valid, restore it
+      if (isValidSet && data.aptitudeStatus === "in_progress") {
         setQuestions(existingQuestions);
         setAnswers(data.aptitudeAnswers || {});
         setCurrentIdx(data.aptitudeCurrentIndex || 0);
@@ -137,7 +125,8 @@ export default function AptitudeEnginePage() {
         return;
       }
 
-      if (data.aptitudeReport || data.aptitudeStatus === 'completed') {
+      // SHOW RESULT: If already completed, just show results
+      if (data.aptitudeStatus === "completed" && data.aptitudeReport) {
         setQuestions(existingQuestions);
         setAnswers(data.aptitudeAnswers || {});
         setResult(data.aptitudeReport);
@@ -145,17 +134,17 @@ export default function AptitudeEnginePage() {
         return;
       }
 
-      // Generation Path
+      // NEW ATTEMPT LOGIC
       try {
         const userRef = doc(db, 'users', user.uid);
         const userSnap = await getDoc(userRef);
-        const usedIds = userSnap.data()?.aptitudeQuestionHistory || [];
+        const history = userSnap.data()?.aptitudeQuestionHistory || [];
 
         const response = await generateAptitudeTest({
           role: data.role,
           company: data.company,
           experienceLevel: data.experience,
-          usedQuestionIds: usedIds
+          usedQuestionFingerprints: history
         });
         
         const freshQuestions = response.questions;
@@ -166,6 +155,7 @@ export default function AptitudeEnginePage() {
           aptitudeCurrentIndex: 0,
           aptitudeTimeLeft: 45 * 60,
           aptitudeStatus: "in_progress",
+          aptitudeReport: null,
           updatedAt: serverTimestamp()
         });
 
@@ -189,10 +179,15 @@ export default function AptitudeEnginePage() {
     setIsEvaluating(true);
 
     let correctCount = 0;
+    const fingerprints: string[] = [];
+
     const formattedResults = questions.map((q, idx) => {
       const userSelectedIdx = answers[idx];
       const isCorrect = userSelectedIdx === q.correctOptionIndex;
       if (isCorrect) correctCount++;
+      
+      fingerprints.push(normalizeQuestion(q.question));
+
       return {
         question: q.question,
         category: q.category,
@@ -208,7 +203,7 @@ export default function AptitudeEnginePage() {
     
     for (let i = 0; i < steps.length; i++) {
       setEvaluationStep(i);
-      await new Promise(r => setTimeout(r, 1000));
+      await new Promise(r => setTimeout(r, 800));
     }
 
     try {
@@ -231,6 +226,8 @@ export default function AptitudeEnginePage() {
       };
 
       setResult(finalReport);
+      
+      // Update Journey
       await updateDoc(journeyRef, {
         aptitudeReport: finalReport,
         aptitudeStatus: "completed",
@@ -238,13 +235,20 @@ export default function AptitudeEnginePage() {
         step: finalReport.status === 'Pass' ? 4 : 3,
         updatedAt: serverTimestamp()
       });
+
+      // Update Global History (Fingerprints)
+      const userRef = doc(db, 'users', user.uid);
+      await updateDoc(userRef, {
+        aptitudeQuestionHistory: arrayUnion(...fingerprints)
+      });
+
     } catch (e) {
       console.error("[Aptitude] Submission error:", e);
       toast({ variant: "destructive", title: "Audit Protocol Fault" });
     } finally {
       setIsEvaluating(false);
     }
-  }, [isEvaluating, journey, journeyRef, questions, answers, timeLeft, result, toast]);
+  }, [isEvaluating, journey, journeyRef, questions, answers, timeLeft, result, toast, db, user?.uid]);
 
   const handleOptionSelect = async (optIdx: number) => {
     if (!journeyRef || result) return;
@@ -304,9 +308,9 @@ export default function AptitudeEnginePage() {
           <Brain className="w-10 h-10 text-accent absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 animate-pulse" />
         </div>
         <div className="text-center space-y-2">
-          <h2 className="text-2xl font-bold tracking-tighter text-premium uppercase">Synthesizing Curriculum</h2>
+          <h2 className="text-2xl font-bold tracking-tighter text-premium uppercase">Synthesizing Unique Nodes</h2>
           <p className="text-[10px] font-black uppercase tracking-[0.4em] text-accent animate-pulse">
-            Personalizing Nodes for {journey?.company || "Standard Tech"}
+            Personalizing Environment for {journey?.company || "Standard Tech"}
           </p>
         </div>
       </div>
@@ -318,7 +322,7 @@ export default function AptitudeEnginePage() {
        <div className="h-screen bg-[#050816] flex flex-col items-center justify-center p-12 text-center">
          <XCircle className="w-16 h-16 text-red-500 mb-6" />
          <h2 className="text-2xl font-bold text-white mb-2">Protocol Desynchronization</h2>
-         <p className="text-muted-foreground mb-8 text-sm max-w-md">System failed to load questions. Please restart the session.</p>
+         <p className="text-muted-foreground mb-8 text-sm max-w-md">System failed to load unique questions. Please restart the session.</p>
          <Button onClick={handleRetry} className="btn-premium px-12 h-14 uppercase tracking-widest text-xs">Restart Session</Button>
        </div>
      );
@@ -330,17 +334,6 @@ export default function AptitudeEnginePage() {
     <div className="min-h-screen bg-[#050816] flex flex-col relative overflow-y-auto custom-scrollbar">
       <div className="particles-bg" />
       <Navbar />
-
-      {!result && !isEvaluating && (
-        <div className="fixed right-0 top-1/2 -translate-y-1/2 z-[60]">
-          <Button 
-            onClick={() => journey?.sessionId && router.push(`/interview/${journey.sessionId}?role=${encodeURIComponent(journey.role)}&company=${encodeURIComponent(journey.company)}&exp=${encodeURIComponent(journey.experience)}&round=HR%20Round`)} 
-            className="h-12 px-5 rounded-l-2xl rounded-r-none btn-premium text-[9px] font-black uppercase tracking-widest shadow-2xl flex items-center gap-2 border-r-0"
-          >
-            SKIP → INTERVIEW <ArrowRight className="w-3.5 h-3.5" />
-          </Button>
-        </div>
-      )}
 
       <header className="h-20 border-b border-white/5 bg-[#0b0e1a]/80 backdrop-blur-xl flex items-center justify-between px-8 z-50 sticky top-0">
         <div className="flex items-center gap-6">
