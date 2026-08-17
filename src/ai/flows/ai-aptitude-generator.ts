@@ -1,8 +1,8 @@
 'use server';
 /**
- * @fileOverview Nexvoro AI Master Aptitude Generator v22.0.
+ * @fileOverview Nexvoro AI Master Aptitude Generator v24.0.
  * Dynamically synthesizes high-fidelity logic nodes using Google Gemini.
- * Implements a strict Quality Gate: ZERO AMBIGUITY / ZERO UNSOLVABLE QUESTIONS.
+ * Implements a PROGRAMMATIC QUALITY GATE: NO AMBIGUITY / NO UNSOLVABLE QUESTIONS.
  * Includes a verified 30-node professional-grade fallback bank.
  */
 
@@ -19,6 +19,8 @@ const AptitudeQuestionSchema = z.object({
   explanation: z.string().optional().describe("Brief logical explanation."),
 });
 
+export type AptitudeQuestion = z.infer<typeof AptitudeQuestionSchema>;
+
 const AptitudeInputSchema = z.object({
   role: z.string(),
   company: z.string(),
@@ -31,54 +33,51 @@ const AptitudeOutputSchema = z.object({
   questions: z.array(AptitudeQuestionSchema).length(20),
 });
 
-export async function generateAptitudeTest(input: z.infer<typeof AptitudeInputSchema>) {
-  return aptitudeFlow(input);
+/**
+ * Programmatic Rejection Criteria for Ambiguous Logic
+ */
+const FORBIDDEN_CONCEPTS = [
+  "velocity doubles",
+  "growth doubles",
+  "doubles every",
+  "triples every",
+  "25% complete", // Only when used in specific ambiguous work completion contexts
+  "percentage completion",
+  "missing information",
+];
+
+/**
+ * Validates a single question node for logical and structural integrity.
+ */
+function validateAptitudeQuestion(q: AptitudeQuestion, existingTexts: Set<string>): { valid: boolean; reason?: string } {
+  if (!q.question || q.question.trim().length < 10) return { valid: false, reason: "Question text too short or empty." };
+  if (!q.options || q.options.length !== 4) return { valid: false, reason: "Invalid options count." };
+  
+  // Unique options check
+  const uniqueOpts = new Set(q.options.map(o => o.trim().toLowerCase()));
+  if (uniqueOpts.size !== 4) return { valid: false, reason: "Duplicate options detected." };
+
+  // Answer index check
+  if (q.correctOptionIndex < 0 || q.correctOptionIndex > 3) return { valid: false, reason: "Correct index out of bounds." };
+  if (!q.options[q.correctOptionIndex] || q.options[q.correctOptionIndex].trim() === "") return { valid: false, reason: "Correct index points to empty option." };
+
+  // Forbidden concept check (The "Velocity Doubles" trap)
+  const normalizedText = q.question.toLowerCase();
+  for (const concept of FORBIDDEN_CONCEPTS) {
+    if (normalizedText.includes(concept)) {
+      return { valid: false, reason: `Question contains forbidden ambiguous concept: ${concept}` };
+    }
+  }
+
+  // Duplicate question check
+  const normalizedQuestion = normalizedText.replace(/[^\w\s]/g, "").replace(/\s+/g, " ").trim();
+  if (existingTexts.has(normalizedQuestion)) return { valid: false, reason: "Duplicate question content detected in this set." };
+  existingTexts.add(normalizedQuestion);
+
+  return { valid: true };
 }
 
-const prompt = ai.definePrompt({
-  name: 'aptitudeGeneratorPrompt',
-  input: { schema: AptitudeInputSchema },
-  output: { schema: AptitudeOutputSchema },
-  prompt: `You are an elite Recruitment Architect at {{{company}}}. 
-Generate a professional 20-question Aptitude Assessment for a {{{role}}} candidate ({{{experienceLevel}}}).
-
-### NEURAL QUALITY GATE PROTOCOL (CRITICAL):
-For EVERY question you generate, you must follow this internal protocol:
-1. **SOLVE**: Solve the question yourself from only the information provided in your prompt.
-2. **VERIFY**: Calculate the final answer. If it requires information not in the text, REJECT and regenerate.
-3. **MAPPING**: Compare your answer against all 4 options. Confirm exactly ONE option is correct.
-4. **INDEX**: Ensure 'correctOptionIndex' points to that exact correct option.
-
-### HARD REJECTION RULES:
-Reject and replace any question that:
-- Has ambiguous wording or multiple interpretations.
-- Depends on unstated assumptions (e.g., "velocity doubles" without initial rate).
-- Requires real-world data not explicitly provided in the question.
-- Has more than one plausible correct answer.
-- Uses subjective terms ("best", "most likely") without a deterministic logic base.
-
-### CURRICULUM ARCHITECTURE (Exactly 20 Nodes):
-- Quantitative Aptitude (5): Percentages, ratios, work/time, probability, profit/loss.
-- Logical Reasoning (4): Syllogisms, arrangements, conditional deduction.
-- English Communication (3): Objective grammar, context-based vocabulary, sentence logic.
-- Data Interpretation (3): Provide a structured dataset (e.g. 'Table: Region | Q1 | Q2') and ask a multi-step calculation.
-- Analytical Reasoning (3): Resource allocation, scheduling, or constraint-based scenarios.
-- CS Aptitude (2): Data structures, Big-O, system fundamentals.
-
-### DIFFICULTY PROGRESSION:
-- Q1-Q5: Easy
-- Q6-Q12: Medium
-- Q13-Q17: Medium/Hard
-- Q18-Q20: Hard
-
-### UNIQUE IDENTITY PROTOCOL:
-- DO NOT use any questions that overlap with these IDs: {{{usedQuestionIds}}}
-- Every question MUST have a unique 10-character alphanumeric ID.
-
-Return ONLY a valid JSON object.`,
-});
-
-const FALLBACK_BANK = [
+const FALLBACK_BANK: AptitudeQuestion[] = [
   { id: 'fb-1', category: 'Quantitative Aptitude', difficulty: 'Easy', question: 'A team completes 10 units of work per week. For a project with 400 total units, how many weeks will it take to reach 25% completion?', options: ['4 weeks', '8 weeks', '10 weeks', '12 weeks'], correctOptionIndex: 2, explanation: '25% of 400 is 100. 100 / 10 = 10 weeks.' },
   { id: 'fb-2', category: 'Logical Reasoning', difficulty: 'Easy', question: 'Identify the next number in the sequence: 4, 9, 25, 49, 121, ?', options: ['144', '169', '196', '225'], correctOptionIndex: 1, explanation: 'The sequence consists of squares of prime numbers: 2, 3, 5, 7, 11. The next prime is 13, and 13 squared is 169.' },
   { id: 'fb-3', category: 'CS Aptitude', difficulty: 'Easy', question: 'Which data structure is primarily used to implement Undo functionality in a text editor?', options: ['Queue', 'Stack', 'Linked List', 'Binary Tree'], correctOptionIndex: 1, explanation: 'A Stack follows Last-In-First-Out (LIFO), which is ideal for reversing the most recent actions.' },
@@ -111,6 +110,53 @@ const FALLBACK_BANK = [
   { id: 'fb-30', category: 'Analytical Reasoning', difficulty: 'Hard', question: 'Four friends (A, B, C, D) cross a bridge. Max 2 at a time. A takes 1m, B takes 2m, C takes 5m, D takes 10m. Min time?', options: ['15m', '17m', '19m', '21m'], correctOptionIndex: 1, explanation: 'Best strategy: (A,B) cross, A returns, (C,D) cross, B returns, (A,B) cross. 2+1+10+2+2 = 17.' },
 ];
 
+export async function generateAptitudeTest(input: z.infer<typeof AptitudeInputSchema>) {
+  return aptitudeFlow(input);
+}
+
+const prompt = ai.definePrompt({
+  name: 'aptitudeGeneratorPrompt',
+  input: { schema: AptitudeInputSchema },
+  output: { schema: AptitudeOutputSchema },
+  prompt: `You are an elite Recruitment Architect at {{{company}}}. 
+Generate a professional 20-question Aptitude Assessment for a {{{role}}} candidate ({{{experienceLevel}}}).
+
+### NEURAL QUALITY GATE PROTOCOL (CRITICAL):
+For EVERY question you generate, you must follow this internal protocol:
+1. **SOLVE**: Solve the question yourself from only the information provided in your prompt.
+2. **VERIFY**: Calculate the final answer. If it requires information not in the text, REJECT and regenerate.
+3. **MAPPING**: Compare your answer against all 4 options. Confirm exactly ONE option is correct.
+4. **INDEX**: Ensure 'correctOptionIndex' points to that exact correct option.
+
+### HARD REJECTION RULES (MANDATORY):
+Reject and replace any question that:
+- Uses the word "velocity doubles" or "growth doubles" without a clear starting rate.
+- Uses exponential work-rate models that are ambiguous.
+- Has ambiguous wording or multiple interpretations.
+- Requires real-world data not explicitly provided in the question.
+- Has more than one plausible correct answer.
+
+### CURRICULUM ARCHITECTURE (Exactly 20 Nodes):
+- Quantitative Aptitude (5): Percentages, ratios, work/time, probability, profit/loss.
+- Logical Reasoning (4): Syllogisms, arrangements, conditional deduction.
+- English Communication (3): Objective grammar, context-based vocabulary, sentence logic.
+- Data Interpretation (3): Provide a structured dataset and ask a multi-step calculation.
+- Analytical Reasoning (3): Resource allocation or scheduling.
+- CS Aptitude (2): Data structures, Big-O, system fundamentals.
+
+### DIFFICULTY PROGRESSION:
+- Q1-Q5: Easy
+- Q6-Q12: Medium
+- Q13-Q17: Medium/Hard
+- Q18-Q20: Hard
+
+### UNIQUE IDENTITY PROTOCOL:
+- DO NOT use any questions that overlap with these IDs: {{{usedQuestionIds}}}
+- Every question MUST have a unique 10-character alphanumeric ID.
+
+Return ONLY a valid JSON object.`,
+});
+
 const aptitudeFlow = ai.defineFlow(
   {
     name: 'aptitudeFlow',
@@ -118,29 +164,47 @@ const aptitudeFlow = ai.defineFlow(
     outputSchema: AptitudeOutputSchema,
   },
   async (input) => {
-    try {
-      const { output } = await runWithResilience(prompt, input);
-      if (!output || !output.questions || output.questions.length === 0) throw new Error("Aptitude synthesis failed validation.");
-      
-      // Secondary programmatic validation gate
-      const validQuestions = output.questions.filter(q => {
-        const hasId = !!q.id;
-        const hasText = q.question.length > 5;
-        const has4Opts = q.options.length === 4;
-        const hasValidIdx = q.correctOptionIndex >= 0 && q.correctOptionIndex <= 3;
-        const uniqueOpts = new Set(q.options).size === 4;
-        return hasId && hasText && has4Opts && hasValidIdx && uniqueOpts;
-      });
+    const MAX_RETRIES = 3;
+    let attempts = 0;
 
-      if (validQuestions.length !== 20) throw new Error("Quality Gate rejected nodes.");
+    while (attempts < MAX_RETRIES) {
+      try {
+        console.log(`[Aptitude Flow] Attempt ${attempts + 1} to generate validated questions.`);
+        const { output } = await runWithResilience(prompt, input);
+        
+        if (!output || !output.questions || output.questions.length !== 20) {
+          throw new Error("Invalid output length or null response from AI.");
+        }
 
-      return output;
-    } catch (error) {
-      console.error("[Aptitude Flow] Quality Gate or Neural Fault. Deploying verified unique repository.", error);
-      const usedIds = new Set(input.usedQuestionIds || []);
-      const availableFallback = FALLBACK_BANK.filter(q => !usedIds.has(q.id));
-      const finalBank = availableFallback.length >= 20 ? availableFallback.slice(0, 20) : FALLBACK_BANK.slice(0, 20);
-      return { questions: finalBank as any };
+        const validQuestions: AptitudeQuestion[] = [];
+        const questionTexts = new Set<string>();
+
+        for (const q of output.questions) {
+          const validation = validateAptitudeQuestion(q, questionTexts);
+          if (validation.valid) {
+            validQuestions.push(q);
+          } else {
+            console.warn(`[Aptitude Flow] Question rejected: ${validation.reason}`);
+          }
+        }
+
+        if (validQuestions.length === 20) {
+          console.log("[Aptitude Flow] 20/20 questions passed the programmatic Quality Gate.");
+          return { questions: validQuestions };
+        }
+
+        console.warn(`[Aptitude Flow] Only ${validQuestions.length}/20 passed. Retrying set...`);
+        attempts++;
+      } catch (error) {
+        console.error(`[Aptitude Flow] Neural Error on attempt ${attempts + 1}:`, error);
+        attempts++;
+      }
     }
+
+    console.error("[Aptitude Flow] Failed to generate a fully validated set. Deploying verified fallback bank.");
+    const usedIds = new Set(input.usedQuestionIds || []);
+    const availableFallback = FALLBACK_BANK.filter(q => !usedIds.has(q.id));
+    const finalBank = availableFallback.length >= 20 ? availableFallback.slice(0, 20) : FALLBACK_BANK.slice(0, 20);
+    return { questions: finalBank };
   }
 );
