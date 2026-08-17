@@ -1,10 +1,8 @@
-
-'use client';
+"use client";
 
 import { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Navbar from '@/components/layout/Navbar';
-import NavigationControls from '@/components/NavigationControls';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -138,7 +136,6 @@ export default function InterviewHistoryPage() {
     <div className="min-h-screen bg-[#050816] pb-32">
       <div className="particles-bg" />
       <Navbar />
-      <NavigationControls />
       
       <main className="container mx-auto px-6 pt-32">
         <div className="max-w-7xl mx-auto space-y-12">
@@ -202,7 +199,7 @@ export default function InterviewHistoryPage() {
                             <stop offset="5%" stopColor="hsl(var(--accent))" stopOpacity={0.3}/>
                             <stop offset="95%" stopColor="hsl(var(--accent))" stopOpacity={0}/>
                           </linearGradient>
-                          <linearGradient id="colorReadiness" x1="0" y1="0" x2="0" y2="1">
+                          <linearGradient id="colorReadiness" x1="0" x2="0" y2="1">
                             <stop offset="5%" stopColor="#a855f7" stopOpacity={0.3}/>
                             <stop offset="95%" stopColor="#a855f7" stopOpacity={0}/>
                           </linearGradient>
@@ -339,4 +336,3 @@ export default function InterviewHistoryPage() {
     </div>
   );
 }
-

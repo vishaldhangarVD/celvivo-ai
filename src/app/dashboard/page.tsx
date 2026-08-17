@@ -3,7 +3,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Navbar from '@/components/layout/Navbar';
-import NavigationControls from '@/components/NavigationControls';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -181,7 +180,6 @@ export default function Dashboard() {
     <div className="min-h-screen bg-[#050816] pb-32">
       <div className="particles-bg" />
       <Navbar />
-      <NavigationControls />
       
       <main className="container mx-auto px-6 pt-32">
         <div className="max-w-7xl mx-auto space-y-12">
@@ -194,7 +192,6 @@ export default function Dashboard() {
             <div>
               <div className="flex items-center gap-4 mb-4">
                 <Badge className="bg-accent/20 text-accent border-none px-4 py-1 text-[10px] tracking-widest font-bold uppercase">Mission Briefing</Badge>
-                {/* DEV ONLY BUTTON */}
                 <Button 
                   onClick={handleTestGemini}
                   className="h-8 px-4 rounded-full bg-gradient-to-r from-red-600 to-red-400 text-[9px] font-black uppercase tracking-[0.2em] shadow-[0_0_20px_rgba(239,68,68,0.3)] hover:shadow-[0_0_30px_rgba(239,68,68,0.5)] transition-all animate-pulse-glow"

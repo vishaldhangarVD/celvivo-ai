@@ -4,28 +4,17 @@ import { useState, useMemo, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import Navbar from '@/components/layout/Navbar';
-import NavigationControls from '@/components/NavigationControls';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { 
-  Command, 
   Search, 
   Building2, 
   ChevronRight, 
-  Zap, 
   Rocket, 
-  ShieldCheck, 
-  Award, 
-  FileText,
-  Clock,
-  Sparkles,
-  CheckCircle2,
-  Cpu,
+  Cpu, 
   Loader2,
-  AlertTriangle,
-  Briefcase,
-  GraduationCap
+  Sparkles
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useUser, useFirestore } from '@/firebase';
@@ -128,7 +117,6 @@ export default function InterviewSetupPage() {
     setIsTransitioning(true);
     
     try {
-      // Use crypto.randomUUID for guaranteed session uniqueness
       const sessionId = typeof crypto.randomUUID === 'function' 
         ? crypto.randomUUID() 
         : Math.random().toString(36).substring(2) + Date.now().toString(36);
@@ -184,7 +172,6 @@ export default function InterviewSetupPage() {
     <div className="h-screen bg-[#050816] flex flex-col overflow-hidden relative selection:bg-accent/30 selection:text-white">
       <div className="particles-bg" />
       <Navbar />
-      <NavigationControls onHome={() => router.push('/')} />
 
       {process.env.NODE_ENV === 'development' && (
         <div className="fixed top-24 right-8 z-[100]">
