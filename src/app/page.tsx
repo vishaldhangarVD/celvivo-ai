@@ -514,8 +514,12 @@ export default function LandingPage() {
         .animate-light-streak {
           animation: light-streak 8s linear infinite;
         }
-        html {
-          overflow: hidden;
+        html, body {
+          height: auto !important;
+          overflow-y: auto !important;
+        }
+        body {
+          overflow-y: visible !important;
         }
       `}</style>
     </div>
