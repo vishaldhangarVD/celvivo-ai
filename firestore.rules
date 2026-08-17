@@ -10,9 +10,18 @@ service cloud.firestore {
     }
     
     match /userFeedback/{feedbackId} {
-      allow read: if resource.data.status == 'approved' && resource.data.consent == true;
-      allow create: if request.auth != null && request.resource.data.userId == request.auth.uid && request.resource.data.status == 'pending';
-      allow update, delete: if request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'founder';
+      // Allow public to read approved feedback. Allow founders to read all feedback (for moderation).
+      allow read: if (resource.data.status == 'approved' && resource.data.consent == true) || 
+                   (request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'founder');
+      
+      // Authenticated users can create their own feedback, but it must be submitted as 'pending'.
+      allow create: if request.auth != null && 
+                      request.resource.data.userId == request.auth.uid && 
+                      request.resource.data.status == 'pending';
+      
+      // Only founders can update status or delete feedback records.
+      allow update, delete: if request.auth != null && 
+                             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'founder';
     }
   }
 }

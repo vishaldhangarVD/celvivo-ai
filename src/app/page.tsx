@@ -82,9 +82,9 @@ const TRUST_CARDS = [
 
 const STATIC_TESTIMONIALS = [
   {
-    name: "KHANDERAO YELIS",
-    role: "Senior Software Engineer",
-    company: "Saba Software India",
+    name: "Prof. Rahul Patil",
+    role: "FOUNDER & CEO",
+    company: "Hruta Solutions Software company",
     image: "https://picsum.photos/seed/person1/200/200",
     text: "I was genuinely impressed by NexVoroAI’s technical depth. Its aptitude, coding assessments, resume analysis, and interview simulations go far beyond basic practice. The realistic challenges and meaningful feedback can truly help students bridge the gap between academic learning and real-world technical interviews.",
     rating: 5
