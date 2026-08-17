@@ -32,10 +32,54 @@ import {
 } from 'lucide-react';
 import { useUser, useFirestore, useDoc } from '@/firebase';
 import { doc, updateDoc, serverTimestamp, getDoc } from 'firebase/firestore';
-import { generateAptitudeTest, validateAptitudeQuestion } from '@/ai/flows/ai-aptitude-generator';
+import { generateAptitudeTest, type AptitudeQuestion } from '@/ai/flows/ai-aptitude-generator';
 import { evaluateAptitude } from '@/ai/flows/ai-aptitude-evaluator';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
+
+/**
+ * Programmatic Rejection Criteria for Ambiguous Logic
+ * Local copy to avoid Server Action build errors when importing from 'use server' file.
+ */
+const FORBIDDEN_CONCEPTS = [
+  "velocity doubles",
+  "growth doubles",
+  "doubles every",
+  "triples every",
+  "25% complete",
+  "percentage completion",
+  "missing information",
+];
+
+/**
+ * Validates a single question node for logical and structural integrity.
+ * Client-side implementation to allow synchronous validation during load.
+ */
+function validateAptitudeQuestion(q: AptitudeQuestion, existingTexts?: Set<string>): { valid: boolean; reason?: string } {
+  if (!q.question || q.question.trim().length < 10) return { valid: false, reason: "Question text too short or empty." };
+  if (!q.options || q.options.length !== 4) return { valid: false, reason: "Invalid options count." };
+  
+  const uniqueOpts = new Set(q.options.map(o => o.trim().toLowerCase()));
+  if (uniqueOpts.size !== 4) return { valid: false, reason: "Duplicate options detected." };
+
+  if (q.correctOptionIndex < 0 || q.correctOptionIndex > 3) return { valid: false, reason: "Correct index out of bounds." };
+  if (!q.options[q.correctOptionIndex] || q.options[q.correctOptionIndex].trim() === "") return { valid: false, reason: "Correct index points to empty option." };
+
+  const normalizedText = q.question.toLowerCase();
+  for (const concept of FORBIDDEN_CONCEPTS) {
+    if (normalizedText.includes(concept)) {
+      return { valid: false, reason: `Question contains forbidden ambiguous concept: ${concept}` };
+    }
+  }
+
+  if (existingTexts) {
+    const normalizedQuestion = normalizedText.replace(/[^\w\s]/g, "").replace(/\s+/g, " ").trim();
+    if (existingTexts.has(normalizedQuestion)) return { valid: false, reason: "Duplicate question content detected in this set." };
+    existingTexts.add(normalizedQuestion);
+  }
+
+  return { valid: true };
+}
 
 export default function AptitudeEnginePage() {
   const router = useRouter();
@@ -43,7 +87,7 @@ export default function AptitudeEnginePage() {
   const db = useFirestore();
   const { toast } = useToast();
 
-  const [questions, setQuestions] = useState<any[]>([]);
+  const [questions, setQuestions] = useState<AptitudeQuestion[]>([]);
   const [currentIdx, setCurrentIdx] = useState(0);
   const [answers, setAnswers] = useState<Record<number, number>>({});
   const [markedForReview, setMarkedForReview] = useState<Set<number>>(new Set());
@@ -68,8 +112,8 @@ export default function AptitudeEnginePage() {
   // Helper to validate a set of questions retrieved from Firestore
   const validateQuestionSet = (qs: any[]): boolean => {
     if (!qs || qs.length !== 20) return false;
-    // Perform strict check for forbidden concepts in the loaded set
-    return qs.every(q => validateAptitudeQuestion(q).valid);
+    const texts = new Set<string>();
+    return qs.every(q => validateAptitudeQuestion(q, texts).valid);
   };
 
   // LIFECYCLE: Initialization & Persistence
@@ -89,7 +133,7 @@ export default function AptitudeEnginePage() {
       const existingQuestions = data.aptitudeQuestions || [];
       const isValidSet = validateQuestionSet(existingQuestions);
 
-      if (isValidSet && !data.aptitudeReport) {
+      if (isValidSet && !data.aptitudeReport && data.aptitudeStatus !== 'completed') {
         console.log("[Aptitude] Restoring validated session from Firestore.");
         setQuestions(existingQuestions);
         setAnswers(data.aptitudeAnswers || {});
@@ -101,7 +145,7 @@ export default function AptitudeEnginePage() {
       }
 
       // COMPLETED LOGIC
-      if (data.aptitudeReport) {
+      if (data.aptitudeReport || data.aptitudeStatus === 'completed') {
         setQuestions(existingQuestions);
         setAnswers(data.aptitudeAnswers || {});
         setResult(data.aptitudeReport);

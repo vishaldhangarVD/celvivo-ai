@@ -49,9 +49,9 @@ const FORBIDDEN_CONCEPTS = [
 
 /**
  * Validates a single question node for logical and structural integrity.
- * This is an EXECUTABLE GATE, not a prompt instruction.
+ * Internal helper: Not exported to avoid Next.js Server Action build errors for sync functions.
  */
-export function validateAptitudeQuestion(q: AptitudeQuestion, existingTexts?: Set<string>): { valid: boolean; reason?: string } {
+function validateAptitudeQuestion(q: AptitudeQuestion, existingTexts?: Set<string>): { valid: boolean; reason?: string } {
   if (!q.question || q.question.trim().length < 10) return { valid: false, reason: "Question text too short or empty." };
   if (!q.options || q.options.length !== 4) return { valid: false, reason: "Invalid options count." };
   
