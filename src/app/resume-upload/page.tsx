@@ -97,11 +97,8 @@ export default function ResumeUploadPage() {
     }
     
     try {
-      // PROD-GRADE LIFECYCLE:
-      // If the user is at step 3 or higher AND already has a report, 
-      // clicking "Enter Aptitude" means they want a NEW attempt.
-      // If it was just interrupted (incomplete), we resume by NOT clearing fields.
-      const isAptitudeCompleted = !!journey.aptitudeReport;
+      // If the user has already completed the test, mark it as "not_started" to force a new unique attempt
+      const isAptitudeCompleted = journey.aptitudeStatus === "completed";
       
       const updateData: any = {
         currentStage: "Aptitude Assessment",
@@ -112,16 +109,15 @@ export default function ResumeUploadPage() {
       };
 
       if (isAptitudeCompleted) {
-        // Start a fresh 20-question set
         updateData.aptitudeQuestions = null;
         updateData.aptitudeAnswers = null;
         updateData.aptitudeCurrentIndex = 0;
         updateData.aptitudeTimeLeft = 45 * 60;
         updateData.aptitudeReport = null;
+        updateData.aptitudeStatus = "not_started";
       }
 
       await updateDoc(journeyRef!, updateData);
-
       router.push('/interview/aptitude');
     } catch (e) {
       console.error(e);
@@ -253,7 +249,7 @@ export default function ResumeUploadPage() {
                   disabled={!isUploaded || isVerifying}
                   className="w-full h-20 btn-premium rounded-2xl text-lg font-black uppercase tracking-[0.3em] shadow-[0_20px_60px_rgba(147,51,234,0.3)] group"
                  >
-                   {!!journey?.aptitudeReport ? "RESTART APTITUDE TEST" : "ENTER APTITUDE TEST"} <ArrowRight className="ml-4 w-6 h-6 transition-transform group-hover:translate-x-2" />
+                   {journey?.aptitudeStatus === "completed" ? "RESTART APTITUDE TEST" : "ENTER APTITUDE TEST"} <ArrowRight className="ml-4 w-6 h-6 transition-transform group-hover:translate-x-2" />
                  </Button>
                </div>
             </Card>

@@ -148,6 +148,7 @@ export default function AptitudeEnginePage() {
         });
         
         const freshQuestions = response.questions;
+        const newFingerprints = freshQuestions.map(q => normalizeQuestion(q.question));
         
         await updateDoc(journeyRef, {
           aptitudeQuestions: freshQuestions,
@@ -157,6 +158,11 @@ export default function AptitudeEnginePage() {
           aptitudeStatus: "in_progress",
           aptitudeReport: null,
           updatedAt: serverTimestamp()
+        });
+
+        // Record history immediately so they are considered "seen"
+        await updateDoc(userRef, {
+          aptitudeQuestionHistory: arrayUnion(...newFingerprints)
         });
 
         setQuestions(freshQuestions);
@@ -179,15 +185,11 @@ export default function AptitudeEnginePage() {
     setIsEvaluating(true);
 
     let correctCount = 0;
-    const fingerprints: string[] = [];
-
     const formattedResults = questions.map((q, idx) => {
       const userSelectedIdx = answers[idx];
       const isCorrect = userSelectedIdx === q.correctOptionIndex;
       if (isCorrect) correctCount++;
       
-      fingerprints.push(normalizeQuestion(q.question));
-
       return {
         question: q.question,
         category: q.category,
@@ -236,19 +238,13 @@ export default function AptitudeEnginePage() {
         updatedAt: serverTimestamp()
       });
 
-      // Update Global History (Fingerprints)
-      const userRef = doc(db, 'users', user.uid);
-      await updateDoc(userRef, {
-        aptitudeQuestionHistory: arrayUnion(...fingerprints)
-      });
-
     } catch (e) {
       console.error("[Aptitude] Submission error:", e);
       toast({ variant: "destructive", title: "Audit Protocol Fault" });
     } finally {
       setIsEvaluating(false);
     }
-  }, [isEvaluating, journey, journeyRef, questions, answers, timeLeft, result, toast, db, user?.uid]);
+  }, [isEvaluating, journey, journeyRef, questions, answers, timeLeft, result, toast]);
 
   const handleOptionSelect = async (optIdx: number) => {
     if (!journeyRef || result) return;

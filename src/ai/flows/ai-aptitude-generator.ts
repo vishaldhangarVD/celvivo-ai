@@ -60,19 +60,23 @@ const CATEGORY_MAP: Record<string, string> = {
 
 /**
  * Normalizes question text for fingerprinting.
+ * Also generates a "reasoning pattern" by removing digits.
  */
-function normalizeQuestion(text: string): string {
-  return text
+function normalizeQuestion(text: string): { fingerprint: string; pattern: string } {
+  const clean = text
     .toLowerCase()
     .replace(/[^\w\s]/g, "") // Remove punctuation
     .replace(/\s+/g, " ")    // Normalize whitespace
     .trim();
+  
+  const pattern = clean.replace(/\d+/g, "X"); // Replace numbers with X to detect templates
+  return { fingerprint: clean, pattern };
 }
 
 /**
  * Validates a single question node for logical and structural integrity.
  */
-function validateAptitudeQuestion(q: any, existingFingerprints: Set<string>): { valid: boolean; reason?: string; normalized?: AptitudeQuestion } {
+function validateAptitudeQuestion(q: any, existingFingerprints: Set<string>, existingPatterns: Set<string>): { valid: boolean; reason?: string; normalized?: AptitudeQuestion } {
   if (!q.question || q.question.trim().length < 20) return { valid: false, reason: "Question text too short or empty." };
   if (!q.options || q.options.length !== 4) return { valid: false, reason: "Invalid options count." };
   
@@ -89,13 +93,17 @@ function validateAptitudeQuestion(q: any, existingFingerprints: Set<string>): { 
     cat = closest || "Logical Reasoning";
   }
 
-  const normalizedText = normalizeQuestion(q.question);
+  const { fingerprint, pattern } = normalizeQuestion(q.question);
+  
   for (const concept of FORBIDDEN_CONCEPTS) {
-    if (normalizedText.includes(concept)) return { valid: false, reason: `Question contains forbidden pattern: ${concept}` };
+    if (fingerprint.includes(concept)) return { valid: false, reason: `Question contains forbidden pattern: ${concept}` };
   }
 
-  if (existingFingerprints.has(normalizedText)) return { valid: false, reason: "Duplicate question content detected." };
-  existingFingerprints.add(normalizedText);
+  if (existingFingerprints.has(fingerprint)) return { valid: false, reason: "Duplicate question content detected." };
+  if (existingPatterns.has(pattern)) return { valid: false, reason: "Duplicate reasoning template detected." };
+
+  existingFingerprints.add(fingerprint);
+  existingPatterns.add(pattern);
 
   return { 
     valid: true, 
@@ -189,6 +197,7 @@ const aptitudeFlow = ai.defineFlow(
     const historySet = new Set(input.usedQuestionFingerprints || []);
     const validQuestions: AptitudeQuestion[] = [];
     const currentFingerprints = new Set<string>();
+    const currentPatterns = new Set<string>();
 
     let attempts = 0;
     while (attempts < 3 && validQuestions.length < 20) {
@@ -200,12 +209,13 @@ const aptitudeFlow = ai.defineFlow(
           for (const q of output.questions) {
             if (validQuestions.length >= 20) break;
             
-            const val = validateAptitudeQuestion(q, currentFingerprints);
+            const val = validateAptitudeQuestion(q, currentFingerprints, currentPatterns);
             if (val.valid && val.normalized) {
-              const fingerprint = normalizeQuestion(val.normalized.question);
-              if (!historySet.has(fingerprint)) {
+              const { fingerprint, pattern } = normalizeQuestion(val.normalized.question);
+              if (!historySet.has(fingerprint) && !historySet.has(pattern)) {
                 validQuestions.push(val.normalized);
                 currentFingerprints.add(fingerprint);
+                currentPatterns.add(pattern);
               }
             }
           }
@@ -221,7 +231,11 @@ const aptitudeFlow = ai.defineFlow(
     }
 
     console.warn("[Aptitude Flow] Insufficient dynamic nodes. Injecting unique fallback nodes.");
-    const filteredFallback = FALLBACK_BANK.filter(q => !historySet.has(normalizeQuestion(q.question)));
+    const filteredFallback = FALLBACK_BANK.filter(q => {
+      const { fingerprint, pattern } = normalizeQuestion(q.question);
+      return !historySet.has(fingerprint) && !historySet.has(pattern);
+    });
+    
     const needed = 20 - validQuestions.length;
     validQuestions.push(...filteredFallback.slice(0, needed));
 
