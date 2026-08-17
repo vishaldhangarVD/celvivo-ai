@@ -4,6 +4,7 @@ import { useState, useMemo, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import Navbar from '@/components/layout/Navbar';
+import NavigationControls from '@/components/NavigationControls';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -172,6 +173,7 @@ export default function InterviewSetupPage() {
     <div className="h-screen bg-[#050816] flex flex-col overflow-hidden relative selection:bg-accent/30 selection:text-white">
       <div className="particles-bg" />
       <Navbar />
+      <NavigationControls />
 
       {process.env.NODE_ENV === 'development' && (
         <div className="fixed top-24 right-8 z-[100]">
