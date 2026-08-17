@@ -10,9 +10,12 @@ service cloud.firestore {
     }
     
     match /userFeedback/{feedbackId} {
-      // Allow public to read approved feedback. Allow founders to read all feedback (for moderation).
+      // Allow public to read approved feedback with consent.
+      // Allow owners to read their own feedback (pending or otherwise).
+      // Allow founders to read all feedback for moderation.
       allow read: if (resource.data.status == 'approved' && resource.data.consent == true) || 
-                   (request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'founder');
+                   (request.auth != null && (request.auth.uid == resource.data.userId || 
+                    get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'founder'));
       
       // Authenticated users can create their own feedback, but it must be submitted as 'pending'.
       allow create: if request.auth != null && 
