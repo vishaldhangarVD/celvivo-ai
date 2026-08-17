@@ -32,8 +32,8 @@ import {
   Rocket,
   FastForward
 } from 'lucide-react';
-import { useUser, useFirestore, useDoc } from '@/firebase';
-import { doc, updateDoc, serverTimestamp, collection, addDoc, getDoc } from 'firebase/firestore';
+import { useUser, useFirestore, useDoc, useCollection } from '@/firebase';
+import { doc, updateDoc, serverTimestamp, collection, addDoc, getDoc, query, where } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { MASTER_QUESTIONS } from '@/lib/coding-questions-data';
@@ -86,6 +86,38 @@ export default function CodingEnginePage() {
 
   const { data: journey, loading: journeyLoading } = useDoc(journeyRef);
 
+  // Fetch existing results for this session to handle refresh
+  const resultsQuery = useMemo(() => {
+    if (!db || !user?.uid || !journey?.sessionId) return null;
+    return query(
+      collection(db, 'users', user.uid, 'coding_results'),
+      where('interviewId', '==', journey.sessionId)
+    );
+  }, [db, user?.uid, journey?.sessionId]);
+
+  const { data: existingResultsData } = useCollection(resultsQuery);
+
+  // Restore session results from Firestore on mount/refresh
+  useEffect(() => {
+    if (existingResultsData && existingResultsData.length > 0 && questions.length > 0 && Object.keys(sessionResults).length === 0) {
+      const restoredResults: Record<number, any> = {};
+      existingResultsData.forEach((res: any) => {
+        const qIdx = questions.findIndex(q => q.id === res.questionId);
+        if (qIdx !== -1) {
+          restoredResults[qIdx] = {
+            code: res.submittedCode,
+            results: res.auditTrace,
+            status: res.status,
+            passedCount: res.passedTestCases,
+            totalCount: res.totalTestCases,
+            language: res.language
+          };
+        }
+      });
+      setSessionResults(restoredResults);
+    }
+  }, [existingResultsData, questions, sessionResults]);
+
   const getDifficultyColor = (diff?: string) => {
     if (!diff) return 'text-accent border-accent/20 bg-accent/5';
     switch (diff) {
@@ -135,10 +167,14 @@ export default function CodingEnginePage() {
       let passed = 0;
       let failed = 0;
       let skipped = 0;
+      let totalPassedCases = 0;
+      let totalTestCases = 0;
       
       for (let i = 0; i < total; i++) {
         const r = sessionResults[i];
         if (r) {
+          totalPassedCases += (r.passedCount || 0);
+          totalTestCases += (r.totalCount || 0);
           if (r.status === 'Solved') passed++;
           else if (r.status === 'Skipped') skipped++;
           else failed++;
@@ -157,6 +193,8 @@ export default function CodingEnginePage() {
           passedQuestions: passed, 
           failedQuestions: failed,
           skippedQuestions: skipped,
+          totalPassedCases,
+          totalTestCases,
           submissionTime: new Date().toLocaleTimeString()
         },
         codingRoundCompleted: true,
@@ -418,20 +456,16 @@ export default function CodingEnginePage() {
   // Load language-specific starter code or saved work
   useEffect(() => {
     if (currentQ) {
-      // Check if we have a saved result for the current question index in the same language
       const savedResult = sessionResults[currentIdx];
       const isSameLanguage = savedResult?.language === selectedLang.label;
       const savedCode = isSameLanguage ? savedResult.code : null;
 
-      // Immediately load the current question's correct starter code for the selected language
       const starterCode = currentQ.starterCode?.[selectedLang.id] || 
                           currentQ.starterCode?.["python"] || 
                           "// Starter code unavailable for this language.";
 
-      // Prioritize saved work if it exists and matches the language, otherwise use starter code
       setCode(savedCode || starterCode);
 
-      // Update UI state based on whether work is "fresh" or "archived"
       if (isSameLanguage) {
         setTerminalOutput("Question submission archived.");
         setActiveTerminalTab("cases");
@@ -643,7 +677,6 @@ export default function CodingEnginePage() {
               value={code} 
               onChange={(val) => setCode(val || "")} 
               onMount={(editor, monaco) => {
-                // Set global defaults for TypeScript language to support Node.js APIs in the editor
                 monaco.languages.typescript.typescriptDefaults.setCompilerOptions({
                   target: monaco.languages.typescript.ScriptTarget.ES2017,
                   moduleResolution: monaco.languages.typescript.ModuleResolutionKind.NodeJs,
@@ -652,7 +685,6 @@ export default function CodingEnginePage() {
                   noEmit: true,
                 });
                 
-                // Minimal Node.js typings for standard coding environments
                 monaco.languages.typescript.typescriptDefaults.addExtraLib(`
                   declare module "fs" {
                     export function readFileSync(fd: number, encoding: string): string;

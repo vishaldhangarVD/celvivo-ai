@@ -78,6 +78,8 @@ export default function CodingResultTerminal() {
       passedQuestions: 0,
       failedQuestions: 0,
       skippedQuestions: 0,
+      totalPassedCases: 0,
+      totalTestCases: 0,
       submissionTime: "N/A"
     };
   }, [journey]);
@@ -115,13 +117,9 @@ export default function CodingResultTerminal() {
   const isPassed = result?.status === 'Pass' || (result?.score || 0) >= 60;
 
   const getQuestionTitle = (questionId: string) => {
+    const q = journey?.codingQuestions?.find((q: any) => q.id === questionId);
+    if (q) return q.title;
     return MASTER_QUESTIONS.find(q => q.id === questionId)?.title || "Protocol Node";
-  };
-
-  const getScoreColor = (score: number) => {
-    if (score >= 80) return "text-green-400";
-    if (score >= 60) return "text-orange-400";
-    return "text-red-400";
   };
 
   const handleContinueToInterview = () => {
@@ -175,7 +173,7 @@ export default function CodingResultTerminal() {
                    "px-6 py-2 rounded-xl font-black tracking-[0.4em] text-[10px] border-none",
                    isPassed ? "bg-green-500/20 text-green-400" : "bg-red-500/20 text-red-400"
                  )}>
-                   STATUS: {result?.status.toUpperCase()}
+                   STATUS: {result?.status?.toUpperCase() || "AWAITING"}
                  </Badge>
               </div>
             </Card>
