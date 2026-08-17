@@ -1,4 +1,4 @@
-'use client';
+"use client";
 
 import { motion } from 'framer-motion';
 import Link from 'next/link';
@@ -327,6 +327,9 @@ export default function LandingPage() {
         }
         .animate-light-streak {
           animation: light-streak 8s linear infinite;
+        }
+        html {
+          overflow: hidden;
         }
       `}</style>
     </div>
