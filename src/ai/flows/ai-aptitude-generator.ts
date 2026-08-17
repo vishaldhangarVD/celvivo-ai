@@ -1,6 +1,6 @@
 'use server';
 /**
- * @fileOverview Nexvoro AI Master Aptitude Generator v24.0.
+ * @fileOverview Nexvoro AI Master Aptitude Generator v25.0.
  * Dynamically synthesizes high-fidelity logic nodes using Google Gemini.
  * Implements a PROGRAMMATIC QUALITY GATE: NO AMBIGUITY / NO UNSOLVABLE QUESTIONS.
  * Includes a verified 30-node professional-grade fallback bank.
@@ -35,21 +35,23 @@ const AptitudeOutputSchema = z.object({
 
 /**
  * Programmatic Rejection Criteria for Ambiguous Logic
+ * These concepts frequently produce unsolvable or ambiguous questions in LLM outputs.
  */
 const FORBIDDEN_CONCEPTS = [
   "velocity doubles",
   "growth doubles",
   "doubles every",
   "triples every",
-  "25% complete", // Only when used in specific ambiguous work completion contexts
+  "25% complete", // Usually associated with the ambiguous work doubling problem
   "percentage completion",
   "missing information",
 ];
 
 /**
  * Validates a single question node for logical and structural integrity.
+ * This is an EXECUTABLE GATE, not a prompt instruction.
  */
-function validateAptitudeQuestion(q: AptitudeQuestion, existingTexts: Set<string>): { valid: boolean; reason?: string } {
+export function validateAptitudeQuestion(q: AptitudeQuestion, existingTexts?: Set<string>): { valid: boolean; reason?: string } {
   if (!q.question || q.question.trim().length < 10) return { valid: false, reason: "Question text too short or empty." };
   if (!q.options || q.options.length !== 4) return { valid: false, reason: "Invalid options count." };
   
@@ -61,7 +63,7 @@ function validateAptitudeQuestion(q: AptitudeQuestion, existingTexts: Set<string
   if (q.correctOptionIndex < 0 || q.correctOptionIndex > 3) return { valid: false, reason: "Correct index out of bounds." };
   if (!q.options[q.correctOptionIndex] || q.options[q.correctOptionIndex].trim() === "") return { valid: false, reason: "Correct index points to empty option." };
 
-  // Forbidden concept check (The "Velocity Doubles" trap)
+  // Forbidden concept check (Hard Rejection for known problematic AI hallucinations)
   const normalizedText = q.question.toLowerCase();
   for (const concept of FORBIDDEN_CONCEPTS) {
     if (normalizedText.includes(concept)) {
@@ -69,10 +71,12 @@ function validateAptitudeQuestion(q: AptitudeQuestion, existingTexts: Set<string
     }
   }
 
-  // Duplicate question check
-  const normalizedQuestion = normalizedText.replace(/[^\w\s]/g, "").replace(/\s+/g, " ").trim();
-  if (existingTexts.has(normalizedQuestion)) return { valid: false, reason: "Duplicate question content detected in this set." };
-  existingTexts.add(normalizedQuestion);
+  // Duplicate question check (within the same set)
+  if (existingTexts) {
+    const normalizedQuestion = normalizedText.replace(/[^\w\s]/g, "").replace(/\s+/g, " ").trim();
+    if (existingTexts.has(normalizedQuestion)) return { valid: false, reason: "Duplicate question content detected in this set." };
+    existingTexts.add(normalizedQuestion);
+  }
 
   return { valid: true };
 }

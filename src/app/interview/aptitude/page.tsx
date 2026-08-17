@@ -32,7 +32,7 @@ import {
 } from 'lucide-react';
 import { useUser, useFirestore, useDoc } from '@/firebase';
 import { doc, updateDoc, serverTimestamp, getDoc } from 'firebase/firestore';
-import { generateAptitudeTest } from '@/ai/flows/ai-aptitude-generator';
+import { generateAptitudeTest, validateAptitudeQuestion } from '@/ai/flows/ai-aptitude-generator';
 import { evaluateAptitude } from '@/ai/flows/ai-aptitude-evaluator';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
@@ -65,26 +65,33 @@ export default function AptitudeEnginePage() {
 
   const { data: journey, loading: journeyLoading } = useDoc(journeyRef);
 
+  // Helper to validate a set of questions retrieved from Firestore
+  const validateQuestionSet = (qs: any[]): boolean => {
+    if (!qs || qs.length !== 20) return false;
+    // Perform strict check for forbidden concepts in the loaded set
+    return qs.every(q => validateAptitudeQuestion(q).valid);
+  };
+
   // LIFECYCLE: Initialization & Persistence
   useEffect(() => {
     async function init() {
       if (!db || !user?.uid || !journeyRef || initGuard.current) return;
       
-      console.log("[Aptitude Init] Logic Sequence Started.");
       const snap = await getDoc(journeyRef);
       if (!snap.exists()) {
-        console.error("[Aptitude Init] Journey document missing.");
         router.push('/interview');
         return;
       }
       
       const data = snap.data();
-      console.log("[Aptitude Init] Firestore Data Loaded.", { status: data.aptitudeStatus });
       
-      // RESUME LOGIC: Restore existing 20-question set if in progress
-      if (data.aptitudeQuestions && data.aptitudeQuestions.length === 20 && !data.aptitudeReport) {
-        console.log("[Aptitude Init] Resuming existing session.");
-        setQuestions(data.aptitudeQuestions);
+      // RESTORE LOGIC: Validate before trusting Firestore
+      const existingQuestions = data.aptitudeQuestions || [];
+      const isValidSet = validateQuestionSet(existingQuestions);
+
+      if (isValidSet && !data.aptitudeReport) {
+        console.log("[Aptitude] Restoring validated session from Firestore.");
+        setQuestions(existingQuestions);
         setAnswers(data.aptitudeAnswers || {});
         setCurrentIdx(data.aptitudeCurrentIndex || 0);
         setTimeLeft(data.aptitudeTimeLeft ?? 45 * 60);
@@ -93,10 +100,9 @@ export default function AptitudeEnginePage() {
         return;
       }
 
-      // COMPLETED LOGIC: If landing on page while already done, show results
+      // COMPLETED LOGIC
       if (data.aptitudeReport) {
-        console.log("[Aptitude Init] Displaying existing report.");
-        setQuestions(data.aptitudeQuestions || []);
+        setQuestions(existingQuestions);
         setAnswers(data.aptitudeAnswers || {});
         setResult(data.aptitudeReport);
         setIsInitializing(false);
@@ -104,8 +110,8 @@ export default function AptitudeEnginePage() {
         return;
       }
 
-      // FRESH START LOGIC
-      console.log("[Aptitude Init] Generating new assessment nodes.");
+      // GENERATION LOGIC: Trigger if no valid set exists or session is new
+      console.log("[Aptitude] Initializing fresh synthesis flow.");
       initGuard.current = true;
       try {
         const userRef = doc(db, 'users', user.uid);
@@ -121,11 +127,6 @@ export default function AptitudeEnginePage() {
         });
         
         const freshQuestions = response.questions;
-        if (!freshQuestions || freshQuestions.length !== 20) {
-           throw new Error(`Invalid question count received: ${freshQuestions?.length}`);
-        }
-
-        console.log("[Aptitude Init] AI Synthesis Success. Persisting to Cloud.");
         
         await updateDoc(journeyRef, {
           aptitudeQuestions: freshQuestions,
@@ -145,8 +146,8 @@ export default function AptitudeEnginePage() {
         setIsInitializing(false);
 
       } catch (e: any) {
-        console.error("[Aptitude Init] Critical failure:", e);
-        toast({ variant: "destructive", title: "Neural Sync Error", description: "Assessment calibration failure. Please restart." });
+        console.error("[Aptitude] Initialization fault:", e);
+        toast({ variant: "destructive", title: "Synthesis Error", description: "Assessment calibration failure." });
         setIsInitializing(false);
       }
     }
@@ -161,8 +162,6 @@ export default function AptitudeEnginePage() {
     if (submissionGuard.current || isEvaluating || !journey || !journeyRef || result) return;
     submissionGuard.current = true;
     setIsEvaluating(true);
-
-    console.log("[Aptitude Submit] Initiating Audit.");
 
     let correctCount = 0;
     const formattedResults = questions.map((q, idx) => {
@@ -217,10 +216,8 @@ export default function AptitudeEnginePage() {
         updatedAt: serverTimestamp()
       });
 
-      console.log("[Aptitude Submit] Report Archived Successfully.");
-
     } catch (e) {
-      console.error("[Aptitude Submit] Submission Fault:", e);
+      console.error("[Aptitude] Submission error:", e);
       toast({ variant: "destructive", title: "Audit Protocol Fault" });
     } finally {
       setIsEvaluating(false);
@@ -264,7 +261,6 @@ export default function AptitudeEnginePage() {
     }
   };
 
-  // TIMER PERSISTENCE
   useEffect(() => {
     if (isInitializing || isEvaluating || result) return;
     const timer = setInterval(() => {
@@ -305,15 +301,12 @@ export default function AptitudeEnginePage() {
     );
   }
 
-  // Final check for desync error
   if (questions.length === 0 && !result && !isEvaluating) {
      return (
        <div className="h-screen bg-[#050816] flex flex-col items-center justify-center p-12 text-center">
          <XCircle className="w-16 h-16 text-red-500 mb-6" />
          <h2 className="text-2xl font-bold text-white mb-2">Protocol Desynchronization</h2>
-         <p className="text-muted-foreground mb-8 text-sm max-w-md">
-            System node failed to load logic nodes. Please verify your connection and restart the session.
-         </p>
+         <p className="text-muted-foreground mb-8 text-sm max-w-md">System node failed to load logic nodes. Please verify your connection and restart the session.</p>
          <Button onClick={handleRetry} className="btn-premium px-12 h-14 uppercase tracking-widest text-xs">Restart Session</Button>
        </div>
      );
