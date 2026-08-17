@@ -38,7 +38,7 @@ import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 
 /**
- * Programmatic Rejection Criteria for Ambiguous Logic
+ * Programmatic Rejection Criteria for Ambiguous or Trivial Logic
  * Local copy to avoid Server Action build errors when importing from 'use server' file.
  */
 const FORBIDDEN_CONCEPTS = [
@@ -46,17 +46,17 @@ const FORBIDDEN_CONCEPTS = [
   "growth doubles",
   "doubles every",
   "triples every",
-  "25% complete",
-  "percentage completion",
+  "25% complete", // Rejected: Often associated with trivial work-rate problems
+  "percentage completion", // Rejected: Usually too basic
   "missing information",
 ];
 
 /**
- * Validates a single question node for logical and structural integrity.
+ * Validates a single question node for logical, structural, and complexity integrity.
  * Client-side implementation to allow synchronous validation during load.
  */
 function validateAptitudeQuestion(q: AptitudeQuestion, existingTexts?: Set<string>): { valid: boolean; reason?: string } {
-  if (!q.question || q.question.trim().length < 10) return { valid: false, reason: "Question text too short or empty." };
+  if (!q.question || q.question.trim().length < 15) return { valid: false, reason: "Question text too short or empty." };
   if (!q.options || q.options.length !== 4) return { valid: false, reason: "Invalid options count." };
   
   const uniqueOpts = new Set(q.options.map(o => o.trim().toLowerCase()));
@@ -68,7 +68,7 @@ function validateAptitudeQuestion(q: AptitudeQuestion, existingTexts?: Set<strin
   const normalizedText = q.question.toLowerCase();
   for (const concept of FORBIDDEN_CONCEPTS) {
     if (normalizedText.includes(concept)) {
-      return { valid: false, reason: `Question contains forbidden ambiguous concept: ${concept}` };
+      return { valid: false, reason: `Question contains forbidden or trivial pattern: ${concept}` };
     }
   }
 
@@ -416,7 +416,7 @@ export default function AptitudeEnginePage() {
                     </div>
 
                     <div className="grid md:grid-cols-2 gap-4">
-                      {currentQ?.options?.map((opt: string, i: number) => (
+                      {currentQ?.options?.map((opt, i) => (
                         <button 
                           key={i} 
                           onClick={() => handleOptionSelect(i)} 
