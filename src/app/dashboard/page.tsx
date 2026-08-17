@@ -7,6 +7,7 @@ import NavigationControls from '@/components/NavigationControls';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import FeedbackDialog from '@/components/feedback/FeedbackDialog';
 import { 
   Dialog,
   DialogContent,
@@ -205,6 +206,7 @@ export default function Dashboard() {
               <p className="text-muted-foreground font-light mt-2">Neural synchronization complete. Your career metrics are live.</p>
             </div>
             <div className="flex gap-4">
+              <FeedbackDialog />
               <Link href="/job-tracker">
                 <Button variant="outline" className="h-14 px-8 glass border-white/10 flex gap-3 text-[10px] tracking-widest uppercase">
                   <LayoutGrid className="w-4 h-4" />

@@ -26,8 +26,9 @@ import {
   Command,
   ArrowUpRight
 } from 'lucide-react';
-import { useUser } from '@/firebase';
-import { useState } from 'react';
+import { useUser, useFirestore, useCollection } from '@/firebase';
+import { useState, useMemo } from 'react';
+import { collection, query, where, orderBy } from 'firebase/firestore';
 
 const COMPANIES = [
   { name: "Google", logo: "GOOG", color: "text-blue-400" },
@@ -79,37 +80,63 @@ const TRUST_CARDS = [
   }
 ];
 
-const TESTIMONIALS = [
+const STATIC_TESTIMONIALS = [
   {
-    name: "Sarah Jenkins",
+    name: "KHANDERAO YELIS",
     role: "Senior Software Engineer",
-    company: "Google",
+    company: "Saba Software India",
     image: "https://picsum.photos/seed/person1/200/200",
-    text: "Nexvoro AI transformed my prep. The depth of the system's technical probes is unmatched. It identified gaps I didn't even know I had.",
+    text: "I was genuinely impressed by NexVoroAI’s technical depth. Its aptitude, coding assessments, resume analysis, and interview simulations go far beyond basic practice. The realistic challenges and meaningful feedback can truly help students bridge the gap between academic learning and real-world technical interviews.",
     rating: 5
   },
   {
-    name: "Michael Chen",
-    role: "Frontend Lead",
-    company: "Amazon",
+    name: "SHUBHAM SOMWANSHI",
+    role: "FOUNDER & CEO",
+    company: "GOLDWINGS IT",
     image: "https://picsum.photos/seed/person2/200/200",
-    text: "The simulated HR round was identical to my real experience. Unbelievably accurate feedback on my confidence and communication.",
+    text: "As a Founder & CEO, I use NexVoroAI’s with my students for aptitude and coding practice, resume analysis, and mock interviews. It has helped them overcome interview anxiety, improve their confidence and communication, and prepare better for real-world placements. It’s been incredibly valuable for their growth.",
     rating: 5
   },
   {
-    name: "Elena Rodriguez",
-    role: "Data Scientist",
+    name: "ABHINAY CHAUHAN",
+    role: "Full-Stack Software Engineer with AI/ML experience",
     company: "Microsoft",
     image: "https://picsum.photos/seed/person3/200/200",
-    text: "Finally, an AI that understands technical nuance. My readiness score was spot on and helped me secure three top-tier offers.",
+    text: "As a Full-Stack Software Engineer with AI/ML experience, I found NexVoroAI’s aptitude, coding, resume analysis, and interview assessments incredibly powerful and accurate. The real-world practice and detailed feedback make it genuinely useful for students preparing for technical careers.",
     rating: 5
   }
 ];
 
 export default function LandingPage() {
   const router = useRouter();
+  const db = useFirestore();
   const { user, loading: authLoading } = useUser();
   const [isScrollingPaused, setIsScrollingPaused] = useState(false);
+
+  // Fetch approved community feedback
+  const feedbackQuery = useMemo(() => {
+    if (!db) return null;
+    return query(
+      collection(db, 'userFeedback'),
+      where('status', '==', 'approved'),
+      where('consent', '==', true),
+      orderBy('createdAt', 'desc')
+    );
+  }, [db]);
+
+  const { data: communityFeedback } = useCollection(feedbackQuery);
+
+  const allTestimonials = useMemo(() => {
+    const dynamic = communityFeedback?.map(f => ({
+      name: f.name,
+      role: f.role,
+      company: f.company,
+      image: f.photoURL || `https://picsum.photos/seed/${f.userId}/200/200`,
+      text: f.feedback,
+      rating: f.rating
+    })) || [];
+    return [...STATIC_TESTIMONIALS, ...dynamic];
+  }, [communityFeedback]);
 
   const hrImg = "/hr.png.png";
 
@@ -167,7 +194,7 @@ export default function LandingPage() {
               <div className="flex flex-wrap gap-4 pt-2">
                 <Button 
                   onClick={handleStartVirtualInterview} 
-                  className="h-14 px-8 text-xs btn-premium rounded-2xl shadow-[0_20px_50px_rgba(147,51,234,0.3)] transition-all hover:scale-105 active:scale-95"
+                  className="h-14 px-8 text-xs btn-premium shadow-[0_20px_50px_rgba(147,51,234,0.3)] transition-all hover:scale-105 active:scale-95"
                 >
                   🎤 Start Mock Interview <Zap className="ml-3 w-4 h-4 fill-current" />
                 </Button>
@@ -365,7 +392,7 @@ export default function LandingPage() {
           </div>
 
           <div className="grid md:grid-cols-3 gap-8">
-            {TESTIMONIALS.map((t, i) => (
+            {allTestimonials.map((t, i) => (
               <motion.div
                 key={i}
                 initial={{ opacity: 0, y: 30 }}
@@ -389,7 +416,7 @@ export default function LandingPage() {
                     </div>
                     <div>
                       <p className="text-sm font-bold text-white uppercase tracking-widest">{t.name}</p>
-                      <p className="text-[10px] text-accent font-bold uppercase tracking-widest">{t.role} @ {t.company}</p>
+                      <p className="text-[10px] text-accent font-bold uppercase tracking-widest">{t.role} {t.company ? `@ ${t.company}` : ''}</p>
                     </div>
                   </div>
                 </Card>

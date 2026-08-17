@@ -8,5 +8,11 @@ service cloud.firestore {
         allow read, write: if request.auth != null && request.auth.uid == userId;
       }
     }
+    
+    match /userFeedback/{feedbackId} {
+      allow read: if resource.data.status == 'approved' && resource.data.consent == true;
+      allow create: if request.auth != null && request.resource.data.userId == request.auth.uid && request.resource.data.status == 'pending';
+      allow update, delete: if request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'founder';
+    }
   }
 }
