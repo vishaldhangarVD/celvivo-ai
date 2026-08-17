@@ -1,6 +1,6 @@
 'use server';
 /**
- * @fileOverview Nexvoro AI Master Aptitude Generator v25.0.
+ * @fileOverview Nexvoro AI Master Aptitude Generator v26.0.
  * Dynamically synthesizes high-fidelity logic nodes using Google Gemini.
  * Implements a PROGRAMMATIC QUALITY GATE: NO AMBIGUITY / NO UNSOLVABLE QUESTIONS.
  * Includes a verified 30-node professional-grade fallback bank.
@@ -14,8 +14,8 @@ const AptitudeQuestionSchema = z.object({
   question: z.string().describe("The text of the question, including any data tables or scenarios."),
   options: z.array(z.string()).length(4).describe("Exactly four unique multiple choice options."),
   correctOptionIndex: z.number().min(0).max(3).describe("Zero-based index of the correct option."),
-  category: z.enum(['Quantitative Aptitude', 'Logical Reasoning', 'English Communication', 'Analytical Reasoning', 'Critical Thinking', 'Pattern Recognition', 'Data Interpretation', 'CS Aptitude']),
-  difficulty: z.enum(['Easy', 'Medium', 'Hard']),
+  category: z.string().describe("The logic category."),
+  difficulty: z.string().describe("The difficulty level."),
   explanation: z.string().optional().describe("Brief logical explanation."),
 });
 
@@ -29,56 +29,99 @@ const AptitudeInputSchema = z.object({
   usedQuestionIds: z.array(z.string()).optional().describe("List of question IDs already used in previous sessions to prevent repeats."),
 });
 
+// Relaxed schema for initial LLM parsing to avoid brittle Genkit errors
 const AptitudeOutputSchema = z.object({
-  questions: z.array(AptitudeQuestionSchema).length(20),
+  questions: z.array(AptitudeQuestionSchema),
 });
 
 /**
  * Programmatic Rejection Criteria for Ambiguous or Trivial Logic
- * These concepts frequently produce unsolvable or too-basic questions.
  */
 const FORBIDDEN_CONCEPTS = [
   "velocity doubles",
   "growth doubles",
   "doubles every",
   "triples every",
-  "25% complete", // Rejected: Often associated with trivial work-rate problems
-  "percentage completion", // Rejected: Usually too basic
+  "25% complete", 
+  "percentage completion",
   "missing information",
 ];
 
+const VALID_CATEGORIES = [
+  'Quantitative Aptitude', 
+  'Logical Reasoning', 
+  'English Communication', 
+  'Analytical Reasoning', 
+  'Critical Thinking', 
+  'Pattern Recognition', 
+  'Data Interpretation', 
+  'CS Aptitude'
+];
+
+const CATEGORY_NORMALIZATION: Record<string, string> = {
+  "Verbal Ability": "English Communication",
+  "Verbal Reasoning": "English Communication",
+  "Verbal": "English Communication",
+  "Problem Solving": "Analytical Reasoning",
+  "Critical Reasoning": "Logical Reasoning",
+};
+
 /**
  * Validates a single question node for logical, structural, and complexity integrity.
- * Internal helper: Not exported to avoid Next.js Server Action build errors for sync functions.
  */
-function validateAptitudeQuestion(q: AptitudeQuestion, existingTexts?: Set<string>): { valid: boolean; reason?: string } {
+function validateAptitudeQuestion(q: any, existingTexts?: Set<string>): { valid: boolean; reason?: string; normalized?: AptitudeQuestion } {
   if (!q.question || q.question.trim().length < 15) return { valid: false, reason: "Question text too short or empty." };
   if (!q.options || q.options.length !== 4) return { valid: false, reason: "Invalid options count." };
   
   // Unique options check
-  const uniqueOpts = new Set(q.options.map(o => o.trim().toLowerCase()));
+  const uniqueOpts = new Set(q.options.map((o: any) => String(o).trim().toLowerCase()));
   if (uniqueOpts.size !== 4) return { valid: false, reason: "Duplicate options detected." };
 
   // Answer index check
   if (q.correctOptionIndex < 0 || q.correctOptionIndex > 3) return { valid: false, reason: "Correct index out of bounds." };
-  if (!q.options[q.correctOptionIndex] || q.options[q.correctOptionIndex].trim() === "") return { valid: false, reason: "Correct index points to empty option." };
+  if (!q.options[q.correctOptionIndex] || String(q.options[q.correctOptionIndex]).trim() === "") return { valid: false, reason: "Correct index points to empty option." };
 
-  // Forbidden concept check (Hard Rejection for known problematic or trivial AI hallucinations)
+  // Category Normalization
+  let cat = q.category;
+  if (CATEGORY_NORMALIZATION[cat]) cat = CATEGORY_NORMALIZATION[cat];
+  if (!VALID_CATEGORIES.includes(cat)) {
+    // Attempt fallback mapping
+    const closest = VALID_CATEGORIES.find(v => cat.toLowerCase().includes(v.toLowerCase().split(' ')[0]));
+    if (closest) cat = closest;
+    else return { valid: false, reason: `Invalid category: ${cat}` };
+  }
+
+  // Difficulty Normalization
+  let diff = q.difficulty;
+  if (typeof diff === 'string') {
+    diff = diff.charAt(0).toUpperCase() + diff.slice(1).toLowerCase();
+  }
+  if (!['Easy', 'Medium', 'Hard'].includes(diff)) diff = "Medium";
+
+  // Forbidden concept check (Hard Rejection)
   const normalizedText = q.question.toLowerCase();
   for (const concept of FORBIDDEN_CONCEPTS) {
     if (normalizedText.includes(concept)) {
-      return { valid: false, reason: `Question contains forbidden or trivial pattern: ${concept}` };
+      return { valid: false, reason: `Question contains forbidden pattern: ${concept}` };
     }
   }
 
-  // Duplicate question check (within the same set)
+  // Duplicate question check
   if (existingTexts) {
     const normalizedQuestion = normalizedText.replace(/[^\w\s]/g, "").replace(/\s+/g, " ").trim();
-    if (existingTexts.has(normalizedQuestion)) return { valid: false, reason: "Duplicate question content detected in this set." };
+    if (existingTexts.has(normalizedQuestion)) return { valid: false, reason: "Duplicate question content detected." };
     existingTexts.add(normalizedQuestion);
   }
 
-  return { valid: true };
+  return { 
+    valid: true, 
+    normalized: {
+      ...q,
+      category: cat,
+      difficulty: diff,
+      id: q.id || Math.random().toString(36).substring(2, 12)
+    } 
+  };
 }
 
 const FALLBACK_BANK: AptitudeQuestion[] = [
@@ -125,42 +168,27 @@ const prompt = ai.definePrompt({
   prompt: `You are an elite Recruitment Architect at {{{company}}}. 
 Generate a professional 20-question Aptitude Assessment for a {{{role}}} candidate ({{{experienceLevel}}}).
 
-### NEURAL QUALITY GATE PROTOCOL (CRITICAL):
-For EVERY question you generate, you must follow this internal protocol:
-1. **SOLVE**: Solve the question yourself from only the information provided in your prompt.
-2. **VERIFY**: Calculate the final answer. If it requires information not in the text, REJECT and regenerate.
-3. **MAPPING**: Compare your answer against all 4 options. Confirm exactly ONE option is correct.
-4. **INDEX**: Ensure 'correctOptionIndex' points to that exact correct option.
-5. **NON-TRIVIAL**: Reject any question solvable by one trivial arithmetic operation (e.g., simple division/percentage). Require multi-step reasoning.
-
-### HARD REJECTION RULES (MANDATORY):
-Reject and replace any question that:
-- Is solvable in one simple step (e.g., "Total / rate").
-- Uses the word "velocity doubles" or "growth doubles" without a clear starting rate.
-- Uses exponential work-rate models that are ambiguous.
-- Has ambiguous wording or multiple interpretations.
-- Requires real-world data not explicitly provided in the question.
-- Has more than one plausible correct answer.
-
-### CURRICULUM ARCHITECTURE (Exactly 20 Nodes):
-- Quantitative Aptitude (5): Ratios, multi-step percentages, probability, time/work with changing rates, profit/loss.
+### CATEGORY DISTRIBUTION (Strictly 20 Nodes):
+- Quantitative Aptitude (5): Multi-step percentages, probability, time/work with changing rates, profit/loss.
 - Logical Reasoning (4): Syllogisms, arrangements, conditional deduction.
 - English Communication (3): Contextual vocabulary, sentence logic, grammar inference.
-- Data Interpretation (3): Provide a structured dataset and ask a multi-step calculation or comparison.
-- Analytical Reasoning (3): Resource allocation, optimization, or scheduling under constraints.
-- CS Aptitude (2): Data structures, Big-O, system fundamentals.
+- Data Interpretation (3): Multi-step calculation based on a provided small dataset.
+- Analytical Reasoning (3): Resource allocation, optimization, or scheduling.
+- CS Aptitude (2): Data structures, Big-O, networking.
+
+### NEURAL QUALITY GATE PROTOCOL:
+1. **SOLVE & VERIFY**: You MUST solve every question yourself. Ensure exactly ONE option is correct.
+2. **NON-TRIVIAL**: Reject any question solvable by one simple arithmetic operation (e.g., direct division). Require multi-step reasoning.
+3. **NO AMBIGUITY**: Ensure all premises are provided. No unstated assumptions.
+4. **UNIQUE**: Do not repeat questions or patterns. Avoid IDs: {{{usedQuestionIds}}}.
 
 ### DIFFICULTY PROGRESSION:
 - Q1-Q5: Easy
-- Q6-Q12: Medium (Min 2 reasoning steps)
-- Q13-Q17: Medium/Hard (Min 3 reasoning steps)
-- Q18-Q20: Hard (Complex multi-dimensional deduction)
+- Q6-Q12: Medium
+- Q13-Q17: Medium/Hard
+- Q18-Q20: Hard
 
-### UNIQUE IDENTITY PROTOCOL:
-- DO NOT use any questions that overlap with these IDs: {{{usedQuestionIds}}}
-- Every question MUST have a unique 10-character alphanumeric ID.
-
-Return ONLY a valid JSON object.`,
+Return ONLY valid JSON.`,
 });
 
 const aptitudeFlow = ai.defineFlow(
@@ -175,42 +203,39 @@ const aptitudeFlow = ai.defineFlow(
 
     while (attempts < MAX_RETRIES) {
       try {
-        console.log(`[Aptitude Flow] Attempt ${attempts + 1} to generate validated questions.`);
+        console.log(`[Aptitude Flow] Attempt ${attempts + 1}: Synthesizing dynamic nodes for ${input.company}`);
         const { output } = await runWithResilience(prompt, input);
         
-        if (!output || !output.questions || output.questions.length !== 20) {
-          throw new Error("Invalid output length or null response from AI.");
+        if (!output || !output.questions || output.questions.length === 0) {
+          throw new Error("Empty logic payload received.");
         }
 
         const validQuestions: AptitudeQuestion[] = [];
         const questionTexts = new Set<string>();
 
-        for (const q of output.questions) {
-          const validation = validateAptitudeQuestion(q, questionTexts);
-          if (validation.valid) {
-            validQuestions.push(q);
-          } else {
-            console.warn(`[Aptitude Flow] Question rejected: ${validation.reason}`);
+        for (const rawQ of output.questions) {
+          const validation = validateAptitudeQuestion(rawQ, questionTexts);
+          if (validation.valid && validation.normalized) {
+            validQuestions.push(validation.normalized);
           }
         }
 
-        if (validQuestions.length === 20) {
-          console.log("[Aptitude Flow] 20/20 questions passed the programmatic Quality Gate.");
-          return { questions: validQuestions };
+        if (validQuestions.length >= 20) {
+          console.log(`[Aptitude Flow] SUCCESS. Source: GEMINI. Count: ${validQuestions.length}`);
+          return { questions: validQuestions.slice(0, 20) };
         }
 
-        console.warn(`[Aptitude Flow] Only ${validQuestions.length}/20 passed. Retrying set...`);
+        console.warn(`[Aptitude Flow] Partial success (${validQuestions.length}/20). Retrying...`);
         attempts++;
       } catch (error) {
-        console.error(`[Aptitude Flow] Neural Error on attempt ${attempts + 1}:`, error);
+        console.error(`[Aptitude Flow] Neural sync fault on attempt ${attempts + 1}:`, error);
         attempts++;
       }
     }
 
-    console.error("[Aptitude Flow] Failed to generate a fully validated set. Deploying verified fallback bank.");
+    console.error("[Aptitude Flow] Max retries exhausted. Source: FALLBACK.");
     const usedIds = new Set(input.usedQuestionIds || []);
-    const availableFallback = FALLBACK_BANK.filter(q => !usedIds.has(q.id));
-    const finalBank = availableFallback.length >= 20 ? availableFallback.slice(0, 20) : FALLBACK_BANK.slice(0, 20);
-    return { questions: finalBank };
+    const finalBank = FALLBACK_BANK.filter(q => !usedIds.has(q.id)).slice(0, 20);
+    return { questions: finalBank.length === 20 ? finalBank : FALLBACK_BANK.slice(0, 20) };
   }
 );

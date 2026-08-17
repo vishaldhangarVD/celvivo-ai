@@ -11,7 +11,6 @@ import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { 
   Command, 
-  Clock, 
   CheckCircle2, 
   ShieldCheck, 
   ChevronRight, 
@@ -37,48 +36,48 @@ import { evaluateAptitude } from '@/ai/flows/ai-aptitude-evaluator';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 
-/**
- * Programmatic Rejection Criteria for Ambiguous or Trivial Logic
- * Local copy to avoid Server Action build errors when importing from 'use server' file.
- */
 const FORBIDDEN_CONCEPTS = [
   "velocity doubles",
   "growth doubles",
   "doubles every",
   "triples every",
-  "25% complete", // Rejected: Often associated with trivial work-rate problems
-  "percentage completion", // Rejected: Usually too basic
+  "25% complete", 
+  "percentage completion",
   "missing information",
 ];
 
-/**
- * Validates a single question node for logical, structural, and complexity integrity.
- * Client-side implementation to allow synchronous validation during load.
- */
-function validateAptitudeQuestion(q: AptitudeQuestion, existingTexts?: Set<string>): { valid: boolean; reason?: string } {
-  if (!q.question || q.question.trim().length < 15) return { valid: false, reason: "Question text too short or empty." };
-  if (!q.options || q.options.length !== 4) return { valid: false, reason: "Invalid options count." };
-  
-  const uniqueOpts = new Set(q.options.map(o => o.trim().toLowerCase()));
-  if (uniqueOpts.size !== 4) return { valid: false, reason: "Duplicate options detected." };
+const VALID_CATEGORIES = [
+  'Quantitative Aptitude', 
+  'Logical Reasoning', 
+  'English Communication', 
+  'Analytical Reasoning', 
+  'Critical Thinking', 
+  'Pattern Recognition', 
+  'Data Interpretation', 
+  'CS Aptitude'
+];
 
-  if (q.correctOptionIndex < 0 || q.correctOptionIndex > 3) return { valid: false, reason: "Correct index out of bounds." };
-  if (!q.options[q.correctOptionIndex] || q.options[q.correctOptionIndex].trim() === "") return { valid: false, reason: "Correct index points to empty option." };
+/**
+ * Client-side validation for Firestore restored data and incoming sets.
+ */
+function validateAptitudeQuestion(q: any): boolean {
+  if (!q.question || q.question.trim().length < 15) return false;
+  if (!q.options || q.options.length !== 4) return false;
+  
+  const uniqueOpts = new Set(q.options.map((o: any) => String(o).trim().toLowerCase()));
+  if (uniqueOpts.size !== 4) return false;
+
+  if (q.correctOptionIndex < 0 || q.correctOptionIndex > 3) return false;
+  if (!q.options[q.correctOptionIndex]) return false;
+
+  if (!VALID_CATEGORIES.includes(q.category)) return false;
 
   const normalizedText = q.question.toLowerCase();
   for (const concept of FORBIDDEN_CONCEPTS) {
-    if (normalizedText.includes(concept)) {
-      return { valid: false, reason: `Question contains forbidden or trivial pattern: ${concept}` };
-    }
+    if (normalizedText.includes(concept)) return false;
   }
 
-  if (existingTexts) {
-    const normalizedQuestion = normalizedText.replace(/[^\w\s]/g, "").replace(/\s+/g, " ").trim();
-    if (existingTexts.has(normalizedQuestion)) return { valid: false, reason: "Duplicate question content detected in this set." };
-    existingTexts.add(normalizedQuestion);
-  }
-
-  return { valid: true };
+  return true;
 }
 
 export default function AptitudeEnginePage() {
@@ -109,17 +108,15 @@ export default function AptitudeEnginePage() {
 
   const { data: journey, loading: journeyLoading } = useDoc(journeyRef);
 
-  // Helper to validate a set of questions retrieved from Firestore
   const validateQuestionSet = (qs: any[]): boolean => {
     if (!qs || qs.length !== 20) return false;
-    const texts = new Set<string>();
-    return qs.every(q => validateAptitudeQuestion(q, texts).valid);
+    return qs.every(q => validateAptitudeQuestion(q));
   };
 
-  // LIFECYCLE: Initialization & Persistence
   useEffect(() => {
     async function init() {
       if (!db || !user?.uid || !journeyRef || initGuard.current) return;
+      initGuard.current = true;
       
       const snap = await getDoc(journeyRef);
       if (!snap.exists()) {
@@ -128,40 +125,31 @@ export default function AptitudeEnginePage() {
       }
       
       const data = snap.data();
-      
-      // RESTORE LOGIC: Validate before trusting Firestore
       const existingQuestions = data.aptitudeQuestions || [];
       const isValidSet = validateQuestionSet(existingQuestions);
 
       if (isValidSet && !data.aptitudeReport && data.aptitudeStatus !== 'completed') {
-        console.log("[Aptitude] Restoring validated session from Firestore.");
         setQuestions(existingQuestions);
         setAnswers(data.aptitudeAnswers || {});
         setCurrentIdx(data.aptitudeCurrentIndex || 0);
         setTimeLeft(data.aptitudeTimeLeft ?? 45 * 60);
         setIsInitializing(false);
-        initGuard.current = true;
         return;
       }
 
-      // COMPLETED LOGIC
       if (data.aptitudeReport || data.aptitudeStatus === 'completed') {
         setQuestions(existingQuestions);
         setAnswers(data.aptitudeAnswers || {});
         setResult(data.aptitudeReport);
         setIsInitializing(false);
-        initGuard.current = true;
         return;
       }
 
-      // GENERATION LOGIC: Trigger if no valid set exists or session is new
-      console.log("[Aptitude] Initializing fresh synthesis flow.");
-      initGuard.current = true;
+      // Generation Path
       try {
         const userRef = doc(db, 'users', user.uid);
         const userSnap = await getDoc(userRef);
-        const userData = userSnap.data();
-        const usedIds = Array.isArray(userData?.aptitudeQuestionHistory) ? userData.aptitudeQuestionHistory : [];
+        const usedIds = userSnap.data()?.aptitudeQuestionHistory || [];
 
         const response = await generateAptitudeTest({
           role: data.role,
@@ -181,16 +169,10 @@ export default function AptitudeEnginePage() {
           updatedAt: serverTimestamp()
         });
 
-        const newIds = freshQuestions.map(q => q.id);
-        await updateDoc(userRef, {
-          aptitudeQuestionHistory: Array.from(new Set([...usedIds, ...newIds])).slice(-200)
-        });
-
         setQuestions(freshQuestions);
         setIsInitializing(false);
-
       } catch (e: any) {
-        console.error("[Aptitude] Initialization fault:", e);
+        console.error("[Aptitude] Init Error:", e);
         toast({ variant: "destructive", title: "Synthesis Error", description: "Assessment calibration failure." });
         setIsInitializing(false);
       }
@@ -201,7 +183,6 @@ export default function AptitudeEnginePage() {
     }
   }, [db, user?.uid, journey, journeyLoading, journeyRef, router, toast]);
 
-  // SCORING: Deterministic Index-Based Submission
   const handleSubmit = useCallback(async () => {
     if (submissionGuard.current || isEvaluating || !journey || !journeyRef || result) return;
     submissionGuard.current = true;
@@ -212,7 +193,6 @@ export default function AptitudeEnginePage() {
       const userSelectedIdx = answers[idx];
       const isCorrect = userSelectedIdx === q.correctOptionIndex;
       if (isCorrect) correctCount++;
-      
       return {
         question: q.question,
         category: q.category,
@@ -224,8 +204,8 @@ export default function AptitudeEnginePage() {
     });
 
     const finalNumericScore = Math.round((correctCount / questions.length) * 100);
-
     const steps = ["Auditing Quantitative Accuracy...", "Mapping Logical Consistency...", "Verbal Capability Synthesis...", "Finalizing Performance Dossier..."];
+    
     for (let i = 0; i < steps.length; i++) {
       setEvaluationStep(i);
       await new Promise(r => setTimeout(r, 1000));
@@ -251,7 +231,6 @@ export default function AptitudeEnginePage() {
       };
 
       setResult(finalReport);
-      
       await updateDoc(journeyRef, {
         aptitudeReport: finalReport,
         aptitudeStatus: "completed",
@@ -259,7 +238,6 @@ export default function AptitudeEnginePage() {
         step: finalReport.status === 'Pass' ? 4 : 3,
         updatedAt: serverTimestamp()
       });
-
     } catch (e) {
       console.error("[Aptitude] Submission error:", e);
       toast({ variant: "destructive", title: "Audit Protocol Fault" });
@@ -272,10 +250,7 @@ export default function AptitudeEnginePage() {
     if (!journeyRef || result) return;
     const newAnswers = { ...answers, [currentIdx]: optIdx };
     setAnswers(newAnswers);
-    updateDoc(journeyRef, { 
-      aptitudeAnswers: newAnswers,
-      updatedAt: serverTimestamp() 
-    });
+    updateDoc(journeyRef, { aptitudeAnswers: newAnswers });
   };
 
   const handleNav = (newIdx: number) => {
@@ -288,21 +263,14 @@ export default function AptitudeEnginePage() {
     if (!journeyRef || !user) return;
     setIsInitializing(true);
     initGuard.current = false;
-    try {
-      await updateDoc(journeyRef, {
-        aptitudeQuestions: null,
-        aptitudeAnswers: null,
-        aptitudeCurrentIndex: 0,
-        aptitudeTimeLeft: 45 * 60,
-        aptitudeReport: null,
-        aptitudeStatus: "not_started",
-        updatedAt: serverTimestamp()
-      });
-      window.location.reload();
-    } catch (e) {
-      console.error(e);
-      setIsInitializing(false);
-    }
+    await updateDoc(journeyRef, {
+      aptitudeQuestions: null,
+      aptitudeAnswers: null,
+      aptitudeCurrentIndex: 0,
+      aptitudeStatus: "not_started",
+      aptitudeReport: null
+    });
+    window.location.reload();
   };
 
   useEffect(() => {
@@ -350,7 +318,7 @@ export default function AptitudeEnginePage() {
        <div className="h-screen bg-[#050816] flex flex-col items-center justify-center p-12 text-center">
          <XCircle className="w-16 h-16 text-red-500 mb-6" />
          <h2 className="text-2xl font-bold text-white mb-2">Protocol Desynchronization</h2>
-         <p className="text-muted-foreground mb-8 text-sm max-w-md">System node failed to load logic nodes. Please verify your connection and restart the session.</p>
+         <p className="text-muted-foreground mb-8 text-sm max-w-md">System failed to load questions. Please restart the session.</p>
          <Button onClick={handleRetry} className="btn-premium px-12 h-14 uppercase tracking-widest text-xs">Restart Session</Button>
        </div>
      );
@@ -489,7 +457,7 @@ export default function AptitudeEnginePage() {
                   {[
                     { label: "Correct Nodes", val: result.correctCount, icon: CheckCircle2, color: "text-green-400" },
                     { label: "Failed Probes", val: result.wrongCount, icon: XCircle, color: "text-red-400" },
-                    { label: "Total Probes", val: questions.length, icon: Clock, color: "text-purple-400" },
+                    { label: "Total Probes", val: questions.length, icon: Timer, color: "text-purple-400" },
                     { label: "Verification", val: result.status, icon: ShieldCheck, color: "text-accent" }
                   ].map((s, i) => (
                     <div key={i} className="space-y-3">
