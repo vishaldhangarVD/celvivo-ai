@@ -1,6 +1,6 @@
 'use server';
 /**
- * @fileOverview Nexvoro AI Master Aptitude Generator v28.0.
+ * @fileOverview Nexvoro AI Master Aptitude Generator v30.0.
  * Dynamically synthesizes high-fidelity logic nodes using Google Gemini.
  * Implements persistent history awareness and semantic duplicate prevention.
  */

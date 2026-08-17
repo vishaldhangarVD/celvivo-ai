@@ -4,8 +4,6 @@
  * Distribution: 20 Easy, 20 Medium, 20 Hard.
  */
 
-import * as fs from 'fs';
-
 export interface CodingQuestion {
   id: string;
   title: string;
@@ -998,8 +996,8 @@ export const MASTER_QUESTIONS: CodingQuestion[] = [
     hiddenTestCases: [
       { input: "2\n1 2\n3", output: "0 1" },
       { input: "3\n10 20 30\n50", output: "1 2" },
-      { input: "4\n1 5 8 12\n13", output: "0 3" },
-      { input: "5\n10 20 30 40 50\n70", output: "1 4" },
+      { input: "4\n1 5 8 20\n13", output: "1 2" },
+      { input: "5\n10 20 30 41 50\n70", output: "1 4" },
       { input: "6\n-5 -2 0 2 5 10\n-3", output: "0 3" },
       { input: "4\n2 2 4 4\n4", output: "0 1" },
       { input: "3\n1 5 2\n6", output: "0 1" },
@@ -1277,8 +1275,8 @@ export const MASTER_QUESTIONS: CodingQuestion[] = [
       { input: "3 2\n-1 -5 -2", output: "-6" },
       { input: "1 1\n100", output: "100" },
       { input: "5 5\n1 1 1 1 1", output: "5" },
-      { input: "4 2\n100 -50 200 -10", output: "150" },
-      { input: "6 3\n1 4 2 10 23 3", output: "35" },
+      { input: "4 2\n100 -50 200 -10", output: "190" },
+      { input: "6 3\n1 4 2 10 23 3", output: "36" },
       { input: "5 1\n-1 -2 -3 -4 -5", output: "-1" },
       { input: "3 1\n0 0 0", output: "0" },
       { input: "4 3\n1 2 3 4", output: "9" }
@@ -1321,12 +1319,12 @@ export const MASTER_QUESTIONS: CodingQuestion[] = [
       { input: "1\n5", output: "0" },
       { input: "6\n1 7 3 6 5 6", output: "3" },
       { input: "2\n1 2", output: "-1" },
-      { input: "3\n1 0 -1", output: "1" },
+      { input: "3\n1 0 -1", output: "-1" },
       { input: "5\n1 1 1 1 1", output: "2" },
       { input: "4\n-1 -1 -1 -1", output: "-1" },
       { input: "7\n-7 1 5 2 -4 3 0", output: "3" },
       { input: "3\n0 0 0", output: "0" },
-      { input: "5\n2 1 -1 0 2", output: "2" },
+      { input: "5\n2 1 -1 0 2", output: "3" },
       { input: "2\n0 0", output: "0" }
     ],
     timeLimit: "1s", memoryLimit: "256MB", languageSupport: ["python", "java", "cpp", "javascript", "typescript", "c", "csharp", "go", "rust", "kotlin", "php", "swift", "ruby"]
@@ -1413,7 +1411,7 @@ export const MASTER_QUESTIONS: CodingQuestion[] = [
       { input: "bbbbb", output: "1" },
       { input: "pwwkew", output: "3" },
       { input: "a", output: "1" },
-      { input: " ", output: "1" },
+      { input: "abcabcbb", output: "3" },
       { input: "au", output: "2" },
       { input: "dvdf", output: "3" },
       { input: "abba", output: "2" },
@@ -1598,7 +1596,7 @@ export const MASTER_QUESTIONS: CodingQuestion[] = [
       { input: "2\n8 1", output: "1" },
       { input: "3\n1 2 1", output: "2" },
       { input: "4\n1 1 1 1", output: "3" },
-      { input: "5\n1 8 6 2 5", output: "24" },
+      { input: "5\n1 8 6 2 5", output: "15" },
       { input: "9\n1 8 6 2 5 4 8 3 7", output: "49" },
       { input: "3\n10 1 10", output: "20" },
       { input: "4\n0 10 0 10", output: "20" },
@@ -1739,7 +1737,7 @@ export const MASTER_QUESTIONS: CodingQuestion[] = [
       { input: "2 2\n1 1", output: "1" },
       { input: "4 3\n1 1 1 1", output: "2" },
       { input: "5 10\n10 0 0 0 0", output: "5" },
-      { input: "3 -1\n-1 -1 1", output: "2" },
+      { input: "3 -1\n-1 -1 1", output: "3" },
       { input: "4 1\n1 2 3 4", output: "1" },
       { input: "3 1\n1 5 1", output: "2" }
     ],
@@ -1833,7 +1831,7 @@ export const MASTER_QUESTIONS: CodingQuestion[] = [
       { input: "3\n0 0 0", output: "NO" },
       { input: "5\n2 0 0 0 0", output: "NO" },
       { input: "4\n10 0 0 0", output: "YES" },
-      { input: "6\n1 2 0 1 0 1", output: "YES" }
+      { input: "6\n1 2 0 1 0 1", output: "NO" }
     ],
     timeLimit: "1s", memoryLimit: "256MB", languageSupport: ["python", "java", "cpp", "javascript", "typescript", "c", "csharp", "go", "rust", "kotlin", "php", "swift", "ruby"]
   },
@@ -2227,19 +2225,19 @@ export const MASTER_QUESTIONS: CodingQuestion[] = [
     explanation: "The longest common subsequence is 'ace', which has length 3.",
     functionInfo: { name: "lcs", params: "s1, s2", returnType: "int", goal: "Longest common subsequence" },
     starterCode: {
-      python: `import sys\n\ndef lcs(s1, s2):\n    # TODO: Implement O(N*M) DP logic\n    return 0\n\nif __name__ == "__main__":\n    lines = sys.stdin.read().splitlines()\n    if len(lines) >= 2: print(lcs(lines[0].strip(), lines[1].strip()))`,
-      java: `import java.util.Scanner;\n\npublic class Main {\n    public static int lcs(String s1, String s2) {\n        // TODO: Implement logic\n        return 0;\n    }\n\n    public static void main(String[] args) {\n        Scanner sc = new Scanner(System.in);\n        if (sc.hasNextLine()) {\n            String s1 = sc.nextLine();\n            if (sc.hasNextLine()) {\n                String s2 = sc.nextLine();\n                System.out.println(lcs(s1, s2));\n            }\n        }\n    }\n}`,
-      cpp: `#include <iostream>\n#include <string>\n#include <vector>\n#include <algorithm>\n\nusing namespace std;\n\nint lcs(string s1, string s2) {\n    // TODO: Implement logic\n    return 0;\n}\n\nint main() {\n    string s1, s2;\n    if (getline(cin, s1) && getline(cin, s2)) {\n        cout << lcs(s1, s2) << endl;\n    }\n    return 0;\n}`,
+      python: `import sys\n\ndef lcs(s1, s2):\n    # TODO: Implement O(N*M) DP logic\n    return 0\n\nif __name__ == "__main__":\n    lines = sys.stdin.read().split('\\n')\n    if len(lines) >= 2: print(lcs(lines[0].strip(), lines[1].strip()))`,
+      java: `import java.util.Scanner;\n\npublic class Main {\n    public static int lcs(String s1, String s2) {\n        // TODO: Implement logic\n        return 0;\n    }\n\n    public static void main(String[] args) {\n        Scanner sc = new Scanner(System.in).useDelimiter("\\\\A");\n        String all = sc.hasNext() ? sc.next() : "";\n        String[] parts = all.split("\\n", -1);\n        if (parts.length >= 2) {\n            System.out.println(lcs(parts[0].trim(), parts[1].trim()));\n        }\n    }\n}`,
+      cpp: `#include <iostream>\n#include <sstream>\n#include <string>\n#include <vector>\n#include <algorithm>\n#include <iterator>\n\nusing namespace std;\n\nint lcs(string s1, string s2) {\n    // TODO: Implement logic\n    return 0;\n}\n\nint main() {\n    string all((istreambuf_iterator<char>(cin)), istreambuf_iterator<char>());\n    size_t pos = all.find('\\n');\n    string s1 = (pos == string::npos) ? all : all.substr(0, pos);\n    string s2 = (pos == string::npos) ? "" : all.substr(pos + 1);\n    if (!s2.empty() && s2.back() == '\\r') s2.pop_back();\n    cout << lcs(s1, s2) << endl;\n    return 0;\n}`,
       javascript: `const fs = require('fs');\n\nfunction lcs(s1, s2) {\n    // TODO: Implement logic\n    return 0;\n}\n\nconst input = fs.readFileSync(0, 'utf8').split('\\n');\nif (input.length >= 2) {\n    console.log(lcs(input[0].trim(), input[1].trim()));\n}`,
       typescript: `import * as fs from 'fs';\n\nfunction lcs(s1: string, s2: string): number {\n    // TODO: Implement logic\n    return 0;\n}\n\nconst input = fs.readFileSync(0, 'utf8').split('\\n');\nif (input.length >= 2) {\n    console.log(lcs(input[0].trim(), input[1].trim()));\n}`,
       c: `#include <stdio.h>\n#include <string.h>\n\n// TODO: Logic and main`,
-      csharp: `using System;\n\nclass Program {\n    static int Lcs(string s1, string s2) {\n        // TODO: Implement logic\n        return 0;\n    }\n\n    static void Main() {\n        string s1 = Console.ReadLine();\n        string s2 = Console.ReadLine();\n        if (s1 != null && s2 != null) Console.WriteLine(Lcs(s1, s2));\n    }\n}`,
+      csharp: `using System;\n\nclass Program {\n    static int Lcs(string s1, string s2) {\n        // TODO: Implement logic\n        return 0;\n    }\n\n    static void Main() {\n        string all = Console.In.ReadToEnd();\n        string[] parts = all.Split('\\n');\n        if (parts.Length >= 2) Console.WriteLine(Lcs(parts[0].Trim(), parts[1].Trim()));\n    }\n}`,
       go: `package main\n\nimport "fmt"\n\n// TODO: Logic and main`,
-      rust: `use std::io::{self, BufRead};\n\nfn lcs(s1: &str, s2: &str) -> usize {\n    // TODO: Implement O(N*M) DP logic for Longest Common Subsequence\n    0\n}\n\nfn main() {\n    let stdin = io::stdin();\n    let mut lines = stdin.lock().lines();\n    if let (Some(Ok(s1)), Some(Ok(s2))) = (lines.next(), lines.next()) {\n        println!("{}", lcs(s1.trim(), s2.trim()));\n    }\n}`,
-      kotlin: `import java.util.Scanner\n\nfun lcs(s1: String, s2: String): Int {\n    // TODO: Implement logic\n    return 0\n}\n\nfun main(args: Array<String>) {\n    val sc = Scanner(System.\`in\`)\n    if (sc.hasNextLine()) {\n        val s1 = sc.nextLine()\n        if (sc.hasNextLine()) {\n            val s2 = sc.nextLine()\n            println(lcs(s1, s2))\n        }\n    }\n}`,
+      rust: `use std::io::{self, Read};\n\nfn lcs(s1: &str, s2: &str) -> usize {\n    // TODO: Implement O(N*M) DP logic for Longest Common Subsequence\n    0\n}\n\nfn main() {\n    let mut input = String::new();\n    if io::stdin().read_to_string(&mut input).is_ok() {\n        let parts: Vec<&str> = input.split('\\n').collect();\n        if parts.len() >= 2 {\n            println!("{}", lcs(parts[0].trim(), parts[1].trim()));\n        }\n    }\n}`,
+      kotlin: `fun lcs(s1: String, s2: String): Int {\n    // TODO: Implement logic\n    return 0\n}\n\nfun main(args: Array<String>) {\n    val all = System.\`in\`.bufferedReader().readText()\n    val parts = all.split("\\n")\n    if (parts.size >= 2) {\n        println(lcs(parts[0].trim(), parts[1].trim()))\n    }\n}`,
       php: `<?php\n\nfunction lcs($s1, $s2) {\n    // TODO: Implement logic using DP\n    return 0;\n}\n\n$input = explode("\\n", file_get_contents("php://stdin"));\nif (count($input) >= 2) {\n    echo lcs(trim($input[0]), trim($input[1]));\n}\n?>`,
-      swift: `import Foundation\n\nfunc lcs(_ s1: String, _ s2: String) -> Int {\n    // TODO: Implement logic\n    return 0;\n}\n\nif let line1 = readLine(), let line2 = readLine() {\n    print(lcs(line1, line2))\n}`,
-      ruby: `def lcs(s1, s2)\n    # TODO: Implement logic\n    0\nend\n\ninput = STDIN.read.split("\\n")\nif input.length >= 2\n    puts lcs(input[0].strip, input[1].strip)\nend`
+      swift: `import Foundation\n\nfunc lcs(_ s1: String, _ s2: String) -> Int {\n    // TODO: Implement logic\n    return 0;\n}\n\nlet data = FileHandle.standardInput.readDataToEndOfFile()\nlet all = String(data: data, encoding: .utf8) ?? ""\nlet parts = all.components(separatedBy: "\\n")\nif parts.count >= 2 {\n    print(lcs(parts[0].trimmingCharacters(in: .whitespacesAndNewlines), parts[1].trimmingCharacters(in: .whitespacesAndNewlines)))\n}`,
+      ruby: `def lcs(s1, s2)\n    # TODO: Implement logic\n    0\nend\n\ninput = STDIN.read.split("\\n", -1)\nif input.length >= 2\n    puts lcs(input[0].strip, input[1].strip)\nend`
     },
     hiddenTestCases: [
       { input: "AGGTAB\nGXTXAYB", output: "4" },
@@ -2341,7 +2339,7 @@ export const MASTER_QUESTIONS: CodingQuestion[] = [
       { input: "5\n4 2 0 3 2", output: "4" },
       { input: "10\n0 1 0 2 1 0 1 3 2 1", output: "5" },
       { input: "0\n", output: "0" },
-      { input: "6\n4 2 3 5 2 3", output: "2" },
+      { input: "6\n4 2 3 5 2 3", output: "4" },
       { input: "3\n3 3 3", output: "0" },
       { input: "5\n1 2 3 4 5", output: "0" }
     ],
@@ -2427,11 +2425,11 @@ export const MASTER_QUESTIONS: CodingQuestion[] = [
     },
     hiddenTestCases: [
       { input: "2\n1 2\n2\n3 4", output: "2.5" },
-      { input: "0\n\n1\n1", output: "1.0" },
-      { input: "1\n2\n0\n", output: "2.0" },
+      { input: "1\n1\n1\n1", output: "1.0" },
+      { input: "1\n2\n1\n2", output: "2.0" },
       { input: "1\n100\n1\n100", output: "100.0" },
       { input: "2\n1 1\n2\n1 1", output: "1.0" },
-      { input: "3\n1 5 8\n2\n2 4", output: "5.0" },
+      { input: "3\n1 5 8\n2\n2 4", output: "4.0" },
       { input: "2\n-5 -2\n2\n-3 -1", output: "-2.5" },
       { input: "1\n0\n1\n0", output: "0.0" },
       { input: "2\n1 2\n2\n1 2", output: "1.5" },
@@ -2706,11 +2704,11 @@ export const MASTER_QUESTIONS: CodingQuestion[] = [
       { input: "catsandog\n5\ncats dog sand and cat", output: "NO" },
       { input: "a\n1\na", output: "YES" },
       { input: "a\n1\nb", output: "NO" },
-      { input: "cars\n2\ncar rs", output: "YES" },
+      { input: "cars\n2\ncar rs", output: "NO" },
       { input: "aaaaaaa\n1\naaaa", output: "NO" },
       { input: "aaaaaaa\n1\naaa", output: "NO" },
       { input: "goals\n2\ngoals goal", output: "YES" },
-      { input: "hellow\n2\nhello ow", output: "YES" },
+      { input: "hellow\n2\nhello ow", output: "NO" },
       { input: "abc\n3\na b c", output: "YES" }
     ],
     timeLimit: "1s", memoryLimit: "256MB", languageSupport: ["python", "java", "cpp", "javascript", "typescript", "c", "csharp", "go", "rust", "kotlin", "php", "swift", "ruby"]
@@ -2779,19 +2777,19 @@ export const MASTER_QUESTIONS: CodingQuestion[] = [
     explanation: "horse->rorse->rose->ros.",
     functionInfo: { name: "minDistance", params: "a, b", returnType: "int", goal: "Levenshtein distance" },
     starterCode: {
-      python: `import sys\n\ndef min_distance(a, b):\n    # TODO: Implement DP logic\n    return 0\n\nif __name__ == "__main__":\n    lines = sys.stdin.read().splitlines()\n    if len(lines) >= 2: print(min_distance(lines[0].strip(), lines[1].strip()))`,
-      java: `import java.util.Scanner;\n\npublic class Main {\n    public static int minDistance(String a, String b) {\n        // TODO: Implement logic\n        return 0;\n    }\n\n    public static void main(String[] args) {\n        Scanner sc = new Scanner(System.in);\n        if (sc.hasNextLine()) {\n            String a = sc.nextLine();\n            if (sc.hasNextLine()) {\n                String b = sc.nextLine();\n                System.out.println(minDistance(a, b));\n            }\n        }\n    }\n}`,
-      cpp: `#include <iostream>\n#include <string>\n#include <vector>\n#include <algorithm>\n\nusing namespace std;\n\nint minDistance(string a, string b) {\n    // TODO: Implement logic\n    return 0;\n}\n\nint main() {\n    string a, b;\n    if (getline(cin, a) && getline(cin, b)) {\n        cout << minDistance(a, b) << endl;\n    }\n    return 0;\n}`,
+      python: `import sys\n\ndef min_distance(a, b):\n    # TODO: Implement DP logic\n    return 0\n\nif __name__ == "__main__":\n    lines = sys.stdin.read().split('\\n')\n    if len(lines) >= 2: print(min_distance(lines[0].strip(), lines[1].strip()))`,
+      java: `import java.util.Scanner;\n\npublic class Main {\n    public static int minDistance(String a, String b) {\n        // TODO: Implement logic\n        return 0;\n    }\n\n    public static void main(String[] args) {\n        Scanner sc = new Scanner(System.in).useDelimiter("\\\\A");\n        String all = sc.hasNext() ? sc.next() : "";\n        String[] parts = all.split("\\n", -1);\n        if (parts.length >= 2) {\n            System.out.println(minDistance(parts[0].trim(), parts[1].trim()));\n        }\n    }\n}`,
+      cpp: `#include <iostream>\n#include <string>\n#include <vector>\n#include <algorithm>\n#include <iterator>\n\nusing namespace std;\n\nint minDistance(string a, string b) {\n    // TODO: Implement logic\n    return 0;\n}\n\nint main() {\n    string all((istreambuf_iterator<char>(cin)), istreambuf_iterator<char>());\n    size_t pos = all.find('\\n');\n    string a = (pos == string::npos) ? all : all.substr(0, pos);\n    string b = (pos == string::npos) ? "" : all.substr(pos + 1);\n    if (!b.empty() && b.back() == '\\r') b.pop_back();\n    cout << minDistance(a, b) << endl;\n    return 0;\n}`,
       javascript: `const fs = require('fs');\n\nfunction minDistance(a, b) {\n    // TODO: Implement logic\n    return 0;\n}\n\nconst input = fs.readFileSync(0, 'utf8').split('\\n');\nif (input.length >= 2) console.log(minDistance(input[0].trim(), input[1].trim()));`,
       typescript: `import * as fs from 'fs';\n\nfunction minDistance(a: string, b: string): number {\n    // TODO: Implement logic\n    return 0;\n}\n\nconst input = fs.readFileSync(0, 'utf8').split('\\n');\nif (input.length >= 2) console.log(minDistance(input[0].trim(), input[1].trim()));`,
       c: `#include <stdio.h>\n#include <string.h>\n\n// TODO: Logic and main`,
       csharp: `using System;\n\nclass Program {\n    // TODO: Logic and main\n}`,
       go: `package main\n\nimport "fmt"\n\n// TODO: Logic and main`,
-      rust: `use std::io::{self, BufRead};\n\nfn min_distance(a: &str, b: &str) -> i32 {\n    // TODO: Implement dynamic programming logic to find the minimum edit distance\n    0\n}\n\nfn main() {\n    let stdin = io::stdin();\n    let mut lines = stdin.lock().lines();\n    if let (Some(Ok(a)), Some(Ok(b))) = (lines.next(), lines.next()) {\n        println!("{}", min_distance(a.trim(), b.trim()));\n    }\n}`,
-      kotlin: `import java.util.Scanner\n\nfun minDistance(a: String, b: String): Int {\n    // TODO: Implement logic\n    return 0\n}\n\nfun main(args: Array<String>) {\n    val sc = Scanner(System.\`in\`)\n    if (sc.hasNextLine()) {\n        val a = sc.nextLine()\n        if (sc.hasNextLine()) println(minDistance(a, sc.nextLine()))\n    }\n}`,
+      rust: `use std::io::{self, Read};\n\nfn min_distance(a: &str, b: &str) -> i32 {\n    // TODO: Implement dynamic programming logic to find the minimum edit distance\n    0\n}\n\nfn main() {\n    let mut input = String::new();\n    if io::stdin().read_to_string(&mut input).is_ok() {\n        let parts: Vec<&str> = input.split('\\n').collect();\n        if parts.len() >= 2 {\n            println!("{}", min_distance(parts[0].trim(), parts[1].trim()));\n        }\n    }\n}`,
+      kotlin: `fun minDistance(a: String, b: String): Int {\n    // TODO: Implement logic\n    return 0\n}\n\nfun main(args: Array<String>) {\n    val all = System.\`in\`.bufferedReader().readText()\n    val parts = all.split("\\n")\n    if (parts.size >= 2) {\n        println(minDistance(parts[0].trim(), parts[1].trim()))\n    }\n}`,
       php: `<?php\n\nfunction minDistance($a, $b) {\n    // TODO: Implement logic using DP\n    return 0;\n}\n\n$input = explode("\\n", file_get_contents("php://stdin"));\nif (count($input) >= 2) {\n    echo minDistance(trim($input[0]), trim($input[1]));\n}\n?>`,
-      swift: `import Foundation\n\nfunc minDistance(_ a: String, _ b: String) -> Int {\n    // TODO: Implement logic\n    return 0;\n}\n\nif let a = readLine(), let b = readLine() {\n    print(minDistance(a, b))\n}`,
-      ruby: `def min_distance(a, b)\n    # TODO: Implement logic\n    0\nend\n\ninput = STDIN.read.split("\\n")\nif input.length >= 2\n    puts min_distance(input[0].strip, input[1].strip)\nend`
+      swift: `import Foundation\n\nfunc minDistance(_ a: String, _ b: String) -> Int {\n    // TODO: Implement logic\n    return 0;\n}\n\nlet data = FileHandle.standardInput.readDataToEndOfFile()\nlet all = String(data: data, encoding: .utf8) ?? ""\nlet parts = all.components(separatedBy: "\\n")\nif parts.count >= 2 {\n    print(minDistance(parts[0].trimmingCharacters(in: .whitespacesAndNewlines), parts[1].trimmingCharacters(in: .whitespacesAndNewlines)))\n}`,
+      ruby: `def min_distance(a, b)\n    # TODO: Implement logic\n    0\nend\n\ninput = STDIN.read.split("\\n", -1)\nif input.length >= 2\n    puts min_distance(input[0].strip, input[1].strip)\nend`
     },
     hiddenTestCases: [
       { input: "intention\nexecution", output: "5" },

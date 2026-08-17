@@ -46,12 +46,15 @@ const FORBIDDEN_CONCEPTS = [
   "missing information",
 ];
 
-function normalizeQuestion(text: string): string {
-  return text
+function normalizeQuestion(text: string): { fingerprint: string; pattern: string } {
+  const clean = text
     .toLowerCase()
-    .replace(/[^\w\s]/g, "")
-    .replace(/\s+/g, " ")
+    .replace(/[^\w\s]/g, "") // Remove punctuation
+    .replace(/\s+/g, " ")    // Normalize whitespace
     .trim();
+  
+  const pattern = clean.replace(/\d+/g, "X"); // Replace numbers with X to detect templates
+  return { fingerprint: clean, pattern };
 }
 
 function validateAptitudeQuestion(q: any): boolean {
@@ -64,9 +67,9 @@ function validateAptitudeQuestion(q: any): boolean {
   if (q.correctOptionIndex < 0 || q.correctOptionIndex > 3) return false;
   if (!q.options[q.correctOptionIndex]) return false;
 
-  const normalizedText = normalizeQuestion(q.question);
+  const { fingerprint } = normalizeQuestion(q.question);
   for (const concept of FORBIDDEN_CONCEPTS) {
-    if (normalizedText.includes(concept)) return false;
+    if (fingerprint.includes(concept)) return false;
   }
 
   return true;
@@ -115,8 +118,8 @@ export default function AptitudeEnginePage() {
       const existingQuestions = data.aptitudeQuestions || [];
       const isValidSet = existingQuestions.length === 20 && existingQuestions.every(validateAptitudeQuestion);
 
-      // RESUME LOGIC: If test is in progress and valid, restore it
       if (isValidSet && data.aptitudeStatus === "in_progress") {
+        console.log("[APTITUDE SESSION] Resuming active session:", data.sessionId);
         setQuestions(existingQuestions);
         setAnswers(data.aptitudeAnswers || {});
         setCurrentIdx(data.aptitudeCurrentIndex || 0);
@@ -125,7 +128,6 @@ export default function AptitudeEnginePage() {
         return;
       }
 
-      // SHOW RESULT: If already completed, just show results
       if (data.aptitudeStatus === "completed" && data.aptitudeReport) {
         setQuestions(existingQuestions);
         setAnswers(data.aptitudeAnswers || {});
@@ -134,8 +136,8 @@ export default function AptitudeEnginePage() {
         return;
       }
 
-      // NEW ATTEMPT LOGIC
       try {
+        console.log("[APTITUDE SESSION] Initializing new session for user:", user.uid);
         const userRef = doc(db, 'users', user.uid);
         const userSnap = await getDoc(userRef);
         const history = userSnap.data()?.aptitudeQuestionHistory || [];
@@ -148,7 +150,10 @@ export default function AptitudeEnginePage() {
         });
         
         const freshQuestions = response.questions;
-        const newFingerprints = freshQuestions.map(q => normalizeQuestion(q.question));
+        const newEncounterData = freshQuestions.map(q => {
+          const norm = normalizeQuestion(q.question);
+          return norm.fingerprint;
+        });
         
         await updateDoc(journeyRef, {
           aptitudeQuestions: freshQuestions,
@@ -160,15 +165,14 @@ export default function AptitudeEnginePage() {
           updatedAt: serverTimestamp()
         });
 
-        // Record history immediately so they are considered "seen"
         await updateDoc(userRef, {
-          aptitudeQuestionHistory: arrayUnion(...newFingerprints)
+          aptitudeQuestionHistory: arrayUnion(...newEncounterData)
         });
 
         setQuestions(freshQuestions);
         setIsInitializing(false);
       } catch (e: any) {
-        console.error("[Aptitude] Init Error:", e);
+        console.error("[APTITUDE SESSION] Initialization fault:", e);
         toast({ variant: "destructive", title: "Synthesis Error", description: "Assessment calibration failure." });
         setIsInitializing(false);
       }
@@ -229,7 +233,6 @@ export default function AptitudeEnginePage() {
 
       setResult(finalReport);
       
-      // Update Journey
       await updateDoc(journeyRef, {
         aptitudeReport: finalReport,
         aptitudeStatus: "completed",
@@ -239,7 +242,7 @@ export default function AptitudeEnginePage() {
       });
 
     } catch (e) {
-      console.error("[Aptitude] Submission error:", e);
+      console.error("[APTITUDE SESSION] Submission fault:", e);
       toast({ variant: "destructive", title: "Audit Protocol Fault" });
     } finally {
       setIsEvaluating(false);
