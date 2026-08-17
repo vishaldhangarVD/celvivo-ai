@@ -18,7 +18,13 @@ import {
   ShieldCheck,
   Star,
   Users,
-  Lock
+  Lock,
+  Twitter,
+  Linkedin,
+  Github,
+  Mail,
+  Command,
+  ArrowUpRight
 } from 'lucide-react';
 import { useUser } from '@/firebase';
 import { useState } from 'react';
@@ -70,6 +76,33 @@ const TRUST_CARDS = [
     title: "100% Secure & Private",
     subtitle: "Your interview data and reports remain secure.",
     color: "text-green-400"
+  }
+];
+
+const TESTIMONIALS = [
+  {
+    name: "Sarah Jenkins",
+    role: "Senior Software Engineer",
+    company: "Google",
+    image: "https://picsum.photos/seed/person1/200/200",
+    text: "Nexvoro AI transformed my prep. The depth of the system's technical probes is unmatched. It identified gaps I didn't even know I had.",
+    rating: 5
+  },
+  {
+    name: "Michael Chen",
+    role: "Frontend Lead",
+    company: "Amazon",
+    image: "https://picsum.photos/seed/person2/200/200",
+    text: "The simulated HR round was identical to my real experience. Unbelievably accurate feedback on my confidence and communication.",
+    rating: 5
+  },
+  {
+    name: "Elena Rodriguez",
+    role: "Data Scientist",
+    company: "Microsoft",
+    image: "https://picsum.photos/seed/person3/200/200",
+    text: "Finally, an AI that understands technical nuance. My readiness score was spot on and helped me secure three top-tier offers.",
+    rating: 5
   }
 ];
 
@@ -319,6 +352,132 @@ export default function LandingPage() {
           </motion.div>
         </div>
       </section>
+
+      {/* Success Stories Section */}
+      <section className="py-32 px-8 relative overflow-hidden">
+        <div className="container mx-auto max-w-7xl">
+          <div className="text-center mb-20 space-y-4">
+            <Badge className="bg-accent/20 text-accent border-none px-6 py-1.5 font-bold tracking-[0.4em] text-[10px] uppercase">Testimonials</Badge>
+            <h2 className="text-5xl md:text-6xl font-bold tracking-tighter text-premium">Success <span className="text-gradient-purple">Stories.</span></h2>
+            <p className="text-muted-foreground font-light max-w-2xl mx-auto text-lg">
+              Engineers from the world's most innovative companies used Nexvoro AI to master their interviews.
+            </p>
+          </div>
+
+          <div className="grid md:grid-cols-3 gap-8">
+            {TESTIMONIALS.map((t, i) => (
+              <motion.div
+                key={i}
+                initial={{ opacity: 0, y: 30 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ delay: i * 0.1 }}
+              >
+                <Card className="glass p-10 rounded-[2.5rem] border-white/5 bg-white/[0.01] hover:bg-white/[0.03] transition-all h-full flex flex-col justify-between group">
+                  <div className="space-y-6">
+                    <div className="flex gap-1">
+                      {[...Array(t.rating)].map((_, idx) => (
+                        <Star key={idx} className="w-4 h-4 text-yellow-500 fill-current" />
+                      ))}
+                    </div>
+                    <p className="text-white/80 font-light leading-relaxed text-lg italic">"{t.text}"</p>
+                  </div>
+                  
+                  <div className="pt-8 mt-8 border-t border-white/5 flex items-center gap-4">
+                    <div className="relative w-12 h-12 rounded-full overflow-hidden border-2 border-accent/20">
+                      <Image src={t.image} alt={t.name} fill className="object-cover" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-bold text-white uppercase tracking-widest">{t.name}</p>
+                      <p className="text-[10px] text-accent font-bold uppercase tracking-widest">{t.role} @ {t.company}</p>
+                    </div>
+                  </div>
+                </Card>
+              </motion.div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Footer Section */}
+      <footer className="pt-32 pb-16 px-8 border-t border-white/5 bg-black/20">
+        <div className="container mx-auto max-w-7xl">
+          <div className="grid md:grid-cols-4 gap-16 mb-20">
+            <div className="md:col-span-1 space-y-8">
+              <Link href="/" className="flex items-center gap-4 group">
+                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-purple-600 to-blue-600 flex items-center justify-center shadow-lg border border-white/10 group-hover:rotate-90 transition-transform duration-500">
+                  <Command className="text-white w-5 h-5" />
+                </div>
+                <span className="font-headline font-bold text-2xl tracking-tighter uppercase text-premium">
+                  NEXVORO<span className="text-accent">AI</span>
+                </span>
+              </Link>
+              <p className="text-white/40 text-sm font-light leading-relaxed">
+                The global standard for high-fidelity technical interview preparation. Calibrated for elite IT performance.
+              </p>
+              <div className="flex gap-4">
+                {[Twitter, Linkedin, Github].map((Icon, i) => (
+                  <button key={i} className="w-10 h-10 rounded-xl glass border-white/5 flex items-center justify-center text-white/20 hover:text-accent hover:border-accent/20 transition-all">
+                    <Icon className="w-4 h-4" />
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 md:grid-cols-3 md:col-span-3 gap-12">
+              <div className="space-y-6">
+                <h4 className="text-[10px] font-black uppercase tracking-[0.4em] text-white">Platform</h4>
+                <ul className="space-y-4">
+                  {['Features', 'Pricing', 'Question Bank', 'About'].map((item) => (
+                    <li key={item}>
+                      <Link href={`/${item.toLowerCase().replace(' ', '-')}`} className="text-sm text-white/40 hover:text-accent transition-colors flex items-center gap-2 group">
+                        {item} <ArrowUpRight className="w-3 h-3 opacity-0 group-hover:opacity-100 transition-all" />
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+              <div className="space-y-6">
+                <h4 className="text-[10px] font-black uppercase tracking-[0.4em] text-white">Products</h4>
+                <ul className="space-y-4">
+                  {['Resume Analysis', 'Mock Interviews', 'Skill Gap', 'Personal Roadmaps'].map((item) => (
+                    <li key={item}>
+                      <Link href={item === 'Mock Interviews' ? '/interview' : `/${item.toLowerCase().replace(' ', '-')}`} className="text-sm text-white/40 hover:text-accent transition-colors flex items-center gap-2 group">
+                        {item} <ArrowUpRight className="w-3 h-3 opacity-0 group-hover:opacity-100 transition-all" />
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+              <div className="space-y-6">
+                <h4 className="text-[10px] font-black uppercase tracking-[0.4em] text-white">Support</h4>
+                <ul className="space-y-4">
+                  {['Documentation', 'Contact', 'Privacy Policy', 'Terms of Service'].map((item) => (
+                    <li key={item}>
+                      <Link href={item === 'Contact' ? '/contact' : '#'} className="text-sm text-white/40 hover:text-accent transition-colors flex items-center gap-2 group">
+                        {item} <ArrowUpRight className="w-3 h-3 opacity-0 group-hover:opacity-100 transition-all" />
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </div>
+          </div>
+
+          <div className="pt-12 border-t border-white/5 flex flex-col md:flex-row justify-between items-center gap-8">
+            <p className="text-[10px] font-bold text-white/20 uppercase tracking-[0.3em]">
+              © 2024 NEXVORO AI PROTOCOLS. ALL RIGHTS RESERVED.
+            </p>
+            <div className="flex items-center gap-6">
+              <div className="flex items-center gap-2 px-3 py-1 glass rounded-full border-green-500/20">
+                <div className="w-1.5 h-1.5 rounded-full bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.8)]" />
+                <span className="text-[8px] font-black text-green-400 uppercase tracking-widest">System Optimal</span>
+              </div>
+              <p className="text-[8px] font-black text-white/20 uppercase tracking-widest">v5.0.2 Deployment</p>
+            </div>
+          </div>
+        </div>
+      </footer>
 
       <style jsx global>{`
         @keyframes light-streak {
