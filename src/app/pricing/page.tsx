@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState } from 'react';
@@ -15,13 +14,12 @@ import {
   Crown, 
   ShieldCheck, 
   ArrowRight,
-  Sparkles,
-  Rocket,
   Loader2
 } from 'lucide-react';
 import { useUser } from '@/firebase';
 import { useRouter } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
+import { cn } from '@/lib/utils';
 
 export default function PricingPage() {
   const router = useRouter();
@@ -39,74 +37,66 @@ export default function PricingPage() {
       return;
     }
 
-    // Paid Plan logic
     toast({
-      title: "Protocol Initializing",
+      title: "PROTOCOL INITIALIZING",
       description: "Payment integration is being calibrated. Check back shortly for active deployment.",
     });
   };
 
   const plans = [
     {
-      name: "Free",
+      name: "FREE",
       price: "₹0",
-      description: "Perfect for getting started",
+      description: "Ideal for initial calibration",
       icon: Zap,
       color: "text-blue-400",
-      button: "Get Started Free",
+      button: "GET STARTED FREE",
       features: [
-        "1 Complete Free Interview Journey",
+        "One-time initial access",
         "Resume Analysis",
-        "Aptitude Assessment",
-        "Coding Assessment",
-        "AI Virtual Interview",
-        "Basic Feedback",
-        "Learning Roadmap"
+        "Aptitude Round",
+        "Coding Round",
+        "AI Mock Interview",
+        "Basic Feedback"
       ]
     },
     {
-      name: "Pro",
-      price: isYearly ? "₹950" : "₹99",
+      name: "PRO",
+      price: isYearly ? "₹4,790" : "₹499",
       period: isYearly ? "/year" : "/month",
-      description: "Everything you need to ace interviews",
+      description: "Engineered for active seekers",
       icon: Star,
       color: "text-purple-400",
-      button: "Upgrade to Pro",
+      button: "UPGRADE TO PRO",
       features: [
-        "Multiple AI Interviews",
-        "Resume Analysis",
-        "Aptitude Assessment",
-        "Coding Assessment",
-        "Advanced Feedback",
-        "Learning Roadmap",
-        "Virtual HR Manager",
-        "AI Career Coach",
-        "Interview Performance Tracking"
+        "Unlimited AI Interviews",
+        "Resume Intelligence Audit",
+        "Advanced Performance Feedback",
+        "30/90 Day Learning Roadmap",
+        "Virtual HR Simulation Manager",
+        "24/7 AI Career Coach"
       ]
     },
     {
-      name: "Premium",
-      price: isYearly ? "₹2,870" : "₹299",
+      name: "PREMIUM",
+      price: isYearly ? "₹9,590" : "₹999",
       period: isYearly ? "/year" : "/month",
-      description: "The ultimate interview preparation experience",
+      description: "The ultimate mastery track",
       icon: Crown,
       color: "text-accent",
-      button: "Upgrade to Premium",
+      button: "UPGRADE TO PREMIUM",
       popular: true,
       features: [
         "Everything in Pro",
-        "Unlimited Interviews",
-        "Virtual HR Manager",
-        "AI Career Coach",
-        "Advanced Reports",
-        "Priority Access",
-        "Confidence Analysis",
-        "Communication Analysis",
-        "Technical Analysis",
-        "Job Readiness Score",
+        "High-Fidelity Advanced Reports",
+        "Priority Neural Access",
+        "Confidence Vector Analysis",
+        "Communication Strategic Audit",
+        "Deep Technical Precision Index",
+        "Job Readiness Benchmarking",
         "Personalized Career Guidance",
-        "Resume Optimization",
-        "Premium Support"
+        "Full Resume Blueprint Optimization",
+        "Executive Priority Support"
       ]
     }
   ];
@@ -134,7 +124,6 @@ export default function PricingPage() {
             </p>
           </motion.div>
 
-          {/* Toggle */}
           <div className="flex items-center justify-center gap-6 pt-8">
             <span className={cn("text-xs font-bold uppercase tracking-widest transition-colors", !isYearly ? "text-white" : "text-white/40")}>Monthly</span>
             <button 

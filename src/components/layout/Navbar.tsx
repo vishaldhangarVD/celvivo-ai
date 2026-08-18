@@ -11,7 +11,8 @@ import {
   LogOut, 
   Menu, 
   X,
-  Crown
+  Crown,
+  CreditCard
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useState, useMemo } from 'react';
@@ -100,7 +101,7 @@ export default function Navbar() {
                 <div className={cn(pillIconWrapperClasses, pathname === '/dashboard' && pillActiveIconWrapperClasses)}>
                   <LayoutDashboard className="w-2.5 h-2.5" />
                 </div>
-                Dashboard
+                DASHBOARD
                 <span className={pillUnderlineClasses} />
               </Link>
               <Link 
@@ -110,7 +111,17 @@ export default function Navbar() {
                 <div className={cn(pillIconWrapperClasses, pathname === '/certificates' && pillActiveIconWrapperClasses)}>
                   <Award className="w-2.5 h-2.5" />
                 </div>
-                Certificates
+                CERTIFICATES
+                <span className={pillUnderlineClasses} />
+              </Link>
+              <Link 
+                href="/pricing" 
+                className={cn(pillClasses, pillHoverClasses, pathname === '/pricing' && pillActiveClasses)}
+              >
+                <div className={cn(pillIconWrapperClasses, pathname === '/pricing' && pillActiveIconWrapperClasses)}>
+                  <CreditCard className="w-2.5 h-2.5" />
+                </div>
+                PRICING
                 <span className={pillUnderlineClasses} />
               </Link>
               {isFounder && (
@@ -121,7 +132,7 @@ export default function Navbar() {
                   <div className={cn(pillIconWrapperClasses, "border-purple-500/20 bg-purple-500/10 text-purple-400", pathname === '/founder' && "bg-purple-500 border-purple-400 text-white")}>
                     <Crown className="w-2.5 h-2.5" />
                   </div>
-                  Founder Console
+                  FOUNDER CONSOLE
                   <span className={cn(pillUnderlineClasses, "bg-purple-400 shadow-[0_0_8px_#a855f7]")} />
                 </Link>
               )}
@@ -246,6 +257,9 @@ export default function Navbar() {
                 )}
                 <Link href="/certificates" onClick={() => setIsOpen(false)} className="text-2xl font-bold tracking-tighter uppercase text-white hover:text-accent flex items-center gap-4">
                   <Award className="w-6 h-6" /> Certificates
+                </Link>
+                <Link href="/pricing" onClick={() => setIsOpen(false)} className="text-2xl font-bold tracking-tighter uppercase text-white hover:text-accent flex items-center gap-4">
+                  <CreditCard className="w-6 h-6" /> Pricing
                 </Link>
                 <Link href="/user-dashboard" onClick={() => setIsOpen(false)} className="text-2xl font-bold tracking-tighter uppercase text-white hover:text-accent flex items-center gap-4">
                   <ShieldCheck className="w-6 h-6" /> Verified Track
