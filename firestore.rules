@@ -11,7 +11,15 @@ service cloud.firestore {
 
     // Rules for user profile and their private subcollections
     match /users/{userId} {
-      allow read, write: if request.auth != null && request.auth.uid == userId;
+      allow read: if request.auth != null && request.auth.uid == userId;
+      
+      // On create: allow setting the initial profile, but isFreeAccess must be false
+      allow create: if request.auth != null && request.auth.uid == userId && 
+                    request.resource.data.get('isFreeAccess', false) == false;
+      
+      // On update: allow updates but prevent changing isFreeAccess and other core fields
+      allow update: if request.auth != null && request.auth.uid == userId && 
+                    request.resource.data.get('isFreeAccess', resource.data.get('isFreeAccess', false)) == resource.data.get('isFreeAccess', false);
       
       match /{allSubcollections=**} {
         allow read, write: if request.auth != null && request.auth.uid == userId;

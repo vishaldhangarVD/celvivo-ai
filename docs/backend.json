@@ -1,4 +1,3 @@
-
 {
   "entities": {
     "UserProfile": {
@@ -14,6 +13,7 @@
         "plan": { "type": "string", "enum": ["free", "pro", "premium"], "description": "The user's current subscription plan." },
         "subscriptionStatus": { "type": "string", "description": "Status of the subscription (e.g., active, past_due)." },
         "freeJourneyUsed": { "type": "boolean", "description": "Whether the user has completed their one allowed free interview journey." },
+        "isFreeAccess": { "type": "boolean", "description": "Override to grant unlimited free access regardless of plan usage." },
         "subscriptionId": { "type": "string" },
         "paymentId": { "type": "string" },
         "subscriptionStart": { "type": "string", "format": "date-time" },

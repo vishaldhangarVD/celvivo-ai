@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, Suspense } from 'react';
@@ -51,6 +50,7 @@ function SignupContent() {
         plan: "free",
         subscriptionStatus: "active",
         freeJourneyUsed: false,
+        isFreeAccess: false, // Default to no override
         subscriptionId: null,
         paymentId: null,
         subscriptionStart: null,
