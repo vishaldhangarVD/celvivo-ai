@@ -52,7 +52,6 @@ export default function FinalReportPage() {
   const { toast } = useToast();
   
   const docId = params.id as string;
-  const [hasConsumed, setHasConsumed] = useState(false);
 
   const interviewRef = useMemo(() => {
     if (!db || !user?.uid || !docId) return null;
@@ -69,58 +68,6 @@ export default function FinalReportPage() {
 
   const feedback = (interviewDoc as any)?.feedback;
 
-  // Subscription Consumption Intelligence
-  useEffect(() => {
-    const consumeFreeJourney = async () => {
-      // Guard: Ensure user, profile, and the completed interview dossier are loaded
-      if (!user || !db || !profile || !interviewDoc || hasConsumed) return;
-
-      // Protocol: If the operator is on a Free Plan and the journey has not been marked as used
-      if (profile.plan === 'free' && !profile.freeJourneyUsed) {
-        setHasConsumed(true); // Prevent concurrent update cycles
-
-        const userRef = doc(db, 'users', user.uid);
-        
-        console.log("FREE JOURNEY CONSUMPTION UPDATE", {
-          uid: user.uid,
-          plan: profile.plan,
-          freeJourneyUsed: true
-        });
-
-        try {
-          // 1. Persist the usage flag to the user's primary profile
-          await updateDoc(userRef, { 
-            freeJourneyUsed: true,
-            updatedAt: serverTimestamp() 
-          });
-
-          // 2. Post-Update Verification
-          const verifySnap = await getDoc(userRef);
-          const verifiedData = verifySnap.data();
-          console.log("VERIFIED SUBSCRIPTION:", verifiedData);
-          
-          toast({
-            title: "Journey Logged",
-            description: "Your free interview session has been archived."
-          });
-        } catch (error: any) {
-          console.error("CRITICAL: FAILED TO PERSIST JOURNEY CONSUMPTION:", error);
-          setHasConsumed(false); // Allow retry if the network node failed
-        }
-      }
-    };
-
-    consumeFreeJourney();
-
-    // Step Sync for Journey active state
-    if (user && db && docId) {
-      setDoc(doc(db, 'users', user.uid, 'journey', 'active'), {
-        step: 12,
-        lastReportId: docId
-      }, { merge: true }).catch(e => console.warn("Journey step sync fault:", e));
-    }
-  }, [user, db, profile, interviewDoc, hasConsumed, docId, toast]);
-
   const handleStartNew = async () => {
     if (!user || !db || !profile) return;
     
@@ -128,12 +75,13 @@ export default function FinalReportPage() {
     if (!canStartInterviewJourney(profile)) {
       toast({
         title: "Protocol Complete",
-        description: "Your free interview journey has concluded. Upgrade to continue.",
+        description: "Your free interview journey has been concluded. Upgrade to continue.",
       });
       router.push('/pricing');
       return;
     }
 
+    // Clean up any remaining active journey state before starting a new track
     await deleteDoc(doc(db, 'users', user.uid, 'journey', 'active'));
     router.push('/interview');
   };

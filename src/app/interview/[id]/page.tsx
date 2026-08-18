@@ -1,3 +1,4 @@
+
 "use client";
 import { Suspense, useEffect, useState, useRef, useMemo } from "react";
 import { useRouter, useParams, useSearchParams } from "next/navigation";
@@ -39,7 +40,7 @@ import {
 } from "lucide-react";
 import { aiMockInterview } from "@/ai/flows/ai-mock-interview-v2";
 import { generateInterviewFeedback } from "@/ai/flows/ai-interview-feedback";
-import { useUser, useFirestore } from "@/firebase";
+import { useUser, useFirestore, useDoc } from "@/firebase";
 import { doc, serverTimestamp, collection, addDoc, getDoc, deleteDoc, updateDoc } from "firebase/firestore";
 import { useToast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
@@ -88,6 +89,13 @@ function VirtualArenaContent() {
     if (!db || !user?.uid) return null;
     return doc(db, 'users', user.uid, 'journey', 'active');
   }, [db, user?.uid]);
+
+  const profileRef = useMemo(() => {
+    if (!db || !user?.uid) return null;
+    return doc(db, 'users', user.uid);
+  }, [db, user?.uid]);
+
+  const { data: profile } = useDoc(profileRef);
 
   // ElevenLabs Audio Management
   const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -519,6 +527,7 @@ function VirtualArenaContent() {
       const aptitudeReport = assessmentContext.aptitudeReport;
       const codingReport = assessmentContext.codingReport;
 
+      // 1. Generate final audit intelligence
       const finalAudit = await generateInterviewFeedback({
         role, company, experienceLevel: exp, interviewTranscript: transcriptStr,
         resumeContext: {
@@ -540,6 +549,7 @@ function VirtualArenaContent() {
         }
       });
 
+      // 2. Persist the interview dossier to Firestore
       const docRef = await addDoc(collection(db, 'users', user.uid, 'interviews'), {
         userId: user.uid, 
         role, 
@@ -552,15 +562,39 @@ function VirtualArenaContent() {
         feedback: finalAudit, 
         createdAt: serverTimestamp(),
       });
+
+      // 3. Confirm Save Success & Execute Subscription Consumption Protocol
+      if (docRef.id) {
+        const plan = profile?.plan || 'free';
+        if (plan === 'free' && !profile?.freeJourneyUsed) {
+          console.log("FREE JOURNEY CONSUMPTION UPDATE", {
+            uid: user.uid,
+            plan,
+            freeJourneyUsed: true
+          });
+
+          const userRef = doc(db, 'users', user.uid);
+          // Await the Firestore update strictly before navigation
+          await updateDoc(userRef, {
+            freeJourneyUsed: true,
+            updatedAt: serverTimestamp()
+          });
+
+          // Post-Update Verification
+          const verifySnap = await getDoc(userRef);
+          console.log("VERIFIED SUBSCRIPTION:", verifySnap.data());
+        }
+      }
       
+      // 4. Cleanup and final transition
       await deleteDoc(journeyRef);
       stopCamera();
       router.push(`/feedback/${docRef.id}`);
     } catch (e) {
       console.error(e);
       toast({ variant: "destructive", title: "Final Audit Protocol Failure" });
-    } finally {
       setIsGeneratingReport(false);
+      setIsSimulationComplete(false);
     }
   };
 
