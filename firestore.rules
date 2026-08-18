@@ -1,6 +1,13 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
+    // Utility function for founder check
+    function isFounder() {
+      return request.auth != null && 
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'founder';
+    }
+
+    // Rules for user profile and their private subcollections
     match /users/{userId} {
       allow read, write: if request.auth != null && request.auth.uid == userId;
       
@@ -9,13 +16,12 @@ service cloud.firestore {
       }
     }
     
+    // Rules for the public feedback collection
     match /userFeedback/{feedbackId} {
       // Allow public to read approved feedback with consent.
-      // Allow owners to read their own feedback (pending or otherwise).
-      // Allow founders to read all feedback for moderation.
+      // Allow owners and founders to read any feedback.
       allow read: if (resource.data.status == 'approved' && resource.data.consent == true) || 
-                   (request.auth != null && (request.auth.uid == resource.data.userId || 
-                    get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'founder'));
+                   (request.auth != null && (request.auth.uid == resource.data.userId || isFounder()));
       
       // Authenticated users can create their own feedback, but it must be submitted as 'pending'.
       allow create: if request.auth != null && 
@@ -23,8 +29,13 @@ service cloud.firestore {
                       request.resource.data.status == 'pending';
       
       // Only founders can update status or delete feedback records.
-      allow update, delete: if request.auth != null && 
-                             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'founder';
+      allow update, delete: if isFounder();
+    }
+
+    // Master repository for coding questions
+    match /codingQuestions/{questionId} {
+      allow read: if request.auth != null;
+      allow write: if isFounder();
     }
   }
 }
