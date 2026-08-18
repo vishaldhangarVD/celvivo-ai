@@ -38,7 +38,7 @@ import {
   XCircle
 } from 'lucide-react';
 import { useUser, useFirestore, useDoc } from '@/firebase';
-import { doc, setDoc, deleteDoc, updateDoc, getDoc } from 'firebase/firestore';
+import { doc, setDoc, deleteDoc, updateDoc, getDoc, serverTimestamp } from 'firebase/firestore';
 import { generateCertificatePDF } from '@/lib/certificate-generator';
 import { useToast } from '@/hooks/use-toast';
 import Link from 'next/link';
@@ -52,6 +52,8 @@ export default function FinalReportPage() {
   const { toast } = useToast();
   
   const docId = params.id as string;
+  const [hasConsumed, setHasConsumed] = useState(false);
+
   const interviewRef = useMemo(() => {
     if (!db || !user?.uid || !docId) return null;
     return doc(db, 'users', user.uid, 'interviews', docId);
@@ -67,24 +69,57 @@ export default function FinalReportPage() {
 
   const feedback = (interviewDoc as any)?.feedback;
 
+  // Subscription Consumption Intelligence
   useEffect(() => {
+    const consumeFreeJourney = async () => {
+      // Guard: Ensure user, profile, and the completed interview dossier are loaded
+      if (!user || !db || !profile || !interviewDoc || hasConsumed) return;
+
+      // Protocol: If the operator is on a Free Plan and the journey has not been marked as used
+      if (profile.plan === 'free' && !profile.freeJourneyUsed) {
+        setHasConsumed(true); // Prevent concurrent update cycles
+
+        const userRef = doc(db, 'users', user.uid);
+        
+        console.log("FREE JOURNEY CONSUMPTION UPDATE", {
+          uid: user.uid,
+          plan: profile.plan,
+          freeJourneyUsed: true
+        });
+
+        try {
+          // 1. Persist the usage flag to the user's primary profile
+          await updateDoc(userRef, { 
+            freeJourneyUsed: true,
+            updatedAt: serverTimestamp() 
+          });
+
+          // 2. Post-Update Verification
+          const verifySnap = await getDoc(userRef);
+          const verifiedData = verifySnap.data();
+          console.log("VERIFIED SUBSCRIPTION:", verifiedData);
+          
+          toast({
+            title: "Journey Logged",
+            description: "Your free interview session has been archived."
+          });
+        } catch (error: any) {
+          console.error("CRITICAL: FAILED TO PERSIST JOURNEY CONSUMPTION:", error);
+          setHasConsumed(false); // Allow retry if the network node failed
+        }
+      }
+    };
+
+    consumeFreeJourney();
+
+    // Step Sync for Journey active state
     if (user && db && docId) {
       setDoc(doc(db, 'users', user.uid, 'journey', 'active'), {
         step: 12,
         lastReportId: docId
-      }, { merge: true });
-
-      // Subscription Consumption Logic: Mark the free journey as consumed upon completion
-      const consumeFreeJourney = async () => {
-        if (!profile) return;
-        const userRef = doc(db, 'users', user.uid);
-        if (profile.plan === 'free' && !profile.freeJourneyUsed) {
-          await updateDoc(userRef, { freeJourneyUsed: true });
-        }
-      };
-      consumeFreeJourney();
+      }, { merge: true }).catch(e => console.warn("Journey step sync fault:", e));
     }
-  }, [user, db, docId, profile]);
+  }, [user, db, profile, interviewDoc, hasConsumed, docId, toast]);
 
   const handleStartNew = async () => {
     if (!user || !db || !profile) return;
