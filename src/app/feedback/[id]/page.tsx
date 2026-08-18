@@ -42,6 +42,7 @@ import { doc, setDoc, deleteDoc, updateDoc, getDoc } from 'firebase/firestore';
 import { generateCertificatePDF } from '@/lib/certificate-generator';
 import { useToast } from '@/hooks/use-toast';
 import Link from 'next/link';
+import { canStartInterviewJourney } from '@/lib/subscription';
 
 export default function FinalReportPage() {
   const params = useParams();
@@ -57,6 +58,13 @@ export default function FinalReportPage() {
   }, [db, user?.uid, docId]);
   
   const { data: interviewDoc, loading: docLoading } = useDoc(interviewRef);
+
+  const profileRef = useMemo(() => {
+    if (!db || !user?.uid) return null;
+    return doc(db, 'users', user.uid);
+  }, [db, user?.uid]);
+  const { data: profile } = useDoc(profileRef);
+
   const feedback = (interviewDoc as any)?.feedback;
 
   useEffect(() => {
@@ -66,25 +74,23 @@ export default function FinalReportPage() {
         lastReportId: docId
       }, { merge: true });
 
-      // Mark Free Trial as used upon reaching the final report
-      const updateTrialStatus = async () => {
+      // Subscription Consumption Logic: Mark the free journey as consumed upon completion
+      const consumeFreeJourney = async () => {
+        if (!profile) return;
         const userRef = doc(db, 'users', user.uid);
-        const userSnap = await getDoc(userRef);
-        if (userSnap.exists() && userSnap.data().plan === 'free' && !userSnap.data().freeTrialUsed) {
-          await updateDoc(userRef, { freeTrialUsed: true });
+        if (profile.plan === 'free' && !profile.freeJourneyUsed) {
+          await updateDoc(userRef, { freeJourneyUsed: true });
         }
       };
-      updateTrialStatus();
+      consumeFreeJourney();
     }
-  }, [user, db, docId]);
+  }, [user, db, docId, profile]);
 
   const handleStartNew = async () => {
-    if (!user || !db) return;
+    if (!user || !db || !profile) return;
     
-    // Check if free trial is used before allowing another new interview
-    const userRef = doc(db, 'users', user.uid);
-    const userSnap = await getDoc(userRef);
-    if (userSnap.exists() && userSnap.data().plan === 'free' && userSnap.data().freeTrialUsed) {
+    // Subscription Protocol Guard
+    if (!canStartInterviewJourney(profile)) {
       toast({
         title: "Protocol Complete",
         description: "Your free interview journey has concluded. Upgrade to continue.",

@@ -22,6 +22,7 @@ import { cn } from '@/lib/utils';
 import { useUser, useFirestore, useDoc } from '@/firebase';
 import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
+import { canStartInterviewJourney } from '@/lib/subscription';
 
 const ALL_ROLES = [
   "Software Engineer", "Frontend Developer", "Backend Developer", "Full Stack Developer",
@@ -104,12 +105,12 @@ export default function InterviewSetupPage() {
   }, [isTransitioning, loadingMsgIdx]);
 
   const handleContinue = async () => {
-    // Free Trial Enforcement
-    if (profile?.plan === 'free' && profile?.freeTrialUsed) {
+    // Subscription Protocol Enforcement
+    if (!canStartInterviewJourney(profile)) {
       toast({
         variant: "destructive",
-        title: "Protocol Restriction",
-        description: "Your Free Journey is complete. Upgrade to Pro for continued access.",
+        title: "Upgrade Required",
+        description: "Your free interview journey has been consumed. Upgrade to Pro for unlimited sessions.",
       });
       router.push('/pricing');
       return;
@@ -166,12 +167,12 @@ export default function InterviewSetupPage() {
   const handleSkipToCoding = async () => {
     if (!user || !db) return;
     
-    // Free Trial Enforcement
-    if (profile?.plan === 'free' && profile?.freeTrialUsed) {
+    // Subscription Protocol Enforcement
+    if (!canStartInterviewJourney(profile)) {
       toast({
         variant: "destructive",
-        title: "Protocol Restriction",
-        description: "Your Free Journey is complete. Upgrade to Pro for continued access.",
+        title: "Upgrade Required",
+        description: "Your free interview journey has been consumed. Upgrade to Pro for unlimited sessions.",
       });
       router.push('/pricing');
       return;

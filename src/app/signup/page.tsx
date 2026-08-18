@@ -38,7 +38,7 @@ function SignupContent() {
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       await updateProfile(userCredential.user, { displayName: name });
       
-      // Strict sanitization for user profile
+      // Strict initialization for user profile and subscription metadata
       const userProfile = {
         uid: userCredential.user.uid ?? "",
         displayName: name ?? "Operator",
@@ -46,16 +46,19 @@ function SignupContent() {
         photoURL: null,
         jobReadinessScore: 0,
         totalInterviews: 0,
+        
+        // Subscription Protocol Initial State
         plan: "free",
-        freeTrialUsed: false,
+        subscriptionStatus: "active",
+        freeJourneyUsed: false,
+        subscriptionId: null,
+        paymentId: null,
+        subscriptionStart: null,
+        subscriptionEnd: null,
+
         createdAt: serverTimestamp(),
       };
       
-      // Debug log
-      Object.entries(userProfile).forEach(([key, val]) => {
-        if (val === undefined) console.warn(`[Firestore Debug] Field "${key}" is undefined in userProfile`);
-      });
-
       await setDoc(doc(db, 'users', userCredential.user.uid), userProfile);
 
       toast({
