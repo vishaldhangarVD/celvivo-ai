@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect, useMemo } from 'react';
@@ -37,7 +38,7 @@ import {
   XCircle
 } from 'lucide-react';
 import { useUser, useFirestore, useDoc } from '@/firebase';
-import { doc, setDoc, deleteDoc } from 'firebase/firestore';
+import { doc, setDoc, deleteDoc, updateDoc, getDoc } from 'firebase/firestore';
 import { generateCertificatePDF } from '@/lib/certificate-generator';
 import { useToast } from '@/hooks/use-toast';
 import Link from 'next/link';
@@ -64,11 +65,34 @@ export default function FinalReportPage() {
         step: 12,
         lastReportId: docId
       }, { merge: true });
+
+      // Mark Free Trial as used upon reaching the final report
+      const updateTrialStatus = async () => {
+        const userRef = doc(db, 'users', user.uid);
+        const userSnap = await getDoc(userRef);
+        if (userSnap.exists() && userSnap.data().plan === 'free' && !userSnap.data().freeTrialUsed) {
+          await updateDoc(userRef, { freeTrialUsed: true });
+        }
+      };
+      updateTrialStatus();
     }
   }, [user, db, docId]);
 
   const handleStartNew = async () => {
     if (!user || !db) return;
+    
+    // Check if free trial is used before allowing another new interview
+    const userRef = doc(db, 'users', user.uid);
+    const userSnap = await getDoc(userRef);
+    if (userSnap.exists() && userSnap.data().plan === 'free' && userSnap.data().freeTrialUsed) {
+      toast({
+        title: "Protocol Complete",
+        description: "Your free interview journey has concluded. Upgrade to continue.",
+      });
+      router.push('/pricing');
+      return;
+    }
+
     await deleteDoc(doc(db, 'users', user.uid, 'journey', 'active'));
     router.push('/interview');
   };
@@ -101,7 +125,7 @@ export default function FinalReportPage() {
       <NavigationControls />
       
       <div className="container mx-auto px-4 pt-32">
-        <div className="max-w-7xl mx-auto space-y-12">
+        <div className="max-w-7xl auto space-y-12">
           
           <motion.div initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} className="premium-card p-12 border-glow-premium relative overflow-hidden">
             <div className="absolute top-0 right-0 p-12">

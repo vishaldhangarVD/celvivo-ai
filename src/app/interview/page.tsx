@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useMemo, useEffect } from 'react';
@@ -18,7 +19,7 @@ import {
   Sparkles
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { useUser, useFirestore } from '@/firebase';
+import { useUser, useFirestore, useDoc } from '@/firebase';
 import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 
@@ -64,6 +65,13 @@ export default function InterviewSetupPage() {
   const { user } = useUser();
   const db = useFirestore();
   const { toast } = useToast();
+
+  const profileRef = useMemo(() => {
+    if (!db || !user?.uid) return null;
+    return doc(db, 'users', user.uid);
+  }, [db, user?.uid]);
+
+  const { data: profile } = useDoc(profileRef);
   
   const [selectedRole, setSelectedRole] = useState("");
   const [selectedCompany, setSelectedCompany] = useState("");
@@ -96,6 +104,17 @@ export default function InterviewSetupPage() {
   }, [isTransitioning, loadingMsgIdx]);
 
   const handleContinue = async () => {
+    // Free Trial Enforcement
+    if (profile?.plan === 'free' && profile?.freeTrialUsed) {
+      toast({
+        variant: "destructive",
+        title: "Protocol Restriction",
+        description: "Your Free Journey is complete. Upgrade to Pro for continued access.",
+      });
+      router.push('/pricing');
+      return;
+    }
+
     const newErrors = {
       role: !selectedRole,
       company: !selectedCompany,
@@ -147,6 +166,17 @@ export default function InterviewSetupPage() {
   const handleSkipToCoding = async () => {
     if (!user || !db) return;
     
+    // Free Trial Enforcement
+    if (profile?.plan === 'free' && profile?.freeTrialUsed) {
+      toast({
+        variant: "destructive",
+        title: "Protocol Restriction",
+        description: "Your Free Journey is complete. Upgrade to Pro for continued access.",
+      });
+      router.push('/pricing');
+      return;
+    }
+
     const role = selectedRole || "Software Engineer";
     const company = selectedCompany || "Google";
     const exp = selectedExp || "Senior";

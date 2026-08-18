@@ -11,6 +11,8 @@
         "email": { "type": "string" },
         "photoURL": { "type": "string" },
         "role": { "type": "string", "enum": ["user", "founder"], "description": "System access level. 'founder' grants console access." },
+        "plan": { "type": "string", "enum": ["free", "pro", "premium"], "description": "The user's current subscription plan." },
+        "freeTrialUsed": { "type": "boolean", "description": "Whether the user has completed their one allowed free interview journey." },
         "jobReadinessScore": { "type": "number" },
         "resumeScore": { "type": "number" },
         "totalInterviews": { "type": "number" },

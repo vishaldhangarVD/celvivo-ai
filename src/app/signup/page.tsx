@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, Suspense } from 'react';
@@ -45,6 +46,8 @@ function SignupContent() {
         photoURL: null,
         jobReadinessScore: 0,
         totalInterviews: 0,
+        plan: "free",
+        freeTrialUsed: false,
         createdAt: serverTimestamp(),
       };
       
