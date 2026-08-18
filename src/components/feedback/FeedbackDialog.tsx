@@ -14,16 +14,20 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { 
   Star, 
   MessageSquare, 
   Loader2, 
   CheckCircle2, 
   Sparkles,
-  ShieldCheck
+  ShieldCheck,
+  Camera,
+  X
 } from 'lucide-react';
-import { useUser, useFirestore } from '@/firebase';
+import { useUser, useFirestore, useStorage } from '@/firebase';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { useRouter } from 'next/navigation';
@@ -31,6 +35,7 @@ import { useRouter } from 'next/navigation';
 export default function FeedbackDialog() {
   const { user } = useUser();
   const db = useFirestore();
+  const storage = useStorage();
   const { toast } = useToast();
   const router = useRouter();
   
@@ -39,6 +44,9 @@ export default function FeedbackDialog() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
   
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+
   const [formData, setFormData] = useState({
     name: '',
     feedback: '',
@@ -65,12 +73,48 @@ export default function FeedbackDialog() {
     setIsOpen(open);
   };
 
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) {
+      toast({ variant: "destructive", title: "Invalid Format", description: "Please upload a JPG, PNG or WEBP image." });
+      return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      toast({ variant: "destructive", title: "File Too Large", description: "Image size must be less than 5MB." });
+      return;
+    }
+
+    setImageFile(file);
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setImagePreview(reader.result as string);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const removeImage = () => {
+    setImageFile(null);
+    setImagePreview(null);
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user || !db || !formData.consent) return;
 
     setIsSubmitting(true);
     try {
+      let finalPhotoURL = user.photoURL || null;
+
+      if (imageFile && storage) {
+        const fileName = `${Date.now()}_${imageFile.name}`;
+        const storageRef = ref(storage, `userFeedback/${user.uid}/${fileName}`);
+        const uploadResult = await uploadBytes(storageRef, imageFile);
+        finalPhotoURL = await getDownloadURL(uploadResult.ref);
+      }
+
       await addDoc(collection(db, 'userFeedback'), {
         userId: user.uid,
         name: formData.name,
@@ -78,7 +122,7 @@ export default function FeedbackDialog() {
         company: formData.company,
         feedback: formData.feedback,
         rating,
-        photoURL: user.photoURL || null,
+        photoURL: finalPhotoURL,
         consent: formData.consent,
         status: 'pending',
         createdAt: serverTimestamp()
@@ -90,6 +134,8 @@ export default function FeedbackDialog() {
         setIsSuccess(false);
         setFormData({ name: '', feedback: '', role: '', company: '', consent: false });
         setRating(5);
+        setImageFile(null);
+        setImagePreview(null);
       }, 3000);
     } catch (error) {
       console.error(error);
@@ -111,7 +157,7 @@ export default function FeedbackDialog() {
           Share Your Feedback
         </Button>
       </DialogTrigger>
-      <DialogContent className="glass border-white/10 bg-[#0b0e1a] text-white max-w-xl rounded-[2.5rem] overflow-hidden">
+      <DialogContent className="glass border-white/10 bg-[#0b0e1a] text-white max-w-xl rounded-[2.5rem] overflow-hidden custom-scrollbar max-h-[90vh] overflow-y-auto">
         <AnimatePresence mode="wait">
           {isSuccess ? (
             <motion.div 
@@ -166,6 +212,48 @@ export default function FeedbackDialog() {
                 </div>
 
                 <div className="space-y-4">
+                  <div className="flex items-center gap-6 p-4 glass rounded-2xl border-white/5 bg-white/[0.01]">
+                    <div className="relative group">
+                      <Avatar className="w-20 h-20 border-2 border-white/10 group-hover:border-accent transition-all cursor-pointer overflow-hidden">
+                        <AvatarImage src={imagePreview || ""} className="object-cover" />
+                        <AvatarFallback className="bg-white/5 text-white/20">
+                          <Camera className="w-8 h-8" />
+                        </AvatarFallback>
+                      </Avatar>
+                      {imagePreview && (
+                        <button 
+                          type="button"
+                          onClick={removeImage}
+                          className="absolute -top-2 -right-2 w-6 h-6 rounded-full bg-red-500 text-white flex items-center justify-center shadow-lg hover:bg-red-600 transition-colors z-10"
+                        >
+                          <X className="w-3 h-3" />
+                        </button>
+                      )}
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="text-[10px] font-bold uppercase tracking-widest text-white/40">Profile Picture (Optional)</Label>
+                      <div className="flex flex-col gap-2">
+                        <input 
+                          type="file" 
+                          id="profile-upload" 
+                          className="hidden" 
+                          accept="image/jpeg,image/png,image/webp" 
+                          onChange={handleImageChange} 
+                        />
+                        <Button 
+                          type="button"
+                          variant="outline" 
+                          size="sm" 
+                          onClick={() => document.getElementById('profile-upload')?.click()}
+                          className="h-9 px-4 rounded-xl glass border-white/10 text-[9px] font-bold uppercase tracking-widest hover:bg-white/10"
+                        >
+                          Select Image
+                        </Button>
+                        <p className="text-[8px] text-white/20 uppercase">JPG, PNG, WEBP • Max 5MB</p>
+                      </div>
+                    </div>
+                  </div>
+
                   <div className="space-y-2">
                     <Label className="text-[10px] font-bold uppercase tracking-widest text-white/40 ml-1">Full Name</Label>
                     <Input 
@@ -204,7 +292,7 @@ export default function FeedbackDialog() {
                   <Label className="text-[10px] font-bold uppercase tracking-widest text-white/40 ml-1">Your Feedback</Label>
                   <Textarea 
                     placeholder="Describe your experience with our neural simulations..."
-                    className="glass border-white/10 bg-transparent min-h-[120px] rounded-2xl p-4 resize-none font-light leading-relaxed"
+                    className="glass border-white/10 bg-transparent min-h-[100px] rounded-2xl p-4 resize-none font-light leading-relaxed"
                     value={formData.feedback}
                     onChange={e => setFormData({...formData, feedback: e.target.value})}
                     required
