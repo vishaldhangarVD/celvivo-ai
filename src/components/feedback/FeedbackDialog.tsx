@@ -55,20 +55,27 @@ export default function FeedbackDialog() {
     consent: false
   });
 
+  const resetForm = () => {
+    setFormData({ name: '', feedback: '', role: '', company: '', consent: false });
+    setRating(5);
+    setImageFile(null);
+    setImagePreview(null);
+    setIsSubmitting(false);
+    setIsSuccess(false);
+  };
+
   const handleOpenChange = (open: boolean) => {
     if (open && !user) {
       router.push('/login?redirectTo=/');
       return;
     }
-    setIsOpen(open);
-    // Reset form when closing to ensure it starts empty next time and clears any previous state
+    
+    // If the dialog is being closed, we purge all temporary local state
     if (!open) {
-      setFormData({ name: '', feedback: '', role: '', company: '', consent: false });
-      setRating(5);
-      setImageFile(null);
-      setImagePreview(null);
-      setIsSuccess(false);
+      resetForm();
     }
+    
+    setIsOpen(open);
   };
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -106,6 +113,7 @@ export default function FeedbackDialog() {
     try {
       let finalPhotoURL = null;
 
+      // Only perform the storage upload if the form is valid and being submitted
       if (imageFile && storage) {
         const fileName = `${Date.now()}_${imageFile.name}`;
         const storageRef = ref(storage, `userFeedback/${user.uid}/${fileName}`);
@@ -113,6 +121,7 @@ export default function FeedbackDialog() {
         finalPhotoURL = await getDownloadURL(uploadResult.ref);
       }
 
+      // Create the firestore document
       await addDoc(collection(db, 'userFeedback'), {
         userId: user.uid,
         name: formData.name,
@@ -127,13 +136,10 @@ export default function FeedbackDialog() {
       });
 
       setIsSuccess(true);
+      // Auto-close after success notification
       setTimeout(() => {
         setIsOpen(false);
-        setIsSuccess(false);
-        setFormData({ name: '', feedback: '', role: '', company: '', consent: false });
-        setRating(5);
-        setImageFile(null);
-        setImagePreview(null);
+        resetForm();
       }, 3000);
     } catch (error) {
       console.error(error);
@@ -142,7 +148,6 @@ export default function FeedbackDialog() {
         title: "Protocol Error",
         description: "Failed to transmit feedback node. Please try again."
       });
-    } finally {
       setIsSubmitting(false);
     }
   };
@@ -309,18 +314,28 @@ export default function FeedbackDialog() {
                   </Label>
                 </div>
 
-                <Button 
-                  type="submit" 
-                  disabled={isSubmitting || !formData.consent || !formData.feedback || !formData.name || !formData.role}
-                  className="w-full h-16 btn-premium text-[10px] font-bold tracking-[0.3em] uppercase shadow-2xl"
-                >
-                  {isSubmitting ? <Loader2 className="w-5 h-5 animate-spin" /> : (
-                    <div className="flex items-center gap-3">
-                      <ShieldCheck className="w-4 h-4" />
-                      Submit Feedback
-                    </div>
-                  )}
-                </Button>
+                <div className="flex gap-4">
+                  <Button 
+                    type="button"
+                    variant="ghost"
+                    onClick={() => handleOpenChange(false)}
+                    className="flex-1 h-16 rounded-2xl glass border-white/10 text-[10px] font-bold uppercase tracking-widest hover:bg-white/5"
+                  >
+                    Cancel
+                  </Button>
+                  <Button 
+                    type="submit" 
+                    disabled={isSubmitting || !formData.consent || !formData.feedback || !formData.name || !formData.role}
+                    className="flex-[2] h-16 btn-premium text-[10px] font-bold tracking-[0.3em] uppercase shadow-2xl"
+                  >
+                    {isSubmitting ? <Loader2 className="w-5 h-5 animate-spin" /> : (
+                      <div className="flex items-center gap-3">
+                        <ShieldCheck className="w-4 h-4" />
+                        Submit Feedback
+                      </div>
+                    )}
+                  </Button>
+                </div>
               </form>
             </motion.div>
           )}
