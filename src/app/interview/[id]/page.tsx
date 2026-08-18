@@ -41,7 +41,7 @@ import {
 import { aiMockInterview } from "@/ai/flows/ai-mock-interview-v2";
 import { generateInterviewFeedback } from "@/ai/flows/ai-interview-feedback";
 import { useUser, useFirestore, useDoc } from "@/firebase";
-import { doc, serverTimestamp, collection, addDoc, getDoc, deleteDoc, updateDoc } from "firebase/firestore";
+import { doc, serverTimestamp, collection, addDoc, getDoc, deleteDoc, updateDoc, setDoc } from "firebase/firestore";
 import { useToast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
@@ -366,14 +366,6 @@ function VirtualArenaContent() {
   }, []);
 
   useEffect(() => {
-    if (isSimulationComplete) return;
-    const timer = setInterval(() => {
-      setTimeLeft(prev => Math.max(0, prev - 1));
-    }, 1000);
-    return () => clearInterval(timer);
-  }, [isSimulationComplete]);
-
-  useEffect(() => {
     async function init() {
       if (!user || !db || !role || !company) return;
       
@@ -387,16 +379,6 @@ function VirtualArenaContent() {
         // Simulation Context Verification
         const rs = data.resumeAnalysis?.skillAnalysis || [];
         const rp = data.resumeAnalysis?.sections?.projects || [];
-        console.log("[INTERVIEW RESUME DEBUG]", {
-          resumeSkills: rs.length,
-          resumeProjects: rp.length,
-          resumeSummary: data.resumeAnalysis?.summary ? "PRESENT" : "EMPTY",
-          role: data.role
-        });
-
-        if (rs.length === 0 && rp.length === 0 && process.env.NODE_ENV === 'development') {
-           console.warn("[RESUME PIPELINE ERROR] Resume data is empty before Gemini generation.");
-        }
 
         // Initialize Sim State
         const startStage = data.simStage || "INTRODUCTION";
@@ -484,8 +466,6 @@ function VirtualArenaContent() {
         currentDifficulty: currentSimDifficulty as any
       });
 
-      console.log(`[Interviewer Brain] Transition: ${currentSimStage} → ${response.stage} | Difficulty: ${currentSimDifficulty} → ${response.difficulty}`);
-
       const updatedTranscript = [...newTranscript, { role: 'interviewer' as const, text: response.nextQuestion }];
       setTranscript(updatedTranscript);
       setAskedQuestions(prev => [...prev, response.nextQuestion]);
@@ -523,7 +503,6 @@ function VirtualArenaContent() {
     try {
       const transcriptStr = currentTranscript.map(t => `${t.role.toUpperCase()}: ${t.text}`).join('\n\n');
       
-      // REAL DATA MAPPING FROM ASSESSMENT CONTEXT
       const aptitudeReport = assessmentContext.aptitudeReport;
       const codingReport = assessmentContext.codingReport;
 
@@ -563,26 +542,39 @@ function VirtualArenaContent() {
         createdAt: serverTimestamp(),
       });
 
-      // 3. Confirm Save Success & Execute Subscription Consumption Protocol
-      if (docRef.id) {
-        const plan = profile?.plan || 'free';
-        if (plan === 'free' && !profile?.freeJourneyUsed) {
-          console.log("FREE JOURNEY CONSUMPTION UPDATE", {
-            uid: user.uid,
-            plan,
-            freeJourneyUsed: true
-          });
+      // 3. SECURE SUBSCRIPTION CONSUMPTION PROTOCOL (HARDENED)
+      const userRef = doc(db, 'users', user.uid);
+      const profileSnap = await getDoc(userRef);
+      const profileData = profileSnap.data();
+      
+      const plan = profileData?.plan || 'free';
+      const alreadyUsed = profileData?.freeJourneyUsed || false;
 
-          const userRef = doc(db, 'users', user.uid);
-          // Await the Firestore update strictly before navigation
-          await updateDoc(userRef, {
+      console.log("=== FREE JOURNEY COMPLETION ===");
+      console.log("USER UID:", user.uid);
+      console.log("PLAN:", plan);
+      console.log("ALREADY USED:", alreadyUsed);
+
+      if (plan === 'free' && !alreadyUsed) {
+        console.log("UPDATING FREE JOURNEY: true");
+        try {
+          // Use setDoc with merge to ensure doc creation if missing (e.g. Google Login users)
+          await setDoc(userRef, {
             freeJourneyUsed: true,
+            plan: plan,
+            subscriptionStatus: profileData?.subscriptionStatus || 'active',
             updatedAt: serverTimestamp()
-          });
-
-          // Post-Update Verification
+          }, { merge: true });
+          
+          console.log("=== FREE JOURNEY UPDATED SUCCESSFULLY ===");
+          
+          // VERIFY WRITE
           const verifySnap = await getDoc(userRef);
-          console.log("VERIFIED SUBSCRIPTION:", verifySnap.data());
+          console.log("VERIFIED FIRESTORE USER:", verifySnap.data());
+        } catch (updateErr) {
+          console.error("=== FREE JOURNEY UPDATE FAILED ===", updateErr);
+          // Do not fail the whole process if only usage tracking fails, 
+          // but log it extensively for audit.
         }
       }
       
