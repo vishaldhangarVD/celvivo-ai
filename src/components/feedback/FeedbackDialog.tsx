@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from 'react';
+import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Dialog, 
@@ -55,30 +55,20 @@ export default function FeedbackDialog() {
     consent: false
   });
 
-  // Track initialization to prevent overwriting user edits after first load
-  const hasInitialized = useRef(false);
-
-  useEffect(() => {
-    if (isOpen) {
-      if (user && !hasInitialized.current) {
-        setFormData(prev => ({
-          ...prev,
-          name: user.displayName || user.email?.split('@')[0] || ''
-        }));
-        hasInitialized.current = true;
-      }
-    } else {
-      // Reset initialization when dialog closes so it can re-init next time it's opened
-      hasInitialized.current = false;
-    }
-  }, [isOpen, user]);
-
   const handleOpenChange = (open: boolean) => {
     if (open && !user) {
       router.push('/login?redirectTo=/');
       return;
     }
     setIsOpen(open);
+    // Reset form when closing to ensure it starts empty next time and clears any previous state
+    if (!open) {
+      setFormData({ name: '', feedback: '', role: '', company: '', consent: false });
+      setRating(5);
+      setImageFile(null);
+      setImagePreview(null);
+      setIsSuccess(false);
+    }
   };
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -114,7 +104,7 @@ export default function FeedbackDialog() {
 
     setIsSubmitting(true);
     try {
-      let finalPhotoURL = user.photoURL || null;
+      let finalPhotoURL = null;
 
       if (imageFile && storage) {
         const fileName = `${Date.now()}_${imageFile.name}`;
