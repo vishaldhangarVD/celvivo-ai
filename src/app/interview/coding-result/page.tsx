@@ -12,7 +12,6 @@ import {
   CheckCircle2, 
   XCircle, 
   Trophy, 
-  History, 
   Activity, 
   Clock, 
   ChevronRight, 
@@ -69,8 +68,30 @@ export default function CodingResultTerminal() {
   const { data: questionResults, loading: resultsLoading } = useCollection(resultsQuery);
 
   const result = useMemo(() => {
+    // 1. Try to use the pre-finalized report from journey active doc
     if (journey?.codingReport) return journey.codingReport;
     
+    // 2. Fallback: Re-calculate summary index from raw collection data if report is missing/processing
+    if (questionResults && questionResults.length > 0) {
+      const total = 5;
+      const solved = questionResults.filter((r: any) => r.status === 'Solved').length;
+      const failed = questionResults.filter((r: any) => r.status === 'Failed').length;
+      const skipped = questionResults.filter((r: any) => r.status === 'Skipped').length;
+      const score = Math.round((solved / total) * 100);
+
+      return {
+        score,
+        status: score >= 60 ? 'Pass' : 'Fail',
+        totalQuestions: total,
+        passedQuestions: solved,
+        failedQuestions: failed,
+        skippedQuestions: skipped,
+        totalPassedCases: questionResults.reduce((acc, curr) => acc + (curr.passedTestCases || 0), 0),
+        totalTestCases: questionResults.reduce((acc, curr) => acc + (curr.totalTestCases || 0), 0),
+        submissionTime: "Synced"
+      };
+    }
+
     return {
       score: 0,
       status: 'Awaiting',
@@ -82,7 +103,7 @@ export default function CodingResultTerminal() {
       totalTestCases: 0,
       submissionTime: "N/A"
     };
-  }, [journey]);
+  }, [journey, questionResults]);
 
   const aggregateStats = useMemo(() => {
     if (!questionResults || questionResults.length === 0) return null;

@@ -47,18 +47,10 @@ export default function CodingResultPage() {
 
   const { data: journey, loading: journeyLoading } = useDoc(journeyRef);
 
-  // Result Data (Uses Firestore data if available, otherwise mocks for UI preview)
+  // Result Data - Derived from the actual completed session report
   const result = useMemo(() => {
-    if (!journey) return null;
-    return journey.codingReport || {
-      score: 80,
-      status: 'Pass',
-      totalQuestions: 5,
-      passedQuestions: 4,
-      time: "14:25",
-      accuracy: 80,
-      submissionTime: new Date().toLocaleTimeString(),
-    };
+    if (!journey || !journey.codingReport) return null;
+    return journey.codingReport;
   }, [journey]);
 
   const isPassed = (result?.score || 0) >= 60;
@@ -66,6 +58,15 @@ export default function CodingResultPage() {
   if (journeyLoading) return (
     <div className="h-screen flex items-center justify-center bg-[#050816]">
       <Loader2 className="w-12 h-12 text-accent animate-spin" />
+    </div>
+  );
+
+  if (!result) return (
+    <div className="h-screen flex flex-col items-center justify-center bg-[#050816] text-center p-8 space-y-6">
+      <AlertTriangle className="w-16 h-16 text-orange-400" />
+      <h2 className="text-2xl font-bold text-white">Dossier Processing</h2>
+      <p className="text-muted-foreground max-w-xs mx-auto">The neural auditor is still calculating your performance index. Please wait a moment.</p>
+      <Button onClick={() => window.location.reload()} className="btn-premium px-8">Refresh Protocol</Button>
     </div>
   );
 
@@ -118,9 +119,9 @@ export default function CodingResultPage() {
             {[
               { label: "Total Questions", val: `0${result?.totalQuestions || 5}`, icon: Layers, color: "text-blue-400" },
               { label: "Correct Nodes", val: `0${result?.passedQuestions || 0}`, icon: CheckCircle2, color: "text-green-400" },
-              { label: "Failed Probes", val: `0${(result?.totalQuestions || 5) - (result?.passedQuestions || 0)}`, icon: XCircle, color: "text-red-400" },
+              { label: "Failed Probes", val: `0${result?.failedQuestions || 0}`, icon: XCircle, color: "text-red-400" },
               { label: "Execution Status", val: "Success", icon: Activity, color: "text-accent" },
-              { label: "Code Integrity", val: "Optimal", icon: Cpu, color: "text-purple-400" },
+              { label: "Code Integrity", val: result?.score >= 80 ? "Optimal" : "Standard", icon: Cpu, color: "text-purple-400" },
               { label: "Master Score", val: `${result?.score}%`, icon: Trophy, color: "text-yellow-400" }
             ].map((stat, i) => (
               <motion.div
@@ -153,5 +154,11 @@ export default function CodingResultPage() {
 
       <NavigationControls onHome={() => router.push('/')} />
     </div>
+  );
+}
+
+function AlertTriangle({ className }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>
   );
 }
