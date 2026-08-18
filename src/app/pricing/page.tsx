@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Navbar from '@/components/layout/Navbar';
 import NavigationControls from '@/components/NavigationControls';
@@ -16,19 +16,24 @@ import {
   ArrowRight,
   Loader2
 } from 'lucide-react';
-import { useUser } from '@/firebase';
+import { useUser, useFirestore } from '@/firebase';
+import { doc, updateDoc, serverTimestamp } from 'firebase/firestore';
 import { useRouter } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
+import Script from 'next/script';
 
 export default function PricingPage() {
   const router = useRouter();
   const { user, loading: authLoading } = useUser();
+  const db = useFirestore();
   const { toast } = useToast();
+  
   const [isYearly, setIsYearly] = useState(false);
+  const [isProcessing, setIsProcessing] = useState<string | null>(null);
 
-  const handleAction = (plan: string) => {
-    if (plan === 'Free') {
+  const handleAction = async (plan: string) => {
+    if (plan === 'FREE') {
       if (user) {
         router.push('/interview');
       } else {
@@ -37,10 +42,99 @@ export default function PricingPage() {
       return;
     }
 
-    toast({
-      title: "PROTOCOL INITIALIZING",
-      description: "Payment integration is being calibrated. Check back shortly for active deployment.",
-    });
+    if (!user) {
+      router.push('/login?redirectTo=/pricing');
+      return;
+    }
+
+    const planType = plan.toLowerCase(); // 'pro' or 'premium'
+    setIsProcessing(planType);
+
+    try {
+      // 1. Create Subscription on Server
+      const res = await fetch('/api/payment/create-subscription', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ planType })
+      });
+
+      if (!res.ok) throw new Error("Failed to initialize payment gateway.");
+      
+      const { subscriptionId, keyId } = await res.json();
+
+      // 2. Open Razorpay Checkout
+      const options = {
+        key: keyId,
+        subscription_id: subscriptionId,
+        name: "Nexvoro AI",
+        description: `${plan} Plan Subscription`,
+        image: "/favicon.ico",
+        handler: async function (response: any) {
+          // 3. Verify Payment on Server
+          setIsProcessing('verifying');
+          const verifyRes = await fetch('/api/payment/verify', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              razorpay_payment_id: response.razorpay_payment_id,
+              razorpay_subscription_id: response.razorpay_subscription_id,
+              razorpay_signature: response.razorpay_signature
+            })
+          });
+
+          const verifyData = await verifyRes.json();
+
+          if (verifyData.verified && db) {
+            // 4. Update Firestore Profile
+            await updateDoc(doc(db, 'users', user.uid), {
+              plan: planType,
+              subscriptionStatus: 'active',
+              subscriptionId: response.razorpay_subscription_id,
+              paymentId: response.razorpay_payment_id,
+              subscriptionStart: serverTimestamp(),
+              updatedAt: serverTimestamp()
+            });
+
+            toast({
+              title: "PROTOCOL UPGRADED",
+              description: `Welcome to ${plan} tier. All elite nodes are now unlocked.`,
+            });
+            router.push('/dashboard');
+          } else {
+            toast({
+              variant: "destructive",
+              title: "VERIFICATION FAILED",
+              description: "Security signature mismatch. Please contact support.",
+            });
+          }
+          setIsProcessing(null);
+        },
+        prefill: {
+          name: user.displayName || "",
+          email: user.email || "",
+        },
+        theme: {
+          color: "#22d3ee"
+        },
+        modal: {
+          ondismiss: function() {
+            setIsProcessing(null);
+          }
+        }
+      };
+
+      const rzp = new (window as any).Razorpay(options);
+      rzp.open();
+
+    } catch (error: any) {
+      console.error(error);
+      toast({
+        variant: "destructive",
+        title: "GATEWAY ERROR",
+        description: error.message || "Could not reach payment servers.",
+      });
+      setIsProcessing(null);
+    }
   };
 
   const plans = [
@@ -105,6 +199,7 @@ export default function PricingPage() {
 
   return (
     <div className="min-h-screen bg-[#050816] pb-32">
+      <Script src="https://checkout.razorpay.com/v1/checkout.js" strategy="lazyOnload" />
       <div className="particles-bg" />
       <Navbar />
       <NavigationControls />
@@ -199,6 +294,7 @@ export default function PricingPage() {
 
                 <Button 
                   onClick={() => handleAction(plan.name)}
+                  disabled={isProcessing !== null}
                   className={cn(
                     "w-full h-16 rounded-2xl text-[10px] font-black tracking-[0.3em] uppercase transition-all shadow-2xl group/btn",
                     plan.popular 
@@ -206,7 +302,13 @@ export default function PricingPage() {
                     : "glass border-white/10 hover:bg-white/10"
                   )}
                 >
-                  {plan.button} <ArrowRight className="ml-2 w-4 h-4 transition-transform group-hover/btn:translate-x-1" />
+                  {isProcessing === plan.name.toLowerCase() ? (
+                    <Loader2 className="w-5 h-5 animate-spin" />
+                  ) : isProcessing === 'verifying' && plan.name !== 'FREE' ? (
+                    "VERIFYING..."
+                  ) : (
+                    <>{plan.button} <ArrowRight className="ml-2 w-4 h-4 transition-transform group-hover/btn:translate-x-1" /></>
+                  )}
                 </Button>
               </Card>
             </motion.div>
