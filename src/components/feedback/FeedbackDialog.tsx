@@ -55,15 +55,15 @@ export default function FeedbackDialog() {
     consent: false
   });
 
-  // Sync user name to form when opening
+  // Sync user name to form ONLY once when opening
   useEffect(() => {
-    if (isOpen && user && !formData.name) {
+    if (isOpen && user) {
       setFormData(prev => ({
         ...prev,
-        name: user.displayName || user.email?.split('@')[0] || ''
+        name: prev.name || user.displayName || user.email?.split('@')[0] || ''
       }));
     }
-  }, [isOpen, user, formData.name]);
+  }, [isOpen, !!user]);
 
   const handleOpenChange = (open: boolean) => {
     if (open && !user) {
@@ -71,6 +71,10 @@ export default function FeedbackDialog() {
       return;
     }
     setIsOpen(open);
+    if (!open) {
+      // Reset form state slightly on close if needed, 
+      // but keeping it simple to just close
+    }
   };
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
