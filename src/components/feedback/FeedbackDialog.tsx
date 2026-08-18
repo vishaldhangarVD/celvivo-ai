@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Dialog, 
@@ -55,15 +55,23 @@ export default function FeedbackDialog() {
     consent: false
   });
 
-  // Sync user name to form ONLY once when opening
+  // Track initialization to prevent overwriting user edits after first load
+  const hasInitialized = useRef(false);
+
   useEffect(() => {
-    if (isOpen && user) {
-      setFormData(prev => ({
-        ...prev,
-        name: prev.name || user.displayName || user.email?.split('@')[0] || ''
-      }));
+    if (isOpen) {
+      if (user && !hasInitialized.current) {
+        setFormData(prev => ({
+          ...prev,
+          name: user.displayName || user.email?.split('@')[0] || ''
+        }));
+        hasInitialized.current = true;
+      }
+    } else {
+      // Reset initialization when dialog closes so it can re-init next time it's opened
+      hasInitialized.current = false;
     }
-  }, [isOpen, !!user]);
+  }, [isOpen, user]);
 
   const handleOpenChange = (open: boolean) => {
     if (open && !user) {
@@ -71,10 +79,6 @@ export default function FeedbackDialog() {
       return;
     }
     setIsOpen(open);
-    if (!open) {
-      // Reset form state slightly on close if needed, 
-      // but keeping it simple to just close
-    }
   };
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
