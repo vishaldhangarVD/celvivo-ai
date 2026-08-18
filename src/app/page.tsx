@@ -28,7 +28,7 @@ import {
 } from 'lucide-react';
 import { useUser, useFirestore, useCollection } from '@/firebase';
 import { useState, useMemo } from 'react';
-import { collection, query, where, orderBy } from 'firebase/firestore';
+import { collection, query, where } from 'firebase/firestore';
 import FeedbackDialog from '@/components/feedback/FeedbackDialog';
 
 const COMPANIES = [
@@ -115,13 +115,13 @@ export default function LandingPage() {
   const [isScrollingPaused, setIsScrollingPaused] = useState(false);
 
   // Fetch approved community feedback
+  // Removed orderBy to avoid requiring composite indexes for prototype deployment
   const feedbackQuery = useMemo(() => {
     if (!db) return null;
     return query(
       collection(db, 'userFeedback'),
       where('status', '==', 'approved'),
-      where('consent', '==', true),
-      orderBy('createdAt', 'desc')
+      where('consent', '==', true)
     );
   }, [db]);
 

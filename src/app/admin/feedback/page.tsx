@@ -6,7 +6,6 @@ import { useUser, useFirestore, useCollection, useDoc } from '@/firebase';
 import { 
   collection, 
   query, 
-  orderBy, 
   doc, 
   updateDoc, 
   deleteDoc, 
@@ -48,12 +47,12 @@ export default function AdminFeedbackPage() {
 
   const [filter, setFilter] = useState<'pending' | 'approved' | 'rejected'>('pending');
 
+  // Removed orderBy to ensure it works without requiring a composite index
   const feedbackQuery = useMemo(() => {
     if (!db) return null;
     return query(
       collection(db, 'userFeedback'),
-      where('status', '==', filter),
-      orderBy('createdAt', 'desc')
+      where('status', '==', filter)
     );
   }, [db, filter]);
 
@@ -99,7 +98,7 @@ export default function AdminFeedbackPage() {
       <NavigationControls />
 
       <main className="container mx-auto px-6 pt-40">
-        <div className="max-w-6xl mx-auto space-y-12">
+        <div className="max-w-6xl auto space-y-12">
           
           <header className="flex flex-col md:flex-row justify-between items-end gap-8">
             <div className="space-y-4">

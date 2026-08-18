@@ -70,7 +70,6 @@ export default function FeedbackDialog() {
       return;
     }
     
-    // If the dialog is being closed, we purge all temporary local state
     if (!open) {
       resetForm();
     }
@@ -107,13 +106,19 @@ export default function FeedbackDialog() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!user || !db || !formData.consent) return;
+    if (!user || !db || !formData.consent) {
+      toast({
+        variant: "destructive",
+        title: "Validation Error",
+        description: "Please provide consent and ensure your session is active."
+      });
+      return;
+    }
 
     setIsSubmitting(true);
     try {
       let finalPhotoURL = null;
 
-      // Only perform the storage upload if the form is valid and being submitted
       if (imageFile && storage) {
         const fileName = `${Date.now()}_${imageFile.name}`;
         const storageRef = ref(storage, `userFeedback/${user.uid}/${fileName}`);
@@ -121,7 +126,6 @@ export default function FeedbackDialog() {
         finalPhotoURL = await getDownloadURL(uploadResult.ref);
       }
 
-      // Create the firestore document
       await addDoc(collection(db, 'userFeedback'), {
         userId: user.uid,
         name: formData.name,
@@ -136,17 +140,16 @@ export default function FeedbackDialog() {
       });
 
       setIsSuccess(true);
-      // Auto-close after success notification
       setTimeout(() => {
         setIsOpen(false);
         resetForm();
       }, 3000);
-    } catch (error) {
-      console.error(error);
+    } catch (error: any) {
+      console.error("Submission Error:", error);
       toast({
         variant: "destructive",
         title: "Protocol Error",
-        description: "Failed to transmit feedback node. Please try again."
+        description: error.message || "Failed to transmit feedback node. Please try again."
       });
       setIsSubmitting(false);
     }
@@ -320,7 +323,7 @@ export default function FeedbackDialog() {
                   <Button 
                     type="button"
                     variant="ghost"
-                    onClick={() => handleOpenChange(false)}
+                    onClick={() => setIsOpen(false)}
                     className="flex-1 h-16 rounded-2xl glass border-white/10 text-[10px] font-bold uppercase tracking-widest hover:bg-white/5"
                   >
                     Cancel

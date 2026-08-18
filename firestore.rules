@@ -2,8 +2,10 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
     // Utility function for founder check
+    // Added exists() check to prevent errors if user profile doesn't exist yet
     function isFounder() {
       return request.auth != null && 
+        exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'founder';
     }
 
@@ -19,7 +21,8 @@ service cloud.firestore {
     // Rules for the public feedback collection
     match /userFeedback/{feedbackId} {
       // Allow public to read approved feedback with consent.
-      // Allow owners and founders to read any feedback.
+      // Allow owners to read their own pending feedback.
+      // Allow founders to read all for moderation.
       allow read: if (resource.data.status == 'approved' && resource.data.consent == true) || 
                    (request.auth != null && (request.auth.uid == resource.data.userId || isFounder()));
       
