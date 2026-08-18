@@ -218,7 +218,9 @@ export default function FeedbackDialog() {
                   <div className="flex items-center gap-6 p-4 glass rounded-2xl border-white/5 bg-white/[0.01]">
                     <div className="relative group">
                       <Avatar className="w-20 h-20 border-2 border-white/10 group-hover:border-accent transition-all cursor-pointer overflow-hidden">
-                        <AvatarImage src={imagePreview || ""} className="object-cover" />
+                        {imagePreview && (
+                          <AvatarImage src={imagePreview} className="object-cover" />
+                        )}
                         <AvatarFallback className="bg-white/5 text-white/20">
                           <Camera className="w-8 h-8" />
                         </AvatarFallback>
