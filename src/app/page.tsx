@@ -29,6 +29,7 @@ import {
 import { useUser, useFirestore, useCollection } from '@/firebase';
 import { useState, useMemo } from 'react';
 import { collection, query, where, orderBy } from 'firebase/firestore';
+import FeedbackDialog from '@/components/feedback/FeedbackDialog';
 
 const COMPANIES = [
   { name: "Google", logo: "GOOG", color: "text-blue-400" },
@@ -389,6 +390,9 @@ export default function LandingPage() {
             <p className="text-muted-foreground font-light max-w-2xl mx-auto text-lg">
               Engineers from the world's most innovative companies used Nexvoro AI to master their interviews.
             </p>
+            <div className="pt-8">
+              <FeedbackDialog />
+            </div>
           </div>
 
           <div className="grid md:grid-cols-3 gap-8">

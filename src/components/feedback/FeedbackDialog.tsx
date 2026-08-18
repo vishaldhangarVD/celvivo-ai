@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Dialog, 
@@ -26,11 +26,13 @@ import { useUser, useFirestore } from '@/firebase';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
+import { useRouter } from 'next/navigation';
 
 export default function FeedbackDialog() {
   const { user } = useUser();
   const db = useFirestore();
   const { toast } = useToast();
+  const router = useRouter();
   
   const [isOpen, setIsOpen] = useState(false);
   const [rating, setRating] = useState(5);
@@ -38,11 +40,30 @@ export default function FeedbackDialog() {
   const [isSuccess, setIsSuccess] = useState(false);
   
   const [formData, setFormData] = useState({
+    name: '',
     feedback: '',
     role: '',
     company: '',
     consent: false
   });
+
+  // Sync user name to form when opening
+  useEffect(() => {
+    if (isOpen && user && !formData.name) {
+      setFormData(prev => ({
+        ...prev,
+        name: user.displayName || user.email?.split('@')[0] || ''
+      }));
+    }
+  }, [isOpen, user, formData.name]);
+
+  const handleOpenChange = (open: boolean) => {
+    if (open && !user) {
+      router.push('/login?redirectTo=/');
+      return;
+    }
+    setIsOpen(open);
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -52,7 +73,7 @@ export default function FeedbackDialog() {
     try {
       await addDoc(collection(db, 'userFeedback'), {
         userId: user.uid,
-        name: user.displayName || user.email?.split('@')[0] || 'Anonymous',
+        name: formData.name,
         role: formData.role,
         company: formData.company,
         feedback: formData.feedback,
@@ -67,7 +88,7 @@ export default function FeedbackDialog() {
       setTimeout(() => {
         setIsOpen(false);
         setIsSuccess(false);
-        setFormData({ feedback: '', role: '', company: '', consent: false });
+        setFormData({ name: '', feedback: '', role: '', company: '', consent: false });
         setRating(5);
       }, 3000);
     } catch (error) {
@@ -83,11 +104,11 @@ export default function FeedbackDialog() {
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={setIsOpen}>
+    <Dialog open={isOpen} onOpenChange={handleOpenChange}>
       <DialogTrigger asChild>
         <Button variant="outline" className="h-14 px-8 glass border-white/10 flex gap-3 text-[10px] tracking-widest uppercase hover:bg-accent/10 hover:text-accent transition-all">
           <MessageSquare className="w-4 h-4" />
-          Share Your Experience
+          Share Your Feedback
         </Button>
       </DialogTrigger>
       <DialogContent className="glass border-white/10 bg-[#0b0e1a] text-white max-w-xl rounded-[2.5rem] overflow-hidden">
@@ -144,25 +165,38 @@ export default function FeedbackDialog() {
                   </div>
                 </div>
 
-                <div className="grid md:grid-cols-2 gap-6">
+                <div className="space-y-4">
                   <div className="space-y-2">
-                    <Label className="text-[10px] font-bold uppercase tracking-widest text-white/40 ml-1">Professional Role</Label>
+                    <Label className="text-[10px] font-bold uppercase tracking-widest text-white/40 ml-1">Full Name</Label>
                     <Input 
-                      placeholder="e.g. Senior Software Engineer"
+                      placeholder="e.g. John Doe"
                       className="glass border-white/10 bg-transparent h-12 rounded-xl"
-                      value={formData.role}
-                      onChange={e => setFormData({...formData, role: e.target.value})}
+                      value={formData.name}
+                      onChange={e => setFormData({...formData, name: e.target.value})}
                       required
                     />
                   </div>
-                  <div className="space-y-2">
-                    <Label className="text-[10px] font-bold uppercase tracking-widest text-white/40 ml-1">Company / Org (Optional)</Label>
-                    <Input 
-                      placeholder="e.g. Google, Amazon"
-                      className="glass border-white/10 bg-transparent h-12 rounded-xl"
-                      value={formData.company}
-                      onChange={e => setFormData({...formData, company: e.target.value})}
-                    />
+                  
+                  <div className="grid md:grid-cols-2 gap-6">
+                    <div className="space-y-2">
+                      <Label className="text-[10px] font-bold uppercase tracking-widest text-white/40 ml-1">Professional Role</Label>
+                      <Input 
+                        placeholder="e.g. Senior Software Engineer"
+                        className="glass border-white/10 bg-transparent h-12 rounded-xl"
+                        value={formData.role}
+                        onChange={e => setFormData({...formData, role: e.target.value})}
+                        required
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="text-[10px] font-bold uppercase tracking-widest text-white/40 ml-1">Company / Org (Optional)</Label>
+                      <Input 
+                        placeholder="e.g. Google, Amazon"
+                        className="glass border-white/10 bg-transparent h-12 rounded-xl"
+                        value={formData.company}
+                        onChange={e => setFormData({...formData, company: e.target.value})}
+                      />
+                    </div>
                   </div>
                 </div>
 
@@ -191,13 +225,13 @@ export default function FeedbackDialog() {
 
                 <Button 
                   type="submit" 
-                  disabled={isSubmitting || !formData.consent || !formData.feedback}
+                  disabled={isSubmitting || !formData.consent || !formData.feedback || !formData.name || !formData.role}
                   className="w-full h-16 btn-premium text-[10px] font-bold tracking-[0.3em] uppercase shadow-2xl"
                 >
                   {isSubmitting ? <Loader2 className="w-5 h-5 animate-spin" /> : (
                     <div className="flex items-center gap-3">
                       <ShieldCheck className="w-4 h-4" />
-                      Submit to Nexus
+                      Submit Feedback
                     </div>
                   )}
                 </Button>
