@@ -43,9 +43,8 @@ export default function RootCodingResultPage() {
     return {
       score: 0,
       status: 'Awaiting',
-      totalQuestions: 5,
-      passedQuestions: 0,
-      failedQuestions: 0,
+      totalQuestions: 8,
+      passedQuestions: 0,      failedQuestions: 0,
       skippedQuestions: 0,
       totalPassedCases: 0,
       totalTestCases: 0,
@@ -106,7 +105,7 @@ export default function RootCodingResultPage() {
 
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
             {[
-              { label: "Total Questions", val: result?.totalQuestions || 5, icon: Layers, color: "text-blue-400" },
+              { label: "Total Questions", val: result?.totalQuestions || 8, icon: Layers, color: "text-blue-400" },
               { label: "Correct Solutions", val: result?.passedQuestions || 0, icon: CheckCircle2, color: "text-green-400" },
               { label: "Failed Solutions", val: result?.failedQuestions || 0, icon: XCircle, color: "text-red-400" },
               { label: "Skipped Nodes", val: result?.skippedQuestions || 0, icon: FastForward, color: "text-orange-400" },
