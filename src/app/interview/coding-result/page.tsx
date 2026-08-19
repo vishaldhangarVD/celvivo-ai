@@ -196,20 +196,19 @@ function CodingResultContent() {
                 </div>
               </div>
 
-              <div className="relative z-10 pt-6">
-                {isPassed ? (
-                  <Button 
-                    onClick={handleContinueToInterview}
-                    className="w-full h-16 btn-premium rounded-2xl text-xs font-black uppercase tracking-[0.3em] shadow-[0_20px_60px_rgba(147,51,234,0.3)] group"
-                  >
-                    CONTINUE TO INTERVIEW <ArrowRight className="ml-3 w-5 h-5 transition-transform group-hover:translate-x-1" />
-                  </Button>
-                ) : (
+              <div className="relative z-10 pt-6 space-y-4">
+                <Button 
+                  onClick={handleContinueToInterview}
+                  className="w-full h-16 btn-premium rounded-2xl text-xs font-black uppercase tracking-[0.3em] shadow-[0_20px_60px_rgba(147,51,234,0.3)] group"
+                >
+                  CONTINUE TO INTERVIEW <ArrowRight className="ml-3 w-5 h-5 transition-transform group-hover/btn:translate-x-1" />
+                </Button>
+                {!isPassed && (
                   <Button 
                     onClick={() => router.push('/interview/coding')}
-                    className="w-full h-16 glass border-white/10 hover:bg-white/5 rounded-2xl text-xs font-black uppercase tracking-[0.3em]"
+                    className="w-full h-12 glass border-white/10 hover:bg-white/5 rounded-xl text-[10px] font-bold uppercase tracking-widest"
                   >
-                    <RotateCcw className="mr-3 w-5 h-5" /> Re-initialize Assessment
+                    <RotateCcw className="mr-2 w-4 h-4" /> Re-initialize Assessment
                   </Button>
                 )}
               </div>
@@ -320,14 +319,12 @@ function CodingResultContent() {
             </div>
 
             <div className="flex justify-end gap-4 shrink-0 pt-4 border-t border-white/5">
-              {isPassed && (
-                <Button 
-                  onClick={handleContinueToInterview}
-                  className="h-12 px-10 btn-premium rounded-xl text-[10px] font-black uppercase tracking-[0.3em] shadow-2xl flex items-center gap-2"
-                >
-                  CONTINUE TO INTERVIEW <ArrowRight className="w-4 h-4" />
-                </Button>
-              )}
+              <Button 
+                onClick={handleContinueToInterview}
+                className="h-12 px-10 btn-premium rounded-xl text-[10px] font-black uppercase tracking-[0.3em] shadow-2xl flex items-center gap-2"
+              >
+                CONTINUE TO INTERVIEW <ArrowRight className="w-4 h-4" />
+              </Button>
               <Button onClick={() => router.push('/dashboard')} variant="ghost" className="h-12 px-8 rounded-xl glass border-white/10 text-[9px] font-black uppercase tracking-widest text-white/30 hover:text-white">
                 Exit to Control Panel
               </Button>

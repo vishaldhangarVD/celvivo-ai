@@ -20,7 +20,8 @@ import {
   FastForward,
   Activity,
   Cpu,
-  RefreshCcw
+  RefreshCcw,
+  RotateCcw
 } from 'lucide-react';
 import { useUser, useFirestore, useDoc } from '@/firebase';
 import { doc } from 'firebase/firestore';
@@ -84,20 +85,31 @@ function CodingResultContent() {
       <main className="flex-1 container mx-auto px-6 pt-32 pb-16">
         <div className="max-w-6xl mx-auto space-y-12">
           <header className="text-center space-y-4">
-            <Badge className="bg-accent/20 text-accent border-none px-6 py-1.5 font-bold tracking-[0.4em] text-[10px] uppercase">Simulation Audit Node 05</Badge>
+            <Badge className="bg-accent/20 text-accent border-none px-4 py-1 text-[10px] tracking-[0.4em] text-[10px] uppercase">Simulation Audit Node 05</Badge>
             <h1 className="text-6xl font-bold tracking-tighter text-premium">Coding Round <span className="text-gradient-purple">Result.</span></h1>
           </header>
 
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
             <Card className="premium-card p-12 flex flex-col items-center text-center space-y-10 relative overflow-hidden bg-white/[0.01]">
               <div className={cn("text-[120px] font-black tracking-tighter tabular-nums drop-shadow-[0_0_50px_rgba(34,211,238,0.2)]", isPassed ? "text-accent" : "text-red-400")}>{result?.score}%</div>
-              {isPassed ? (
-                <Button onClick={handleContinueToInterview} className="h-20 px-16 btn-premium rounded-[2rem] text-lg font-black uppercase tracking-[0.3em] shadow-2xl group">
+              
+              <div className="flex flex-col items-center gap-6 w-full max-w-md">
+                <Button 
+                  onClick={handleContinueToInterview} 
+                  className="w-full h-20 btn-premium rounded-[2rem] text-lg font-black uppercase tracking-[0.3em] shadow-2xl group"
+                >
                   Continue to Interview <ArrowRight className="ml-4 w-6 h-6 transition-transform group-hover:translate-x-1" />
                 </Button>
-              ) : (
-                <Button onClick={() => router.push('/interview/coding')} className="h-20 px-16 glass border-white/10 hover:bg-white/5 rounded-[2rem] text-lg font-black uppercase tracking-[0.3em] group"><RefreshCcw className="mr-4 w-6 h-6 group-hover:rotate-180 transition-transform" /> Re-initialize Test</Button>
-              )}
+                
+                {!isPassed && (
+                  <Button 
+                    onClick={() => router.push('/interview/coding')} 
+                    className="w-full h-14 glass border-white/10 hover:bg-white/5 rounded-[2rem] text-xs font-bold uppercase tracking-[0.3em] group"
+                  >
+                    <RotateCcw className="mr-3 w-5 h-5 group-hover:rotate-180 transition-transform" /> Re-initialize Test
+                  </Button>
+                )}
+              </div>
             </Card>
           </motion.div>
         </div>
