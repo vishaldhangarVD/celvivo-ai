@@ -227,15 +227,20 @@ export default function AptitudeEnginePage() {
     let notAnsweredCount = 0;
     const formattedResults = questions.map((q, idx) => {
       const userSelectedIdx = answers[idx];
-      if (userSelectedIdx === undefined) notAnsweredCount++;
-      const isCorrect = userSelectedIdx === q.correctOptionIndex;
+      const isAnswered = userSelectedIdx !== undefined;
+      
+      if (!isAnswered) {
+        notAnsweredCount++;
+      }
+      
+      const isCorrect = isAnswered && userSelectedIdx === q.correctOptionIndex;
       if (isCorrect) correctCount++;
       
       return {
         question: q.question,
         category: q.category,
         difficulty: q.difficulty,
-        userAnswer: userSelectedIdx !== undefined ? q.options[userSelectedIdx] : "Not Answered",
+        userAnswer: isAnswered ? q.options[userSelectedIdx] : "Not Answered",
         correctAnswer: q.options[q.correctOptionIndex],
         isCorrect: isCorrect,
       };
@@ -268,7 +273,7 @@ export default function AptitudeEnginePage() {
         notAnsweredCount,
         accuracy: finalNumericScore,
         status: finalNumericScore >= 60 ? 'Pass' : 'Fail',
-        details: formattedResults
+        details: formattedResults // CRITICAL: Save the actual results trace
       };
 
       setResult(finalReport);
