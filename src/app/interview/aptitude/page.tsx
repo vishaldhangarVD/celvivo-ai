@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
@@ -233,7 +234,7 @@ export default function AptitudeEnginePage() {
 
       setResult(finalReport);
       
-      await updateDoc(journeyRef, {
+      await updateDoc(journeyRef!, {
         aptitudeReport: finalReport,
         aptitudeStatus: "completed",
         currentStage: finalReport.status === 'Pass' ? 'Coding Assessment' : 'Aptitude Assessment',
@@ -330,7 +331,7 @@ export default function AptitudeEnginePage() {
   const currentQ = questions[currentIdx];
 
   return (
-    <div className="h-screen bg-[#050816] flex flex-col relative overflow-hidden pt-[72px]">
+    <div className="fixed inset-0 bg-[#050816] flex flex-col overflow-hidden pt-[72px]">
       <div className="particles-bg" />
       <Navbar />
 
