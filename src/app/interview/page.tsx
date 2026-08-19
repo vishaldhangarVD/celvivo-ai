@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useMemo, useEffect } from 'react';
@@ -150,7 +149,17 @@ export default function InterviewSetupPage() {
         status: "Active",
         currentStage: "Resume Upload",
         updatedAt: serverTimestamp(),
-        step: 1
+        step: 1,
+        // Reset assessment states for the new session
+        aptitudeQuestions: null,
+        aptitudeAnswers: null,
+        aptitudeCurrentIndex: 0,
+        aptitudeTimerEndAt: null,
+        aptitudeStatus: "not_started",
+        aptitudeReport: null,
+        codingQuestions: null,
+        codingReport: null,
+        codingRoundCompleted: false
       }, { merge: true });
 
       setTimeout(() => {
@@ -194,7 +203,17 @@ export default function InterviewSetupPage() {
       status: "Active",
       currentStage: "Coding Assessment",
       updatedAt: serverTimestamp(),
-      step: 4
+      step: 4,
+      // Reset assessment states for the new session
+      aptitudeQuestions: null,
+      aptitudeAnswers: null,
+      aptitudeCurrentIndex: 0,
+      aptitudeTimerEndAt: null,
+      aptitudeStatus: "not_started",
+      aptitudeReport: null,
+      codingQuestions: null,
+      codingReport: null,
+      codingRoundCompleted: false
     }, { merge: true });
     
     router.push('/interview/coding');
@@ -318,7 +337,7 @@ export default function InterviewSetupPage() {
                     <p className="text-[8px] font-black uppercase text-white/30 tracking-widest ml-1">Logic Path Sequence</p>
                     {[
                       { label: "Resume Upload", status: "Node 01" },
-                      { label: "Aptitude Assessment", status: "Node 02" },
+                      { label: "Aptitude Screening", status: "Node 02" },
                       { label: "Syntax Matrix", status: "Node 03" },
                       { label: "HR Virtual Arena", status: "Node 04" }
                     ].map((step, i) => (

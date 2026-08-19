@@ -119,6 +119,7 @@ export default function AptitudeEnginePage() {
       const existingQuestions = data.aptitudeQuestions || [];
       const isValidSet = existingQuestions.length === 20 && existingQuestions.every(validateAptitudeQuestion);
 
+      // Resuming existing in-progress session
       if (isValidSet && data.aptitudeStatus === "in_progress") {
         setQuestions(existingQuestions);
         setAnswers(data.aptitudeAnswers || {});
@@ -148,6 +149,7 @@ export default function AptitudeEnginePage() {
         return;
       }
 
+      // Already completed - viewing results
       if (data.aptitudeStatus === "completed" && data.aptitudeReport) {
         setQuestions(existingQuestions);
         setAnswers(data.aptitudeAnswers || {});
@@ -156,7 +158,9 @@ export default function AptitudeEnginePage() {
         return;
       }
 
+      // Starting a completely fresh session
       try {
+        localStorage.removeItem(`aptitude_timer_end_${user.uid}`); // Force clear stale timer
         const userRef = doc(db, 'users', user.uid);
         const userSnap = await getDoc(userRef);
         const history = userSnap.data()?.aptitudeQuestionHistory || [];
@@ -174,7 +178,7 @@ export default function AptitudeEnginePage() {
           return norm.fingerprint;
         });
         
-        const endAt = Date.now() + 30 * 60 * 1000;
+        const endAt = Date.now() + 30 * 60 * 1000; // Fresh 30 minutes
         localStorage.setItem(`aptitude_timer_end_${user.uid}`, endAt.toString());
         
         await updateDoc(journeyRef, {
@@ -240,15 +244,12 @@ export default function AptitudeEnginePage() {
     }
 
     try {
-      const localEndAt = localStorage.getItem(`aptitude_timer_end_${user?.uid}`);
-      const actualTimeLeft = localEndAt ? Math.max(0, Math.ceil((parseInt(localEndAt) - Date.now()) / 1000)) : 0;
-      const timeTaken = Math.max(0, 1800 - actualTimeLeft);
-
+      const actualTimeTaken = 1800 - timeLeft;
       const report = await evaluateAptitude({
         role: journey.role,
         company: journey.company,
         experienceLevel: journey.experience,
-        timeTakenSeconds: timeTaken,
+        timeTakenSeconds: Math.max(0, actualTimeTaken),
         totalQuestions: questions.length,
         results: formattedResults
       });
@@ -278,7 +279,7 @@ export default function AptitudeEnginePage() {
     } finally {
       setIsEvaluating(false);
     }
-  }, [isEvaluating, journey, journeyRef, questions, answers, result, toast, user?.uid]);
+  }, [isEvaluating, journey, journeyRef, questions, answers, result, toast, user?.uid, timeLeft]);
 
   // Sync ref with latest submit handler
   useEffect(() => {

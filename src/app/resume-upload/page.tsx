@@ -112,7 +112,7 @@ export default function ResumeUploadPage() {
         updateData.aptitudeQuestions = null;
         updateData.aptitudeAnswers = null;
         updateData.aptitudeCurrentIndex = 0;
-        updateData.aptitudeTimeLeft = 45 * 60;
+        updateData.aptitudeTimerEndAt = null; // Clear existing end time for the new session
         updateData.aptitudeReport = null;
         updateData.aptitudeStatus = "not_started";
       }
