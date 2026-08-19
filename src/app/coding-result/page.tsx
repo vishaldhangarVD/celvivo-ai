@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useMemo, Suspense } from 'react';
@@ -20,17 +19,20 @@ import {
   Loader2,
   FastForward,
   Activity,
-  Cpu
+  Cpu,
+  RefreshCcw
 } from 'lucide-react';
 import { useUser, useFirestore, useDoc } from '@/firebase';
 import { doc } from 'firebase/firestore';
 import { cn } from '@/lib/utils';
+import { useToast } from '@/hooks/use-toast';
 
 function CodingResultContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { user } = useUser();
   const db = useFirestore();
+  const { toast } = useToast();
 
   const attemptId = searchParams.get('attemptId');
 
@@ -51,6 +53,7 @@ function CodingResultContent() {
 
   const result = useMemo(() => {
     if (attemptDoc?.codingReport) return attemptDoc.codingReport;
+    if (attemptDoc?.score !== undefined) return attemptDoc; // Historical structure
     if (journey?.codingReport && (!attemptId || attemptId === journey.sessionId)) return journey.codingReport;
     
     return {
@@ -67,6 +70,15 @@ function CodingResultContent() {
   }, [attemptDoc, journey, attemptId]);
 
   const isPassed = (result?.score || 0) >= 60;
+
+  const handleContinueToInterview = () => {
+    if (!journey) {
+      toast({ variant: "destructive", title: "Session Context Lost", description: "Return to dashboard and resume journey." });
+      return;
+    }
+    const activeId = attemptId || journey.sessionId;
+    router.push(`/interview/${activeId}?role=${encodeURIComponent(journey.role || '')}&company=${encodeURIComponent(journey.company || '')}&exp=${encodeURIComponent(journey.experience || '')}&round=HR%20Round`);
+  };
 
   if (journeyLoading || attemptLoading) return (
     <div className="h-screen flex items-center justify-center bg-[#050816]">
@@ -86,7 +98,7 @@ function CodingResultContent() {
           <header className="text-center space-y-4">
             <Badge className="bg-accent/20 text-accent border-none px-6 py-1.5 font-bold tracking-[0.4em] text-[10px] uppercase">Simulation Audit Node 05</Badge>
             <h1 className="text-6xl font-bold tracking-tighter text-premium">Coding Round <span className="text-gradient-purple">Result.</span></h1>
-            <p className="text-xl text-muted-foreground font-light">Your coding performance has been evaluated by the neural syntax auditor.</p>
+            <p className="text-xl text-muted-foreground font-light">Your coding performance has been evaluated by the neural auditor.</p>
           </header>
 
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
@@ -142,12 +154,28 @@ function CodingResultContent() {
             ))}
           </div>
 
-          <div className="flex justify-center pt-8">
+          <div className="flex flex-col sm:flex-row justify-center gap-6 pt-8">
+            {isPassed ? (
+              <Button 
+                onClick={handleContinueToInterview}
+                className="h-20 px-16 btn-premium rounded-[2rem] text-lg font-black uppercase tracking-[0.3em] shadow-[0_20px_80px_rgba(147,51,234,0.3)] group"
+              >
+                Continue to Interview <ArrowRight className="ml-4 w-6 h-6 transition-transform group-hover:translate-x-1" />
+              </Button>
+            ) : (
+              <Button 
+                onClick={() => router.push('/interview/coding')}
+                className="h-20 px-16 glass border-white/10 hover:bg-white/5 rounded-[2rem] text-lg font-black uppercase tracking-[0.3em] group"
+              >
+                <RefreshCcw className="mr-4 w-6 h-6 group-hover:rotate-180 transition-transform" /> Re-initialize Test
+              </Button>
+            )}
             <Button 
+              variant="ghost"
               onClick={() => router.push('/dashboard')}
-              className="h-20 px-16 btn-premium rounded-[2rem] text-lg font-black uppercase tracking-[0.3em] shadow-[0_20px_80px_rgba(147,51,234,0.3)] group"
+              className="h-20 px-12 rounded-[2rem] glass border-white/5 hover:bg-white/5 text-sm font-bold uppercase tracking-widest text-white/40"
             >
-              Return to Dashboard <ArrowRight className="ml-4 w-6 h-6 transition-transform group-hover:translate-x-1" />
+              Back to Dashboard
             </Button>
           </div>
         </div>

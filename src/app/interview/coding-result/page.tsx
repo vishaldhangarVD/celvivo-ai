@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useMemo, Suspense } from 'react';
@@ -129,7 +128,10 @@ function CodingResultContent() {
   const isPassed = (result?.score || 0) >= 60;
 
   const handleContinueToInterview = () => {
-    if (!journey) return;
+    if (!journey) {
+      toast({ variant: "destructive", title: "Session Context Lost", description: "Return to dashboard and resume journey." });
+      return;
+    }
     router.push(`/interview/${activeId}?role=${encodeURIComponent(journey.role || '')}&company=${encodeURIComponent(journey.company || '')}&exp=${encodeURIComponent(journey.experience || '')}&round=HR%20Round`);
   };
 
@@ -333,7 +335,7 @@ function CodingResultContent() {
                                           <p className="text-xs font-bold text-white tabular-nums">{res.executionTime || '0.00'}s</p>
                                         </div>
                                         <div className="p-4 glass rounded-xl border-white/5 space-y-1">
-                                          <p className="text-[8px] uppercase font-bold text-white/30">Memory Usage</p>
+                                          <p className="text-[8px] uppercase font-bold text-white/30">Memory usage</p>
                                           <p className="text-xs font-bold text-white tabular-nums">{res.memory || '---'} KB</p>
                                         </div>
                                      </div>
@@ -385,11 +387,7 @@ function CodingResultContent() {
                   CONTINUE TO INTERVIEW <ArrowRight className="w-4 h-4" />
                 </Button>
               )}
-              <Button 
-                onClick={() => router.push('/dashboard')}
-                variant="ghost" 
-                className="h-12 px-8 rounded-xl glass border-white/10 text-[9px] font-black uppercase tracking-widest text-white/30 hover:text-white"
-              >
+              <Button onClick={() => router.push('/dashboard')} variant="ghost" className="h-12 px-8 rounded-xl glass border-white/10 text-[9px] font-black uppercase tracking-widest text-white/30 hover:text-white">
                 Exit to Control Panel
               </Button>
             </div>

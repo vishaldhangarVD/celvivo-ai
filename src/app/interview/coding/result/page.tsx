@@ -118,26 +118,6 @@ function CodingResultContent() {
     };
   }, [attemptDoc, journey, questionResults, attemptId]);
 
-  const aggregateStats = useMemo(() => {
-    if (!questionResults || questionResults.length === 0) return null;
-    
-    const passedTests = questionResults.reduce((acc, curr) => acc + (curr.passedTestCases || 0), 0);
-    const totalTests = questionResults.reduce((acc, curr) => acc + (curr.totalTestCases || 0), 0);
-    const times = questionResults.map(r => parseFloat(r.executionTime)).filter(t => !isNaN(t) && t > 0);
-    const memories = questionResults.map(r => parseInt(r.memory)).filter(m => !isNaN(m) && m > 0);
-    
-    const maxTime = times.length > 0 ? Math.max(...times) : 0;
-    const maxMemory = memories.length > 0 ? Math.max(...memories) : 0;
-    
-    return {
-      passedTests,
-      totalTests,
-      maxTime: maxTime > 0 ? maxTime.toFixed(2) : "N/A",
-      maxMemory: maxMemory > 0 ? maxMemory : "N/A",
-      successRate: totalTests > 0 ? Math.round((passedTests / totalTests) * 100) : 0
-    };
-  }, [questionResults]);
-
   const recommendation = useMemo(() => {
     if (!result || result.status === 'Awaiting') return "Evaluation unavailable";
     const score = result.score || 0;
@@ -352,7 +332,7 @@ function CodingResultContent() {
                                           <p className="text-xs font-bold text-white tabular-nums">{res.executionTime || '0.00'}s</p>
                                         </div>
                                         <div className="p-4 glass rounded-xl border-white/5 space-y-1">
-                                          <p className="text-[8px] uppercase font-bold text-white/30">Memory usage</p>
+                                          <p className="text-[8px] uppercase font-bold text-white/30">Memory Usage</p>
                                           <p className="text-xs font-bold text-white tabular-nums">{res.memory || '---'} KB</p>
                                         </div>
                                      </div>
@@ -396,12 +376,14 @@ function CodingResultContent() {
             </div>
 
             <div className="flex justify-end gap-4 shrink-0 pt-4 border-t border-white/5">
-              <Button 
-                onClick={handleContinueToInterview}
-                className="h-12 px-10 btn-premium rounded-xl text-[10px] font-black uppercase tracking-[0.3em] shadow-2xl flex items-center gap-2"
-              >
-                CONTINUE TO INTERVIEW <ArrowRight className="w-4 h-4" />
-              </Button>
+              {isPassed && (
+                <Button 
+                  onClick={handleContinueToInterview}
+                  className="h-12 px-10 btn-premium rounded-xl text-[10px] font-black uppercase tracking-[0.3em] shadow-2xl flex items-center gap-2"
+                >
+                  CONTINUE TO INTERVIEW <ArrowRight className="w-4 h-4" />
+                </Button>
+              )}
               <Button onClick={() => router.push('/dashboard')} variant="ghost" className="h-12 px-8 rounded-xl glass border-white/10 text-[9px] font-black uppercase tracking-widest text-white/30 hover:text-white">
                 Exit to Control Panel
               </Button>
