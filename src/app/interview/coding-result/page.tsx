@@ -73,7 +73,7 @@ export default function CodingResultTerminal() {
     
     // 2. Fallback: Re-calculate summary index from raw collection data if report is missing/processing
     if (questionResults && questionResults.length > 0) {
-      const total = 5;
+      const total = 10;
       const solved = questionResults.filter((r: any) => r.status === 'Solved').length;
       const failed = questionResults.filter((r: any) => r.status === 'Failed').length;
       const skipped = questionResults.filter((r: any) => r.status === 'Skipped').length;
@@ -95,7 +95,7 @@ export default function CodingResultTerminal() {
     return {
       score: 0,
       status: 'Awaiting',
-      totalQuestions: 5,
+      totalQuestions: 10,
       passedQuestions: 0,
       failedQuestions: 0,
       skippedQuestions: 0,
@@ -268,7 +268,7 @@ export default function CodingResultTerminal() {
               
               <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-4 shrink-0">
                 {[
-                  { label: "Total Questions", val: result?.totalQuestions || 5, icon: Layers, color: "text-blue-400" },
+                  { label: "Total Questions", val: result?.totalQuestions || 10, icon: Layers, color: "text-blue-400" },
                   { label: "Correct Nodes", val: result?.passedQuestions || 0, icon: CheckCircle2, color: "text-green-400" },
                   { label: "Failed Probes", val: result?.failedQuestions || 0, icon: XCircle, color: "text-red-400" },
                   { label: "Skipped Nodes", val: result?.skippedQuestions || 0, icon: FastForward, color: "text-orange-400" },

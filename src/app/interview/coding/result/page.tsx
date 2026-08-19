@@ -117,7 +117,7 @@ export default function CodingResultPage() {
           {/* Performance Summary Grid */}
           <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-4">
             {[
-              { label: "Total Questions", val: `0${result?.totalQuestions || 5}`, icon: Layers, color: "text-blue-400" },
+              { label: "Total Questions", val: `${result?.totalQuestions || 10}`, icon: Layers, color: "text-blue-400" },
               { label: "Correct Nodes", val: `0${result?.passedQuestions || 0}`, icon: CheckCircle2, color: "text-green-400" },
               { label: "Failed Probes", val: `0${result?.failedQuestions || 0}`, icon: XCircle, color: "text-red-400" },
               { label: "Execution Status", val: "Success", icon: Activity, color: "text-accent" },

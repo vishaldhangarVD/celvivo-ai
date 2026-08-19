@@ -85,7 +85,6 @@ export default function CodingEnginePage() {
 
   const { data: journey, loading: journeyLoading } = useDoc(journeyRef);
 
-  // Fetch existing results for this session to handle refresh
   const resultsQuery = useMemo(() => {
     if (!db || !user?.uid || !journey?.sessionId) return null;
     return query(
@@ -96,7 +95,6 @@ export default function CodingEnginePage() {
 
   const { data: existingResultsData } = useCollection(resultsQuery);
 
-  // Restore session results from Firestore on mount/refresh
   useEffect(() => {
     if (existingResultsData && existingResultsData.length > 0 && questions.length > 0 && Object.keys(sessionResults).length === 0) {
       const restoredResults: Record<number, any> = {};
@@ -162,7 +160,7 @@ export default function CodingEnginePage() {
         await new Promise(r => setTimeout(r, 800));
       }
       
-      const total = questions?.length || 5;
+      const total = questions?.length || 10;
       let passed = 0;
       let failed = 0;
       let skipped = 0;
@@ -402,7 +400,7 @@ export default function CodingEnginePage() {
         return;
       }
 
-      if (questions && questions.length === 5) return;
+      if (questions && questions.length === 10) return;
       
       try {
         const userRef = doc(db, 'users', user.uid);
@@ -421,14 +419,14 @@ export default function CodingEnginePage() {
           return combined.slice(0, count);
         };
 
-        const selectedEasy = pickQuestions('Easy', 2);
-        const selectedMed = pickQuestions('Medium', 2);
-        const selectedHard = pickQuestions('Hard', 1);
+        const selectedEasy = pickQuestions('Easy', 4);
+        const selectedMed = pickQuestions('Medium', 4);
+        const selectedHard = pickQuestions('Hard', 2);
 
         const finalQuestions = [...selectedEasy, ...selectedMed, ...selectedHard];
         
-        if (finalQuestions.length < 5) {
-          const fallback = MASTER_QUESTIONS.sort(() => Math.random() - 0.5).slice(0, 5);
+        if (finalQuestions.length < 10) {
+          const fallback = MASTER_QUESTIONS.sort(() => Math.random() - 0.5).slice(0, 10);
           setQuestions(fallback);
           return;
         }
@@ -457,7 +455,6 @@ export default function CodingEnginePage() {
     initEnvironment();
   }, [db, user, journey, journeyRef, questions, toast, router]);
 
-  // Load language-specific starter code or saved work
   useEffect(() => {
     if (currentQ) {
       const savedResult = sessionResults[currentIdx];
@@ -529,14 +526,14 @@ export default function CodingEnginePage() {
           </div>
           <div>
             <h1 className="text-sm font-black uppercase tracking-widest text-premium">Syntax Matrix Protocol</h1>
-            <p className="text-[9px] font-bold text-accent uppercase tracking-widest">Question {currentIdx + 1} of {(questions || []).length || 5}</p>
+            <p className="text-[9px] font-bold text-accent uppercase tracking-widest">Question {currentIdx + 1} of {(questions || []).length || 10}</p>
           </div>
         </div>
         
         <div className="flex-1 max-w-md mx-12">
           <div className="flex justify-between items-center mb-1.5 px-1">
              <span className="text-[8px] font-black uppercase tracking-widest text-white/30">Progression Roadmap</span>
-             <span className="text-[8px] font-black uppercase tracking-widest text-accent">α → α → β → β → Ω</span>
+             <span className="text-[8px] font-black uppercase tracking-widest text-accent">α → α → α → α → β → β → β → β → Ω → Ω</span>
           </div>
           <div className="h-1 bg-white/5 rounded-full overflow-hidden flex gap-0.5">
             {(questions || []).map((_, s) => (
@@ -561,7 +558,7 @@ export default function CodingEnginePage() {
             {currentQ ? (
               <div className="space-y-10">
                 <div className="flex items-center justify-between">
-                  <span className="text-[10px] font-black uppercase tracking-widest text-white/40">Question {currentIdx + 1} of {(questions || []).length || 5}</span>
+                  <span className="text-[10px] font-black uppercase tracking-widest text-white/40">Question {currentIdx + 1} of {(questions || []).length || 10}</span>
                   <div className="flex items-center gap-2">
                     <Clock className="w-3 h-3 text-white/40" />
                     <span className="text-[9px] font-bold uppercase tracking-widest" style={{ color: '#ef4444' }}>TIME LEFT: {formatTime(timeLeft)}</span>
@@ -713,7 +710,7 @@ export default function CodingEnginePage() {
               <div className="flex items-center gap-6">
                 <Button 
                   onClick={handleRunCode} 
-                  disabled={isRunning || isSubmitting || isTimeExpired || isNavigating || !currentQ || countdown !== null} 
+                  disabled={isRunning || iSubmitting || isTimeExpired || isNavigating || !currentQ || countdown !== null} 
                   className="h-12 px-8 glass border-white/10 bg-white/5 text-[10px] font-black uppercase tracking-widest rounded-xl hover:bg-white/10 transition-all"
                 >
                   {isRunning ? <Loader2 className="w-4 animate-spin mr-2" /> : <Activity className="w-4 h-4 mr-2" />} RUN SAMPLE
