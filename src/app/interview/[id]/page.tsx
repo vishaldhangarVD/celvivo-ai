@@ -78,6 +78,7 @@ function VirtualArenaContent() {
 
   const [isMicOn, setIsMicOn] = useState(true);
   const [isCameraOn, setIsCameraOn] = useState(true);
+  const [isMediaReady, setIsMediaReady] = useState(false);
 
   const [askedQuestions, setAskedQuestions] = useState<string[]>([]);
   const recognitionRef = useRef<any>(null);
@@ -113,9 +114,12 @@ function VirtualArenaContent() {
     return lastInterviewer?.text || "Initializing session...";
   }, [transcript]);
 
-  // ElevenLabs Neural Audio Protocol
+  // ElevenLabs Neural Audio Protocol - GATED BY CAMERA PERMISSION
   useEffect(() => {
-    if (!currentInterviewerQuestion || currentInterviewerQuestion === "Initializing session...") return;
+    // CRITICAL GATE: Do not proceed if camera/media access is not verified
+    if (!isMediaReady || !currentInterviewerQuestion || currentInterviewerQuestion === "Initializing session...") {
+      return;
+    }
 
     if (ttsAbortControllerRef.current) {
       ttsAbortControllerRef.current.abort();
@@ -180,7 +184,7 @@ function VirtualArenaContent() {
         URL.revokeObjectURL(currentAudioUrlRef.current);
       }
     };
-  }, [currentInterviewerQuestion]);
+  }, [currentInterviewerQuestion, isMediaReady]);
 
   const toggleMediaMic = () => {
     const newState = !isMicOn;
@@ -308,6 +312,7 @@ function VirtualArenaContent() {
       mediaStream.getVideoTracks().forEach(t => t.enabled = isCameraOn);
 
       mediaStreamRef.current = mediaStream;
+      setIsMediaReady(true);
 
       if (userVideoRef.current) {
         userVideoRef.current.srcObject = mediaStream;
@@ -321,6 +326,7 @@ function VirtualArenaContent() {
       }
     } catch (error: any) {
       console.error("CAMERA START ERROR:", error);
+      setIsMediaReady(false);
       setCameraError(error?.message || "Unable to access camera. Please check your permissions.");
     }
   };
