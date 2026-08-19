@@ -184,11 +184,18 @@ export default function PersonalizedRoadmapPage() {
                     <div key={i} className="p-4 glass rounded-xl border-white/5 space-y-2">
                       <div className="flex justify-between items-center">
                         <span className="text-sm font-bold text-white">{item.skill}</span>
-                        <Badge className={cn(
-                          "text-[8px] font-black uppercase py-0.5",
-                          item.priority === 'High' ? 'bg-red-500/20 text-red-400' : 
-                          item.priority === 'Medium' ? 'bg-orange-500/20 text-orange-400' : 'bg-blue-500/20 text-blue-400'
-                        )}>{item.priority}</span>
+                        <Badge 
+                          className={cn(
+                            "text-[8px] font-black uppercase py-0.5",
+                            item.priority === "High"
+                              ? "bg-red-500/20 text-red-400"
+                              : item.priority === "Medium"
+                                ? "bg-orange-500/20 text-orange-400"
+                                : "bg-blue-500/20 text-blue-400"
+                          )}
+                        >
+                          {item.priority}
+                        </Badge>
                       </div>
                       <p className="text-[10px] text-white/40 leading-relaxed">{item.reason}</p>
                     </div>
