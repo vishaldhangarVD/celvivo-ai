@@ -246,7 +246,7 @@ export default function CodingEnginePage() {
         language: res.language || "Unknown",
         score: res.totalCount > 0 ? Math.round((res.passedCount / res.totalCount) * 100) : 0,
         passedTestCases: res.passedCount || 0,
-        totalTestCases: res.totalCount ?? 0,
+        totalTestCases: res.totalTestCases ?? 0,
         status: res.status || "Unknown",
         submittedCode: res.code || "",
         executionTime,
@@ -710,7 +710,7 @@ export default function CodingEnginePage() {
               <div className="flex items-center gap-6">
                 <Button 
                   onClick={handleRunCode} 
-                  disabled={isRunning || iSubmitting || isTimeExpired || isNavigating || !currentQ || countdown !== null} 
+                  disabled={isRunning || isSubmitting || isTimeExpired || isNavigating || !currentQ || countdown !== null} 
                   className="h-12 px-8 glass border-white/10 bg-white/5 text-[10px] font-black uppercase tracking-widest rounded-xl hover:bg-white/10 transition-all"
                 >
                   {isRunning ? <Loader2 className="w-4 animate-spin mr-2" /> : <Activity className="w-4 h-4 mr-2" />} RUN SAMPLE
