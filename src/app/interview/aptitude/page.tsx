@@ -330,11 +330,11 @@ export default function AptitudeEnginePage() {
   const currentQ = questions[currentIdx];
 
   return (
-    <div className="h-screen bg-[#050816] flex flex-col relative overflow-hidden">
+    <div className="h-screen bg-[#050816] flex flex-col relative overflow-hidden pt-[72px]">
       <div className="particles-bg" />
       <Navbar />
 
-      <header className="h-20 border-b border-white/5 bg-[#0b0e1a]/80 backdrop-blur-xl flex items-center justify-between px-8 z-50 sticky top-0 shrink-0">
+      <header className="h-20 border-b border-white/5 bg-[#0b0e1a]/80 backdrop-blur-xl flex items-center justify-between px-8 z-50 shrink-0">
         <div className="flex items-center gap-6">
           <div className="w-10 h-10 rounded-xl bg-accent/10 flex items-center justify-center text-accent border border-accent/20">
             <Command className="w-5 h-5" />
@@ -351,7 +351,7 @@ export default function AptitudeEnginePage() {
         )}
       </header>
 
-      <main className="flex-1 container mx-auto px-6 py-12 overflow-y-auto custom-scrollbar">
+      <main className="flex-1 min-h-0 container mx-auto px-6 py-12 overflow-y-auto custom-scrollbar">
         <AnimatePresence mode="wait">
           {!result && !isEvaluating ? (
             <div className="grid lg:grid-cols-12 gap-8">
