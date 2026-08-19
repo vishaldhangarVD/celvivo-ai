@@ -150,13 +150,18 @@ export default function PersonalizedRoadmapPage() {
      </div>
   );
 
+  const skillGaps = roadmap.skillGapPriority || [];
+  const dailyRoutine = roadmap.dailyRoutine || [];
+  const softSkills = roadmap.softSkillDirectives || [];
+  const phases = roadmap.phases || [];
+
   return (
     <div className="min-h-screen bg-[#050816] pb-32">
       <div className="particles-bg" />
       <Navbar />
       <NavigationControls />
       
-      <main className="container mx-auto px-6 pt-32">
+      <main className="container mx-auto px-6 pt-40">
         <div className="max-w-7xl mx-auto space-y-12">
           
           <header className="flex flex-col md:flex-row justify-between items-end gap-8">
@@ -180,7 +185,7 @@ export default function PersonalizedRoadmapPage() {
                   <h3 className="text-xl font-bold">Skill Priorities</h3>
                 </div>
                 <div className="space-y-4">
-                  {roadmap.skillGapPriority.map((item, i) => (
+                  {skillGaps.length > 0 ? skillGaps.map((item, i) => (
                     <div key={i} className="p-4 glass rounded-xl border-white/5 space-y-2">
                       <div className="flex justify-between items-center">
                         <span className="text-sm font-bold text-white">{item.skill}</span>
@@ -199,7 +204,9 @@ export default function PersonalizedRoadmapPage() {
                       </div>
                       <p className="text-[10px] text-white/40 leading-relaxed">{item.reason}</p>
                     </div>
-                  ))}
+                  )) : (
+                    <p className="text-[10px] text-white/20 italic uppercase text-center py-4">No specific gaps identified</p>
+                  )}
                 </div>
               </Card>
 
@@ -209,24 +216,28 @@ export default function PersonalizedRoadmapPage() {
                   <h3 className="text-[10px] font-bold uppercase tracking-[0.4em] text-white/30">Daily Mastery Protocol</h3>
                 </div>
                 <div className="space-y-6">
-                  {roadmap.dailyRoutine.map((item, i) => (
+                  {dailyRoutine.length > 0 ? dailyRoutine.map((item, i) => (
                     <div key={i} className="flex gap-4 items-start">
                       <div className="w-1.5 h-1.5 rounded-full bg-accent mt-2 shrink-0" />
                       <p className="text-xs font-light text-white/70 leading-relaxed italic">"{item}"</p>
                     </div>
-                  ))}
+                  )) : (
+                    <p className="text-[10px] text-white/20 italic uppercase text-center py-4">Routine synthesis pending</p>
+                  )}
                 </div>
               </Card>
 
               <Card className="premium-card bg-white/[0.01] border-white/5 p-10 space-y-8">
                 <h3 className="text-[10px] font-bold uppercase tracking-[0.4em] text-white/30">Soft Skill Optimization</h3>
                 <div className="space-y-4">
-                  {roadmap.softSkillDirectives.map((item, i) => (
+                  {softSkills.length > 0 ? softSkills.map((item, i) => (
                     <div key={i} className="p-4 glass rounded-xl border-white/5 flex items-center gap-4">
                       <BrainCircuit className="w-4 h-4 text-purple-400 shrink-0" />
                       <span className="text-xs font-light text-white/60">{item}</span>
                     </div>
-                  ))}
+                  )) : (
+                    <p className="text-[10px] text-white/20 italic uppercase text-center py-4">Soft skill audit complete</p>
+                  )}
                 </div>
               </Card>
 
@@ -238,89 +249,95 @@ export default function PersonalizedRoadmapPage() {
             </div>
 
             <div className="lg:col-span-8 space-y-12">
-              <div className="grid grid-cols-5 gap-2 p-2 glass rounded-[2.5rem] bg-white/[0.01] border-white/5">
-                {roadmap.phases.map((phase, idx) => (
-                  <button
-                    key={idx}
-                    onClick={() => setActivePhaseIdx(idx)}
-                    className={cn(
-                      "h-20 rounded-[2rem] flex flex-col items-center justify-center transition-all duration-500",
-                      activePhaseIdx === idx ? 'bg-accent/20 border border-accent/40 shadow-[0_0_30px_rgba(34,211,238,0.2)]' : 'hover:bg-white/5 opacity-40'
-                    )}
-                  >
-                    <span className="text-[10px] font-bold uppercase tracking-widest">Phase {idx + 1}</span>
-                    <span className="text-[8px] font-light text-muted-foreground mt-1 truncate px-2">{phase.title}</span>
-                  </button>
-                ))}
-              </div>
+              {phases.length > 0 && (
+                <div className="grid grid-cols-5 gap-2 p-2 glass rounded-[2.5rem] bg-white/[0.01] border-white/5">
+                  {phases.map((phase, idx) => (
+                    <button
+                      key={idx}
+                      onClick={() => setActivePhaseIdx(idx)}
+                      className={cn(
+                        "h-20 rounded-[2rem] flex flex-col items-center justify-center transition-all duration-500",
+                        activePhaseIdx === idx ? 'bg-accent/20 border border-accent/40 shadow-[0_0_30px_rgba(34,211,238,0.2)]' : 'hover:bg-white/5 opacity-40'
+                      )}
+                    >
+                      <span className="text-[10px] font-bold uppercase tracking-widest">Phase {idx + 1}</span>
+                      <span className="text-[8px] font-light text-muted-foreground mt-1 truncate px-2">{phase.title}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
 
               <div className="space-y-8">
-                <div className="flex items-center gap-4 mb-4">
-                   <Zap className="w-6 h-6 text-accent" />
-                   <h2 className="text-2xl font-bold">{roadmap.phases[activePhaseIdx].title}</h2>
-                   <Badge variant="outline" className="border-white/10 text-white/40">{roadmap.phases[activePhaseIdx].duration}</Badge>
-                </div>
+                {phases.length > activePhaseIdx && (
+                  <>
+                    <div className="flex items-center gap-4 mb-4">
+                       <Zap className="w-6 h-6 text-accent" />
+                       <h2 className="text-2xl font-bold">{phases[activePhaseIdx].title}</h2>
+                       <Badge variant="outline" className="border-white/10 text-white/40">{phases[activePhaseIdx].duration}</Badge>
+                    </div>
 
-                {roadmap.phases[activePhaseIdx].modules.map((module, i) => (
-                  <motion.div
-                    key={i}
-                    initial={{ opacity: 0, x: -20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: i * 0.1 }}
-                  >
-                    <Card className="premium-card bg-white/[0.01] border-white/5 p-10 relative overflow-hidden group hover:bg-white/[0.03] transition-all">
-                      <div className="absolute top-0 right-0 p-8">
-                        <span className="text-[10px] font-bold uppercase tracking-widest text-white/10 group-hover:text-accent/20 transition-colors">Node {activePhaseIdx + 1}.{i + 1}</span>
-                      </div>
-                      
-                      <div className="space-y-8">
-                        <div className="grid md:grid-cols-12 gap-8">
-                          <div className="md:col-span-4 space-y-4">
-                            <h3 className="text-2xl font-bold text-white leading-tight">{module.title}</h3>
-                            <div className="flex items-center gap-2">
-                               <p className="text-[9px] font-black uppercase text-white/40 tracking-widest">Current Node Level:</p>
-                               <Badge variant="outline" className="text-[8px] uppercase font-bold border-accent/30 text-accent">{module.currentLevel}</Badge>
-                            </div>
-                            <div className="p-4 glass rounded-xl border-accent/10 bg-accent/[0.01]">
-                               <p className="text-[9px] font-black uppercase text-accent tracking-widest mb-2 flex items-center gap-2">
-                                 <Lightbulb className="w-3 h-3" /> Why this matters
-                               </p>
-                               <p className="text-xs font-light text-white/70 leading-relaxed italic">{module.evidence}</p>
-                            </div>
+                    {(phases[activePhaseIdx].modules || []).map((module, i) => (
+                      <motion.div
+                        key={i}
+                        initial={{ opacity: 0, x: -20 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ delay: i * 0.1 }}
+                      >
+                        <Card className="premium-card bg-white/[0.01] border-white/5 p-10 relative overflow-hidden group hover:bg-white/[0.03] transition-all">
+                          <div className="absolute top-0 right-0 p-8">
+                            <span className="text-[10px] font-bold uppercase tracking-widest text-white/10 group-hover:text-accent/20 transition-colors">Node {activePhaseIdx + 1}.{i + 1}</span>
                           </div>
-                          <div className="md:col-span-8 space-y-6">
-                            <div className="space-y-3">
-                               <p className="text-[9px] font-black uppercase text-white/30 tracking-widest">Mastery Tasks</p>
-                               <div className="grid gap-3">
-                                 {module.tasks.map((task, j) => (
-                                   <div key={j} className="flex items-start gap-4 p-4 glass rounded-2xl border-white/5 hover:border-accent/20 transition-all">
-                                      <div className="w-1.5 h-1.5 rounded-full bg-accent mt-1.5 shrink-0" />
-                                      <p className="text-xs font-light text-white/80">{task}</p>
+                          
+                          <div className="space-y-8">
+                            <div className="grid md:grid-cols-12 gap-8">
+                              <div className="md:col-span-4 space-y-4">
+                                <h3 className="text-2xl font-bold text-white leading-tight">{module.title}</h3>
+                                <div className="flex items-center gap-2">
+                                   <p className="text-[9px] font-black uppercase text-white/40 tracking-widest">Current Node Level:</p>
+                                   <Badge variant="outline" className="text-[8px] uppercase font-bold border-accent/30 text-accent">{module.currentLevel}</Badge>
+                                </div>
+                                <div className="p-4 glass rounded-xl border-accent/10 bg-accent/[0.01]">
+                                   <p className="text-[9px] font-black uppercase text-accent tracking-widest mb-2 flex items-center gap-2">
+                                     <Lightbulb className="w-3 h-3" /> Why this matters
+                                   </p>
+                                   <p className="text-xs font-light text-white/70 leading-relaxed italic">{module.evidence}</p>
+                                </div>
+                              </div>
+                              <div className="md:col-span-8 space-y-6">
+                                <div className="space-y-3">
+                                   <p className="text-[9px] font-black uppercase text-white/30 tracking-widest">Mastery Tasks</p>
+                                   <div className="grid gap-3">
+                                     {(module.tasks || []).map((task, j) => (
+                                       <div key={j} className="flex items-start gap-4 p-4 glass rounded-2xl border-white/5 hover:border-accent/20 transition-all">
+                                          <div className="w-1.5 h-1.5 rounded-full bg-accent mt-1.5 shrink-0" />
+                                          <p className="text-xs font-light text-white/80">{task}</p>
+                                       </div>
+                                     ))}
                                    </div>
-                                 ))}
+                                </div>
+                              </div>
+                            </div>
+
+                            <div className="grid md:grid-cols-2 gap-6 pt-6 border-t border-white/5">
+                               <div className="p-6 glass rounded-[2rem] border-purple-500/10 space-y-3">
+                                  <h4 className="text-[9px] font-black uppercase tracking-widest text-purple-400 flex items-center gap-2">
+                                    <Rocket className="w-3 h-3" /> Project Laboratory
+                                  </h4>
+                                  <p className="text-xs font-light text-white/70 leading-relaxed">{module.realWorldProject}</p>
+                               </div>
+                               <div className="p-6 glass rounded-[2rem] border-green-500/10 space-y-3">
+                                  <h4 className="text-[9px] font-black uppercase tracking-widest text-green-400 flex items-center gap-2">
+                                    <CheckCircle2 className="w-3 h-3" /> Validation Goal
+                                  </h4>
+                                  <p className="text-xs font-light text-white/70 leading-relaxed">{module.validationCriteria}</p>
                                </div>
                             </div>
                           </div>
-                        </div>
-
-                        <div className="grid md:grid-cols-2 gap-6 pt-6 border-t border-white/5">
-                           <div className="p-6 glass rounded-[2rem] border-purple-500/10 space-y-3">
-                              <h4 className="text-[9px] font-black uppercase tracking-widest text-purple-400 flex items-center gap-2">
-                                <Rocket className="w-3 h-3" /> Project Laboratory
-                              </h4>
-                              <p className="text-xs font-light text-white/70 leading-relaxed">{module.realWorldProject}</p>
-                           </div>
-                           <div className="p-6 glass rounded-[2rem] border-green-500/10 space-y-3">
-                              <h4 className="text-[9px] font-black uppercase tracking-widest text-green-400 flex items-center gap-2">
-                                <CheckCircle2 className="w-3 h-3" /> Validation Goal
-                              </h4>
-                              <p className="text-xs font-light text-white/70 leading-relaxed">{module.validationCriteria}</p>
-                           </div>
-                        </div>
-                      </div>
-                    </Card>
-                  </motion.div>
-                ))}
+                        </Card>
+                      </motion.div>
+                    ))}
+                  </>
+                )}
               </div>
             </div>
           </div>
