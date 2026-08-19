@@ -1,44 +1,33 @@
 
 "use client";
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import Navbar from '@/components/layout/Navbar';
 import NavigationControls from '@/components/NavigationControls';
 import { Button } from '@/components/ui/button';
-import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
-import { Progress } from '@/components/ui/progress';
+import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { 
-  BrainCircuit, 
   Zap,
-  Map,
   Download,
   Award,
-  TrendingUp,
-  ShieldCheck,
   ChevronRight,
-  Code2,
-  Trophy,
-  History,
   Target,
-  Activity,
   MessageSquare,
   CircleAlert,
   CircleCheck,
-  Lightbulb,
   Cpu,
-  RefreshCcw,
   LayoutDashboard,
   Loader2,
   Plus,
   Layers,
-  XCircle
+  BrainCircuit,
+  Star
 } from 'lucide-react';
 import { useUser, useFirestore, useDoc } from '@/firebase';
-import { doc, setDoc, deleteDoc, updateDoc, getDoc, serverTimestamp } from 'firebase/firestore';
+import { doc, deleteDoc } from 'firebase/firestore';
 import { generateCertificatePDF } from '@/lib/certificate-generator';
 import { useToast } from '@/hooks/use-toast';
 import Link from 'next/link';
@@ -71,7 +60,6 @@ export default function FinalReportPage() {
   const handleStartNew = async () => {
     if (!user || !db || !profile) return;
     
-    // Subscription Protocol Guard
     if (!canStartInterviewJourney(profile)) {
       toast({
         title: "Protocol Complete",
@@ -81,7 +69,6 @@ export default function FinalReportPage() {
       return;
     }
 
-    // Clean up any remaining active journey state before starting a new track
     await deleteDoc(doc(db, 'users', user.uid, 'journey', 'active'));
     router.push('/interview');
   };
@@ -91,6 +78,11 @@ export default function FinalReportPage() {
     if (score >= 70) return "text-green-400";
     if (score >= 50) return "text-orange-400";
     return "text-red-400";
+  };
+
+  const formatScore = (score: any) => {
+    if (score === undefined || score === null) return "N/A";
+    return `${score}%`;
   };
 
   if (docLoading) return <div className="h-screen flex items-center justify-center bg-[#050816]"><Loader2 className="w-12 h-12 text-accent animate-spin" /></div>;
@@ -107,6 +99,11 @@ export default function FinalReportPage() {
     );
   }
 
+  const interviewMetrics = feedback.virtualInterviewResult || {};
+  const aiFeedback = feedback.aiFeedback || {};
+  const learningPlan = feedback.learningPlan || {};
+  const skillGap = feedback.skillGap || {};
+
   return (
     <div className="min-h-screen bg-[#050816] pb-32">
       <div className="particles-bg" />
@@ -114,29 +111,29 @@ export default function FinalReportPage() {
       <NavigationControls />
       
       <div className="container mx-auto px-4 pt-32">
-        <div className="max-w-7xl auto space-y-12">
+        <div className="max-w-7xl mx-auto space-y-12">
           
           <motion.div initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} className="premium-card p-12 border-glow-premium relative overflow-hidden">
             <div className="absolute top-0 right-0 p-12">
               <Badge className={`${getScoreColor(feedback.overallScore)} border-none bg-white/5 font-black tracking-[0.4em] uppercase text-xs px-8 py-3 rounded-2xl`}>
-                STATUS: {feedback.hiringRecommendation.toUpperCase()}
+                RECOMMENDATION: {feedback.hiringRecommendation?.toUpperCase() || "PENDING"}
               </Badge>
             </div>
             
             <div className="grid lg:grid-cols-12 gap-16 items-center">
               <div className="lg:col-span-4 text-center lg:text-left space-y-6">
-                <Badge className="bg-accent/20 text-accent border-none px-4 py-1 text-[10px] tracking-widest font-bold uppercase">Final Performance Audit</Badge>
-                <h1 className="text-6xl font-bold tracking-tighter text-premium leading-tight">{(interviewDoc as any).role}<br /><span className="text-gradient-purple">Dossier.</span></h1>
+                <Badge className="bg-accent/20 text-accent border-none px-4 py-1 text-[10px] tracking-widest font-bold uppercase">Performance Audit</Badge>
+                <h1 className="text-6xl font-bold tracking-tighter text-premium leading-tight">{(interviewDoc as any).role}<br /><span className="text-gradient-purple">Report.</span></h1>
               </div>
 
               <div className="lg:col-span-8 flex flex-col md:flex-row items-center gap-12 lg:justify-end">
                 <div className="text-center">
-                  <div className={`text-8xl font-bold tracking-tighter tabular-nums ${getScoreColor(feedback.overallScore)}`}>{feedback.overallScore}%</div>
+                  <div className={`text-8xl font-bold tracking-tighter tabular-nums ${getScoreColor(feedback.overallScore)}`}>{formatScore(feedback.overallScore)}</div>
                   <div className="text-[10px] uppercase tracking-[0.4em] text-muted-foreground font-bold mt-2">Overall Index</div>
                 </div>
                 <div className="hidden md:block w-px h-24 bg-white/10" />
                 <div className="text-center">
-                  <div className="text-6xl font-bold text-white tabular-nums">{feedback.interviewReadiness}%</div>
+                  <div className="text-6xl font-bold text-white tabular-nums">{formatScore(feedback.interviewReadiness)}</div>
                   <div className="text-[10px] uppercase tracking-[0.4em] text-accent font-bold mt-2">Readiness</div>
                 </div>
               </div>
@@ -149,57 +146,20 @@ export default function FinalReportPage() {
               <Card className="premium-card bg-accent/5 border-accent/20 p-8 text-center space-y-6">
                 <Award className="w-10 h-10 text-accent mx-auto" />
                 <Button 
-                  onClick={() => generateCertificatePDF({ userName: user?.displayName || 'Elite Candidate', role: (interviewDoc as any).role, score: feedback.overallScore, date: new Date().toLocaleDateString() })}
+                  onClick={() => generateCertificatePDF({ 
+                    userName: user?.displayName || 'Elite Candidate', 
+                    role: (interviewDoc as any).role, 
+                    score: feedback.overallScore, 
+                    date: new Date().toLocaleDateString() 
+                  })}
                   className="w-full h-16 rounded-2xl bg-white text-[#050816] font-bold hover:bg-white/90"
                 >
                   <Download className="w-5 h-5 mr-3" /> Export PDF Report
                 </Button>
               </Card>
 
-              {/* Aptitude Performance Card */}
-              {feedback.aptitudeContext && (
-                <Card className="premium-card bg-white/[0.01] border-white/5 p-8 space-y-6">
-                   <h3 className="text-[10px] font-bold uppercase tracking-[0.4em] text-white/30 flex items-center gap-3">
-                     <BrainCircuit className="w-4 h-4 text-accent" /> Cognitive Node Audit
-                   </h3>
-                   <div className="flex items-center justify-between">
-                      <div className="text-4xl font-black text-accent tabular-nums">{feedback.aptitudeContext.overallScore || 0}%</div>
-                      <Badge variant="outline" className="text-[8px] font-black uppercase border-white/10 text-white/40">Verified Audit</Badge>
-                   </div>
-                   <div className="space-y-4">
-                      <div className="flex justify-between text-[9px] font-bold uppercase text-white/30">
-                         <span>Logic Precision</span>
-                         <span className="text-white/60">{feedback.aptitudeContext.overallScore || 0}%</span>
-                      </div>
-                      <div className="h-1 bg-white/5 rounded-full overflow-hidden">
-                         <motion.div initial={{ width: 0 }} animate={{ width: `${feedback.aptitudeContext.overallScore || 0}%` }} className="h-full bg-accent" />
-                      </div>
-                   </div>
-                </Card>
-              )}
-
-              {/* Coding Performance Card */}
-              <Card className="premium-card bg-white/[0.01] border-white/5 p-8 space-y-6">
-                 <h3 className="text-[10px] font-bold uppercase tracking-[0.4em] text-white/30 flex items-center gap-3">
-                   <Code2 className="w-4 h-4 text-accent" /> Syntax Matrix Audit
-                 </h3>
-                 <div className="flex items-center justify-between">
-                    <div className="text-4xl font-black text-accent tabular-nums">{(interviewDoc as any).codingScore || 0}%</div>
-                    <Badge variant="outline" className="text-[8px] font-black uppercase border-white/10 text-white/40">Verified Audit</Badge>
-                 </div>
-                 <div className="space-y-4">
-                    <div className="flex justify-between text-[9px] font-bold uppercase text-white/30">
-                       <span>Implementation Accuracy</span>
-                       <span className="text-white/60">{(interviewDoc as any).codingScore || 0}%</span>
-                    </div>
-                    <div className="h-1 bg-white/5 rounded-full overflow-hidden">
-                       <motion.div initial={{ width: 0 }} animate={{ width: `${(interviewDoc as any).codingScore || 0}%` }} className="h-full bg-accent" />
-                    </div>
-                 </div>
-              </Card>
-
               <div className="space-y-4">
-                <h3 className="text-[10px] font-bold uppercase tracking-[0.4em] text-white/20 ml-2">Session Directives</h3>
+                <h3 className="text-[10px] font-bold uppercase tracking-[0.4em] text-white/20 ml-2">Directives</h3>
                 <div className="grid gap-3">
                   <Button onClick={handleStartNew} className="h-16 rounded-2xl btn-premium flex gap-4 uppercase tracking-[0.3em] text-[10px] font-bold">
                     <Plus className="w-5 h-5" /> Start New Simulation
@@ -214,22 +174,29 @@ export default function FinalReportPage() {
 
             <div className="lg:col-span-8 space-y-12">
               <Card className="premium-card bg-white/[0.01] border-white/5 p-10">
+                <h3 className="text-[10px] font-bold uppercase tracking-widest text-white/30 mb-10 flex items-center gap-2">
+                  <Cpu className="w-4 h-4 text-accent" /> Neural Capability Matrix
+                </h3>
                 <div className="grid md:grid-cols-2 gap-x-16 gap-y-10">
                   {[
-                    { label: "Technical Knowledge", score: feedback.virtualInterviewResult.technicalKnowledge, icon: Cpu, color: "text-blue-400" },
-                    { label: "Communication", score: feedback.virtualInterviewResult.communication, icon: MessageSquare, color: "text-green-400" },
-                    { label: "Confidence", score: feedback.virtualInterviewResult.confidence, icon: Zap, color: "text-yellow-400" },
-                    { label: "Problem Solving", score: feedback.virtualInterviewResult.problemSolving, icon: Target, color: "text-purple-400" }
+                    { label: "Technical Knowledge", score: interviewMetrics.technicalKnowledge, icon: Cpu, color: "text-blue-400" },
+                    { label: "Communication", score: interviewMetrics.communication, icon: MessageSquare, color: "text-green-400" },
+                    { label: "Confidence", score: interviewMetrics.confidence, icon: Zap, color: "text-yellow-400" },
+                    { label: "Problem Solving", score: interviewMetrics.problemSolving, icon: Target, color: "text-purple-400" }
                   ].map((m, i) => (
                     <div key={i} className="space-y-4">
                       <div className="flex justify-between items-end">
                         <span className="flex items-center gap-3 text-[10px] font-bold uppercase tracking-widest text-white/50">
                           <m.icon className={`w-4 h-4 ${m.color}`} /> {m.label}
                         </span>
-                        <span className="text-xl font-bold">{m.score}%</span>
+                        <span className="text-xl font-bold">{formatScore(m.score)}</span>
                       </div>
                       <div className="h-1.5 bg-white/5 rounded-full overflow-hidden">
-                        <motion.div initial={{ width: 0 }} animate={{ width: `${m.score}%` }} className={`h-full bg-current ${m.color}`} />
+                        <motion.div 
+                          initial={{ width: 0 }} 
+                          animate={{ width: `${m.score || 0}%` }} 
+                          className={`h-full bg-current ${m.color}`} 
+                        />
                       </div>
                     </div>
                   ))}
@@ -242,14 +209,14 @@ export default function FinalReportPage() {
                     <CircleCheck className="w-6 h-6" /> Strategic Strengths
                   </h3>
                   <div className="space-y-4">
-                    {(feedback.aiFeedback.strongSkills || []).length > 0 ? (
-                      feedback.aiFeedback.strongSkills.map((s: string, i: number) => (
+                    {(aiFeedback.strongSkills || []).length > 0 ? (
+                      aiFeedback.strongSkills.map((s: string, i: number) => (
                         <div key={i} className="flex gap-4 text-sm font-light text-white/80">
                           <div className="w-1.5 h-1.5 rounded-full bg-accent mt-2 shrink-0" /> {s}
                         </div>
                       ))
                     ) : (
-                      <p className="text-xs text-white/40 italic">No specific strengths extracted.</p>
+                      <p className="text-xs text-white/40 italic">No major strengths identified in this session.</p>
                     )}
                   </div>
                 </Card>
@@ -258,20 +225,19 @@ export default function FinalReportPage() {
                     <CircleAlert className="w-6 h-6" /> Delta Gaps
                   </h3>
                   <div className="space-y-4">
-                    {(feedback.aiFeedback.weakSkills || []).length > 0 ? (
-                      feedback.aiFeedback.weakSkills.map((w: string, i: number) => (
+                    {(aiFeedback.weakSkills || []).length > 0 ? (
+                      aiFeedback.weakSkills.map((w: string, i: number) => (
                         <div key={i} className="flex gap-4 text-sm font-light text-white/80">
                           <div className="w-1.5 h-1.5 rounded-full bg-red-400 mt-2 shrink-0" /> {w}
                         </div>
                       ))
                     ) : (
-                      <p className="text-xs text-white/40 italic">No specific gaps identified.</p>
+                      <p className="text-xs text-white/40 italic">No critical gaps identified in this session.</p>
                     )}
                   </div>
                 </Card>
               </div>
 
-              {/* Career Learning Roadmap Block */}
               <Card className="premium-card bg-accent/[0.02] border-accent/20 p-10 space-y-8">
                  <div className="flex items-center justify-between">
                     <div className="space-y-1">
@@ -290,29 +256,38 @@ export default function FinalReportPage() {
                           <Layers className="w-4 h-4 text-purple-400" /> Topics to Study
                        </h4>
                        <div className="flex flex-wrap gap-2">
-                          {(feedback.learningPlan.topicsToStudy || []).slice(0, 4).map((topic: string, i: number) => (
-                             <Badge key={i} variant="outline" className="text-[8px] border-white/10 uppercase py-1">{topic}</Badge>
-                          ))}
+                          {(learningPlan.topicsToStudy || []).length > 0 ? (
+                            learningPlan.topicsToStudy.map((topic: string, i: number) => (
+                              <Badge key={i} variant="outline" className="text-[8px] border-white/10 uppercase py-1">{topic}</Badge>
+                            ))
+                          ) : (
+                            <span className="text-[9px] text-white/20 italic uppercase">Analysis Pending</span>
+                          )}
                        </div>
                     </div>
                     <div className="p-6 glass rounded-2xl border-white/5 space-y-4">
                        <h4 className="text-xs font-black uppercase tracking-widest text-white/40 flex items-center gap-2">
-                          <Cpu className="w-4 h-4 text-accent" /> Skill Gaps
+                          <BrainCircuit className="w-4 h-4 text-accent" /> Skill Gaps
                        </h4>
                        <div className="flex flex-wrap gap-2">
-                          {(feedback.skillGap.criticalGaps || []).slice(0, 4).map((gap: string, i: number) => (
-                             <Badge key={i} variant="outline" className="text-[8px] border-red-500/20 text-red-400 uppercase py-1">{gap}</Badge>
-                          ))}
+                          {(skillGap.criticalGaps || []).length > 0 ? (
+                            skillGap.criticalGaps.map((gap: string, i: number) => (
+                              <Badge key={i} variant="outline" className="text-[8px] border-red-500/20 text-red-400 uppercase py-1">{gap}</Badge>
+                            ))
+                          ) : (
+                            <span className="text-[9px] text-white/20 italic uppercase">No immediate gaps</span>
+                          )}
                        </div>
                     </div>
                  </div>
               </Card>
 
-              {/* AI Performance Summary */}
               <Card className="glass p-10 rounded-[30px] border-white/5 bg-white/[0.01]">
-                <h3 className="text-xs font-bold uppercase tracking-widest text-accent mb-6">AI Auditor Executive Summary</h3>
+                <h3 className="text-xs font-bold uppercase tracking-widest text-accent mb-6 flex items-center gap-2">
+                  <Star className="w-4 h-4" /> AI Auditor Executive Summary
+                </h3>
                 <p className="text-lg font-light leading-relaxed text-white/80 italic">
-                  "{feedback.aiFeedback.performanceSummary || "The interview analysis could not be completed."}"
+                  "{aiFeedback.performanceSummary || "The interview analysis could not be completed for this session."}"
                 </p>
               </Card>
             </div>
