@@ -164,6 +164,9 @@ TERMINATION PROTOCOL:
 - MINIMUM questions: 7.
 - MAXIMUM questions: 12.
 - Set "isInterviewComplete": true if index >= 7 and you have sufficient data for a final audit.
+- IF "isInterviewComplete" is true: YOU MUST provide a professional closing message in "nextQuestion". 
+- The closing message should be polite, thank the candidate for their time, and explicitly state that the session has concluded.
+- NEVER ask a question, start a new topic, or invite further response when isInterviewComplete is true.
 
 SESSION INTEGRITY:
 - NEVER repeat a question listed in "Previously Asked Questions".
@@ -215,7 +218,11 @@ const aiMockInterviewFlow = ai.defineFlow(
       console.error("AI Mock Interview Flow Error:", error);
       
       let nextQuestion = "";
-      if (input.currentMainQuestionIndex === 1 || (input.history || []).length === 0) {
+      const isComplete = input.currentMainQuestionIndex >= 12;
+
+      if (isComplete) {
+        nextQuestion = FALLBACK_QUESTIONS[FALLBACK_QUESTIONS.length - 1]; // Use professional closing
+      } else if (input.currentMainQuestionIndex === 1 || (input.history || []).length === 0) {
         // Use a random intro variant for fallback
         nextQuestion = FALLBACK_INTRODUCTIONS[Math.floor(Math.random() * FALLBACK_INTRODUCTIONS.length)];
       } else {
@@ -227,7 +234,7 @@ const aiMockInterviewFlow = ai.defineFlow(
         nextQuestion,
         difficulty: input.currentDifficulty || "MEDIUM",
         stage: input.currentStage || "TECHNICAL",
-        isInterviewComplete: input.currentMainQuestionIndex >= 12,
+        isInterviewComplete: isComplete,
         isHint: false
       };
     }

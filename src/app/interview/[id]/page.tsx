@@ -505,12 +505,7 @@ function VirtualArenaContent() {
       const updatedTranscript = [...newTranscript, { role: 'interviewer' as const, text: response.nextQuestion }];
       setTranscript(updatedTranscript);
       
-      if (!response.isHint) {
-        setAskedQuestions(prev => [...prev, response.nextQuestion]);
-        setCurrentIdx(prev => prev + 1);
-      }
-      
-      // Persist State Loop
+      // Update persistent journey state loop
       setCurrentSimStage(response.stage);
       setCurrentSimDifficulty(response.difficulty);
       if (journeyRef) {
@@ -525,7 +520,14 @@ function VirtualArenaContent() {
       playAiVideo();
 
       if (response.isInterviewComplete) {
-        finalizeSession(updatedTranscript);
+        // UI Lock and professional closing delay
+        setIsSimulationComplete(true);
+        setTimeout(() => {
+          finalizeSession(updatedTranscript);
+        }, 5000);
+      } else if (!response.isHint) {
+        setAskedQuestions(prev => [...prev, response.nextQuestion]);
+        setCurrentIdx(prev => prev + 1);
       }
     } catch (error) {
       console.error(error);
@@ -836,7 +838,7 @@ function VirtualArenaContent() {
                 </div>
                 <Button 
                   onClick={handleSend}
-                  disabled={isProcessing || !userAnswer.trim()}
+                  disabled={isProcessing || !userAnswer.trim() || isSimulationComplete}
                   className="w-full h-10 btn-premium rounded-xl text-[9px] font-black uppercase tracking-[0.3em] shadow-2xl group"
                 >
                   {isProcessing ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <>Submit Answer <Send className="ml-2 w-3 h-3 transition-transform group-hover:translate-x-1" /></>}
