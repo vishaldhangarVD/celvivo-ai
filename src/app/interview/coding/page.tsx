@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useEffect, useMemo, useCallback } from 'react';
@@ -34,10 +33,11 @@ import {
   ArrowRight
 } from 'lucide-react';
 import { useUser, useFirestore, useDoc, useCollection } from '@/firebase';
-import { doc, updateDoc, serverTimestamp, collection, addDoc, getDoc, query, where, setDoc } from 'firebase/firestore';
+import { doc, updateDoc, serverTimestamp, collection, addDoc, getDoc, query, where, setDoc, arrayUnion } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { MASTER_QUESTIONS } from '@/lib/coding-questions-data';
+import { generateCodingQuestions } from '@/ai/flows/ai-coding-generator';
 
 const LANGUAGES = [
   { id: 'python', label: 'Python 3', monaco: 'python' },
@@ -128,22 +128,8 @@ export default function CodingEnginePage() {
   };
 
   const getTopicLabel = (topic?: string | null) => {
-    const map: Record<string, string> = {
-      'Strings': 'STRING ENGINE',
-      'Arrays': 'DATA STRUCTURES',
-      'Stack': 'ALGORITHM CORE',
-      'Hash Map': 'HASH ENGINE',
-      'Sorting': 'OPTIMIZATION CORE',
-      'Searching': 'SCAN PROTOCOL',
-      'Data Structures': 'DATA STRUCTURES',
-      'Algorithms': 'ALGORITHM CORE'
-    };
-
-    if (!topic || typeof topic !== 'string') {
-      return 'ALGORITHM CORE';
-    }
-
-    return map[topic] || topic.toUpperCase();
+    if (!topic) return 'ALGORITHM CORE';
+    return topic.toUpperCase();
   };
 
   const currentQ = useMemo(() => {
@@ -414,7 +400,6 @@ export default function CodingEnginePage() {
       }
 
       // 1. RECOVERY PROTOCOL: If questions are already assigned to this specific session in Firestore, use them.
-      // This ensures browser refreshes DO NOT change the question set for the current attempt.
       if (Array.isArray(journey.codingQuestions) && 
           journey.codingQuestions.length === 8 && 
           journey.questionsSessionId === journey.sessionId) {
@@ -429,34 +414,36 @@ export default function CodingEnginePage() {
         const userRef = doc(db, 'users', user.uid);
         const userSnap = await getDoc(userRef);
         const userData = userSnap.data();
-        const usedIds = Array.isArray(userData?.codingQuestionHistory) ? userData.codingQuestionHistory : [];
+        const usedTitles = Array.isArray(userData?.codingQuestionHistory) ? userData.codingQuestionHistory : [];
         
-        // 2. SELECTION PROTOCOL: Prioritize unused questions from the bank.
-        const pickQuestions = (difficulty: string, count: number) => {
-          const pool = [...MASTER_QUESTIONS].filter(q => q.difficulty === difficulty);
-          
-          // Separate pool into Unused vs Already seen by this user
-          const unused = pool.filter(q => !usedIds.includes(q.id)).sort(() => Math.random() - 0.5);
-          const used = pool.filter(q => usedIds.includes(q.id)).sort(() => Math.random() - 0.5);
-          
-          // Combine: Unused first, then random Used if needed
-          const combined = [...unused, ...used];
-          return combined.slice(0, count);
-        };
-
-        const selectedEasy = pickQuestions('Easy', 3);
-        const selectedMed = pickQuestions('Medium', 3);
-        const selectedHard = pickQuestions('Hard', 2);
-
-        const finalQuestions = [...selectedEasy, ...selectedMed, ...selectedHard];
-        
-        if (finalQuestions.length < 8) {
-          const fallback = [...MASTER_QUESTIONS].sort(() => Math.random() - 0.5).slice(0, 8);
-          setQuestions(fallback);
-          return;
+        // 2. SYNTHESIS PROTOCOL: Use Gemini as the primary source
+        let finalQuestions = [];
+        try {
+          const response = await generateCodingQuestions({
+            role: journey.role,
+            company: journey.company,
+            experienceLevel: journey.experience,
+            count: 8,
+            avoidTitles: usedTitles
+          });
+          finalQuestions = response.questions;
+        } catch (genError) {
+          console.error("[Coding Round] Neural synthesis failed, using fallback bank:", genError);
+          // FALLBACK PROTOCOL
+          const pickQuestions = (difficulty: string, count: number) => {
+            const pool = [...MASTER_QUESTIONS].filter(q => q.difficulty === difficulty);
+            const unused = pool.filter(q => !usedTitles.includes(q.title)).sort(() => Math.random() - 0.5);
+            const used = pool.filter(q => usedTitles.includes(q.title)).sort(() => Math.random() - 0.5);
+            return [...unused, ...used].slice(0, count);
+          };
+          finalQuestions = [...pickQuestions('Easy', 3), ...pickQuestions('Medium', 3), ...pickQuestions('Hard', 2)];
         }
 
-        const newIds = finalQuestions.map(q => q.id);
+        if (finalQuestions.length < 8) {
+          finalQuestions = [...MASTER_QUESTIONS].sort(() => Math.random() - 0.5).slice(0, 8);
+        }
+
+        const newTitles = finalQuestions.map(q => q.title);
         
         // 3. PERSISTENCE PROTOCOL: Store the assigned set for the current session.
         await updateDoc(journeyRef!, {
@@ -466,9 +453,8 @@ export default function CodingEnginePage() {
         });
 
         // 4. HISTORY PROTOCOL: Update global user history to avoid repeating these in future attempts.
-        const updatedHistory = Array.from(new Set([...usedIds, ...newIds]));
         await updateDoc(userRef, {
-          codingQuestionHistory: updatedHistory
+          codingQuestionHistory: arrayUnion(...newTitles)
         });
 
         setQuestions(finalQuestions);
@@ -607,7 +593,7 @@ export default function CodingEnginePage() {
                 <div className="space-y-8">
                   <div className="space-y-3">
                     <h4 className="text-[11px] font-black uppercase tracking-[0.3em] text-accent">PROBLEM NARRATIVE</h4>
-                    <p className="text-base text-white/70 leading-relaxed font-light whitespace-pre-wrap">{currentQ.description || 'Solve the given programming problem.'}</p>
+                    <p className="text-base text-white/70 leading-relaxed font-light whitespace-pre-wrap">{currentQ.problemStatement || currentQ.description || 'Solve the given programming problem.'}</p>
                   </div>
 
                   {(currentQ.constraints || []).length > 0 && (
@@ -672,20 +658,12 @@ export default function CodingEnginePage() {
           <Card className="flex-1 glass border-white/5 bg-[#0b0e1a] flex flex-col relative overflow-hidden rounded-[2.5rem] shadow-2xl">
             <div className="h-14 border-b border-white/5 bg-white/[0.02] flex items-center px-10 gap-12 justify-between">
                <div className="flex items-center gap-12">
-                 {currentQ?.functionInfo && (
-                   <>
-                     <div className="flex items-center gap-3">
-                        <span className="text-[9px] font-black text-white/30 uppercase tracking-widest">Function:</span>
-                        <Badge variant="outline" className="border-accent/30 text-accent text-[10px] font-mono px-3">
-                          {currentQ.functionInfo.name || 'solve()'}
-                        </Badge>
-                     </div>
-                     <div className="flex items-center gap-3">
-                        <span className="text-[9px] font-black text-white/30 uppercase tracking-widest">Return:</span>
-                        <span className="text-[10px] font-mono text-purple-400">{currentQ.functionInfo.returnType || 'void'}</span>
-                     </div>
-                   </>
-                 )}
+                 <div className="flex items-center gap-3">
+                    <span className="text-[9px] font-black text-white/30 uppercase tracking-widest">Syntax Node</span>
+                    <Badge variant="outline" className="border-accent/30 text-accent text-[10px] font-mono px-3">
+                      {currentQ?.topic || 'ALGORITHM'}
+                    </Badge>
+                 </div>
                </div>
                <div className="flex items-center gap-3">
                  <select 
@@ -712,17 +690,6 @@ export default function CodingEnginePage() {
                   allowNonTsExtensions: true,
                   noEmit: true,
                 });
-                
-                monaco.languages.typescript.typescriptDefaults.addExtraLib(`
-                  declare module "fs" {
-                    export function readFileSync(fd: number, encoding: string): string;
-                    export function readFileSync(path: string, encoding: string): string;
-                  }
-                  declare var process: {
-                    stdin: { fd: number };
-                    stdout: { write: (s: string) => void };
-                  };
-                `, 'node.d.ts');
               }}
               options={{ 
                 fontSize: 15, 
@@ -871,4 +838,3 @@ export default function CodingEnginePage() {
     </div>
   );
 }
-
