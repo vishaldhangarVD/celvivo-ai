@@ -1,4 +1,3 @@
-
 "use client";
 import { Suspense, useEffect, useState, useRef, useMemo } from "react";
 import { useRouter, useParams, useSearchParams } from "next/navigation";
@@ -64,12 +63,11 @@ function VirtualArenaContent() {
   const [transcript, setTranscript] = useState<{role: 'interviewer' | 'candidate', text: string}[]>([]);
   const [userAnswer, setUserAnswer] = useState("");
   const [isMicActive, setIsMicActive] = useState(false);
-  const [timeLeft, setTimeLeft] = useState(15 * 60); // Updated to 15 minutes
+  const [timeLeft, setTimeLeft] = useState(15 * 60); 
   const [isSimulationComplete, setIsSimulationComplete] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [isInitializing, setIsInitializing] = useState(true);
   const [isGeneratingReport, setIsGeneratingReport] = useState(false);
-  const [assessmentContext, setAssessmentContext] = useState<any>(null);
   const [cameraError, setCameraError] = useState<string | null>(null);
   
   // Neural Simulation State
@@ -91,6 +89,8 @@ function VirtualArenaContent() {
     return doc(db, 'users', user.uid, 'journey', 'active');
   }, [db, user?.uid]);
 
+  const { data: journey } = useDoc(journeyRef);
+
   const profileRef = useMemo(() => {
     if (!db || !user?.uid) return null;
     return doc(db, 'users', user.uid);
@@ -105,24 +105,21 @@ function VirtualArenaContent() {
 
   // Dynamic Candidate Identity Resolution
   const formattedName = useMemo(() => {
-    // Priority 1: Verified name from the processed resume blueprint
-    const resumeName = assessmentContext?.resumeAnalysis?.personalInfo?.fullName;
+    const resumeName = journey?.resumeAnalysis?.personalInfo?.fullName;
     if (resumeName) return resumeName;
 
-    // Priority 2: System profile name or authenticated identity
     if (!user) return 'Candidate';
     const name = user.displayName || user.email?.split('@')[0] || 'Candidate';
     return name.charAt(0).toUpperCase() + name.slice(1);
-  }, [user, assessmentContext]);
+  }, [user, journey]);
 
   const currentInterviewerQuestion = useMemo(() => {
     const lastInterviewer = [...transcript].reverse().find(t => t.role === 'interviewer');
     return lastInterviewer?.text || "Initializing session...";
   }, [transcript]);
 
-  // ElevenLabs Neural Audio Protocol - GATED BY CAMERA PERMISSION
+  // ElevenLabs Neural Audio Protocol
   useEffect(() => {
-    // CRITICAL GATE: Do not proceed if camera/media access is not verified
     if (!isMediaReady || !currentInterviewerQuestion || currentInterviewerQuestion === "Initializing session...") {
       return;
     }
@@ -410,7 +407,6 @@ function VirtualArenaContent() {
       
       if (snap.exists()) {
         const data = snap.data();
-        setAssessmentContext(data);
         
         // Simulation Context Verification
         const rs = data.resumeAnalysis?.skillAnalysis || [];
@@ -422,7 +418,6 @@ function VirtualArenaContent() {
         setCurrentSimStage(startStage);
         setCurrentSimDifficulty(startDiff);
         
-        // Resolve name for AI personalization
         const candidateName = data.resumeAnalysis?.personalInfo?.fullName || user.displayName || undefined;
 
         try {
@@ -439,7 +434,8 @@ function VirtualArenaContent() {
               askedQuestions: [],
               debugMode: data.debugMode,
               currentStage: startStage as any,
-              currentDifficulty: startDiff as any
+              currentDifficulty: startDiff as any,
+              hintUsed: data.hintUsed || false
             });
 
             setTranscript([{ role: 'interviewer', text: response.nextQuestion }]);
@@ -486,29 +482,33 @@ function VirtualArenaContent() {
         };
       });
 
-      const rs = assessmentContext.resumeAnalysis?.skillAnalysis || [];
-      const rp = assessmentContext.resumeAnalysis?.sections?.projects || [];
+      const rs = journey?.resumeAnalysis?.skillAnalysis || [];
+      const rp = journey?.resumeAnalysis?.sections?.projects || [];
 
       const response = await aiMockInterview({
-        role, experienceLevel: exp, roundType: round, currentMainQuestionIndex: currentIdx + 1,
+        role, experienceLevel: exp, roundType: round, currentMainQuestionIndex: currentIdx,
         history: chatHistory,
         userAnswer: currentAns, targetCompany: company,
         candidateName: formattedName,
         resumeSkills: rs.map((s: any) => s.skill),
         resumeProjects: rp,
-        resumeSummary: assessmentContext.resumeAnalysis?.summary || "",
-        aptitudeScore: assessmentContext.aptitudeReport?.overallScore || 0,
-        codingScore: assessmentContext.codingReport?.score || 0,
+        resumeSummary: journey?.resumeAnalysis?.summary || "",
+        aptitudeScore: journey?.aptitudeReport?.overallScore || 0,
+        codingScore: journey?.codingReport?.score || 0,
         askedQuestions: askedQuestions,
-        debugMode: assessmentContext?.debugMode,
+        debugMode: journey?.debugMode,
         currentStage: currentSimStage as any,
-        currentDifficulty: currentSimDifficulty as any
+        currentDifficulty: currentSimDifficulty as any,
+        hintUsed: journey?.hintUsed || false
       });
 
       const updatedTranscript = [...newTranscript, { role: 'interviewer' as const, text: response.nextQuestion }];
       setTranscript(updatedTranscript);
-      setAskedQuestions(prev => [...prev, response.nextQuestion]);
-      setCurrentIdx(prev => prev + 1);
+      
+      if (!response.isHint) {
+        setAskedQuestions(prev => [...prev, response.nextQuestion]);
+        setCurrentIdx(prev => prev + 1);
+      }
       
       // Persist State Loop
       setCurrentSimStage(response.stage);
@@ -517,6 +517,7 @@ function VirtualArenaContent() {
         updateDoc(journeyRef, {
           simStage: response.stage,
           simDifficulty: response.difficulty,
+          hintUsed: !!response.isHint,
           updatedAt: serverTimestamp()
         });
       }
@@ -542,17 +543,16 @@ function VirtualArenaContent() {
     try {
       const transcriptStr = currentTranscript.map(t => `${t.role.toUpperCase()}: ${t.text}`).join('\n\n');
       
-      const aptitudeReport = assessmentContext.aptitudeReport;
-      const codingReport = assessmentContext.codingReport;
+      const aptitudeReport = journey?.aptitudeReport;
+      const codingReport = journey?.codingReport;
 
-      // 1. Generate final audit intelligence
       const finalAudit = await generateInterviewFeedback({
         role, company, experienceLevel: exp, interviewTranscript: transcriptStr,
         resumeContext: {
-          atsScore: assessmentContext.resumeAnalysis?.atsScore || 0,
-          strengths: assessmentContext.resumeAnalysis?.analysis?.strengths || [],
-          weaknesses: assessmentContext.resumeAnalysis?.analysis?.weaknesses || [],
-          missingSkills: assessmentContext.resumeAnalysis?.analysis?.missingSkills || [],
+          atsScore: journey?.resumeAnalysis?.atsScore || 0,
+          strengths: journey?.resumeAnalysis?.analysis?.strengths || [],
+          weaknesses: journey?.resumeAnalysis?.analysis?.weaknesses || [],
+          missingSkills: journey?.resumeAnalysis?.analysis?.missingSkills || [],
         },
         aptitudeContext: {
           overallScore: aptitudeReport?.overallScore || 0,
@@ -567,7 +567,6 @@ function VirtualArenaContent() {
         }
       });
 
-      // 2. Persist the interview dossier to Firestore
       const docRef = await addDoc(collection(db, 'users', user.uid, 'interviews'), {
         userId: user.uid, 
         role, 
@@ -576,12 +575,11 @@ function VirtualArenaContent() {
         round,
         history: currentTranscript, 
         overallScore: finalAudit.overallScore,
-        codingScore: assessmentContext.codingReport?.score || 0,
+        codingScore: journey?.codingReport?.score || 0,
         feedback: finalAudit, 
         createdAt: serverTimestamp(),
       });
 
-      // 3. SECURE SUBSCRIPTION CONSUMPTION PROTOCOL (HARDENED)
       const userRef = doc(db, 'users', user.uid);
       const profileSnap = await getDoc(userRef);
       const profileData = profileSnap.data();
@@ -590,19 +588,14 @@ function VirtualArenaContent() {
       const alreadyUsed = profileData?.freeJourneyUsed || false;
 
       if (plan === 'free' && !alreadyUsed) {
-        try {
-          await setDoc(userRef, {
-            freeJourneyUsed: true,
-            plan: plan,
-            subscriptionStatus: profileData?.subscriptionStatus || 'active',
-            updatedAt: serverTimestamp()
-          }, { merge: true });
-        } catch (updateErr) {
-          console.error("=== FREE JOURNEY UPDATE FAILED ===", updateErr);
-        }
+        await setDoc(userRef, {
+          freeJourneyUsed: true,
+          plan: plan,
+          subscriptionStatus: profileData?.subscriptionStatus || 'active',
+          updatedAt: serverTimestamp()
+        }, { merge: true });
       }
       
-      // 4. Cleanup and final transition
       await deleteDoc(journeyRef);
       stopCamera();
       router.push(`/feedback/${docRef.id}`);
@@ -891,7 +884,7 @@ function VirtualArenaContent() {
         )}
 
         {isSimulationComplete && isGeneratingReport && (
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-[#050816]/95 backdrop-blur-2xl">
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="fixed inset-0 z-[200] flex items-center justify-center p-6 bg-[#050816]/95 backdrop-blur-2xl">
             <div className="max-w-md w-full text-center space-y-6">
               <div className="relative">
                 <motion.div animate={{ rotate: 360 }} transition={{ duration: 4, repeat: Infinity, ease: "linear" }} className="w-24 h-24 rounded-full border-b-2 border-accent mx-auto" />

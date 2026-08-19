@@ -4,6 +4,7 @@
  * MASTER PROTOCOL: Calibrated for zero-chatbot behavior. Mimics a Lead Engineer at a Tier-1 tech firm.
  * Integrates Resume, Projects, Coding Score, Aptitude Score, and Conversation History.
  * Implements granular stage progression with natural acknowledgments and transitions.
+ * Includes ONE-HINT PROTOCOL for handling non-meaningful responses.
  */
 
 import { ai, runWithResilience } from '@/ai/genkit';
@@ -47,6 +48,7 @@ const AiMockInterviewInputSchema = z.object({
   codingScore: z.number().optional(),
   askedQuestions: z.array(z.string()).optional(),
   debugMode: z.boolean().optional(),
+  hintUsed: z.boolean().optional(),
   currentStage: z.enum([
     "INTRODUCTION",
     "RESUME",
@@ -77,6 +79,7 @@ const AiMockInterviewOutputSchema = z.object({
     "CLOSING"
   ]),
   isInterviewComplete: z.boolean(),
+  isHint: z.boolean().optional(),
 });
 export type AiMockInterviewOutput = z.infer<typeof AiMockInterviewOutputSchema>;
 
@@ -101,6 +104,12 @@ CRITICAL PERSONA RULES:
 - NEVER generate bullet points, lists, or bold text.
 - NEVER reveal numeric scores, ATS percentages, or specific performance ratings to the candidate.
 
+ONE-HINT PROTOCOL:
+If the candidate's latest response ({{{userAnswer}}}) is non-meaningful (e.g. "I don't know", "Not sure", "Hmm", "No idea", "I can't remember"):
+1. If hintUsed is false: Provide ONE short, strategic hint or a leading follow-up question to help them approach the problem without giving the answer. Set isHint: true in your response.
+2. If hintUsed is true: Do not give another hint. Acknowledge the lack of response professionally and move to the NEXT question or stage. Set isHint: false.
+- A meaningful short answer (e.g. "Python", "Agile", "Yes") is NOT a non-meaningful response.
+
 ACKNOWLEDGEMENT PROTOCOL:
 Assess the candidate's latest response ({{{userAnswer}}}) and prepend a short acknowledgement to your next question:
 1. STRONG ANSWER: Use positive validation (e.g., "Good answer.", "That's a good point.", "Excellent, that's clear.").
@@ -112,6 +121,7 @@ Assess the candidate's latest response ({{{userAnswer}}}) and prepend a short ac
 SIMULATION STATE:
 - CURRENT STAGE: {{{currentStage}}}
 - CURRENT DIFFICULTY: {{{currentDifficulty}}}
+- HINT USED FOR CURRENT NODE: {{{hintUsed}}}
 
 CANDIDATE DOSSIER:
 - NAME: {{{candidateName}}}
@@ -124,9 +134,7 @@ INTERVIEW FLOW PROTOCOL:
 STAGE 1: PERSONAL INTRODUCTION (Node 1 ONLY)
 - If history is empty, you MUST start with a natural, welcoming, and varied introduction.
 - Ask the candidate to introduce themselves, state their name, and provide a high-level background.
-- VARIETY PROTOCOL: Dynamically generate the wording (e.g., "Hi! Welcome to the interview. Could you start by introducing yourself and telling me a little about your background?", "Let's begin with a quick introduction. Could you tell me your name and give me a brief overview of yourself?", etc.).
-- Never use the exact same opening sentence across different interviews.
-- DO NOT ask about specialization or technical details in this turn.
+- VARIETY PROTOCOL: Dynamically generate the wording.
 
 STAGE 2: EDUCATION & PROFESSIONAL BACKGROUND (Node 2)
 - Acknowledge the introduction.
@@ -138,7 +146,7 @@ STAGE 3: ROLE-SPECIFIC EXPERIENCE (Node 3)
 
 STAGE 4: PROJECTS & PRACTICAL EXPERIENCE (Node 4)
 - Analyze their PROJECTS: {{#each resumeProjects}}{{{this}}}, {{/each}}
-- Select one and ask deep, architectural questions. "Why that stack?" or "How did you handle [Constraint] in your [Project Name]?".
+- Select one and ask deep, architectural questions.
 
 STAGE 5: TECHNICAL & SYSTEM REASONING (Nodes 5-6)
 - Probe technical reasoning and systems thinking.
@@ -147,8 +155,6 @@ STAGE 5: TECHNICAL & SYSTEM REASONING (Nodes 5-6)
 
 STAGE 6: ADVANCED SCENARIOS & ADAPTIVITY (Node 7)
 - Ask complex real-world situational questions.
-- If candidate is confident, INCREASE friction. Probe edge cases.
-- If candidate struggles, provide a professional bridge and adjust.
 
 STAGE 7: FOLLOW-UP & CLOSING (Nodes 8+)
 - Every new question MUST acknowledge or follow up on the previous answer.
@@ -158,7 +164,6 @@ TERMINATION PROTOCOL:
 - MINIMUM questions: 7.
 - MAXIMUM questions: 12.
 - Set "isInterviewComplete": true if index >= 7 and you have sufficient data for a final audit.
-- Final Question: Provide a professional human sign-off (e.g., "I appreciate your time. This concludes our session. It was good speaking with you.").
 
 SESSION INTEGRITY:
 - NEVER repeat a question listed in "Previously Asked Questions".
@@ -171,7 +176,7 @@ Candidate: {{{this.answer}}}
 LATEST CANDIDATE RESPONSE:
 {{{userAnswer}}}
 
-Based on the protocol and candidate response, output the next logical question with a brief acknowledgement as JSON.`,
+Based on the protocol and candidate response, output the next logical question or hint as JSON.`
 });
 
 const aiMockInterviewFlow = ai.defineFlow(
@@ -187,6 +192,7 @@ const aiMockInterviewFlow = ai.defineFlow(
         difficulty: "EASY",
         stage: "INTRODUCTION",
         isInterviewComplete: input.currentMainQuestionIndex >= 7,
+        isHint: false
       };
     }
 
@@ -196,6 +202,7 @@ const aiMockInterviewFlow = ai.defineFlow(
         askedQuestions: input.askedQuestions || [],
         currentStage: input.currentStage || "INTRODUCTION",
         currentDifficulty: input.currentDifficulty || "MEDIUM",
+        hintUsed: input.hintUsed || false
       });
 
       if (!output) throw new Error("Neural synthesis failed.");
@@ -221,6 +228,7 @@ const aiMockInterviewFlow = ai.defineFlow(
         difficulty: input.currentDifficulty || "MEDIUM",
         stage: input.currentStage || "TECHNICAL",
         isInterviewComplete: input.currentMainQuestionIndex >= 12,
+        isHint: false
       };
     }
   }
