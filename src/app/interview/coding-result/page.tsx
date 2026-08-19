@@ -1,6 +1,7 @@
+
 "use client";
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import Navbar from '@/components/layout/Navbar';
@@ -42,7 +43,7 @@ import { doc, collection, query, where, orderBy } from 'firebase/firestore';
 import { cn } from '@/lib/utils';
 import { MASTER_QUESTIONS } from '@/lib/coding-questions-data';
 
-export default function CodingResultTerminal() {
+function CodingResultContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { user } = useUser();
@@ -118,23 +119,6 @@ export default function CodingResultTerminal() {
     };
   }, [attemptDoc, journey, questionResults, attemptId]);
 
-  const aggregateStats = useMemo(() => {
-    if (!questionResults || questionResults.length === 0) return null;
-    
-    const passedTests = questionResults.reduce((acc, curr) => acc + (curr.passedTestCases || 0), 0);
-    const totalTests = questionResults.reduce((acc, curr) => acc + (curr.totalTestCases || 0), 0);
-    const maxTime = Math.max(...questionResults.map(r => parseFloat(r.executionTime) || 0));
-    const maxMemory = Math.max(...questionResults.map(r => parseInt(r.memory) || 0));
-    
-    return {
-      passedTests,
-      totalTests,
-      maxTime: maxTime > 0 ? maxTime.toFixed(2) : "0.00",
-      maxMemory: maxMemory > 0 ? maxMemory : "N/A",
-      successRate: totalTests > 0 ? Math.round((passedTests / totalTests) * 100) : 0
-    };
-  }, [questionResults]);
-
   const recommendation = useMemo(() => {
     if (!result || result.status === 'Awaiting') return "Evaluation unavailable";
     const score = result.score || 0;
@@ -143,6 +127,11 @@ export default function CodingResultTerminal() {
   }, [result]);
 
   const isPassed = (result?.score || 0) >= 60;
+
+  const handleContinueToInterview = () => {
+    if (!journey) return;
+    router.push(`/interview/${activeId}?role=${encodeURIComponent(journey.role || '')}&company=${encodeURIComponent(journey.company || '')}&exp=${encodeURIComponent(journey.experience || '')}&round=HR%20Round`);
+  };
 
   if (attemptLoading || journeyLoading) return (
     <div className="h-screen flex items-center justify-center bg-[#050816]">
@@ -240,7 +229,7 @@ export default function CodingResultTerminal() {
               <div className="relative z-10 pt-6">
                 {isPassed ? (
                   <Button 
-                    onClick={() => router.push(`/interview/${activeId}?role=${encodeURIComponent(journey?.role || '')}&company=${encodeURIComponent(journey?.company || '')}&exp=${encodeURIComponent(journey?.experience || '')}&round=HR%20Round`)}
+                    onClick={handleContinueToInterview}
                     className="w-full h-16 btn-premium rounded-2xl text-xs font-black uppercase tracking-[0.3em] shadow-[0_20px_60px_rgba(147,51,234,0.3)] group"
                   >
                     CONTINUE TO INTERVIEW <ArrowRight className="ml-3 w-5 h-5 transition-transform group-hover:translate-x-1" />
@@ -388,6 +377,14 @@ export default function CodingResultTerminal() {
             </div>
 
             <div className="flex justify-end gap-4 shrink-0 pt-4 border-t border-white/5">
+              {isPassed && (
+                <Button 
+                  onClick={handleContinueToInterview}
+                  className="h-12 px-10 btn-premium rounded-xl text-[10px] font-black uppercase tracking-[0.3em] shadow-2xl flex items-center gap-2"
+                >
+                  CONTINUE TO INTERVIEW <ArrowRight className="w-4 h-4" />
+                </Button>
+              )}
               <Button 
                 onClick={() => router.push('/dashboard')}
                 variant="ghost" 
@@ -401,5 +398,13 @@ export default function CodingResultTerminal() {
         </div>
       </main>
     </div>
+  );
+}
+
+export default function CodingResultTerminal() {
+  return (
+    <Suspense fallback={<div className="h-screen flex items-center justify-center bg-[#050816]"><Loader2 className="w-12 h-12 text-accent animate-spin" /></div>}>
+      <CodingResultContent />
+    </Suspense>
   );
 }
