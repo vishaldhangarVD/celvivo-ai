@@ -12,41 +12,32 @@ import {
   CheckCircle2, 
   XCircle, 
   Trophy, 
-  Activity, 
-  Clock, 
   ChevronRight, 
   RotateCcw, 
   Cpu, 
   ShieldCheck, 
-  Zap, 
   Target, 
   Code2, 
   Layers,
-  Sparkles, 
-  Command,
-  Mic,
-  MessageSquare,
   Loader2,
   AlertTriangle,
-  Flame,
-  Check,
-  Timer,
-  Terminal,
-  ChevronDown,
-  PieChart,
   ArrowRight,
-  FastForward
+  FastForward,
+  ChevronDown,
+  Terminal,
+  Activity
 } from 'lucide-react';
 import { useUser, useFirestore, useDoc, useCollection } from '@/firebase';
 import { doc, collection, query, where, orderBy } from 'firebase/firestore';
 import { cn } from '@/lib/utils';
-import { MASTER_QUESTIONS } from '@/lib/coding-questions-data';
+import { useToast } from '@/hooks/use-toast';
 
 function CodingResultContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { user } = useUser();
   const db = useFirestore();
+  const { toast } = useToast();
 
   const attemptId = searchParams.get('attemptId');
   const [expandedNode, setExpandedNode] = useState<string | null>(null);
@@ -118,21 +109,21 @@ function CodingResultContent() {
     };
   }, [attemptDoc, journey, questionResults, attemptId]);
 
-  const recommendation = useMemo(() => {
-    if (!result || result.status === 'Awaiting') return "Evaluation unavailable";
-    const score = result.score || 0;
-    if (result.status === 'Pass' || score >= 60) return score >= 85 ? "PASS (OPTIMAL)" : "PASS";
-    return "FAIL";
-  }, [result]);
-
   const isPassed = (result?.score || 0) >= 60;
 
   const handleContinueToInterview = () => {
-    if (!journey) {
-      toast({ variant: "destructive", title: "Session Context Lost", description: "Return to dashboard and resume journey." });
+    if (!journey && !attemptDoc) {
+      toast({ variant: "destructive", title: "Session Context Lost", description: "Return to dashboard to continue." });
       return;
     }
-    router.push(`/interview/${activeId}?role=${encodeURIComponent(journey.role || '')}&company=${encodeURIComponent(journey.company || '')}&exp=${encodeURIComponent(journey.experience || '')}&round=HR%20Round`);
+
+    // Determine context from attemptDoc or active journey
+    const sessionRole = attemptDoc?.role || journey?.role || "Software Engineer";
+    const sessionCompany = attemptDoc?.company || journey?.company || "Standard Tech";
+    const sessionExp = attemptDoc?.experience || journey?.experience || "Senior";
+
+    // Navigate to existing Interview flow
+    router.push(`/interview/${activeId}?role=${encodeURIComponent(sessionRole)}&company=${encodeURIComponent(sessionCompany)}&exp=${encodeURIComponent(sessionExp)}&round=HR%20Round`);
   };
 
   if (attemptLoading || journeyLoading) return (
@@ -147,7 +138,6 @@ function CodingResultContent() {
       <Navbar />
       
       <main className="flex-1 container mx-auto px-6 pt-24 pb-8 flex flex-col gap-6 overflow-hidden">
-        
         <header className="flex flex-col md:flex-row justify-between items-end gap-4 shrink-0">
           <div className="space-y-1">
             <Badge className="bg-accent/20 text-accent border-none px-4 py-1 text-[10px] tracking-[0.4em] font-black uppercase">Simulation Node 03 Audit</Badge>
@@ -161,7 +151,6 @@ function CodingResultContent() {
         </header>
 
         <div className="flex-1 grid lg:grid-cols-12 gap-6 overflow-hidden">
-          
           <div className="lg:col-span-4 flex flex-col gap-6 overflow-hidden">
             <Card className="premium-card bg-white/[0.01] border-white/5 p-8 flex flex-col items-center text-center justify-center relative overflow-hidden">
               <div className="absolute top-0 inset-x-0 h-1 bg-gradient-to-r from-transparent via-accent/30 to-transparent" />
@@ -174,8 +163,7 @@ function CodingResultContent() {
                 </div>
                 <p className="text-[9px] font-bold uppercase tracking-[0.4em] text-white/30 mt-2">Overall Proficiency Index</p>
               </div>
-
-              <div className="mt-8 flex items-center gap-3">
+              <div className="mt-8">
                  <Badge className={cn(
                    "px-6 py-2 rounded-xl font-black tracking-[0.4em] text-[10px] border-none",
                    isPassed ? "bg-green-500/20 text-green-400" : "bg-red-500/20 text-red-400"
@@ -183,26 +171,6 @@ function CodingResultContent() {
                    STATUS: {result?.status?.toUpperCase() || "AWAITING"}
                  </Badge>
               </div>
-            </Card>
-
-            <Card className="premium-card bg-white/[0.01] border-white/5 p-8 space-y-6 relative overflow-hidden group">
-               <div className="absolute top-0 right-0 p-8 opacity-5 group-hover:opacity-10 transition-opacity">
-                 <Target className="w-24 h-24 text-accent" />
-               </div>
-               <div className="space-y-2 relative z-10">
-                 <h3 className="text-[10px] font-black uppercase tracking-[0.3em] text-accent flex items-center gap-3">
-                   <ShieldCheck className="w-4 h-4" /> Final Recommendation
-                 </h3>
-                 <div className="pt-4">
-                   <p className={cn(
-                     "text-3xl font-black tracking-tighter",
-                     recommendation.includes("PASS") ? "text-green-400" : "text-red-400"
-                   )}>
-                     {recommendation}
-                   </p>
-                   <p className="text-[9px] font-bold text-white/30 uppercase tracking-widest mt-1">Based on algorithmic performance</p>
-                 </div>
-               </div>
             </Card>
 
             <Card className={cn(
@@ -250,7 +218,6 @@ function CodingResultContent() {
 
           <div className="lg:col-span-8 flex flex-col gap-6 overflow-hidden">
             <div className="overflow-y-auto custom-scrollbar flex-1 pr-2 space-y-6">
-              
               <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-4 shrink-0">
                 {[
                   { label: "Total Questions", val: result?.totalQuestions || 8, icon: Layers, color: "text-blue-400" },
@@ -309,57 +276,31 @@ function CodingResultContent() {
 
                         <AnimatePresence>
                           {res && expandedNode === res.id && (
-                            <motion.div
-                              initial={{ height: 0, opacity: 0 }}
-                              animate={{ height: 'auto', opacity: 1 }}
-                              exit={{ height: 0, opacity: 0 }}
-                              className="overflow-hidden"
-                            >
+                            <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
                               <div className="p-8 glass rounded-[2.5rem] border-accent/10 bg-accent/[0.01] space-y-8 mt-2">
                                  <div className="grid md:grid-cols-2 gap-8">
                                    <div className="space-y-4">
-                                     <h5 className="text-[10px] font-black uppercase tracking-widest text-accent flex items-center gap-2">
-                                       <Terminal className="w-3 h-3" /> Execution Details
-                                     </h5>
+                                     <h5 className="text-[10px] font-black uppercase tracking-widest text-accent flex items-center gap-2"><Terminal className="w-3 h-3" /> Execution Details</h5>
                                      <div className="grid grid-cols-2 gap-4">
                                         <div className="p-4 glass rounded-xl border-white/5 space-y-1">
                                           <p className="text-[8px] uppercase font-bold text-white/30">Language</p>
                                           <p className="text-xs font-bold text-white">{res.language}</p>
                                         </div>
                                         <div className="p-4 glass rounded-xl border-white/5 space-y-1">
-                                          <p className="text-[8px] uppercase font-bold text-white/30">Status</p>
-                                          <p className={cn("text-xs font-bold", res.status === 'Solved' ? "text-green-400" : "text-red-400")}>{res.status}</p>
-                                        </div>
-                                        <div className="p-4 glass rounded-xl border-white/5 space-y-1">
                                           <p className="text-[8px] uppercase font-bold text-white/30">Execution Time</p>
                                           <p className="text-xs font-bold text-white tabular-nums">{res.executionTime || '0.00'}s</p>
                                         </div>
-                                        <div className="p-4 glass rounded-xl border-white/5 space-y-1">
-                                          <p className="text-[8px] uppercase font-bold text-white/30">Memory usage</p>
-                                          <p className="text-xs font-bold text-white tabular-nums">{res.memory || '---'} KB</p>
-                                        </div>
                                      </div>
                                    </div>
-
                                    <div className="space-y-4">
-                                     <h5 className="text-[10px] font-black uppercase tracking-widest text-purple-400 flex items-center gap-2">
-                                       <Activity className="w-3 h-3" /> Audit Trace Summary
-                                     </h5>
+                                     <h5 className="text-[10px] font-black uppercase tracking-widest text-purple-400 flex items-center gap-2"><Activity className="w-3 h-3" /> Audit Trace</h5>
                                      <div className="p-4 glass rounded-xl border-white/5 h-full max-h-[160px] overflow-y-auto custom-scrollbar">
-                                        {res.auditTrace && res.auditTrace.length > 0 ? (
-                                          <div className="space-y-3">
-                                            {res.auditTrace.map((tr: any, tIdx: number) => (
-                                              <div key={tIdx} className="flex items-center justify-between text-[10px]">
-                                                <span className="text-white/40">Test Case #{tIdx + 1}</span>
-                                                <Badge variant="outline" className={cn("text-[8px] uppercase py-0", tr.passed ? "text-green-400 border-green-500/20" : "text-red-400 border-red-500/20")}>
-                                                  {tr.status}
-                                                </Badge>
-                                              </div>
-                                            ))}
+                                        {(res.auditTrace || []).map((tr: any, tIdx: number) => (
+                                          <div key={tIdx} className="flex items-center justify-between text-[10px] py-1 border-b border-white/5 last:border-0">
+                                            <span className="text-white/40">Case #{tIdx + 1}</span>
+                                            <span className={tr.passed ? "text-green-400" : "text-red-400"}>{tr.status}</span>
                                           </div>
-                                        ) : (
-                                          <p className="text-[10px] text-white/20 italic">No diagnostic trace available.</p>
-                                        )}
+                                        ))}
                                      </div>
                                    </div>
                                  </div>
@@ -372,7 +313,7 @@ function CodingResultContent() {
                   })
                 ) : (
                   <div className="py-12 text-center glass rounded-2xl border-white/5 border-dashed">
-                    <p className="text-xs font-light text-white/20 uppercase tracking-widest">No implementation archives found for this attempt.</p>
+                    <p className="text-xs font-light text-white/20 uppercase tracking-widest">No implementation archives found.</p>
                   </div>
                 )}
               </div>
@@ -392,7 +333,6 @@ function CodingResultContent() {
               </Button>
             </div>
           </div>
-
         </div>
       </main>
     </div>
