@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect, useMemo, useCallback } from 'react';
@@ -197,10 +198,9 @@ export default function CodingEnginePage() {
         sessionId: attemptId
       };
 
-      // PERSIST ATTEMPT RECORD FOR ISOLATION
       await setDoc(doc(db, 'users', user.uid, 'coding_attempts', attemptId), {
         ...report,
-        questions: questions, // Save the actual question bank for this attempt
+        questions: questions,
         userId: user.uid,
         role: journey.role,
         company: journey.company,
@@ -413,6 +413,16 @@ export default function CodingEnginePage() {
         return;
       }
 
+      // 1. RECOVERY PROTOCOL: If questions are already assigned to this specific session in Firestore, use them.
+      // This ensures browser refreshes DO NOT change the question set for the current attempt.
+      if (Array.isArray(journey.codingQuestions) && 
+          journey.codingQuestions.length === 8 && 
+          journey.questionsSessionId === journey.sessionId) {
+        setQuestions(journey.codingQuestions);
+        setIsInitializing(false);
+        return;
+      }
+
       if (questions && questions.length === 8) return;
       
       try {
@@ -421,13 +431,15 @@ export default function CodingEnginePage() {
         const userData = userSnap.data();
         const usedIds = Array.isArray(userData?.codingQuestionHistory) ? userData.codingQuestionHistory : [];
         
+        // 2. SELECTION PROTOCOL: Prioritize unused questions from the bank.
         const pickQuestions = (difficulty: string, count: number) => {
           const pool = [...MASTER_QUESTIONS].filter(q => q.difficulty === difficulty);
-          const shuffledPool = pool.sort(() => Math.random() - 0.5);
           
-          const unused = shuffledPool.filter(q => !usedIds.includes(q.id));
-          const used = shuffledPool.filter(q => usedIds.includes(q.id));
+          // Separate pool into Unused vs Already seen by this user
+          const unused = pool.filter(q => !usedIds.includes(q.id)).sort(() => Math.random() - 0.5);
+          const used = pool.filter(q => usedIds.includes(q.id)).sort(() => Math.random() - 0.5);
           
+          // Combine: Unused first, then random Used if needed
           const combined = [...unused, ...used];
           return combined.slice(0, count);
         };
@@ -439,19 +451,21 @@ export default function CodingEnginePage() {
         const finalQuestions = [...selectedEasy, ...selectedMed, ...selectedHard];
         
         if (finalQuestions.length < 8) {
-          const fallback = MASTER_QUESTIONS.sort(() => Math.random() - 0.5).slice(0, 8);
+          const fallback = [...MASTER_QUESTIONS].sort(() => Math.random() - 0.5).slice(0, 8);
           setQuestions(fallback);
           return;
         }
 
         const newIds = finalQuestions.map(q => q.id);
         
+        // 3. PERSISTENCE PROTOCOL: Store the assigned set for the current session.
         await updateDoc(journeyRef!, {
           codingQuestions: finalQuestions,
           questionsSessionId: journey.sessionId || "unknown",
           updatedAt: serverTimestamp()
         });
 
+        // 4. HISTORY PROTOCOL: Update global user history to avoid repeating these in future attempts.
         const updatedHistory = Array.from(new Set([...usedIds, ...newIds]));
         await updateDoc(userRef, {
           codingQuestionHistory: updatedHistory
@@ -857,3 +871,4 @@ export default function CodingEnginePage() {
     </div>
   );
 }
+
