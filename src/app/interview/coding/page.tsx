@@ -5,7 +5,6 @@ import { useRouter } from 'next/navigation';
 import { AnimatePresence, motion } from 'framer-motion';
 import Editor from '@monaco-editor/react';
 import Navbar from '@/components/layout/Navbar';
-import NavigationControls from '@/components/NavigationControls';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -763,7 +762,7 @@ export default function CodingEnginePage() {
                         currentResult.status === 'Solved' ? "bg-green-500/10 border-green-500/20" : 
                         currentResult.status === 'Skipped' ? "bg-white/5 border-white/10" : "bg-red-500/10 border-red-500/20")}>
                          <div className="flex items-center gap-4">
-                            <div className={cn("w-10 h-10 rounded-xl flex items-center justify-center", currentResult.status === 'Solved' ? "bg-green-500/20 text-green-400" : "bg-red-500/20 text-red-400")}>
+                            <div className={cn("w-10 h-10 rounded-xl flex items-center justify-center", currentResult.status === 'Solved' ? "bg-green-500/20 text-green-400" : "bg-red-500/10 text-red-400")}>
                                {currentResult.status === 'Solved' ? <Trophy className="w-5 h-5" /> : <XCircle className="w-5 h-5" />}
                             </div>
                             <div>
@@ -845,7 +844,6 @@ export default function CodingEnginePage() {
           </motion.div>
         )}
       </AnimatePresence>
-      <NavigationControls onHome={() => router.push('/')} onBack={() => router.push('/dashboard')} />
     </div>
   );
 }
