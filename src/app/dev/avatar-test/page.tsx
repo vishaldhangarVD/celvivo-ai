@@ -1,9 +1,22 @@
 "use client";
 
+import dynamic from 'next/dynamic';
 import Navbar from "@/components/layout/Navbar";
-import HolographicInterviewer from "@/components/HolographicInterviewer";
 import { Badge } from "@/components/ui/badge";
 import { Cpu, Box, Eye } from "lucide-react";
+
+// Dynamically import the Interviewer component with SSR disabled.
+// This ensures the component only runs in the client browser environment
+// and avoids build-time static analysis of internal TalkingHead dependencies.
+const HolographicInterviewer = dynamic(() => import("@/components/HolographicInterviewer"), {
+  ssr: false,
+  loading: () => (
+    <div className="w-full h-full flex flex-col items-center justify-center bg-[#0b0e1a]/50">
+      <div className="w-8 h-8 border-2 border-accent/20 border-t-accent rounded-full animate-spin mb-4" />
+      <p className="text-[8px] font-black uppercase tracking-[0.4em] text-accent">Hydrating Component...</p>
+    </div>
+  )
+});
 
 /**
  * AvatarTestPage - Dedicated development route to verify Step 3 integration.

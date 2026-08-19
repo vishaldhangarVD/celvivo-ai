@@ -6,6 +6,9 @@ import { useEffect, useRef, useState } from "react";
  * @fileOverview HolographicInterviewer - Step 3: Reusable 3D Avatar Component.
  * Integrates Julia.glb mesh with @met4citizen/talkinghead protocol.
  * Calibrated for upper-body rendering and client-side stability.
+ * 
+ * FIX: Uses a runtime dynamic import via eval to bypass Webpack's static analysis 
+ * of the library's internal dynamic imports which causes build errors.
  */
 
 export default function HolographicInterviewer() {
@@ -22,25 +25,28 @@ export default function HolographicInterviewer() {
       if (typeof window === "undefined" || !containerRef.current) return;
 
       try {
-        // Dynamic import to handle library browser dependencies (Three.js) safely
-        // @ts-ignore - Library may not provide native TS types
-        const { TalkingHead } = await import("@met4citizen/talkinghead");
+        // Use eval-based import to bypass Webpack's static dependency analysis.
+        // The library @met4citizen/talkinghead contains dynamic imports that
+        // Webpack cannot resolve at build time. This strategy loads the module at runtime in the browser.
+        const module = await eval('import("@met4citizen/talkinghead")');
+        const TalkingHead = module.TalkingHead;
 
         if (!isMounted || !containerRef.current) return;
 
-        // Initialize TalkingHead with requested Step 3 configuration
+        // Initialize TalkingHead with Step 3 configuration
         // Constructor signature: new TalkingHead(domElement, options)
         const head = new TalkingHead(containerRef.current, {
           cameraView: "upper",   // upper-body camera view
           eyeContact: true,      // maintain virtual eye contact with candidate
-          headMovement: true,    // enable natural idle head micro-movements
-          lipsync: false,        // Phoneme mapping scheduled for Step 4
+          headMovement: true,    // enable natural idle head movements
+          headSpeaking: true,    // enable head movement while speaking (for future steps)
+          lipsync: false,        // Explicitly disabled for Step 3 to avoid build errors
+          mood: "neutral"        // Default neutral expression
         });
 
         headRef.current = head;
 
-        // Load the Julia mesh from the provided GLB asset
-        // showGLB signature: showGLB(url, bodyCallback?, options?)
+        // Load the Julia mesh from the provided GLB asset in public/avatars/
         await head.showGLB("/avatars/julia.glb");
 
         if (isMounted) {
@@ -61,9 +67,13 @@ export default function HolographicInterviewer() {
 
     return () => {
       isMounted = false;
-      // Perform protocol cleanup to prevent Three.js context and canvas memory leaks
+      // Cleanup to prevent Three.js context and canvas memory leaks
       if (headRef.current && typeof headRef.current.dispose === "function") {
-        headRef.current.dispose();
+        try {
+          headRef.current.dispose();
+        } catch (e) {
+          console.warn("[Neural Mesh] Cleanup warning:", e);
+        }
       }
     };
   }, []);
@@ -88,7 +98,7 @@ export default function HolographicInterviewer() {
         </div>
       )}
 
-      {/* TalkingHead Render Viewport */}
+      {/* TalkingHead Render Viewport (Three.js Canvas) */}
       <div 
         ref={containerRef} 
         className="w-full h-full"
