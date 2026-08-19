@@ -95,6 +95,7 @@ export default function AptitudeEnginePage() {
 
   const initGuard = useRef(false);
   const submissionGuard = useRef(false);
+  const submitRef = useRef<() => Promise<void>>(null);
 
   const journeyRef = useMemo(() => {
     if (!db || !user?.uid) return null;
@@ -123,7 +124,6 @@ export default function AptitudeEnginePage() {
         setAnswers(data.aptitudeAnswers || {});
         setCurrentIdx(data.aptitudeCurrentIndex || 0);
         
-        // Handle persistent timer logic (Priority: LocalStorage for instant UI, Firestore for sync)
         let endAt = data.aptitudeTimerEndAt;
         const localEndKey = `aptitude_timer_end_${user.uid}`;
         const localEndAt = localStorage.getItem(localEndKey);
@@ -240,11 +240,15 @@ export default function AptitudeEnginePage() {
     }
 
     try {
+      const localEndAt = localStorage.getItem(`aptitude_timer_end_${user?.uid}`);
+      const actualTimeLeft = localEndAt ? Math.max(0, Math.ceil((parseInt(localEndAt) - Date.now()) / 1000)) : 0;
+      const timeTaken = Math.max(0, 1800 - actualTimeLeft);
+
       const report = await evaluateAptitude({
         role: journey.role,
         company: journey.company,
         experienceLevel: journey.experience,
-        timeTakenSeconds: (30 * 60) - timeLeft,
+        timeTakenSeconds: timeTaken,
         totalQuestions: questions.length,
         results: formattedResults
       });
@@ -274,22 +278,35 @@ export default function AptitudeEnginePage() {
     } finally {
       setIsEvaluating(false);
     }
-  }, [isEvaluating, journey, journeyRef, questions, answers, timeLeft, result, toast, user?.uid]);
+  }, [isEvaluating, journey, journeyRef, questions, answers, result, toast, user?.uid]);
 
+  // Sync ref with latest submit handler
+  useEffect(() => {
+    submitRef.current = handleSubmit;
+  }, [handleSubmit]);
+
+  // Main Timer Logic
   useEffect(() => {
     if (isInitializing || isEvaluating || result) return;
-    const timer = setInterval(() => {
-      setTimeLeft(prev => {
-        if (prev <= 1) {
-          clearInterval(timer);
-          handleSubmit();
-          return 0;
-        }
-        return prev - 1;
-      });
-    }, 1000);
-    return () => clearInterval(timer);
-  }, [isInitializing, isEvaluating, result, handleSubmit]);
+    
+    const tick = () => {
+      const localEndAt = localStorage.getItem(`aptitude_timer_end_${user?.uid}`);
+      if (!localEndAt) return;
+      
+      const remaining = Math.max(0, Math.ceil((parseInt(localEndAt) - Date.now()) / 1000));
+      setTimeLeft(remaining);
+      
+      if (remaining <= 0) {
+        clearInterval(timerInterval);
+        if (submitRef.current) submitRef.current();
+      }
+    };
+
+    const timerInterval = setInterval(tick, 1000);
+    tick(); // Run immediate first tick
+    
+    return () => clearInterval(timerInterval);
+  }, [isInitializing, isEvaluating, result, user?.uid]);
 
   const handleOptionSelect = async (optIdx: number) => {
     if (!journeyRef || result) return;
@@ -308,6 +325,7 @@ export default function AptitudeEnginePage() {
     if (!journeyRef || !user) return;
     setIsInitializing(true);
     initGuard.current = false;
+    submissionGuard.current = false;
     localStorage.removeItem(`aptitude_timer_end_${user.uid}`);
     await updateDoc(journeyRef, {
       aptitudeQuestions: null,
@@ -361,7 +379,6 @@ export default function AptitudeEnginePage() {
       <div className="particles-bg" />
       <Navbar />
 
-      {/* STICKY HEADER WITH TIMER - Offset by Navbar height (72px) */}
       <header className="h-20 border-b border-white/5 bg-[#0b0e1a]/95 backdrop-blur-xl flex items-center justify-between px-8 sticky top-[72px] z-40 shrink-0">
         <div className="flex items-center gap-6">
           <div className="w-10 h-10 rounded-xl bg-accent/10 flex items-center justify-center text-accent border border-accent/20">
@@ -373,7 +390,6 @@ export default function AptitudeEnginePage() {
           </div>
         </div>
 
-        {/* TIMER UI */}
         {!result && (
           <div className={cn(
             "px-6 py-2 rounded-xl glass border-white/10 font-mono text-2xl tabular-nums tracking-wider shadow-2xl",
