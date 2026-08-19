@@ -107,11 +107,11 @@ AUDIT REQUIREMENTS:
 1. OVERALL SCORE CALCULATION: 
    - Pre-validated Nodes (Aptitude Score + Coding Score) represent 40% of the total weight.
    - Virtual Interview Evaluation (derived from transcript analysis) represents 60% of the total weight.
-   - Calculate a REAL weighted percentage. Do not invent arbitrary numbers.
+   - Calculate a REAL weighted percentage based on the data provided. Do not invent arbitrary numbers.
 2. HIRING RECOMMENDATION: Use Excellent (>85), Good (70-85), Average (50-70), Needs Improvement (<50).
-3. DETAILED ANALYTICS: Provide 0-100 scores for Technical Knowledge, Communication, Confidence, and Problem Solving based EXCLUSIVELY on the transcript.
+3. DETAILED ANALYTICS: Provide 0-100 scores for Technical Knowledge, Communication, Confidence, and Problem Solving based EXCLUSIVELY on the candidate's answers in the transcript.
 4. SKILL GAP: Identify missing nodes based on the target role/company benchmarks and candidate's demonstrated performance.
-5. LEARNING PLAN: Create a high-fidelity 30-day roadmap for remediation.
+5. LEARNING PLAN: Create a high-fidelity 30-day roadmap for remediation based on gaps found in THIS specific transcript.
 
 Return a structured intelligence report based ONLY on this specific candidate's data. No generic filler.`,
 });

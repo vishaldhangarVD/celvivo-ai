@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useMemo } from 'react';
@@ -111,7 +110,7 @@ export default function FinalReportPage() {
       <NavigationControls />
       
       <div className="container mx-auto px-4 pt-32">
-        <div className="max-w-7xl mx-auto space-y-12">
+        <div className="max-w-7xl auto space-y-12">
           
           <motion.div initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} className="premium-card p-12 border-glow-premium relative overflow-hidden">
             <div className="absolute top-0 right-0 p-12">
@@ -142,7 +141,6 @@ export default function FinalReportPage() {
 
           <div className="grid lg:grid-cols-12 gap-12">
             <div className="lg:col-span-4 space-y-8">
-              
               <Card className="premium-card bg-accent/5 border-accent/20 p-8 text-center space-y-6">
                 <Award className="w-10 h-10 text-accent mx-auto" />
                 <Button 
@@ -216,7 +214,7 @@ export default function FinalReportPage() {
                         </div>
                       ))
                     ) : (
-                      <p className="text-xs text-white/40 italic">No major strengths identified in this session.</p>
+                      <p className="text-xs text-white/40 italic">No strong areas demonstrated in this interview.</p>
                     )}
                   </div>
                 </Card>

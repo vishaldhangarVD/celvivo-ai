@@ -578,6 +578,7 @@ function VirtualArenaContent() {
         history: currentTranscript, 
         overallScore: finalAudit.overallScore,
         codingScore: journey?.codingReport?.score || 0,
+        aptitudeScore: journey?.aptitudeReport?.overallScore || 0,
         feedback: finalAudit, 
         createdAt: serverTimestamp(),
       });
