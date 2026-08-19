@@ -272,8 +272,8 @@ export default function AptitudeEnginePage() {
         wrongCount: questions.length - (correctCount + notAnsweredCount),
         notAnsweredCount,
         accuracy: finalNumericScore,
-        status: finalNumericScore >= 60 ? 'Pass' : 'Fail',
-        details: formattedResults // CRITICAL: Save the actual results trace
+        status: finalNumericScore >= 70 ? 'Pass' : 'Fail',
+        details: formattedResults 
       };
 
       setResult(finalReport);
@@ -282,6 +282,7 @@ export default function AptitudeEnginePage() {
         aptitudeReport: finalReport,
         aptitudeStatus: "completed",
         currentStage: finalReport.status === 'Pass' ? 'Coding Assessment' : 'Aptitude Assessment',
+        codingUnlocked: finalReport.status === 'Pass',
         step: 3,
         updatedAt: serverTimestamp()
       });
@@ -375,7 +376,8 @@ export default function AptitudeEnginePage() {
       aptitudeCurrentIndex: 0,
       aptitudeStatus: "not_started",
       aptitudeTimerEndAt: null,
-      aptitudeReport: null
+      aptitudeReport: null,
+      codingUnlocked: false
     });
     window.location.reload();
   };
@@ -641,9 +643,28 @@ export default function AptitudeEnginePage() {
 
               <div className="flex justify-center gap-6 pt-12 pb-16">
                 {result.status === 'Pass' ? (
-                  <Button onClick={() => journey?.sessionId && router.push(`/interview/${journey.sessionId}?role=${encodeURIComponent(journey.role)}&company=${encodeURIComponent(journey.company)}&exp=${encodeURIComponent(journey.experience)}&round=HR%20Round`)} className="h-20 px-24 btn-premium rounded-[2.5rem] text-xl font-black uppercase tracking-[0.4em] shadow-2xl group">Proceed to Arena <ChevronRight className="ml-4 w-8 h-8 group-hover:translate-x-2 transition-transform" /></Button>
+                  <div className="flex flex-col items-center gap-8">
+                    <div className="flex items-center gap-3 text-green-400 px-8 py-3 glass rounded-2xl border-green-500/20 bg-green-500/5">
+                      <ShieldCheck className="w-5 h-5" />
+                      <span className="text-xs font-black uppercase tracking-[0.2em]">Coding Round Unlocked</span>
+                    </div>
+                    <Button onClick={() => router.push('/interview/coding')} className="h-20 px-24 btn-premium rounded-[2.5rem] text-xl font-black uppercase tracking-[0.4em] shadow-2xl group">Proceed to Coding Round <ChevronRight className="ml-4 w-8 h-8 group-hover:translate-x-2 transition-transform" /></Button>
+                  </div>
                 ) : (
-                  <Button onClick={handleRetry} className="h-20 px-16 glass border-white/10 rounded-[2.5rem] text-xl font-black uppercase tracking-widest hover:bg-white/5"><RotateCcw className="mr-4 w-8 h-8" /> Re-initialize Assessment</Button>
+                  <div className="flex flex-col items-center gap-8 max-w-lg">
+                    <Card className="p-8 glass border-red-500/20 bg-red-500/5 text-center space-y-4 rounded-3xl">
+                       <div className="w-12 h-12 rounded-2xl bg-red-500/20 flex items-center justify-center mx-auto text-red-400">
+                         <XCircle className="w-6 h-6" />
+                       </div>
+                       <div className="space-y-2">
+                         <h3 className="text-xl font-bold text-white">Access Locked</h3>
+                         <p className="text-sm text-white/60 font-light leading-relaxed">
+                           A minimum efficiency rating of 70% is required in the Aptitude Round to unlock the Syntax Matrix (Coding Round).
+                         </p>
+                       </div>
+                    </Card>
+                    <Button onClick={handleRetry} className="h-20 px-16 glass border-white/10 rounded-[2.5rem] text-xl font-black uppercase tracking-widest hover:bg-white/5 transition-all"><RotateCcw className="mr-4 w-8 h-8" /> RETAKE APTITUDE</Button>
+                  </div>
                 )}
               </div>
             </motion.div>

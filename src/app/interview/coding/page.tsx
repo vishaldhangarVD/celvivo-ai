@@ -390,15 +390,20 @@ export default function CodingEnginePage() {
 
   useEffect(() => {
     async function initEnvironment() {
-      if (!db || !user || !journey || (questions && questions.length === 5)) return;
-      
-      if (journey.codingQuestions && 
-          journey.codingQuestions.length === 5 && 
-          journey.questionsSessionId === journey.sessionId) {
-        setQuestions(journey.codingQuestions);
-        setIsInitializing(false);
+      if (!db || !user || !journey) return;
+
+      // UNLOCK GUARD: 70% threshold enforcement
+      if (journey.codingUnlocked !== true) {
+        toast({ 
+          variant: "destructive", 
+          title: "Access Restricted", 
+          description: "A minimum efficiency rating of 70% in the Aptitude Round is required to enter the Syntax Matrix stage." 
+        });
+        router.push('/interview/aptitude');
         return;
       }
+
+      if (questions && questions.length === 5) return;
       
       try {
         const userRef = doc(db, 'users', user.uid);
@@ -451,7 +456,7 @@ export default function CodingEnginePage() {
       }
     }
     initEnvironment();
-  }, [db, user, journey, journeyRef, questions, toast]);
+  }, [db, user, journey, journeyRef, questions, toast, router]);
 
   // Load language-specific starter code or saved work
   useEffect(() => {

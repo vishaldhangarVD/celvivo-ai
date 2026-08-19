@@ -150,6 +150,7 @@ export default function InterviewSetupPage() {
         currentStage: "Resume Upload",
         updatedAt: serverTimestamp(),
         step: 1,
+        codingUnlocked: false,
         // Reset assessment states for the new session
         aptitudeQuestions: null,
         aptitudeAnswers: null,
@@ -204,6 +205,7 @@ export default function InterviewSetupPage() {
       currentStage: "Coding Assessment",
       updatedAt: serverTimestamp(),
       step: 4,
+      codingUnlocked: true, // Development override
       // Reset assessment states for the new session
       aptitudeQuestions: null,
       aptitudeAnswers: null,
