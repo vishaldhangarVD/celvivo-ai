@@ -30,10 +30,11 @@ import {
   Sparkles,
   Timer,
   Rocket,
-  FastForward
+  FastForward,
+  ArrowRight
 } from 'lucide-react';
 import { useUser, useFirestore, useDoc, useCollection } from '@/firebase';
-import { doc, updateDoc, serverTimestamp, collection, addDoc, getDoc, query, where } from 'firebase/firestore';
+import { doc, updateDoc, serverTimestamp, collection, addDoc, getDoc, query, where, setDoc } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { MASTER_QUESTIONS } from '@/lib/coding-questions-data';
@@ -177,24 +178,37 @@ export default function CodingEnginePage() {
           else if (r.status === 'Skipped') skipped++;
           else failed++;
         } else {
-          skipped++; // Treat unvisited/unsubmitted as skipped in 8-question limit
+          skipped++;
         }
       }
       
       const scorePercentage = Math.round((passed / total) * 100);
+      const attemptId = journey.sessionId;
+
+      const report = { 
+        score: scorePercentage, 
+        status: scorePercentage >= 60 ? 'Pass' : 'Fail', 
+        totalQuestions: total, 
+        passedQuestions: passed, 
+        failedQuestions: failed,
+        skippedQuestions: skipped,
+        totalPassedCases,
+        totalTestCases,
+        submissionTime: new Date().toLocaleTimeString(),
+        sessionId: attemptId
+      };
+
+      // PERSIST ATTEMPT RECORD FOR ISOLATION
+      await setDoc(doc(db, 'users', user.uid, 'coding_attempts', attemptId), {
+        ...report,
+        userId: user.uid,
+        role: journey.role,
+        company: journey.company,
+        createdAt: serverTimestamp()
+      });
       
       await updateDoc(journeyRef!, {
-        codingReport: { 
-          score: scorePercentage, 
-          status: scorePercentage >= 60 ? 'Pass' : 'Fail', 
-          totalQuestions: total, 
-          passedQuestions: passed, 
-          failedQuestions: failed,
-          skippedQuestions: skipped,
-          totalPassedCases,
-          totalTestCases,
-          submissionTime: new Date().toLocaleTimeString()
-        },
+        codingReport: report,
         codingRoundCompleted: true,
         codingScore: scorePercentage,
         currentStage: 'HR Interview',
@@ -202,7 +216,7 @@ export default function CodingEnginePage() {
         updatedAt: serverTimestamp()
       });
 
-      router.push('/interview/coding-result');
+      router.push(`/interview/coding-result?attemptId=${attemptId}`);
     } catch (error) {
       console.error("Finalize Assessment Error:", error);
       setIsFinalizing(false);
@@ -214,7 +228,7 @@ export default function CodingEnginePage() {
     if (isNavigating) return;
     setIsNavigating(true);
 
-    if (currentIdx < 7) { // 0-7 = 8 questions
+    if (currentIdx < 7) { 
       setCurrentIdx(prev => prev + 1);
       setTerminalOutput("Waiting for your implementation.");
       setActiveTerminalTab("output");

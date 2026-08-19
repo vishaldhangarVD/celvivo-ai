@@ -1,8 +1,8 @@
 
 "use client";
 
-import { useState, useMemo } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState, useMemo, Suspense } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import Navbar from '@/components/layout/Navbar';
 import NavigationControls from '@/components/NavigationControls';
@@ -43,13 +43,24 @@ import { doc, collection, query, where, orderBy } from 'firebase/firestore';
 import { cn } from '@/lib/utils';
 import { MASTER_QUESTIONS } from '@/lib/coding-questions-data';
 
-export default function CodingResultTerminal() {
+function CodingResultContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { user } = useUser();
   const db = useFirestore();
 
+  const attemptId = searchParams.get('attemptId');
   const [expandedNode, setExpandedNode] = useState<string | null>(null);
 
+  // PRIMARY SOURCE OF TRUTH: HISTORICAL ATTEMPT DOC
+  const attemptRef = useMemo(() => {
+    if (!db || !user?.uid || !attemptId) return null;
+    return doc(db, 'users', user.uid, 'coding_attempts', attemptId);
+  }, [db, user?.uid, attemptId]);
+
+  const { data: attemptDoc, loading: attemptLoading } = useDoc(attemptRef);
+
+  // FALLBACK SOURCE OF TRUTH: ACTIVE JOURNEY
   const journeyRef = useMemo(() => {
     if (!db || !user?.uid) return null;
     return doc(db, 'users', user.uid, 'journey', 'active');
@@ -57,22 +68,23 @@ export default function CodingResultTerminal() {
 
   const { data: journey, loading: journeyLoading } = useDoc(journeyRef);
 
+  const activeId = attemptId || journey?.sessionId;
+
   const resultsQuery = useMemo(() => {
-    if (!db || !user?.uid || !journey?.sessionId) return null;
+    if (!db || !user?.uid || !activeId) return null;
     return query(
       collection(db, 'users', user.uid, 'coding_results'),
-      where('interviewId', '==', journey.sessionId),
+      where('interviewId', '==', activeId),
       orderBy('completedAt', 'asc')
     );
-  }, [db, user?.uid, journey?.sessionId]);
+  }, [db, user?.uid, activeId]);
 
   const { data: questionResults, loading: resultsLoading } = useCollection(resultsQuery);
 
   const result = useMemo(() => {
-    // 1. Try to use the pre-finalized report from journey active doc
-    if (journey?.codingReport) return journey.codingReport;
+    if (attemptDoc?.codingReport) return attemptDoc.codingReport;
+    if (journey?.codingReport && (!attemptId || attemptId === journey.sessionId)) return journey.codingReport;
     
-    // 2. Fallback: Re-calculate summary index from raw collection data
     if (questionResults && questionResults.length > 0) {
       const total = 8;
       const solved = questionResults.filter((r: any) => r.status === 'Solved').length;
@@ -104,15 +116,13 @@ export default function CodingResultTerminal() {
       totalTestCases: 0,
       submissionTime: "N/A"
     };
-  }, [journey, questionResults]);
+  }, [attemptDoc, journey, questionResults, attemptId]);
 
   const aggregateStats = useMemo(() => {
     if (!questionResults || questionResults.length === 0) return null;
     
     const passedTests = questionResults.reduce((acc, curr) => acc + (curr.passedTestCases || 0), 0);
     const totalTests = questionResults.reduce((acc, curr) => acc + (curr.totalTestCases || 0), 0);
-    
-    // Filter out 0 or N/A values to get real max execution telemetry
     const times = questionResults.map(r => parseFloat(r.executionTime)).filter(t => !isNaN(t) && t > 0);
     const memories = questionResults.map(r => parseInt(r.memory)).filter(m => !isNaN(m) && m > 0);
     
@@ -131,14 +141,8 @@ export default function CodingResultTerminal() {
   const recommendation = useMemo(() => {
     if (!result || result.status === 'Awaiting') return "Evaluation unavailable";
     const score = result.score || 0;
-    
-    if (result.status === 'Pass') {
-      if (score >= 85) return "PASS (OPTIMAL)";
-      return "PASS";
-    }
-    
-    if (score >= 60 && score < 70) return "NEEDS IMPROVEMENT";
-    return "FAIL";
+    if (result.status === 'Pass') return score >= 85 ? "PASS (OPTIMAL)" : "PASS";
+    return score >= 60 ? "NEEDS IMPROVEMENT" : "FAIL";
   }, [result]);
 
   const isPassed = result?.status === 'Pass' || (result?.score || 0) >= 60;
@@ -151,10 +155,10 @@ export default function CodingResultTerminal() {
 
   const handleContinueToInterview = () => {
     if (!journey) return;
-    router.push(`/interview/${journey.sessionId}?role=${encodeURIComponent(journey.role || '')}&company=${encodeURIComponent(journey.company || '')}&exp=${encodeURIComponent(journey.experience || '')}&round=HR%20Round`);
+    router.push(`/interview/${activeId}?role=${encodeURIComponent(journey.role || '')}&company=${encodeURIComponent(journey.company || '')}&exp=${encodeURIComponent(journey.experience || '')}&round=HR%20Round`);
   };
 
-  if (journeyLoading) return (
+  if (attemptLoading || journeyLoading) return (
     <div className="h-screen flex items-center justify-center bg-[#050816]">
       <Loader2 className="w-12 h-12 text-accent animate-spin" />
     </div>
@@ -164,7 +168,6 @@ export default function CodingResultTerminal() {
     <div className="h-screen bg-[#050816] flex flex-col overflow-hidden relative">
       <div className="particles-bg" />
       <Navbar />
-      <NavigationControls onHome={() => router.push('/')} onBack={() => router.push('/interview/coding')} />
       
       <main className="flex-1 container mx-auto px-6 pt-24 pb-8 flex flex-col gap-6 overflow-hidden">
         
@@ -459,5 +462,13 @@ export default function CodingResultTerminal() {
         </div>
       </main>
     </div>
+  );
+}
+
+export default function CodingResultTerminal() {
+  return (
+    <Suspense fallback={<div className="h-screen flex items-center justify-center bg-[#050816]"><Loader2 className="w-12 h-12 text-accent animate-spin" /></div>}>
+      <CodingResultContent />
+    </Suspense>
   );
 }

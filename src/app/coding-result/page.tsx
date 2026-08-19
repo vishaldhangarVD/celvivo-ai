@@ -1,8 +1,8 @@
 
 "use client";
 
-import { useMemo } from 'react';
-import { useRouter } from 'next/navigation';
+import { useMemo, Suspense } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { motion } from 'framer-motion';
 import Navbar from '@/components/layout/Navbar';
 import NavigationControls from '@/components/NavigationControls';
@@ -26,10 +26,21 @@ import { useUser, useFirestore, useDoc } from '@/firebase';
 import { doc } from 'firebase/firestore';
 import { cn } from '@/lib/utils';
 
-export default function RootCodingResultPage() {
+function CodingResultContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { user } = useUser();
   const db = useFirestore();
+
+  const attemptId = searchParams.get('attemptId');
+
+  // Load specific attempt or fallback to active journey
+  const attemptRef = useMemo(() => {
+    if (!db || !user?.uid || !attemptId) return null;
+    return doc(db, 'users', user.uid, 'coding_attempts', attemptId);
+  }, [db, user?.uid, attemptId]);
+
+  const { data: attemptDoc, loading: attemptLoading } = useDoc(attemptRef);
 
   const journeyRef = useMemo(() => {
     if (!db || !user?.uid) return null;
@@ -39,7 +50,8 @@ export default function RootCodingResultPage() {
   const { data: journey, loading: journeyLoading } = useDoc(journeyRef);
 
   const result = useMemo(() => {
-    if (journey?.codingReport) return journey.codingReport;
+    if (attemptDoc?.codingReport) return attemptDoc.codingReport;
+    if (journey?.codingReport && (!attemptId || attemptId === journey.sessionId)) return journey.codingReport;
     
     return {
       score: 0,
@@ -52,11 +64,11 @@ export default function RootCodingResultPage() {
       totalTestCases: 0,
       submissionTime: "N/A"
     };
-  }, [journey]);
+  }, [attemptDoc, journey, attemptId]);
 
   const isPassed = (result?.score || 0) >= 60;
 
-  if (journeyLoading) return (
+  if (journeyLoading || attemptLoading) return (
     <div className="h-screen flex items-center justify-center bg-[#050816]">
       <Loader2 className="w-12 h-12 text-accent animate-spin" />
     </div>
@@ -141,5 +153,13 @@ export default function RootCodingResultPage() {
         </div>
       </main>
     </div>
+  );
+}
+
+export default function RootCodingResultPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-[#050816] flex items-center justify-center"><Loader2 className="w-12 h-12 text-accent animate-spin" /></div>}>
+      <CodingResultContent />
+    </Suspense>
   );
 }
