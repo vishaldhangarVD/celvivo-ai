@@ -19,6 +19,15 @@ const FALLBACK_QUESTIONS = [
   "That concludes the technical assessment. Thank you for your time."
 ];
 
+const FALLBACK_INTRODUCTIONS = [
+  "Hi! Welcome to the interview. Before we begin, could you please introduce yourself and tell me a little about yourself?",
+  "Let's begin with a quick introduction. Could you tell me your name and give me a brief overview of yourself?",
+  "Before we dive into the technical discussion, could you please introduce yourself and share a little about your professional journey?",
+  "Great to have you here. To get started, could you tell me about yourself and your background?",
+  "Let's start with the basics. Please introduce yourself and briefly walk me through your background.",
+  "Welcome! Could you tell me a little about yourself, including your name and what you've been working or studying recently?"
+];
+
 const AiMockInterviewInputSchema = z.object({
   role: z.string(),
   experienceLevel: z.string(),
@@ -113,8 +122,10 @@ CANDIDATE DOSSIER:
 INTERVIEW FLOW PROTOCOL:
 
 STAGE 1: PERSONAL INTRODUCTION (Node 1 ONLY)
-- If history is empty, you MUST start exactly with: "Hi! Welcome to the interview. Before we begin, could you please introduce yourself and tell me a little about yourself?"
-- The goal is to get their name and a high-level background.
+- If history is empty, you MUST start with a natural, welcoming, and varied introduction.
+- Ask the candidate to introduce themselves, state their name, and provide a high-level background.
+- VARIETY PROTOCOL: Dynamically generate the wording (e.g., "Hi! Welcome to the interview. Could you start by introducing yourself and telling me a little about your background?", "Let's begin with a quick introduction. Could you tell me your name and give me a brief overview of yourself?", etc.).
+- Never use the exact same opening sentence across different interviews.
 - DO NOT ask about specialization or technical details in this turn.
 
 STAGE 2: EDUCATION & PROFESSIONAL BACKGROUND (Node 2)
@@ -195,9 +206,18 @@ const aiMockInterviewFlow = ai.defineFlow(
       };
     } catch (error) {
       console.error("AI Mock Interview Flow Error:", error);
-      const bankIndex = Math.max(0, input.currentMainQuestionIndex - 1) % FALLBACK_QUESTIONS.length;
+      
+      let nextQuestion = "";
+      if (input.currentMainQuestionIndex === 1 || (input.history || []).length === 0) {
+        // Use a random intro variant for fallback
+        nextQuestion = FALLBACK_INTRODUCTIONS[Math.floor(Math.random() * FALLBACK_INTRODUCTIONS.length)];
+      } else {
+        const bankIndex = Math.max(0, input.currentMainQuestionIndex - 1) % FALLBACK_QUESTIONS.length;
+        nextQuestion = FALLBACK_QUESTIONS[bankIndex];
+      }
+
       return {
-        nextQuestion: FALLBACK_QUESTIONS[bankIndex],
+        nextQuestion,
         difficulty: input.currentDifficulty || "MEDIUM",
         stage: input.currentStage || "TECHNICAL",
         isInterviewComplete: input.currentMainQuestionIndex >= 12,
