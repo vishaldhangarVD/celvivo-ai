@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useEffect, useMemo, useCallback } from 'react';
@@ -201,6 +200,7 @@ export default function CodingEnginePage() {
       // PERSIST ATTEMPT RECORD FOR ISOLATION
       await setDoc(doc(db, 'users', user.uid, 'coding_attempts', attemptId), {
         ...report,
+        questions: questions, // Save the actual question bank for this attempt
         userId: user.uid,
         role: journey.role,
         company: journey.company,
@@ -222,7 +222,7 @@ export default function CodingEnginePage() {
       setIsFinalizing(false);
       toast({ variant: "destructive", title: "Archive Failure" });
     }
-  }, [isFinalizing, user, db, journey, sessionResults, journeyRef, router, toast]);
+  }, [isFinalizing, user, db, journey, sessionResults, journeyRef, router, toast, questions]);
 
   const goToNextQuestion = useCallback(async () => {
     if (isNavigating) return;

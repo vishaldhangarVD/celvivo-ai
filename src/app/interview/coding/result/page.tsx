@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useMemo, Suspense } from 'react';
@@ -81,15 +80,18 @@ function CodingResultContent() {
 
   const { data: questionResults, loading: resultsLoading } = useCollection(resultsQuery);
 
+  const displayQuestions = useMemo(() => {
+    return attemptDoc?.questions || journey?.codingQuestions || [];
+  }, [attemptDoc, journey]);
+
   const result = useMemo(() => {
-    if (attemptDoc?.codingReport) return attemptDoc.codingReport;
+    if (attemptDoc?.score !== undefined) return attemptDoc;
     if (journey?.codingReport && (!attemptId || attemptId === journey.sessionId)) return journey.codingReport;
     
+    const total = 8;
     if (questionResults && questionResults.length > 0) {
-      const total = 8;
       const solved = questionResults.filter((r: any) => r.status === 'Solved').length;
       const failed = questionResults.filter((r: any) => r.status === 'Failed').length;
-      const skipped = 8 - (solved + failed);
       const score = Math.round((solved / total) * 100);
 
       return {
@@ -98,23 +100,21 @@ function CodingResultContent() {
         totalQuestions: total,
         passedQuestions: solved,
         failedQuestions: failed,
-        skippedQuestions: Math.max(0, skipped),
+        skippedQuestions: Math.max(0, total - (solved + failed)),
         totalPassedCases: questionResults.reduce((acc, curr) => acc + (curr.passedTestCases || 0), 0),
         totalTestCases: questionResults.reduce((acc, curr) => acc + (curr.totalTestCases || 0), 0),
-        submissionTime: "Synced"
       };
     }
 
     return {
       score: 0,
       status: 'Awaiting',
-      totalQuestions: 8,
+      totalQuestions: total,
       passedQuestions: 0,
       failedQuestions: 0,
-      skippedQuestions: 8,
+      skippedQuestions: total,
       totalPassedCases: 0,
       totalTestCases: 0,
-      submissionTime: "N/A"
     };
   }, [attemptDoc, journey, questionResults, attemptId]);
 
@@ -141,17 +141,11 @@ function CodingResultContent() {
   const recommendation = useMemo(() => {
     if (!result || result.status === 'Awaiting') return "Evaluation unavailable";
     const score = result.score || 0;
-    if (result.status === 'Pass') return score >= 85 ? "PASS (OPTIMAL)" : "PASS";
-    return score >= 60 ? "NEEDS IMPROVEMENT" : "FAIL";
+    if (result.status === 'Pass' || score >= 60) return score >= 85 ? "PASS (OPTIMAL)" : "PASS";
+    return "FAIL";
   }, [result]);
 
-  const isPassed = result?.status === 'Pass' || (result?.score || 0) >= 60;
-
-  const getQuestionTitle = (questionId: string) => {
-    const q = journey?.codingQuestions?.find((q: any) => q.id === questionId);
-    if (q) return q.title;
-    return MASTER_QUESTIONS.find(q => q.id === questionId)?.title || "Protocol Node";
-  };
+  const isPassed = (result?.score || 0) >= 60;
 
   const handleContinueToInterview = () => {
     if (!journey) return;
@@ -179,7 +173,7 @@ function CodingResultContent() {
           </div>
           <div className="flex items-center gap-3 bg-white/[0.02] border border-white/10 px-6 py-2 rounded-2xl">
              <div className={cn("w-2 h-2 rounded-full animate-pulse", isPassed ? "bg-green-500" : "bg-red-500")} />
-             <span className="text-[10px] font-black uppercase tracking-widest text-white/40">Coding Evaluation Complete</span>
+             <span className="text-[10px] font-black uppercase tracking-widest text-white/40">Attempt ID: {activeId?.substring(0, 8) || "Unknown"}</span>
           </div>
         </header>
 
@@ -219,8 +213,7 @@ function CodingResultContent() {
                  <div className="pt-4">
                    <p className={cn(
                      "text-3xl font-black tracking-tighter",
-                     recommendation.includes("PASS") ? "text-green-400" : 
-                     recommendation === "NEEDS IMPROVEMENT" ? "text-orange-400" : "text-red-400"
+                     recommendation.includes("PASS") ? "text-green-400" : "text-red-400"
                    )}>
                      {recommendation}
                    </p>
@@ -294,42 +287,6 @@ function CodingResultContent() {
                 ))}
               </div>
 
-              <Card className="premium-card bg-white/[0.01] border-white/5 p-10 space-y-8">
-                <div className="flex items-center justify-between">
-                  <div className="space-y-1">
-                    <h3 className="text-xs font-black uppercase tracking-[0.3em] text-accent flex items-center gap-3">
-                      <PieChart className="w-4 h-4" /> Performance Breakdown
-                    </h3>
-                    <p className="text-[9px] font-bold text-white/30 uppercase tracking-widest">Multi-dimensional implementation audit</p>
-                  </div>
-                </div>
-                
-                <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
-                  {[
-                    { label: "Correctness", val: `${result?.score || 0}%`, status: (result?.score || 0) >= 60 ? "OPTIMAL" : "CRITICAL", icon: CheckCircle2 },
-                    { label: "Test Case Success", val: `${aggregateStats?.successRate || 0}%`, sub: `${aggregateStats?.passedTests || 0}/${aggregateStats?.totalTests || 0} Nodes`, icon: Target },
-                    { label: "Peak Time", val: aggregateStats?.maxTime && aggregateStats.maxTime !== "N/A" ? `${aggregateStats.maxTime}s` : "Not available", sub: "Latency audit", icon: Clock },
-                    { label: "Peak Memory", val: aggregateStats?.maxMemory && aggregateStats.maxMemory !== "N/A" ? `${aggregateStats.maxMemory}KB` : "Not available", sub: "Resource audit", icon: Cpu },
-                    { label: "Code Quality", val: "Awaiting AI", sub: "Neural Audit Pending", icon: Sparkles, dimmed: true },
-                    { label: "Boundary Accuracy", val: aggregateStats?.successRate === 100 ? "VERIFIED" : "N/A", sub: "Edge case validation", icon: ShieldCheck, dimmed: aggregateStats?.successRate !== 100 }
-                  ].map((m, i) => (
-                    <div key={i} className={cn("p-6 glass rounded-[2rem] border-white/5 space-y-4 transition-all hover:bg-white/[0.02]", m.dimmed && "opacity-40")}>
-                      <div className="flex justify-between items-start">
-                        <div className="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center text-accent">
-                          <m.icon className="w-5 h-5" />
-                        </div>
-                        {m.status && <Badge variant="outline" className={cn("text-[7px] font-black tracking-widest", m.status === 'OPTIMAL' ? "text-green-400 border-green-500/20" : "text-red-400 border-red-500/20")}>{m.status}</Badge>}
-                      </div>
-                      <div className="space-y-1">
-                        <p className="text-[9px] font-black text-white/30 uppercase tracking-widest">{m.label}</p>
-                        <p className="text-xl font-bold text-white">{m.val}</p>
-                        {m.sub && <p className="text-[8px] font-medium text-white/20 uppercase tracking-widest">{m.sub}</p>}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </Card>
-
               <div className="space-y-4">
                 <h4 className="text-[10px] font-black uppercase tracking-[0.3em] text-white/20 flex items-center gap-3 ml-2">
                    <Code2 className="w-4 h-4 text-accent" /> Coding Challenge Results
@@ -337,110 +294,102 @@ function CodingResultContent() {
                 
                 {resultsLoading ? (
                   <div className="py-12 flex justify-center"><Loader2 className="w-8 h-8 animate-spin text-accent" /></div>
-                ) : questionResults && questionResults.length > 0 ? (
-                  questionResults.map((res: any, idx: number) => (
-                    <div key={idx} className="space-y-4">
-                      <Card 
-                        onClick={() => setExpandedNode(expandedNode === res.id ? null : res.id)}
-                        className="glass p-6 rounded-[2rem] border-white/5 hover:border-white/20 transition-all flex items-center justify-between group cursor-pointer"
-                      >
-                        <div className="flex items-center gap-6">
-                          <div className="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center text-[10px] font-black group-hover:text-accent transition-colors">0{idx + 1}</div>
-                          <div className="space-y-1">
-                            <p className="text-base font-bold text-white/90">{getQuestionTitle(res.questionId)}</p>
-                            <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
-                              <span className="text-[9px] text-white/30 uppercase tracking-widest">{res.language}</span>
-                              <span className="text-[9px] text-accent font-bold uppercase tracking-widest">{res.passedTestCases}/{res.totalTestCases} Nodes Passed</span>
+                ) : displayQuestions.length > 0 ? (
+                  displayQuestions.map((q: any, idx: number) => {
+                    const res = questionResults?.find((r: any) => r.questionId === q.id);
+                    return (
+                      <div key={idx} className="space-y-4">
+                        <Card 
+                          onClick={() => res && setExpandedNode(expandedNode === res.id ? null : res.id)}
+                          className={cn("glass p-6 rounded-[2rem] border-white/5 transition-all flex items-center justify-between group", res ? "cursor-pointer hover:border-white/20" : "opacity-50")}
+                        >
+                          <div className="flex items-center gap-6">
+                            <div className="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center text-[10px] font-black group-hover:text-accent transition-colors">0{idx + 1}</div>
+                            <div className="space-y-1">
+                              <p className="text-base font-bold text-white/90">{q.title}</p>
+                              <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
+                                <span className="text-[9px] text-white/30 uppercase tracking-widest">{res?.language || "---"}</span>
+                                <span className="text-[9px] text-accent font-bold uppercase tracking-widest">{res?.passedTestCases || 0}/{res?.totalTestCases || q.hiddenTestCases?.length || 0} Nodes Passed</span>
+                              </div>
                             </div>
                           </div>
-                        </div>
-                        <div className="flex items-center gap-6">
-                          <div className="text-right">
-                            <p className={cn("text-xs font-black uppercase tracking-widest", res.status === 'Solved' ? "text-green-400" : "text-red-400")}>
-                              {res.status === 'Solved' ? 'PASSED' : res.status === 'Skipped' ? 'SKIPPED' : 'FAILED'}
-                            </p>
-                            <p className="text-[8px] text-white/20 uppercase tracking-tighter">Audit Status</p>
+                          <div className="flex items-center gap-6">
+                            <div className="text-right">
+                              <p className={cn("text-xs font-black uppercase tracking-widest", res?.status === 'Solved' ? "text-green-400" : "text-red-400")}>
+                                {res?.status === 'Solved' ? 'PASSED' : res?.status === 'Skipped' ? 'SKIPPED' : res ? 'FAILED' : 'NO SUBMISSION'}
+                              </p>
+                              <p className="text-[8px] text-white/20 uppercase tracking-tighter">Audit Status</p>
+                            </div>
+                            {res && <ChevronDown className={cn("w-4 h-4 text-white/20 transition-transform", expandedNode === res.id && "rotate-180")} />}
                           </div>
-                          <ChevronDown className={cn("w-4 h-4 text-white/20 transition-transform", expandedNode === res.id && "rotate-180")} />
-                        </div>
-                      </Card>
+                        </Card>
 
-                      <AnimatePresence>
-                        {expandedNode === res.id && (
-                          <motion.div
-                            initial={{ height: 0, opacity: 0 }}
-                            animate={{ height: 'auto', opacity: 1 }}
-                            exit={{ height: 0, opacity: 0 }}
-                            className="overflow-hidden"
-                          >
-                            <div className="p-8 glass rounded-[2.5rem] border-accent/10 bg-accent/[0.01] space-y-8 mt-2">
-                               <div className="grid md:grid-cols-2 gap-8">
-                                 <div className="space-y-4">
-                                   <h5 className="text-[10px] font-black uppercase tracking-widest text-accent flex items-center gap-2">
-                                     <Terminal className="w-3 h-3" /> Execution Details
-                                   </h5>
-                                   <div className="grid grid-cols-2 gap-4">
-                                      <div className="p-4 glass rounded-xl border-white/5 space-y-1">
-                                        <p className="text-[8px] uppercase font-bold text-white/30">Language</p>
-                                        <p className="text-xs font-bold text-white">{res.language}</p>
-                                      </div>
-                                      <div className="p-4 glass rounded-xl border-white/5 space-y-1">
-                                        <p className="text-[8px] uppercase font-bold text-white/30">Status</p>
-                                        <p className={cn("text-xs font-bold", res.status === 'Solved' ? "text-green-400" : "text-red-400")}>{res.status}</p>
-                                      </div>
-                                      <div className="p-4 glass rounded-xl border-white/5 space-y-1">
-                                        <p className="text-[8px] uppercase font-bold text-white/30">Execution Time</p>
-                                        <p className="text-xs font-bold text-white tabular-nums">{res.executionTime && res.executionTime > 0 ? `${res.executionTime}s` : 'Not available'}</p>
-                                      </div>
-                                      <div className="p-4 glass rounded-xl border-white/5 space-y-1">
-                                        <p className="text-[8px] uppercase font-bold text-white/30">Memory usage</p>
-                                        <p className="text-xs font-bold text-white tabular-nums">{res.memory && res.memory > 0 ? `${res.memory}KB` : 'Not available'}</p>
-                                      </div>
-                                   </div>
-                                 </div>
-
-                                 <div className="space-y-4">
-                                   <h5 className="text-[10px] font-black uppercase tracking-widest text-purple-400 flex items-center gap-2">
-                                     <Activity className="w-3 h-3" /> Audit Trace Summary
-                                   </h5>
-                                   <div className="p-4 glass rounded-xl border-white/5 h-full max-h-[160px] overflow-y-auto custom-scrollbar">
-                                      {res.auditTrace && res.auditTrace.length > 0 ? (
-                                        <div className="space-y-3">
-                                          {res.auditTrace.map((tr: any, tIdx: number) => (
-                                            <div key={tIdx} className="flex items-center justify-between text-[10px]">
-                                              <span className="text-white/40">Test Case #{tIdx + 1}</span>
-                                              <Badge variant="outline" className={cn("text-[8px] uppercase py-0", tr.passed ? "text-green-400 border-green-500/20" : "text-red-400 border-red-500/20")}>
-                                                {tr.status}
-                                              </Badge>
-                                            </div>
-                                          ))}
+                        <AnimatePresence>
+                          {res && expandedNode === res.id && (
+                            <motion.div
+                              initial={{ height: 0, opacity: 0 }}
+                              animate={{ height: 'auto', opacity: 1 }}
+                              exit={{ height: 0, opacity: 0 }}
+                              className="overflow-hidden"
+                            >
+                              <div className="p-8 glass rounded-[2.5rem] border-accent/10 bg-accent/[0.01] space-y-8 mt-2">
+                                 <div className="grid md:grid-cols-2 gap-8">
+                                   <div className="space-y-4">
+                                     <h5 className="text-[10px] font-black uppercase tracking-widest text-accent flex items-center gap-2">
+                                       <Terminal className="w-3 h-3" /> Execution Details
+                                     </h5>
+                                     <div className="grid grid-cols-2 gap-4">
+                                        <div className="p-4 glass rounded-xl border-white/5 space-y-1">
+                                          <p className="text-[8px] uppercase font-bold text-white/30">Language</p>
+                                          <p className="text-xs font-bold text-white">{res.language}</p>
                                         </div>
-                                      ) : (
-                                        <p className="text-[10px] text-white/20 italic">No diagnostic trace available.</p>
-                                      )}
+                                        <div className="p-4 glass rounded-xl border-white/5 space-y-1">
+                                          <p className="text-[8px] uppercase font-bold text-white/30">Status</p>
+                                          <p className={cn("text-xs font-bold", res.status === 'Solved' ? "text-green-400" : "text-red-400")}>{res.status}</p>
+                                        </div>
+                                        <div className="p-4 glass rounded-xl border-white/5 space-y-1">
+                                          <p className="text-[8px] uppercase font-bold text-white/30">Execution Time</p>
+                                          <p className="text-xs font-bold text-white tabular-nums">{res.executionTime || '0.00'}s</p>
+                                        </div>
+                                        <div className="p-4 glass rounded-xl border-white/5 space-y-1">
+                                          <p className="text-[8px] uppercase font-bold text-white/30">Memory usage</p>
+                                          <p className="text-xs font-bold text-white tabular-nums">{res.memory || '---'} KB</p>
+                                        </div>
+                                     </div>
+                                   </div>
+
+                                   <div className="space-y-4">
+                                     <h5 className="text-[10px] font-black uppercase tracking-widest text-purple-400 flex items-center gap-2">
+                                       <Activity className="w-3 h-3" /> Audit Trace Summary
+                                     </h5>
+                                     <div className="p-4 glass rounded-xl border-white/5 h-full max-h-[160px] overflow-y-auto custom-scrollbar">
+                                        {res.auditTrace && res.auditTrace.length > 0 ? (
+                                          <div className="space-y-3">
+                                            {res.auditTrace.map((tr: any, tIdx: number) => (
+                                              <div key={tIdx} className="flex items-center justify-between text-[10px]">
+                                                <span className="text-white/40">Test Case #{tIdx + 1}</span>
+                                                <Badge variant="outline" className={cn("text-[8px] uppercase py-0", tr.passed ? "text-green-400 border-green-500/20" : "text-red-400 border-red-500/20")}>
+                                                  {tr.status}
+                                                </Badge>
+                                              </div>
+                                            ))}
+                                          </div>
+                                        ) : (
+                                          <p className="text-[10px] text-white/20 italic">No diagnostic trace available.</p>
+                                        )}
+                                     </div>
                                    </div>
                                  </div>
-                               </div>
-
-                               {res.auditTrace?.some((tr: any) => tr.status.includes('Error')) && (
-                                 <div className="p-6 glass rounded-2xl border-red-500/20 bg-red-500/[0.02] space-y-3">
-                                    <h5 className="text-[10px] font-black uppercase tracking-widest text-red-400 flex items-center gap-2">
-                                      <AlertTriangle className="w-3 h-3" /> Diagnostic Logs
-                                    </h5>
-                                    <pre className="text-[10px] font-mono text-red-300/80 whitespace-pre-wrap leading-relaxed max-h-[120px] overflow-y-auto custom-scrollbar">
-                                      {res.auditTrace.find((tr: any) => tr.status.includes('Error'))?.rawOutput || "Fatal execution exception captured."}
-                                    </pre>
-                                 </div>
-                               )}
-                            </div>
-                          </motion.div>
-                        )}
-                      </AnimatePresence>
-                    </div>
-                  ))
+                              </div>
+                            </motion.div>
+                          )}
+                        </AnimatePresence>
+                      </div>
+                    );
+                  })
                 ) : (
                   <div className="py-12 text-center glass rounded-2xl border-white/5 border-dashed">
-                    <p className="text-xs font-light text-white/20 uppercase tracking-widest">No implementation archives found.</p>
+                    <p className="text-xs font-light text-white/20 uppercase tracking-widest">No implementation archives found for this attempt.</p>
                   </div>
                 )}
               </div>
