@@ -103,11 +103,17 @@ function VirtualArenaContent() {
   const currentAudioUrlRef = useRef<string | null>(null);
   const ttsAbortControllerRef = useRef<AbortController | null>(null);
 
+  // Dynamic Candidate Identity Resolution
   const formattedName = useMemo(() => {
-    if (!user) return 'User';
-    const name = user.displayName || user.email?.split('@')[0] || 'User';
+    // Priority 1: Verified name from the processed resume blueprint
+    const resumeName = assessmentContext?.resumeAnalysis?.personalInfo?.fullName;
+    if (resumeName) return resumeName;
+
+    // Priority 2: System profile name or authenticated identity
+    if (!user) return 'Candidate';
+    const name = user.displayName || user.email?.split('@')[0] || 'Candidate';
     return name.charAt(0).toUpperCase() + name.slice(1);
-  }, [user]);
+  }, [user, assessmentContext]);
 
   const currentInterviewerQuestion = useMemo(() => {
     const lastInterviewer = [...transcript].reverse().find(t => t.role === 'interviewer');
@@ -416,12 +422,15 @@ function VirtualArenaContent() {
         setCurrentSimStage(startStage);
         setCurrentSimDifficulty(startDiff);
         
+        // Resolve name for AI personalization
+        const candidateName = data.resumeAnalysis?.personalInfo?.fullName || user.displayName || undefined;
+
         try {
           if (transcript.length === 0) {
             const response = await aiMockInterview({
               role, experienceLevel: exp, roundType: round, currentMainQuestionIndex: 1, 
               history: [], targetCompany: company,
-              candidateName: user.displayName || undefined,
+              candidateName: candidateName,
               resumeSkills: rs.map((s: any) => s.skill),
               resumeProjects: rp,
               resumeSummary: data.resumeAnalysis?.summary || "",
@@ -484,7 +493,7 @@ function VirtualArenaContent() {
         role, experienceLevel: exp, roundType: round, currentMainQuestionIndex: currentIdx + 1,
         history: chatHistory,
         userAnswer: currentAns, targetCompany: company,
-        candidateName: user?.displayName || undefined,
+        candidateName: formattedName,
         resumeSkills: rs.map((s: any) => s.skill),
         resumeProjects: rp,
         resumeSummary: assessmentContext.resumeAnalysis?.summary || "",
@@ -580,31 +589,16 @@ function VirtualArenaContent() {
       const plan = profileData?.plan || 'free';
       const alreadyUsed = profileData?.freeJourneyUsed || false;
 
-      console.log("=== FREE JOURNEY COMPLETION ===");
-      console.log("USER UID:", user.uid);
-      console.log("PLAN:", plan);
-      console.log("ALREADY USED:", alreadyUsed);
-
       if (plan === 'free' && !alreadyUsed) {
-        console.log("UPDATING FREE JOURNEY: true");
         try {
-          // Use setDoc with merge to ensure doc creation if missing (e.g. Google Login users)
           await setDoc(userRef, {
             freeJourneyUsed: true,
             plan: plan,
             subscriptionStatus: profileData?.subscriptionStatus || 'active',
             updatedAt: serverTimestamp()
           }, { merge: true });
-          
-          console.log("=== FREE JOURNEY UPDATED SUCCESSFULLY ===");
-          
-          // VERIFY WRITE
-          const verifySnap = await getDoc(userRef);
-          console.log("VERIFIED FIRESTORE USER:", verifySnap.data());
         } catch (updateErr) {
           console.error("=== FREE JOURNEY UPDATE FAILED ===", updateErr);
-          // Do not fail the whole process if only usage tracking fails, 
-          // but log it extensively for audit.
         }
       }
       
