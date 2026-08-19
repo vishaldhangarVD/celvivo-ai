@@ -27,7 +27,11 @@ import {
   Target,
   XCircle,
   ArrowRight,
-  Timer
+  Timer,
+  History,
+  Check,
+  CircleCheck,
+  AlertCircle
 } from 'lucide-react';
 import { useUser, useFirestore, useDoc } from '@/firebase';
 import { doc, updateDoc, serverTimestamp, getDoc, arrayUnion } from 'firebase/firestore';
@@ -220,8 +224,10 @@ export default function AptitudeEnginePage() {
     }
 
     let correctCount = 0;
+    let notAnsweredCount = 0;
     const formattedResults = questions.map((q, idx) => {
       const userSelectedIdx = answers[idx];
+      if (userSelectedIdx === undefined) notAnsweredCount++;
       const isCorrect = userSelectedIdx === q.correctOptionIndex;
       if (isCorrect) correctCount++;
       
@@ -258,9 +264,11 @@ export default function AptitudeEnginePage() {
         ...report,
         overallScore: finalNumericScore,
         correctCount,
-        wrongCount: questions.length - correctCount,
+        wrongCount: questions.length - (correctCount + notAnsweredCount),
+        notAnsweredCount,
         accuracy: finalNumericScore,
-        status: finalNumericScore >= 60 ? 'Pass' : 'Fail'
+        status: finalNumericScore >= 60 ? 'Pass' : 'Fail',
+        details: formattedResults
       };
 
       setResult(finalReport);
@@ -550,8 +558,8 @@ export default function AptitudeEnginePage() {
                   {[
                     { label: "Correct Nodes", val: result.correctCount, icon: CheckCircle2, color: "text-green-400" },
                     { label: "Failed Probes", val: result.wrongCount, icon: XCircle, color: "text-red-400" },
-                    { label: "Total Probes", val: questions.length, icon: Timer, color: "text-purple-400" },
-                    { label: "Verification", val: result.status, icon: ShieldCheck, color: "text-accent" }
+                    { label: "Not Answered", val: result.notAnsweredCount || 0, icon: AlertCircle, color: "text-orange-400" },
+                    { label: "Total Probes", val: questions.length, icon: Timer, color: "text-purple-400" }
                   ].map((s, i) => (
                     <div key={i} className="space-y-3">
                       <div className="flex items-center justify-center gap-3 text-[10px] font-black uppercase text-white/30"><s.icon className={cn("w-4 h-4", s.color)} /> {s.label}</div>
@@ -561,7 +569,72 @@ export default function AptitudeEnginePage() {
                 </div>
               </Card>
 
-              <div className="flex justify-center gap-6 pt-8">
+              {/* Dynamic Question Review Section */}
+              <div className="max-w-5xl mx-auto space-y-8">
+                <div className="flex items-center justify-between px-4">
+                  <h3 className="text-2xl font-bold flex items-center gap-3">
+                    <History className="w-6 h-6 text-accent" /> Question Intelligence Review
+                  </h3>
+                  <Badge variant="outline" className="border-white/10 text-white/40 uppercase text-[10px] tracking-widest">Audited Archive</Badge>
+                </div>
+                
+                <div className="grid gap-6">
+                  {result.details?.map((item: any, idx: number) => (
+                    <motion.div
+                      key={idx}
+                      initial={{ opacity: 0, y: 20 }}
+                      whileInView={{ opacity: 1, y: 0 }}
+                      viewport={{ once: true }}
+                      transition={{ delay: idx * 0.05 }}
+                    >
+                      <Card className="glass p-8 rounded-[2.5rem] border-white/5 bg-white/[0.01] hover:bg-white/[0.02] transition-all relative overflow-hidden group">
+                         <div className={cn(
+                           "absolute top-0 left-0 bottom-0 w-1.5",
+                           item.userAnswer === "Not Answered" ? "bg-orange-500/40" : 
+                           item.isCorrect ? "bg-green-500/40" : "bg-red-500/40"
+                         )} />
+                         
+                         <div className="flex justify-between items-start mb-6">
+                            <div className="space-y-1">
+                               <Badge className="bg-white/5 text-white/40 border-none text-[8px] font-black uppercase tracking-widest">NODE 0{idx + 1} • {item.category}</Badge>
+                               <h4 className="text-xl font-bold text-white/90 leading-tight">{item.question}</h4>
+                            </div>
+                            <div className="shrink-0 flex items-center gap-2">
+                               {item.userAnswer === "Not Answered" ? (
+                                 <Badge variant="outline" className="border-orange-500/20 text-orange-400 text-[9px] font-black uppercase py-1 px-3">NOT ANSWERED</Badge>
+                               ) : item.isCorrect ? (
+                                 <Badge variant="outline" className="border-green-500/20 text-green-400 text-[9px] font-black uppercase py-1 px-3 flex gap-1.5 items-center"><CircleCheck className="w-3 h-3" /> PASS</Badge>
+                               ) : (
+                                 <Badge variant="outline" className="border-red-500/20 text-red-400 text-[9px] font-black uppercase py-1 px-3 flex gap-1.5 items-center"><AlertCircle className="w-3 h-3" /> FAIL</Badge>
+                               )}
+                            </div>
+                         </div>
+
+                         <div className="grid md:grid-cols-2 gap-6 pt-6 border-t border-white/5">
+                            <div className="space-y-2">
+                               <p className="text-[9px] font-black uppercase text-white/20 tracking-widest">Candidate Input</p>
+                               <div className={cn(
+                                 "p-4 rounded-xl text-sm font-medium",
+                                 item.userAnswer === "Not Answered" ? "bg-white/5 text-white/40" :
+                                 item.isCorrect ? "bg-green-500/10 text-green-400" : "bg-red-500/10 text-red-400"
+                               )}>
+                                 {item.userAnswer}
+                               </div>
+                            </div>
+                            <div className="space-y-2">
+                               <p className="text-[9px] font-black uppercase text-white/20 tracking-widest">Verified Baseline</p>
+                               <div className="p-4 rounded-xl bg-accent/10 text-accent text-sm font-bold">
+                                 {item.correctAnswer}
+                               </div>
+                            </div>
+                         </div>
+                      </Card>
+                    </motion.div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="flex justify-center gap-6 pt-12 pb-16">
                 {result.status === 'Pass' ? (
                   <Button onClick={() => journey?.sessionId && router.push(`/interview/${journey.sessionId}?role=${encodeURIComponent(journey.role)}&company=${encodeURIComponent(journey.company)}&exp=${encodeURIComponent(journey.experience)}&round=HR%20Round`)} className="h-20 px-24 btn-premium rounded-[2.5rem] text-xl font-black uppercase tracking-[0.4em] shadow-2xl group">Proceed to Arena <ChevronRight className="ml-4 w-8 h-8 group-hover:translate-x-2 transition-transform" /></Button>
                 ) : (
