@@ -386,7 +386,7 @@ export default function AptitudeEnginePage() {
             <Command className="w-5 h-5" />
           </div>
           <div>
-            <h1 className="text-sm font-black uppercase tracking-widest text-premium">{journey?.company || "Standard Tech"} COGNITIVE AUDIT</h1>
+            <h1 className="text-sm font-black uppercase tracking-widest text-premium">NEXVOROAI</h1>
             <p className="text-[9px] font-bold text-white/40 uppercase tracking-widest mt-0.5">{journey?.role || "Protocol"} • SESSION ACTIVE</p>
           </div>
         </div>
