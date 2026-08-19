@@ -8,7 +8,6 @@ import NavigationControls from '@/components/NavigationControls';
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Progress } from '@/components/ui/progress';
 import { 
   Map, 
   Zap, 
@@ -28,13 +27,15 @@ import {
   Star,
   Flame,
   Lightbulb,
-  Rocket
+  Rocket,
+  AlertCircle,
+  BarChart3
 } from 'lucide-react';
 import { useUser, useFirestore, useDoc } from '@/firebase';
-import { doc, getDoc, setDoc } from 'firebase/firestore';
+import { doc, getDoc, setDoc, collection, query, orderBy, limit, getDocs } from 'firebase/firestore';
 import { generatePersonalizedRoadmap, type LearningRoadmapOutput } from '@/ai/flows/ai-learning-roadmap';
 import { useToast } from '@/hooks/use-toast';
-import Link from 'next/link';
+import { cn } from '@/lib/utils';
 
 export default function PersonalizedRoadmapPage() {
   const params = useParams();
@@ -45,7 +46,7 @@ export default function PersonalizedRoadmapPage() {
   
   const [roadmap, setRoadmap] = useState<LearningRoadmapOutput | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [activePhase, setActivePhase] = useState<'horizon1' | 'horizon2' | 'horizon3'>('horizon1');
+  const [activePhaseIdx, setActivePhaseIdx] = useState(0);
 
   const interviewId = params.id as string;
 
@@ -54,7 +55,7 @@ export default function PersonalizedRoadmapPage() {
       if (!user || !db || !interviewId) return;
 
       try {
-        // 1. Check if roadmap already exists in user's roadmaps collection
+        // 1. Check persistence
         const existingRef = doc(db, 'users', user.uid, 'roadmaps', interviewId);
         const existingSnap = await getDoc(existingRef);
 
@@ -64,12 +65,12 @@ export default function PersonalizedRoadmapPage() {
           return;
         }
 
-        // 2. If not, fetch the interview session to generate it
+        // 2. Fetch required context
         const sessionRef = doc(db, 'users', user.uid, 'interviews', interviewId);
         const sessionSnap = await getDoc(sessionRef);
 
         if (!sessionSnap.exists()) {
-          toast({ variant: "destructive", title: "Session Not Found", description: "Could not retrieve assessment dossiers." });
+          toast({ variant: "destructive", title: "Session Not Found", description: "Assessment dossier unavailable." });
           router.push('/dashboard');
           return;
         }
@@ -77,31 +78,36 @@ export default function PersonalizedRoadmapPage() {
         const session = sessionSnap.data();
         const feedback = session.feedback;
 
-        // 3. Trigger AI Synthesis
+        // Fetch latest resume context if available
+        const resumesRef = collection(db, 'users', user.uid, 'resumes');
+        const resumeSnap = await getDocs(query(resumesRef, orderBy('createdAt', 'desc'), limit(1)));
+        const latestResume = !resumeSnap.empty ? resumeSnap.docs[0].data() : null;
+
+        // 3. Trigger Synthesis
         const result = await generatePersonalizedRoadmap({
           role: session.role,
           company: session.company,
           experienceLevel: session.experienceLevel,
-          resumeContext: {
-            missingSkills: feedback.skillGap.missingSkills,
-            weaknesses: feedback.aiFeedback.weakSkills,
+          transcript: session.history?.map((t: any) => `${t.role}: ${t.text}`).join('\n') || "",
+          resumeContext: latestResume ? {
+            skills: latestResume.analysis?.skillAnalysis?.map((s: any) => s.skill) || [],
+            missingSkills: latestResume.analysis?.missingSkills || [],
+            weaknesses: latestResume.analysis?.weaknesses || [],
+          } : undefined,
+          interviewFeedback: {
+            weakSkills: feedback.aiFeedback?.weakSkills || [],
+            mistakesMade: feedback.aiFeedback?.mistakesMade || [],
+            scores: {
+              technical: feedback.virtualInterviewResult?.technicalKnowledge || 0,
+              communication: feedback.virtualInterviewResult?.communication || 0,
+              problemSolving: feedback.virtualInterviewResult?.problemSolving || 0,
+            }
           },
-          aptitudeContext: {
-            weakCategories: [feedback.aiFeedback.weakSkills[0] || "Logic"],
-            speedAnalysis: "Analyze speed relative to complexity.",
-          },
-          codingContext: {
-            optimizationTips: feedback.learningPlan.codingPractice,
-            complexityIssues: feedback.aiFeedback.mistakesMade[0] || "Standard Big-O deviations.",
-          },
-          interviewContext: {
-            weakSkills: feedback.aiFeedback.weakSkills,
-            mistakesMade: feedback.aiFeedback.mistakesMade,
-            communicationFeedback: feedback.aiFeedback.performanceSummary,
-          }
+          aptitudeScore: session.aptitudeScore || 0,
+          codingScore: session.codingScore || 0
         });
 
-        // 4. Save for future access
+        // 4. Persist
         await setDoc(existingRef, {
           ...result,
           createdAt: new Date().toISOString(),
@@ -111,7 +117,7 @@ export default function PersonalizedRoadmapPage() {
         setRoadmap(result);
       } catch (e) {
         console.error(e);
-        toast({ variant: "destructive", title: "Synthesis Error", description: "Failed to architect personalized evolution path." });
+        toast({ variant: "destructive", title: "Synthesis Error", description: "Failed to architect evolution path." });
       } finally {
         setIsLoading(false);
       }
@@ -129,13 +135,20 @@ export default function PersonalizedRoadmapPage() {
         </div>
         <div className="text-center space-y-4">
           <h2 className="text-3xl font-bold tracking-tighter text-premium">Architecting Personalized Roadmap...</h2>
-          <p className="text-muted-foreground font-light uppercase tracking-[0.4em] text-[10px]">Mapping your evolution horizon v5.0</p>
+          <p className="text-muted-foreground font-light uppercase tracking-[0.4em] text-[10px]">Mapping multi-round performance vectors</p>
         </div>
       </div>
     );
   }
 
-  if (!roadmap) return null;
+  if (!roadmap) return (
+     <div className="h-screen flex flex-col items-center justify-center bg-[#050816] p-12 text-center">
+        <AlertCircle className="w-16 h-16 text-red-400 mb-6" />
+        <h2 className="text-2xl font-bold">Insufficient Assessment Data</h2>
+        <p className="text-muted-foreground mt-2 max-w-sm">Complete a full interview session to generate a personalized roadmap.</p>
+        <Button onClick={() => router.push('/dashboard')} className="mt-8">Return to Dashboard</Button>
+     </div>
+  );
 
   return (
     <div className="min-h-screen bg-[#050816] pb-32">
@@ -148,55 +161,51 @@ export default function PersonalizedRoadmapPage() {
           
           <header className="flex flex-col md:flex-row justify-between items-end gap-8">
             <div className="space-y-4">
-              <Badge className="bg-accent/20 text-accent border-none px-4 py-1 text-[10px] tracking-widest font-bold uppercase">Personalized Evolution Protocol</Badge>
+              <Badge className="bg-accent/20 text-accent border-none px-4 py-1 text-[10px] tracking-widest font-bold uppercase">Evidence-Based Growth Path</Badge>
               <h1 className="text-6xl font-bold tracking-tighter text-premium leading-tight">Career <br /><span className="text-gradient-purple">Roadmap.</span></h1>
-              <p className="text-xl text-muted-foreground font-light max-w-xl">Bespoke 90-day learning timeline calibrated for elite performance.</p>
+              <p className="text-xl text-muted-foreground font-light max-w-xl">A 5-phase evolution roadmap calibrated from your simulation performance.</p>
             </div>
             <div className="flex flex-col items-end gap-2">
               <div className="text-4xl font-bold text-accent">{roadmap.estimatedTimeToReadiness}</div>
-              <p className="text-[10px] uppercase tracking-[0.4em] font-bold text-muted-foreground">Estimated Time to Readiness</p>
+              <p className="text-[10px] uppercase tracking-[0.4em] font-bold text-muted-foreground text-right">Target Readiness Horizon</p>
             </div>
           </header>
 
           <div className="grid lg:grid-cols-12 gap-12">
             
-            {/* Strategy Sidebar (Moved to Left) */}
             <div className="lg:col-span-4 space-y-8">
-              
               <Card className="premium-card bg-accent/5 border-accent/20 p-10 space-y-8">
                 <div className="flex items-center gap-4">
-                  <Flame className="w-8 h-8 text-accent animate-pulse" />
-                  <h3 className="text-xl font-bold">Daily Protocol</h3>
+                  <BarChart3 className="w-8 h-8 text-accent" />
+                  <h3 className="text-xl font-bold">Skill Priorities</h3>
+                </div>
+                <div className="space-y-4">
+                  {roadmap.skillGapPriority.map((item, i) => (
+                    <div key={i} className="p-4 glass rounded-xl border-white/5 space-y-2">
+                      <div className="flex justify-between items-center">
+                        <span className="text-sm font-bold text-white">{item.skill}</span>
+                        <Badge className={cn(
+                          "text-[8px] font-black uppercase py-0.5",
+                          item.priority === 'High' ? 'bg-red-500/20 text-red-400' : 
+                          item.priority === 'Medium' ? 'bg-orange-500/20 text-orange-400' : 'bg-blue-500/20 text-blue-400'
+                        )}>{item.priority}</span>
+                      </div>
+                      <p className="text-[10px] text-white/40 leading-relaxed">{item.reason}</p>
+                    </div>
+                  ))}
+                </div>
+              </Card>
+
+              <Card className="premium-card bg-white/[0.01] border-white/5 p-10 space-y-8">
+                <div className="flex items-center gap-4">
+                  <Flame className="w-6 h-6 text-orange-400" />
+                  <h3 className="text-[10px] font-bold uppercase tracking-[0.4em] text-white/30">Daily Mastery Protocol</h3>
                 </div>
                 <div className="space-y-6">
                   {roadmap.dailyRoutine.map((item, i) => (
                     <div key={i} className="flex gap-4 items-start">
                       <div className="w-1.5 h-1.5 rounded-full bg-accent mt-2 shrink-0" />
-                      <p className="text-sm font-light text-white/80 italic">"{item}"</p>
-                    </div>
-                  ))}
-                </div>
-              </Card>
-
-              <Card className="premium-card bg-white/[0.01] border-white/5 p-10 space-y-8">
-                <h3 className="text-[10px] font-bold uppercase tracking-[0.4em] text-white/30">Weekly Learning Goals</h3>
-                <div className="space-y-4">
-                  {roadmap.weeklyGoals.map((goal, i) => (
-                    <div key={i} className="p-4 glass rounded-xl border-white/5 flex items-center gap-4">
-                      <CheckCircle2 className="w-4 h-4 text-green-400 shrink-0" />
-                      <span className="text-xs font-light text-white/60">{goal}</span>
-                    </div>
-                  ))}
-                </div>
-              </Card>
-
-              <Card className="premium-card bg-white/[0.01] border-white/5 p-10 space-y-8">
-                <h3 className="text-[10px] font-bold uppercase tracking-[0.4em] text-white/30">Syntax Practice Directives</h3>
-                <div className="space-y-4">
-                  {roadmap.codingPracticeSuggestions.map((item, i) => (
-                    <div key={i} className="p-4 glass rounded-xl border-white/5 flex items-center gap-4 group hover:bg-white/5 transition-all">
-                      <Code2 className="w-4 h-4 text-blue-400 shrink-0" />
-                      <span className="text-xs font-light text-white/60 group-hover:text-white transition-colors">{item}</span>
+                      <p className="text-xs font-light text-white/70 leading-relaxed italic">"{item}"</p>
                     </div>
                   ))}
                 </div>
@@ -207,7 +216,7 @@ export default function PersonalizedRoadmapPage() {
                 <div className="space-y-4">
                   {roadmap.softSkillDirectives.map((item, i) => (
                     <div key={i} className="p-4 glass rounded-xl border-white/5 flex items-center gap-4">
-                      <BrainCircuit className="w-4 h-4 text-orange-400 shrink-0" />
+                      <BrainCircuit className="w-4 h-4 text-purple-400 shrink-0" />
                       <span className="text-xs font-light text-white/60">{item}</span>
                     </div>
                   ))}
@@ -218,33 +227,34 @@ export default function PersonalizedRoadmapPage() {
                  <Button onClick={() => router.push('/dashboard')} className="w-full h-16 rounded-2xl glass border-white/10 flex gap-4 uppercase tracking-[0.3em] text-[10px] font-bold">
                     <LayoutDashboard className="w-4 h-4" /> Return to Command
                  </Button>
-                 <Button onClick={() => router.push('/interview')} className="w-full h-16 rounded-2xl btn-premium flex gap-4 uppercase tracking-[0.3em] text-[10px] font-bold shadow-2xl">
-                    <Zap className="w-4 h-4" /> Retry Assessment
-                 </Button>
               </div>
-
             </div>
 
-            {/* Main Evolution Timeline (Moved to Right) */}
             <div className="lg:col-span-8 space-y-12">
-              
-              <div className="flex gap-4 p-2 glass rounded-[2.5rem] bg-white/[0.01] border-white/5">
-                {(['horizon1', 'horizon2', 'horizon3'] as const).map((h) => (
+              <div className="grid grid-cols-5 gap-2 p-2 glass rounded-[2.5rem] bg-white/[0.01] border-white/5">
+                {roadmap.phases.map((phase, idx) => (
                   <button
-                    key={h}
-                    onClick={() => setActivePhase(h)}
-                    className={`flex-1 h-20 rounded-[2rem] flex flex-col items-center justify-center transition-all duration-500 ${
-                      activePhase === h ? 'bg-accent/20 border border-accent/40 shadow-[0_0_30px_rgba(34,211,238,0.2)]' : 'hover:bg-white/5 opacity-40'
-                    }`}
+                    key={idx}
+                    onClick={() => setActivePhaseIdx(idx)}
+                    className={cn(
+                      "h-20 rounded-[2rem] flex flex-col items-center justify-center transition-all duration-500",
+                      activePhaseIdx === idx ? 'bg-accent/20 border border-accent/40 shadow-[0_0_30px_rgba(34,211,238,0.2)]' : 'hover:bg-white/5 opacity-40'
+                    )}
                   >
-                    <span className="text-[10px] font-bold uppercase tracking-widest">{roadmap.phases[h].title}</span>
-                    <span className="text-xs font-light text-muted-foreground mt-1">{roadmap.phases[h].duration}</span>
+                    <span className="text-[10px] font-bold uppercase tracking-widest">Phase {idx + 1}</span>
+                    <span className="text-[8px] font-light text-muted-foreground mt-1 truncate px-2">{phase.title}</span>
                   </button>
                 ))}
               </div>
 
               <div className="space-y-8">
-                {roadmap.phases[activePhase].modules.map((module, i) => (
+                <div className="flex items-center gap-4 mb-4">
+                   <Zap className="w-6 h-6 text-accent" />
+                   <h2 className="text-2xl font-bold">{roadmap.phases[activePhaseIdx].title}</h2>
+                   <Badge variant="outline" className="border-white/10 text-white/40">{roadmap.phases[activePhaseIdx].duration}</Badge>
+                </div>
+
+                {roadmap.phases[activePhaseIdx].modules.map((module, i) => (
                   <motion.div
                     key={i}
                     initial={{ opacity: 0, x: -20 }}
@@ -253,52 +263,57 @@ export default function PersonalizedRoadmapPage() {
                   >
                     <Card className="premium-card bg-white/[0.01] border-white/5 p-10 relative overflow-hidden group hover:bg-white/[0.03] transition-all">
                       <div className="absolute top-0 right-0 p-8">
-                        <span className="text-[10px] font-bold uppercase tracking-widest text-white/10 group-hover:text-accent/20 transition-colors">Node 0{i + 1}</span>
+                        <span className="text-[10px] font-bold uppercase tracking-widest text-white/10 group-hover:text-accent/20 transition-colors">Node {activePhaseIdx + 1}.{i + 1}</span>
                       </div>
-                      <div className="flex flex-col md:flex-row gap-12">
-                        <div className="md:w-1/3 space-y-4">
-                          <h3 className="text-2xl font-bold text-white leading-tight">{module.title}</h3>
-                          <p className="text-sm font-light text-muted-foreground leading-relaxed">{module.desc}</p>
-                          <Badge variant="outline" className="border-accent/30 text-accent text-[8px] uppercase tracking-widest px-3 py-1">
-                            {module.milestone}
-                          </Badge>
-                        </div>
-                        <div className="md:w-2/3 grid grid-cols-1 gap-4">
-                          {module.tasks.map((task, j) => (
-                            <div key={j} className="flex items-start gap-4 p-5 glass rounded-2xl border-white/5 hover:border-accent/20 transition-all">
-                              <div className="w-2 h-2 rounded-full bg-accent mt-1.5 shrink-0" />
-                              <p className="text-sm font-light text-white/80">{task}</p>
+                      
+                      <div className="space-y-8">
+                        <div className="grid md:grid-cols-12 gap-8">
+                          <div className="md:col-span-4 space-y-4">
+                            <h3 className="text-2xl font-bold text-white leading-tight">{module.title}</h3>
+                            <div className="flex items-center gap-2">
+                               <p className="text-[9px] font-black uppercase text-white/40 tracking-widest">Current Node Level:</p>
+                               <Badge variant="outline" className="text-[8px] uppercase font-bold border-accent/30 text-accent">{module.currentLevel}</Badge>
                             </div>
-                          ))}
+                            <div className="p-4 glass rounded-xl border-accent/10 bg-accent/[0.01]">
+                               <p className="text-[9px] font-black uppercase text-accent tracking-widest mb-2 flex items-center gap-2">
+                                 <Lightbulb className="w-3 h-3" /> Why this matters
+                               </p>
+                               <p className="text-xs font-light text-white/70 leading-relaxed italic">{module.evidence}</p>
+                            </div>
+                          </div>
+                          <div className="md:col-span-8 space-y-6">
+                            <div className="space-y-3">
+                               <p className="text-[9px] font-black uppercase text-white/30 tracking-widest">Mastery Tasks</p>
+                               <div className="grid gap-3">
+                                 {module.tasks.map((task, j) => (
+                                   <div key={j} className="flex items-start gap-4 p-4 glass rounded-2xl border-white/5 hover:border-accent/20 transition-all">
+                                      <div className="w-1.5 h-1.5 rounded-full bg-accent mt-1.5 shrink-0" />
+                                      <p className="text-xs font-light text-white/80">{task}</p>
+                                   </div>
+                                 ))}
+                               </div>
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="grid md:grid-cols-2 gap-6 pt-6 border-t border-white/5">
+                           <div className="p-6 glass rounded-[2rem] border-purple-500/10 space-y-3">
+                              <h4 className="text-[9px] font-black uppercase tracking-widest text-purple-400 flex items-center gap-2">
+                                <Rocket className="w-3 h-3" /> Project Laboratory
+                              </h4>
+                              <p className="text-xs font-light text-white/70 leading-relaxed">{module.realWorldProject}</p>
+                           </div>
+                           <div className="p-6 glass rounded-[2rem] border-green-500/10 space-y-3">
+                              <h4 className="text-[9px] font-black uppercase tracking-widest text-green-400 flex items-center gap-2">
+                                <CheckCircle2 className="w-3 h-3" /> Validation Goal
+                              </h4>
+                              <p className="text-xs font-light text-white/70 leading-relaxed">{module.validationCriteria}</p>
+                           </div>
                         </div>
                       </div>
                     </Card>
                   </motion.div>
                 ))}
-              </div>
-
-              {/* Recommended Projects Node */}
-              <div className="space-y-8">
-                <div className="flex items-center gap-4">
-                  <Rocket className="w-6 h-6 text-purple-400" />
-                  <h3 className="text-2xl font-bold tracking-tight">Project Laboratory</h3>
-                </div>
-                <div className="grid md:grid-cols-2 gap-6">
-                  {roadmap.recommendedProjects.map((proj, i) => (
-                    <Card key={i} className="premium-card bg-white/[0.01] border-white/5 p-8 space-y-6 group hover:border-purple-500/20 transition-all">
-                      <div className="flex justify-between items-start">
-                        <h4 className="text-xl font-bold text-white group-hover:text-purple-400 transition-colors">{proj.name}</h4>
-                        <Badge className="bg-purple-500/10 text-purple-400 border-none text-[8px] font-bold uppercase">{proj.difficulty}</Badge>
-                      </div>
-                      <p className="text-sm font-light text-muted-foreground leading-relaxed">{proj.description}</p>
-                      <div className="flex flex-wrap gap-2">
-                        {proj.techStack.map((tech, j) => (
-                          <Badge key={j} variant="outline" className="text-[8px] border-white/10 uppercase">{tech}</Badge>
-                        ))}
-                      </div>
-                    </Card>
-                  ))}
-                </div>
               </div>
             </div>
           </div>

@@ -1,7 +1,8 @@
 'use server';
 /**
- * @fileOverview Nexvoro AI Career Evolution Architect (v5.0).
- * Synthesizes bespoke 90-day learning roadmaps based on multi-round session data.
+ * @fileOverview Nexvoro AI Career Evolution Architect (v6.0).
+ * Synthesizes high-fidelity, evidence-based learning roadmaps.
+ * Performs cross-assessment analysis of Resume, Aptitude, Coding, and Interview data.
  */
 
 import { ai, runWithResilience } from '@/ai/genkit';
@@ -10,63 +11,54 @@ import { z } from 'genkit';
 const RoadmapModuleSchema = z.object({
   title: z.string(),
   desc: z.string(),
+  evidence: z.string().describe("Explain why this specific user needs this based on their actual performance in assessments."),
+  currentLevel: z.enum(['Beginner', 'Developing', 'Intermediate', 'Strong']),
   tasks: z.array(z.string()),
+  realWorldProject: z.string().describe("A practical project task to apply this skill."),
+  validationCriteria: z.string().describe("A measurable goal to verify mastery."),
   milestone: z.string(),
+});
+
+const RoadmapPhaseSchema = z.object({
+  title: z.string(),
+  duration: z.string(),
+  modules: z.array(RoadmapModuleSchema),
 });
 
 const LearningRoadmapInputSchema = z.object({
   role: z.string(),
   company: z.string(),
   experienceLevel: z.string(),
+  transcript: z.string().optional(),
   resumeContext: z.object({
+    skills: z.array(z.string()),
     missingSkills: z.array(z.string()),
     weaknesses: z.array(z.string()),
-  }),
-  aptitudeContext: z.object({
-    weakCategories: z.array(z.string()),
-    speedAnalysis: z.string(),
-  }),
-  codingContext: z.object({
-    optimizationTips: z.array(z.string()),
-    complexityIssues: z.string(),
-  }),
-  interviewContext: z.object({
+  }).optional(),
+  interviewFeedback: z.object({
     weakSkills: z.array(z.string()),
     mistakesMade: z.array(z.string()),
-    communicationFeedback: z.string(),
-  }),
+    scores: z.object({
+      technical: z.number(),
+      communication: z.number(),
+      problemSolving: z.number(),
+    }),
+  }).optional(),
+  aptitudeScore: z.number().optional(),
+  codingScore: z.number().optional(),
 });
 export type LearningRoadmapInput = z.infer<typeof LearningRoadmapInputSchema>;
 
 const LearningRoadmapOutputSchema = z.object({
   estimatedTimeToReadiness: z.string(),
   overallFocus: z.string(),
-  phases: z.object({
-    horizon1: z.object({
-      title: z.string(),
-      duration: z.string(),
-      modules: z.array(RoadmapModuleSchema),
-    }),
-    horizon2: z.object({
-      title: z.string(),
-      duration: z.string(),
-      modules: z.array(RoadmapModuleSchema),
-    }),
-    horizon3: z.object({
-      title: z.string(),
-      duration: z.string(),
-      modules: z.array(RoadmapModuleSchema),
-    }),
-  }),
-  dailyRoutine: z.array(z.string()),
-  weeklyGoals: z.array(z.string()),
-  recommendedProjects: z.array(z.object({
-    name: z.string(),
-    description: z.string(),
-    techStack: z.array(z.string()),
-    difficulty: z.string(),
+  skillGapPriority: z.array(z.object({
+    skill: z.string(),
+    priority: z.enum(['High', 'Medium', 'Low']),
+    reason: z.string(),
   })),
-  codingPracticeSuggestions: z.array(z.string()),
+  phases: z.array(RoadmapPhaseSchema).length(5).describe("Must provide exactly 5 phases: Critical Gaps, Core Competency, Applied Practice, Interview Readiness, Validation."),
+  dailyRoutine: z.array(z.string()),
   softSkillDirectives: z.array(z.string()),
 });
 export type LearningRoadmapOutput = z.infer<typeof LearningRoadmapOutputSchema>;
@@ -80,33 +72,33 @@ const prompt = ai.definePrompt({
   input: { schema: LearningRoadmapInputSchema },
   output: { schema: LearningRoadmapOutputSchema },
   prompt: `You are an elite Engineering Mentor and Career Strategist. 
-Synthesize a bespoke 90-day Evolution Roadmap for a {{{role}}} aiming for {{{company}}} ({{{experienceLevel}}} level).
+Synthesize a bespoke 90-day Evolution Roadmap for a {{{role}}} candidate targeting {{{company}}}.
 
-INPUT DOSSIER:
+### CORE DIRECTIVE:
+You must perform a "Cross-Assessment Skill Analysis" using the provided data:
+1. INTERVIEW PERFORMANCE: 
+   - Weaknesses: {{#each interviewFeedback.weakSkills}}{{{this}}}, {{/each}}
+   - Mistakes: {{#each interviewFeedback.mistakesMade}}{{{this}}}, {{/each}}
+   - Transcript Context: {{{transcript}}}
+2. RESUME GAPS: {{#each resumeContext.missingSkills}}{{{this}}}, {{/each}}
+3. APTITUDE SCORE: {{{aptitudeScore}}}%
+4. CODING SCORE: {{{codingScore}}}%
 
-1. RESUME GAPS:
-- Missing: {{#each resumeContext.missingSkills}}{{{this}}}, {{/each}}
-- Weaknesses: {{#each resumeContext.weaknesses}}{{{this}}}, {{/each}}
+### REQUIREMENTS:
+- NO HARDCODED CONTENT: Every module must be derived from the specific user's assessment data.
+- EVIDENCE-BASED: For every "Why This Matters" (evidence field), cite the specific round or answer that exposed the gap.
+- PRIORITIZATION: Identify repeated weaknesses (e.g. if coding and aptitude both show low logic, prioritize problem-solving).
+- 5-PHASE STRUCTURE: 
+  - Phase 1: Fix Critical Gaps (address High priority failures).
+  - Phase 2: Build Core Competency (strengthen role-specific fundamentals).
+  - Phase 3: Applied Practice (project-based implementation).
+  - Phase 4: Interview Readiness (behavioral and technical communication).
+  - Phase 5: Validation (measurable re-testing goals).
 
-2. COGNITIVE AUDIT (APTITUDE):
-- Weak Categories: {{#each aptitudeContext.weakCategories}}{{{this}}}, {{/each}}
-- Speed Analysis: {{{aptitudeContext.speedAnalysis}}}
+- TARGET ROLE AWARENESS: All recommendations must align with the standards of a {{{role}}} at {{{company}}}.
+- REASONABLE & ACTIONABLE: Provide specific concepts, not generic "Learn Python".
 
-3. SYNTAX AUDIT (CODING):
-- Complexity Deviations: {{{codingContext.complexityIssues}}}
-- Optimization Nodes: {{#each codingContext.optimizationTips}}{{{this}}}, {{/each}}
-
-4. ARENA FEEDBACK (INTERVIEW):
-- Soft Skill Gaps: {{#each interviewContext.weakSkills}}{{{this}}}, {{/each}}
-- Specific Mistakes: {{#each interviewContext.mistakesMade}}{{{this}}}, {{/each}}
-- Narrative Presence: {{{interviewContext.communicationFeedback}}}
-
-ROADMAP ARCHITECTURE:
-- Horizon 1 (Day 1-30): Core Vector Acquisition. Focus on critical gaps that blocked the current offer.
-- Horizon 2 (Day 31-60): Architectural Deep-Dive. Advanced implementation and project work.
-- Horizon 3 (Day 61-90): System Dominance. Final market calibration and elite prep.
-
-Provide high-fidelity daily routines, project laboratories, and specific coding challenges.`,
+Return a high-fidelity intelligence report.`,
 });
 
 const learningRoadmapFlow = ai.defineFlow(
@@ -116,8 +108,13 @@ const learningRoadmapFlow = ai.defineFlow(
     outputSchema: LearningRoadmapOutputSchema,
   },
   async (input) => {
-    const { output } = await runWithResilience(prompt, input);
-    if (!output) throw new Error("Roadmap synthesis failure.");
-    return output;
+    try {
+      const { output } = await runWithResilience(prompt, input);
+      if (!output) throw new Error("Roadmap synthesis failure.");
+      return output;
+    } catch (error) {
+      console.error("[Roadmap Flow] Error:", error);
+      throw error;
+    }
   }
 );
