@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
@@ -92,7 +91,7 @@ export default function AptitudeEnginePage() {
   const [evaluationStep, setEvaluationStep] = useState(0);
   const [result, setResult] = useState<any>(null);
   
-  const [timeLeft, setTimeLeft] = useState(30 * 60);
+  const [timeLeft, setTimeLeft] = useState(1800); // 30 minutes
 
   const initGuard = useRef(false);
   const submissionGuard = useRef(false);
@@ -120,19 +119,29 @@ export default function AptitudeEnginePage() {
       const isValidSet = existingQuestions.length === 20 && existingQuestions.every(validateAptitudeQuestion);
 
       if (isValidSet && data.aptitudeStatus === "in_progress") {
-        console.log("[APTITUDE SESSION] Resuming active session:", data.sessionId);
         setQuestions(existingQuestions);
         setAnswers(data.aptitudeAnswers || {});
         setCurrentIdx(data.aptitudeCurrentIndex || 0);
         
-        // Handle persistent timer logic
-        if (data.aptitudeTimerEndAt) {
-          const remaining = Math.max(0, Math.ceil((data.aptitudeTimerEndAt - Date.now()) / 1000));
+        // Handle persistent timer logic (Priority: LocalStorage for instant UI, Firestore for sync)
+        let endAt = data.aptitudeTimerEndAt;
+        const localEndKey = `aptitude_timer_end_${user.uid}`;
+        const localEndAt = localStorage.getItem(localEndKey);
+        
+        if (!endAt && localEndAt) {
+          endAt = parseInt(localEndAt);
+        } else if (endAt) {
+          localStorage.setItem(localEndKey, endAt.toString());
+        }
+
+        if (endAt) {
+          const remaining = Math.max(0, Math.ceil((endAt - Date.now()) / 1000));
           setTimeLeft(remaining);
         } else {
-          const endAt = Date.now() + 30 * 60 * 1000;
-          await updateDoc(journeyRef, { aptitudeTimerEndAt: endAt });
-          setTimeLeft(30 * 60);
+          const newEndAt = Date.now() + 30 * 60 * 1000;
+          localStorage.setItem(localEndKey, newEndAt.toString());
+          await updateDoc(journeyRef, { aptitudeTimerEndAt: newEndAt });
+          setTimeLeft(1800);
         }
 
         setIsInitializing(false);
@@ -148,7 +157,6 @@ export default function AptitudeEnginePage() {
       }
 
       try {
-        console.log("[APTITUDE SESSION] Initializing new session for user:", user.uid);
         const userRef = doc(db, 'users', user.uid);
         const userSnap = await getDoc(userRef);
         const history = userSnap.data()?.aptitudeQuestionHistory || [];
@@ -167,6 +175,7 @@ export default function AptitudeEnginePage() {
         });
         
         const endAt = Date.now() + 30 * 60 * 1000;
+        localStorage.setItem(`aptitude_timer_end_${user.uid}`, endAt.toString());
         
         await updateDoc(journeyRef, {
           aptitudeQuestions: freshQuestions,
@@ -183,7 +192,7 @@ export default function AptitudeEnginePage() {
         });
 
         setQuestions(freshQuestions);
-        setTimeLeft(30 * 60);
+        setTimeLeft(1800);
         setIsInitializing(false);
       } catch (e: any) {
         console.error("[APTITUDE SESSION] Initialization fault:", e);
@@ -201,6 +210,10 @@ export default function AptitudeEnginePage() {
     if (submissionGuard.current || isEvaluating || !journey || !journeyRef || result) return;
     submissionGuard.current = true;
     setIsEvaluating(true);
+
+    if (user?.uid) {
+      localStorage.removeItem(`aptitude_timer_end_${user.uid}`);
+    }
 
     let correctCount = 0;
     const formattedResults = questions.map((q, idx) => {
@@ -261,7 +274,22 @@ export default function AptitudeEnginePage() {
     } finally {
       setIsEvaluating(false);
     }
-  }, [isEvaluating, journey, journeyRef, questions, answers, timeLeft, result, toast]);
+  }, [isEvaluating, journey, journeyRef, questions, answers, timeLeft, result, toast, user?.uid]);
+
+  useEffect(() => {
+    if (isInitializing || isEvaluating || result) return;
+    const timer = setInterval(() => {
+      setTimeLeft(prev => {
+        if (prev <= 1) {
+          clearInterval(timer);
+          handleSubmit();
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [isInitializing, isEvaluating, result, handleSubmit]);
 
   const handleOptionSelect = async (optIdx: number) => {
     if (!journeyRef || result) return;
@@ -280,6 +308,7 @@ export default function AptitudeEnginePage() {
     if (!journeyRef || !user) return;
     setIsInitializing(true);
     initGuard.current = false;
+    localStorage.removeItem(`aptitude_timer_end_${user.uid}`);
     await updateDoc(journeyRef, {
       aptitudeQuestions: null,
       aptitudeAnswers: null,
@@ -290,21 +319,6 @@ export default function AptitudeEnginePage() {
     });
     window.location.reload();
   };
-
-  useEffect(() => {
-    if (isInitializing || isEvaluating || result) return;
-    const timer = setInterval(() => {
-      setTimeLeft(prev => {
-        if (prev <= 1) {
-          clearInterval(timer);
-          handleSubmit();
-          return 0;
-        }
-        return prev - 1;
-      });
-    }, 1000);
-    return () => clearInterval(timer);
-  }, [isInitializing, isEvaluating, result, handleSubmit]);
 
   const formatTime = (seconds: number) => {
     const m = Math.floor(seconds / 60);
@@ -347,7 +361,8 @@ export default function AptitudeEnginePage() {
       <div className="particles-bg" />
       <Navbar />
 
-      <header className="h-20 border-b border-white/5 bg-[#0b0e1a]/80 backdrop-blur-xl flex items-center justify-between px-8 sticky top-0 z-50 shrink-0">
+      {/* STICKY HEADER WITH TIMER - Offset by Navbar height (72px) */}
+      <header className="h-20 border-b border-white/5 bg-[#0b0e1a]/95 backdrop-blur-xl flex items-center justify-between px-8 sticky top-[72px] z-40 shrink-0">
         <div className="flex items-center gap-6">
           <div className="w-10 h-10 rounded-xl bg-accent/10 flex items-center justify-center text-accent border border-accent/20">
             <Command className="w-5 h-5" />
@@ -357,16 +372,18 @@ export default function AptitudeEnginePage() {
             <p className="text-[9px] font-bold text-white/40 uppercase tracking-widest mt-0.5">{journey?.role || "Protocol"} • SESSION ACTIVE</p>
           </div>
         </div>
+
+        {/* TIMER UI */}
         {!result && (
           <div className={cn(
-            "px-6 py-2 rounded-xl glass border-white/10 font-mono text-2xl tabular-nums tracking-wider",
-            timeLeft <= 60 ? "text-red-500 animate-pulse shadow-[0_0_20px_rgba(239,68,68,0.3)]" : 
-            timeLeft <= 300 ? "text-orange-400" : 
-            "text-accent"
+            "px-6 py-2 rounded-xl glass border-white/10 font-mono text-2xl tabular-nums tracking-wider shadow-2xl",
+            timeLeft <= 60 ? "text-red-500 animate-pulse border-red-500/30 bg-red-500/10" : 
+            timeLeft <= 300 ? "text-orange-400 border-orange-500/30 bg-orange-500/10" : 
+            "text-accent border-accent/30 bg-accent/10"
           )}>
             <div className="flex items-center gap-3">
               <Timer className={cn("w-5 h-5", timeLeft <= 60 && "animate-spin-slow")} />
-              <span>{formatTime(timeLeft)}</span>
+              <span className="font-black">{formatTime(timeLeft)}</span>
             </div>
           </div>
         )}
@@ -432,7 +449,7 @@ export default function AptitudeEnginePage() {
               </motion.div>
 
               <div className="lg:col-span-3">
-                <Card className="premium-card bg-white/[0.01] border-white/5 p-8 space-y-8 sticky top-32">
+                <Card className="premium-card bg-white/[0.01] border-white/5 p-8 space-y-8 sticky top-[168px]">
                   <h3 className="text-xs font-black uppercase tracking-[0.3em] text-accent flex items-center gap-3"><LayoutGrid className="w-4 h-4" /> Node Matrix</h3>
                   <div className="grid grid-cols-5 gap-3">
                     {questions.map((_, i) => (
