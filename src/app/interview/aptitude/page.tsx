@@ -92,7 +92,7 @@ export default function AptitudeEnginePage() {
   const [evaluationStep, setEvaluationStep] = useState(0);
   const [result, setResult] = useState<any>(null);
   
-  const [timeLeft, setTimeLeft] = useState(45 * 60);
+  const [timeLeft, setTimeLeft] = useState(30 * 60);
 
   const initGuard = useRef(false);
   const submissionGuard = useRef(false);
@@ -124,7 +124,17 @@ export default function AptitudeEnginePage() {
         setQuestions(existingQuestions);
         setAnswers(data.aptitudeAnswers || {});
         setCurrentIdx(data.aptitudeCurrentIndex || 0);
-        setTimeLeft(data.aptitudeTimeLeft ?? 45 * 60);
+        
+        // Handle persistent timer logic
+        if (data.aptitudeTimerEndAt) {
+          const remaining = Math.max(0, Math.ceil((data.aptitudeTimerEndAt - Date.now()) / 1000));
+          setTimeLeft(remaining);
+        } else {
+          const endAt = Date.now() + 30 * 60 * 1000;
+          await updateDoc(journeyRef, { aptitudeTimerEndAt: endAt });
+          setTimeLeft(30 * 60);
+        }
+
         setIsInitializing(false);
         return;
       }
@@ -156,11 +166,13 @@ export default function AptitudeEnginePage() {
           return norm.fingerprint;
         });
         
+        const endAt = Date.now() + 30 * 60 * 1000;
+        
         await updateDoc(journeyRef, {
           aptitudeQuestions: freshQuestions,
           aptitudeAnswers: {},
           aptitudeCurrentIndex: 0,
-          aptitudeTimeLeft: 45 * 60,
+          aptitudeTimerEndAt: endAt,
           aptitudeStatus: "in_progress",
           aptitudeReport: null,
           updatedAt: serverTimestamp()
@@ -171,6 +183,7 @@ export default function AptitudeEnginePage() {
         });
 
         setQuestions(freshQuestions);
+        setTimeLeft(30 * 60);
         setIsInitializing(false);
       } catch (e: any) {
         console.error("[APTITUDE SESSION] Initialization fault:", e);
@@ -218,7 +231,7 @@ export default function AptitudeEnginePage() {
         role: journey.role,
         company: journey.company,
         experienceLevel: journey.experience,
-        timeTakenSeconds: (45 * 60) - timeLeft,
+        timeTakenSeconds: (30 * 60) - timeLeft,
         totalQuestions: questions.length,
         results: formattedResults
       });
@@ -272,6 +285,7 @@ export default function AptitudeEnginePage() {
       aptitudeAnswers: null,
       aptitudeCurrentIndex: 0,
       aptitudeStatus: "not_started",
+      aptitudeTimerEndAt: null,
       aptitudeReport: null
     });
     window.location.reload();
@@ -286,13 +300,11 @@ export default function AptitudeEnginePage() {
           handleSubmit();
           return 0;
         }
-        const next = prev - 1;
-        if (next % 30 === 0 && journeyRef) updateDoc(journeyRef, { aptitudeTimeLeft: next });
-        return next;
+        return prev - 1;
       });
     }, 1000);
     return () => clearInterval(timer);
-  }, [isInitializing, isEvaluating, result, journeyRef, handleSubmit]);
+  }, [isInitializing, isEvaluating, result, handleSubmit]);
 
   const formatTime = (seconds: number) => {
     const m = Math.floor(seconds / 60);
@@ -346,8 +358,16 @@ export default function AptitudeEnginePage() {
           </div>
         </div>
         {!result && (
-          <div className={cn("px-6 py-2 rounded-xl glass border-white/10 font-mono text-xl tabular-nums", timeLeft < 300 ? "text-red-500 animate-pulse" : "text-accent")}>
-            <Timer className="w-5 h-5 inline-block mr-2" /> {formatTime(timeLeft)}
+          <div className={cn(
+            "px-6 py-2 rounded-xl glass border-white/10 font-mono text-2xl tabular-nums tracking-wider",
+            timeLeft <= 60 ? "text-red-500 animate-pulse shadow-[0_0_20px_rgba(239,68,68,0.3)]" : 
+            timeLeft <= 300 ? "text-orange-400" : 
+            "text-accent"
+          )}>
+            <div className="flex items-center gap-3">
+              <Timer className={cn("w-5 h-5", timeLeft <= 60 && "animate-spin-slow")} />
+              <span>{formatTime(timeLeft)}</span>
+            </div>
           </div>
         )}
       </header>
@@ -476,4 +496,3 @@ export default function AptitudeEnginePage() {
     </div>
   );
 }
-
