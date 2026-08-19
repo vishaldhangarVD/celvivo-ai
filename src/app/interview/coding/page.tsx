@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect, useMemo, useCallback } from 'react';
@@ -160,7 +161,7 @@ export default function CodingEnginePage() {
         await new Promise(r => setTimeout(r, 800));
       }
       
-      const total = questions?.length || 8;
+      const total = 8;
       let passed = 0;
       let failed = 0;
       let skipped = 0;
@@ -176,11 +177,11 @@ export default function CodingEnginePage() {
           else if (r.status === 'Skipped') skipped++;
           else failed++;
         } else {
-          failed++;
+          skipped++; // Treat unvisited/unsubmitted as skipped in 8-question limit
         }
       }
       
-      const scorePercentage = total > 0 ? Math.round((passed / total) * 100) : 0;
+      const scorePercentage = Math.round((passed / total) * 100);
       
       await updateDoc(journeyRef!, {
         codingReport: { 
@@ -207,14 +208,13 @@ export default function CodingEnginePage() {
       setIsFinalizing(false);
       toast({ variant: "destructive", title: "Archive Failure" });
     }
-  }, [isFinalizing, user, db, journey, sessionResults, questions, journeyRef, router, toast]);
+  }, [isFinalizing, user, db, journey, sessionResults, journeyRef, router, toast]);
 
   const goToNextQuestion = useCallback(async () => {
     if (isNavigating) return;
     setIsNavigating(true);
 
-    const totalQuestionsCount = (questions || []).length;
-    if (currentIdx < totalQuestionsCount - 1) {
+    if (currentIdx < 7) { // 0-7 = 8 questions
       setCurrentIdx(prev => prev + 1);
       setTerminalOutput("Waiting for your implementation.");
       setActiveTerminalTab("output");
@@ -222,7 +222,7 @@ export default function CodingEnginePage() {
     } else {
       await finalizeAssessment();
     }
-  }, [currentIdx, questions, isNavigating, finalizeAssessment]);
+  }, [currentIdx, isNavigating, finalizeAssessment]);
 
   const saveQuestionResult = async (idx: number, res: any) => {
     if (!user || !db || !journey || !questions || !questions[idx]) return;
@@ -389,7 +389,6 @@ export default function CodingEnginePage() {
     async function initEnvironment() {
       if (!db || !user || !journey) return;
 
-      // UNLOCK GUARD: 70% threshold enforcement
       if (journey.codingUnlocked !== true) {
         toast({ 
           variant: "destructive", 
@@ -526,7 +525,7 @@ export default function CodingEnginePage() {
           </div>
           <div>
             <h1 className="text-sm font-black uppercase tracking-widest text-premium">Syntax Matrix Protocol</h1>
-            <p className="text-[9px] font-bold text-accent uppercase tracking-widest">Question {currentIdx + 1} of {(questions || []).length || 8}</p>
+            <p className="text-[9px] font-bold text-accent uppercase tracking-widest">Question {currentIdx + 1} of 8</p>
           </div>
         </div>
         
@@ -536,7 +535,7 @@ export default function CodingEnginePage() {
              <span className="text-[8px] font-black uppercase tracking-widest text-accent">α → α → α → β → β → β → Ω → Ω</span>
           </div>
           <div className="h-1 bg-white/5 rounded-full overflow-hidden flex gap-0.5">
-            {(questions || []).map((_, s) => (
+            {[...Array(8)].map((_, s) => (
               <div key={s} className={cn("flex-1 h-full transition-all duration-500", currentIdx >= s ? "bg-accent shadow-[0_0_8px_#22d3ee]" : "bg-white/5")} />
             ))}
           </div>
@@ -558,7 +557,7 @@ export default function CodingEnginePage() {
             {currentQ ? (
               <div className="space-y-10">
                 <div className="flex items-center justify-between">
-                  <span className="text-[10px] font-black uppercase tracking-widest text-white/40">Question {currentIdx + 1} of {(questions || []).length || 8}</span>
+                  <span className="text-[10px] font-black uppercase tracking-widest text-white/40">Question {currentIdx + 1} of 8</span>
                   <div className="flex items-center gap-2">
                     <Clock className="w-3 h-3 text-white/40" />
                     <span className="text-[9px] font-bold uppercase tracking-widest" style={{ color: '#ef4444' }}>TIME LEFT: {formatTime(timeLeft)}</span>

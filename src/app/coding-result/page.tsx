@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useMemo } from 'react';
@@ -44,8 +45,9 @@ export default function RootCodingResultPage() {
       score: 0,
       status: 'Awaiting',
       totalQuestions: 8,
-      passedQuestions: 0,      failedQuestions: 0,
-      skippedQuestions: 0,
+      passedQuestions: 0,
+      failedQuestions: 0,
+      skippedQuestions: 8,
       totalPassedCases: 0,
       totalTestCases: 0,
       submissionTime: "N/A"

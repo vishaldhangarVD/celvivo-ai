@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useMemo } from 'react';
@@ -71,12 +72,12 @@ export default function CodingResultTerminal() {
     // 1. Try to use the pre-finalized report from journey active doc
     if (journey?.codingReport) return journey.codingReport;
     
-    // 2. Fallback: Re-calculate summary index from raw collection data if report is missing/processing
+    // 2. Fallback: Re-calculate summary index from raw collection data
     if (questionResults && questionResults.length > 0) {
       const total = 8;
       const solved = questionResults.filter((r: any) => r.status === 'Solved').length;
       const failed = questionResults.filter((r: any) => r.status === 'Failed').length;
-      const skipped = questionResults.filter((r: any) => r.status === 'Skipped').length;
+      const skipped = 8 - (solved + failed);
       const score = Math.round((solved / total) * 100);
 
       return {
@@ -85,7 +86,7 @@ export default function CodingResultTerminal() {
         totalQuestions: total,
         passedQuestions: solved,
         failedQuestions: failed,
-        skippedQuestions: skipped,
+        skippedQuestions: Math.max(0, skipped),
         totalPassedCases: questionResults.reduce((acc, curr) => acc + (curr.passedTestCases || 0), 0),
         totalTestCases: questionResults.reduce((acc, curr) => acc + (curr.totalTestCases || 0), 0),
         submissionTime: "Synced"
@@ -98,7 +99,7 @@ export default function CodingResultTerminal() {
       totalQuestions: 8,
       passedQuestions: 0,
       failedQuestions: 0,
-      skippedQuestions: 0,
+      skippedQuestions: 8,
       totalPassedCases: 0,
       totalTestCases: 0,
       submissionTime: "N/A"
@@ -110,13 +111,18 @@ export default function CodingResultTerminal() {
     
     const passedTests = questionResults.reduce((acc, curr) => acc + (curr.passedTestCases || 0), 0);
     const totalTests = questionResults.reduce((acc, curr) => acc + (curr.totalTestCases || 0), 0);
-    const maxTime = Math.max(...questionResults.map(r => parseFloat(r.executionTime) || 0));
-    const maxMemory = Math.max(...questionResults.map(r => parseInt(r.memory) || 0));
+    
+    // Filter out 0 or N/A values to get real max execution telemetry
+    const times = questionResults.map(r => parseFloat(r.executionTime)).filter(t => !isNaN(t) && t > 0);
+    const memories = questionResults.map(r => parseInt(r.memory)).filter(m => !isNaN(m) && m > 0);
+    
+    const maxTime = times.length > 0 ? Math.max(...times) : 0;
+    const maxMemory = memories.length > 0 ? Math.max(...memories) : 0;
     
     return {
       passedTests,
       totalTests,
-      maxTime: maxTime > 0 ? maxTime.toFixed(2) : "0.00",
+      maxTime: maxTime > 0 ? maxTime.toFixed(2) : "N/A",
       maxMemory: maxMemory > 0 ? maxMemory : "N/A",
       successRate: totalTests > 0 ? Math.round((passedTests / totalTests) * 100) : 0
     };
@@ -299,10 +305,10 @@ export default function CodingResultTerminal() {
                   {[
                     { label: "Correctness", val: `${result?.score || 0}%`, status: (result?.score || 0) >= 60 ? "OPTIMAL" : "CRITICAL", icon: CheckCircle2 },
                     { label: "Test Case Success", val: `${aggregateStats?.successRate || 0}%`, sub: `${aggregateStats?.passedTests || 0}/${aggregateStats?.totalTests || 0} Nodes`, icon: Target },
-                    { label: "Execution Time", val: aggregateStats?.maxTime && aggregateStats.maxTime !== "0.00" ? `${aggregateStats.maxTime}s` : "N/A", sub: "Peak Latency", icon: Clock },
-                    { label: "Memory Usage", val: aggregateStats?.maxMemory && aggregateStats.maxMemory !== "N/A" ? `${aggregateStats.maxMemory}KB` : "N/A", sub: "Peak Allocation", icon: Cpu },
+                    { label: "Peak Time", val: aggregateStats?.maxTime && aggregateStats.maxTime !== "N/A" ? `${aggregateStats.maxTime}s` : "Not available", sub: "Latency audit", icon: Clock },
+                    { label: "Peak Memory", val: aggregateStats?.maxMemory && aggregateStats.maxMemory !== "N/A" ? `${aggregateStats.maxMemory}KB` : "Not available", sub: "Resource audit", icon: Cpu },
                     { label: "Code Quality", val: "Awaiting AI", sub: "Neural Audit Pending", icon: Sparkles, dimmed: true },
-                    { label: "Edge Case Handling", val: aggregateStats?.successRate === 100 ? "VERIFIED" : "N/A", sub: "Boundary Validation", icon: ShieldCheck, dimmed: aggregateStats?.successRate !== 100 }
+                    { label: "Boundary Accuracy", val: aggregateStats?.successRate === 100 ? "VERIFIED" : "N/A", sub: "Edge case validation", icon: ShieldCheck, dimmed: aggregateStats?.successRate !== 100 }
                   ].map((m, i) => (
                     <div key={i} className={cn("p-6 glass rounded-[2rem] border-white/5 space-y-4 transition-all hover:bg-white/[0.02]", m.dimmed && "opacity-40")}>
                       <div className="flex justify-between items-start">
@@ -381,11 +387,11 @@ export default function CodingResultTerminal() {
                                       </div>
                                       <div className="p-4 glass rounded-xl border-white/5 space-y-1">
                                         <p className="text-[8px] uppercase font-bold text-white/30">Execution Time</p>
-                                        <p className="text-xs font-bold text-white tabular-nums">{res.executionTime || '0.00'}s</p>
+                                        <p className="text-xs font-bold text-white tabular-nums">{res.executionTime && res.executionTime > 0 ? `${res.executionTime}s` : 'Not available'}</p>
                                       </div>
                                       <div className="p-4 glass rounded-xl border-white/5 space-y-1">
                                         <p className="text-[8px] uppercase font-bold text-white/30">Memory usage</p>
-                                        <p className="text-xs font-bold text-white tabular-nums">{res.memory || 'N/A'} KB</p>
+                                        <p className="text-xs font-bold text-white tabular-nums">{res.memory && res.memory > 0 ? `${res.memory}KB` : 'Not available'}</p>
                                       </div>
                                    </div>
                                  </div>
