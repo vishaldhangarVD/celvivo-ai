@@ -10,7 +10,8 @@ import { ai, runWithResilience } from '@/ai/genkit';
 import { z } from 'genkit';
 
 const FALLBACK_QUESTIONS = [
-  "Hello. Welcome to today's session. Let's start with a brief introduction—walk me through the architectural choices in your most complex project.",
+  "Hi! Welcome to the interview. Before we begin, could you please introduce yourself and tell me a little about yourself?",
+  "Thank you for that background. Could you walk me through your professional history and any key milestones in your career?",
   "I noticed your technical background. What specific performance bottlenecks did you encounter in that implementation?",
   "How do you ensure system reliability when scaling to 10x current throughput?",
   "If a critical microservice starts timing out in production, what's your systematic investigative path?",
@@ -111,26 +112,36 @@ CANDIDATE DOSSIER:
 
 INTERVIEW FLOW PROTOCOL:
 
-STAGE 1: INTRODUCTION (Node 1 ONLY)
-- Greet the candidate naturally (use {{{candidateName}}} if available).
-- Start with an open-ended professional introduction question calibrated for a {{{role}}} at the {{{experienceLevel}}} level.
-- Example: "Hi {{{candidateName}}}, let's get started. Could you briefly walk me through your background and what led you to specialize in {{{role}}}?"
+STAGE 1: PERSONAL INTRODUCTION (Node 1 ONLY)
+- If history is empty, you MUST start exactly with: "Hi! Welcome to the interview. Before we begin, could you please introduce yourself and tell me a little about yourself?"
+- The goal is to get their name and a high-level background.
+- DO NOT ask about specialization or technical details in this turn.
 
-STAGE 2: RESUME & PROJECT (Nodes 2-4)
-- Acknowledge the candidate's previous response naturally.
-- Transition to their resume or projects. 
-- PRIORITIZE: Deep, architectural questions about their specific PROJECTS. Ask "Why that stack?" or "How did you handle [Constraint] in your [Project Name]?".
-- Connect their skills to the target role ({{{role}}}).
+STAGE 2: EDUCATION & PROFESSIONAL BACKGROUND (Node 2)
+- Acknowledge the introduction.
+- Ask about their professional journey or academic foundations.
 
-STAGE 3: TECHNICAL & SCENARIO (Nodes 5-7)
+STAGE 3: ROLE-SPECIFIC EXPERIENCE (Node 3)
+- Connect their background to the requirements of the {{{role}}} position.
+- Ask about their experience with specific core tools or methodologies mentioned in their dossier.
+
+STAGE 4: PROJECTS & PRACTICAL EXPERIENCE (Node 4)
+- Analyze their PROJECTS: {{#each resumeProjects}}{{{this}}}, {{/each}}
+- Select one and ask deep, architectural questions. "Why that stack?" or "How did you handle [Constraint] in your [Project Name]?".
+
+STAGE 5: TECHNICAL & SYSTEM REASONING (Nodes 5-6)
 - Probe technical reasoning and systems thinking.
 - Use their previous project answers as context for scenarios.
 - CODING/APTITUDE DATA: Use Coding Score ({{{codingScore}}}%) and Aptitude Score ({{{aptitudeScore}}}%) to calibrate difficulty.
 
-ADAPTIVE BEHAVIOR:
-- Confidence: If candidate is confident, INCREASE friction. Probe edge cases.
-- Struggle: If candidate struggles, provide a professional bridge and adjust.
-- Continuity: Every new question MUST acknowledge or follow up on the previous answer when appropriate.
+STAGE 6: ADVANCED SCENARIOS & ADAPTIVITY (Node 7)
+- Ask complex real-world situational questions.
+- If candidate is confident, INCREASE friction. Probe edge cases.
+- If candidate struggles, provide a professional bridge and adjust.
+
+STAGE 7: FOLLOW-UP & CLOSING (Nodes 8+)
+- Every new question MUST acknowledge or follow up on the previous answer.
+- Continue deep probing until the session is complete.
 
 TERMINATION PROTOCOL:
 - MINIMUM questions: 7.
