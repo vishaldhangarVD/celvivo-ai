@@ -64,7 +64,7 @@ function VirtualArenaContent() {
   const [transcript, setTranscript] = useState<{role: 'interviewer' | 'candidate', text: string}[]>([]);
   const [userAnswer, setUserAnswer] = useState("");
   const [isMicActive, setIsMicActive] = useState(false);
-  const [timeLeft, setTimeLeft] = useState(45 * 60);
+  const [timeLeft, setTimeLeft] = useState(15 * 60); // Updated to 15 minutes
   const [isSimulationComplete, setIsSimulationComplete] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [isInitializing, setIsInitializing] = useState(true);
@@ -185,6 +185,30 @@ function VirtualArenaContent() {
       }
     };
   }, [currentInterviewerQuestion, isMediaReady]);
+
+  // Interview Real-time Countdown Protocol
+  useEffect(() => {
+    if (isInitializing || isSimulationComplete || isGeneratingReport) return;
+
+    const interval = setInterval(() => {
+      setTimeLeft((prev) => {
+        if (prev <= 1) {
+          clearInterval(interval);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [isInitializing, isSimulationComplete, isGeneratingReport]);
+
+  // Auto-finalize on timeout
+  useEffect(() => {
+    if (timeLeft === 0 && !isSimulationComplete && !isGeneratingReport && !isInitializing) {
+      finalizeSession(transcript);
+    }
+  }, [timeLeft, isSimulationComplete, isGeneratingReport, isInitializing, transcript]);
 
   const toggleMediaMic = () => {
     const newState = !isMicOn;
