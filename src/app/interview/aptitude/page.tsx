@@ -313,6 +313,16 @@ export default function AptitudeEnginePage() {
     if (!journeyRef || result) return;
     const newAnswers = { ...answers, [currentIdx]: optIdx };
     setAnswers(newAnswers);
+    
+    // Once answered, remove from "Review Later" list if it was there
+    if (markedForReview.has(currentIdx)) {
+      setMarkedForReview(prev => {
+        const n = new Set(prev);
+        n.delete(currentIdx);
+        return n;
+      });
+    }
+
     updateDoc(journeyRef, { aptitudeAnswers: newAnswers });
   };
 
@@ -320,6 +330,24 @@ export default function AptitudeEnginePage() {
     if (!journeyRef || result) return;
     setCurrentIdx(newIdx);
     updateDoc(journeyRef, { aptitudeCurrentIndex: newIdx });
+  };
+
+  const handleReviewLater = () => {
+    if (!journeyRef || result) return;
+    
+    setMarkedForReview(prev => {
+      const n = new Set(prev);
+      if (n.has(currentIdx)) {
+        n.delete(currentIdx);
+      } else {
+        n.add(currentIdx);
+        // Move to next question automatically as per requirement
+        if (currentIdx < questions.length - 1) {
+          handleNav(currentIdx + 1);
+        }
+      }
+      return n;
+    });
   };
 
   const handleRetry = async () => {
@@ -453,7 +481,13 @@ export default function AptitudeEnginePage() {
                 <div className="h-24 glass rounded-[2.5rem] border-white/5 p-4 flex items-center justify-between shadow-2xl">
                   <div className="flex gap-4">
                     <Button variant="ghost" onClick={() => handleNav(Math.max(0, currentIdx - 1))} disabled={currentIdx === 0} className="h-16 px-8 rounded-2xl glass border-white/10 text-[10px] font-black uppercase"><ChevronLeft className="w-4 h-4 mr-2" /> Back</Button>
-                    <Button variant="ghost" onClick={() => setMarkedForReview(prev => { const n = new Set(prev); n.has(currentIdx) ? n.delete(currentIdx) : n.add(currentIdx); return n; })} className={cn("h-16 px-8 rounded-2xl glass border-white/10 text-[10px] font-black uppercase", markedForReview.has(currentIdx) && "bg-orange-500/10 text-orange-400")}>Review Later</Button>
+                    <Button 
+                      variant="ghost" 
+                      onClick={handleReviewLater} 
+                      className={cn("h-16 px-8 rounded-2xl glass border-white/10 text-[10px] font-black uppercase", markedForReview.has(currentIdx) && "bg-orange-500/10 text-orange-400")}
+                    >
+                      Review Later
+                    </Button>
                   </div>
                   <div className="flex gap-4">
                     {currentIdx < questions.length - 1 ? (
@@ -470,7 +504,19 @@ export default function AptitudeEnginePage() {
                   <h3 className="text-xs font-black uppercase tracking-[0.3em] text-accent flex items-center gap-3"><LayoutGrid className="w-4 h-4" /> Node Matrix</h3>
                   <div className="grid grid-cols-5 gap-3">
                     {questions.map((_, i) => (
-                      <button key={i} onClick={() => handleNav(i)} className={cn("w-full aspect-square rounded-xl border text-[10px] font-black transition-all", currentIdx === i ? "bg-accent border-accent text-black scale-110" : markedForReview.has(i) ? "bg-orange-500/20 border-orange-500/40 text-orange-400" : answers[i] !== undefined ? "bg-green-500/20 border-green-500/40 text-green-400" : "glass border-white/5 text-white/20")}>{i + 1}</button>
+                      <button 
+                        key={i} 
+                        onClick={() => handleNav(i)} 
+                        className={cn(
+                          "w-full aspect-square rounded-xl border text-[10px] font-black transition-all", 
+                          currentIdx === i ? "bg-accent border-accent text-black scale-110" : 
+                          markedForReview.has(i) ? "bg-orange-500/20 border-orange-500/40 text-orange-400" : 
+                          answers[i] !== undefined ? "bg-green-500/20 border-green-500/40 text-green-400" : 
+                          "glass border-white/5 text-white/20"
+                        )}
+                      >
+                        {i + 1}
+                      </button>
                     ))}
                   </div>
                 </Card>
