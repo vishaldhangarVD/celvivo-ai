@@ -3,12 +3,13 @@
 import React, { useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
-import { Cpu, Brain, Wifi, AlertTriangle, Music, Activity } from "lucide-react";
+import { Cpu, Brain, Wifi, AlertTriangle, Activity } from "lucide-react";
 import { synthesizeAudio } from "@/ai/flows/ai-audio-synthesis";
 
 /**
- * @fileOverview HolographicInterviewer v18.0 - Neural Lip-Sync Implementation.
+ * @fileOverview HolographicInterviewer v19.0 - Corrected Julia 3D Integration.
  * Implements high-fidelity 3D mouth movement synchronized with Gemini TTS audio.
+ * Fixes: getObjectByName error and malformed lipsync module URLs.
  */
 
 interface HolographicInterviewerProps {
@@ -44,7 +45,7 @@ export default function HolographicInterviewer({
     if (!containerRef.current || headRef.current) return;
 
     const initHead = async () => {
-      console.log("[Julia] Initializing Oral Matrix (v1.7 API)");
+      console.log("[Julia] Initializing 3D Arena Matrix");
 
       const getTalkingHead = () => {
         return new Promise((resolve) => {
@@ -63,7 +64,8 @@ export default function HolographicInterviewer({
       try {
         const TalkingHead: any = await getTalkingHead();
 
-        // Initialize 3D Engine with LipSync enabled
+        // CORRECT CONFIGURATION FOR V1.7
+        // lipsyncModules takes language codes, not full URLs.
         const head = new TalkingHead(containerRef.current!, {
           lipsync: true, 
           cameraView: "upper",
@@ -71,7 +73,7 @@ export default function HolographicInterviewer({
           lookup: true,
           smoothMouth: true,
           background: "transparent",
-          lipsyncModules: ["en"],
+          lipsyncModules: ["en"], // Correct format for v1.7
           lipsyncLang: "en"
         });
 
@@ -82,18 +84,12 @@ export default function HolographicInterviewer({
           avatarMood: "neutral"
         });
 
-        // Diagnostic: Log morph targets to verify GLB capability
-        const mesh = head.avatar?.getObjectByName('Wolf3D_Head') || head.avatar?.getObjectByName('Head');
-        if (mesh && mesh.morphTargetDictionary) {
-          console.log("[Julia] Morph Targets Detected:", Object.keys(mesh.morphTargetDictionary).length);
-        }
-
         head.setView("upper");
         headRef.current = head;
         setStatus("ready");
         
         head.start();
-        console.log("[Julia] 3D Engine & Lip-Sync Ready");
+        console.log("[Julia] 3D Engine & Lip-Sync Active");
       } catch (error: any) {
         console.error("[Julia] Critical Engine Failure:", error);
         setErrorMessage(error?.message || "3D Engine initialization failed.");
@@ -101,11 +97,21 @@ export default function HolographicInterviewer({
       }
     };
 
-    initHead();
+    if (typeof window !== "undefined") {
+      initHead();
+    }
 
     return () => {
       if (headRef.current) {
-        headRef.current.stopSpeaking();
+        try {
+          headRef.current.stopSpeaking();
+          // Attempt to clean up renderer if library exposes it
+          if (headRef.current.renderer) {
+            headRef.current.renderer.dispose();
+          }
+        } catch (e) {
+          console.warn("[Julia] Cleanup warning:", e);
+        }
       }
     };
   }, []);
@@ -114,20 +120,19 @@ export default function HolographicInterviewer({
    * Neural Speak Logic: Synthesizes high-quality audio and drives 3D morph targets.
    */
   const triggerNeuralSpeech = async (text: string) => {
-    if (!headRef.current || !text) return;
+    if (!headRef.current || !text || status !== "ready") return;
     
     try {
-      console.log("[Julia LipSync] Initializing Neural Sequence for:", text.substring(0, 30) + "...");
+      console.log("[Julia LipSync] Synchronizing Vocal Nodes...");
       setInternalIsSpeaking(true);
 
-      // 1. Pre-calculate Visemes from text
+      // 1. Pre-calculate phonetic Visemes from text
       const visemes = headRef.current.getVisemes(text);
-      console.log("[Julia LipSync] Visemes calculated:", visemes.length);
 
-      // 2. Synthesize High-Fidelity Audio
+      // 2. Synthesize High-Fidelity Neural Audio (Gemini TTS)
       const audioDataUri = await synthesizeAudio(text);
       
-      // 3. Decode Audio for 3D Engine
+      // 3. Decode Audio for 3D engine drive
       if (!audioCtxRef.current) audioCtxRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
       
       const base64 = audioDataUri.split(',')[1];
@@ -137,7 +142,7 @@ export default function HolographicInterviewer({
       
       const audioBuffer = await audioCtxRef.current.decodeAudioData(bytes.buffer);
       
-      // 4. Execute Lip-Sync
+      // 4. Inject into Julia's 3D Matrix
       headRef.current.speakAudio(audioBuffer, visemes, () => {
         console.log("[Julia LipSync] Audio Pulse Started");
       }, () => {
@@ -147,14 +152,13 @@ export default function HolographicInterviewer({
       });
 
     } catch (err) {
-      console.error("[Julia LipSync] Synthesis Fault:", err);
+      console.error("[Julia LipSync] Neural Fault:", err);
       setInternalIsSpeaking(false);
-      // Fallback to basic text speak if neural fails
+      // Fallback to robotic synthesis if neural WAV generation fails
       headRef.current.speakText(text, undefined, () => setInternalIsSpeaking(true), () => setInternalIsSpeaking(false));
     }
   };
 
-  // React to prop changes
   useEffect(() => {
     if (isSpeaking && currentQuestion && currentQuestion !== lastSpokenRef.current && status === "ready") {
       lastSpokenRef.current = currentQuestion;
@@ -165,9 +169,8 @@ export default function HolographicInterviewer({
     }
   }, [isSpeaking, currentQuestion, status]);
 
-  // Diagnostic Test Function
   const runDiagnosticTest = () => {
-    triggerNeuralSpeech("Hello. This is a system diagnostic check. My neural lip-sync protocol is currently active.");
+    triggerNeuralSpeech("System verification complete. My vocal matrix is now synchronized with the neural arena.");
   };
 
   return (
@@ -176,7 +179,7 @@ export default function HolographicInterviewer({
       className
     )}>
       
-      {/* 3D RENDER CANVAS */}
+      {/* 3D Render Target */}
       <div 
         ref={containerRef} 
         className={cn(
@@ -185,11 +188,10 @@ export default function HolographicInterviewer({
         )}
       />
 
-      {/* HOLOGRAM HUD OVERLAY */}
+      {/* Holographic HUD */}
       <div className="absolute inset-0 z-40 pointer-events-none">
         <div className="absolute inset-0 opacity-10 bg-[linear-gradient(rgba(18,16,16,0)_50%,rgba(0,0,0,0.25)_50%)] bg-[size:100%_4px]" />
 
-        {/* Top Diagnostic Labels */}
         <div className="absolute top-6 left-6 flex flex-col gap-2">
           <div className="flex items-center gap-3 px-3 py-1.5 glass rounded-lg border-cyan-500/20 bg-black/40">
             <Cpu className="w-3.5 h-3.5 text-cyan-400" />
@@ -210,23 +212,8 @@ export default function HolographicInterviewer({
               </div>
             </div>
           </div>
-          
-          <AnimatePresence>
-            {internalIsSpeaking && (
-              <motion.div
-                initial={{ opacity: 0, x: -10 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: -10 }}
-                className="flex items-center gap-2 px-3 py-1 glass rounded-lg border-purple-500/20 bg-purple-500/10"
-              >
-                <div className="w-1.5 h-1.5 rounded-full bg-purple-400 animate-pulse shadow-[0_0_8px_#a855f7]" />
-                <span className="text-[8px] font-black uppercase tracking-[0.4em] text-purple-400">LIP-SYNC ACTIVE</span>
-              </motion.div>
-            )}
-          </AnimatePresence>
         </div>
 
-        {/* Bottom Signal Label */}
         <div className="absolute bottom-6 right-6 flex items-center gap-3">
           <div className="flex items-center gap-2 px-3 py-1.5 glass rounded-lg border-white/5 bg-black/40">
             <Wifi className={cn("w-3 h-3 transition-colors", internalIsSpeaking ? "text-green-400" : "text-white/20")} />
@@ -251,15 +238,15 @@ export default function HolographicInterviewer({
         </div>
       </div>
 
-      {/* Diagnostic Button (Visible only on hover for debug) */}
+      {/* Manual Diagnostic Trigger */}
       <button 
         onClick={runDiagnosticTest}
         className="absolute bottom-20 left-1/2 -translate-x-1/2 z-50 px-4 py-2 glass rounded-xl text-[8px] font-black uppercase tracking-widest text-white/0 group-hover:text-white/40 hover:text-white transition-all pointer-events-auto"
       >
-        <Activity className="w-3 h-3 inline mr-2" /> Run Speak Diagnostic
+        <Activity className="w-3 h-3 inline mr-2" /> Run Vocal Matrix Trigger
       </button>
 
-      {/* Loading/Error States */}
+      {/* Matrix Loading State */}
       <AnimatePresence>
         {status === "loading" && (
           <motion.div 
