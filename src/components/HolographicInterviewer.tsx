@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { Box, Cpu, Activity, Zap } from "lucide-react";
+import { AnimatePresence, motion } from "framer-motion";
 import { cn } from "@/lib/utils";
 
 /**
@@ -43,7 +44,7 @@ export default function HolographicInterviewer({ isSpeaking = false }: Holograph
           eyeContact: true,
           headMovement: true,
           headSpeaking: true,
-          lipsync: false, // Step 4 focuses on visuals; audio link follows in Step 5
+          lipsync: false, 
           mood: "neutral"
         });
 
@@ -128,7 +129,7 @@ export default function HolographicInterviewer({ isSpeaking = false }: Holograph
       <div 
         className={cn(
           "relative w-full h-full transition-all duration-500 transform scale-[1.1]",
-          "hologram-filter", // Applied via global style below
+          "hologram-filter",
           isSpeaking ? "brightness-125 saturate-150" : "brightness-100 opacity-90"
         )}
       >
