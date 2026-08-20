@@ -1,13 +1,14 @@
+
 "use client";
 
 import React, { useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
-import { Cpu, Brain, Wifi } from "lucide-react";
+import { Cpu, Brain, Wifi, AlertTriangle } from "lucide-react";
 
 /**
- * @fileOverview HolographicInterviewer v11.0 - Turbopack Safe Browser Restoration.
- * Uses window-based exposure of the TalkingHead class to avoid dynamic URL import errors.
+ * @fileOverview HolographicInterviewer v12.0 - Final Browser-Native Restoration.
+ * Resolved infinite loading by listening for the global TalkingHeadClass event.
  */
 
 interface HolographicInterviewerProps {
@@ -25,25 +26,24 @@ export default function HolographicInterviewer({
 }: HolographicInterviewerProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const headRef = useRef<any>(null);
-  const [isLoaded, setIsLoaded] = useState(false);
+  const [status, setStatus] = useState<"loading" | "ready" | "error">("loading");
+  const [errorMessage, setErrorMessage] = useState("");
 
   useEffect(() => {
     if (!containerRef.current || headRef.current) return;
 
-    /**
-     * Browser-side initialization node.
-     * Waits for the TalkingHead class to be available on the window object.
-     */
     const initHead = async () => {
+      console.log("[Julia] Initialization Protocol Started");
+
       const getTalkingHead = () => {
         return new Promise((resolve) => {
-          // If the script in layout.tsx has already finished
           if ((window as any).TalkingHeadClass) {
+            console.log("[Julia] Constructor detected in window");
             resolve((window as any).TalkingHeadClass);
             return;
           }
-          // Otherwise, wait for the custom event
           const handleReady = () => {
+            console.log("[Julia] Received ready event");
             window.removeEventListener('talkinghead-ready', handleReady);
             resolve((window as any).TalkingHeadClass);
           };
@@ -53,9 +53,10 @@ export default function HolographicInterviewer({
 
       try {
         const TalkingHead: any = await getTalkingHead();
+        console.log("[Julia] Creating TalkingHead instance...");
 
         const head = new TalkingHead(containerRef.current!, {
-          lipsync: false, // Internal dynamic imports are handled by the importmap
+          lipsync: false, 
           cameraView: "upper",
           blinking: true,
           lookup: true,
@@ -63,7 +64,7 @@ export default function HolographicInterviewer({
           background: "transparent"
         });
 
-        // Initialize Julia using the official showAvatar API
+        console.log("[Julia] Loading GLB asset: /avatars/julia.glb");
         await head.showAvatar({
           url: "/avatars/julia.glb",
           body: "F",
@@ -72,12 +73,15 @@ export default function HolographicInterviewer({
 
         head.setView("upper");
         headRef.current = head;
-        setIsLoaded(true);
+        setStatus("ready");
+        console.log("[Julia] Avatar rendering active");
 
-        // Start autonomous idle animation
+        // Start autonomous behavior
         head.start();
-      } catch (error) {
-        console.error("[Julia Engine] Failed to initialize 3D node:", error);
+      } catch (error: any) {
+        console.error("[Julia] Critical Engine Failure:", error);
+        setErrorMessage(error?.message || "3D Engine initialized failed.");
+        setStatus("error");
       }
     };
 
@@ -85,22 +89,22 @@ export default function HolographicInterviewer({
 
     return () => {
       if (headRef.current) {
+        console.log("[Julia] Cleaning up engine node");
         headRef.current.stopSpeaking();
       }
     };
   }, []);
 
-  // Handle speaking state transitions
+  // Sync speech state
   useEffect(() => {
-    if (!headRef.current || !isLoaded) return;
+    if (!headRef.current || status !== "ready") return;
 
     if (isSpeaking && currentQuestion) {
-      // Procedural mouth movement triggered by text
       headRef.current.speakText(currentQuestion);
     } else if (!isSpeaking) {
       headRef.current.stopSpeaking();
     }
-  }, [isSpeaking, currentQuestion, isLoaded]);
+  }, [isSpeaking, currentQuestion, status]);
 
   return (
     <div className={cn(
@@ -113,7 +117,7 @@ export default function HolographicInterviewer({
         ref={containerRef} 
         className={cn(
           "absolute inset-0 z-10 w-full h-full transition-opacity duration-1000",
-          isLoaded ? "opacity-100" : "opacity-0"
+          status === "ready" ? "opacity-100" : "opacity-0"
         )}
       />
 
@@ -124,7 +128,7 @@ export default function HolographicInterviewer({
         <div className="absolute top-6 left-6 flex flex-col gap-2">
           <div className="flex items-center gap-3 px-3 py-1.5 glass rounded-lg border-cyan-500/20 bg-black/40">
             <Cpu className="w-3.5 h-3.5 text-cyan-400" />
-            <span className="text-[9px] font-black uppercase tracking-[0.4em] text-cyan-400">AI INTERVIEWER (JULIA)</span>
+            <span className="text-[9px] font-black uppercase tracking-[0.4em] text-cyan-400">AI INTERVIEWER (JULIA 3D)</span>
           </div>
           
           <AnimatePresence>
@@ -142,34 +146,6 @@ export default function HolographicInterviewer({
           </AnimatePresence>
         </div>
 
-        <div className="absolute left-6 top-1/2 -translate-y-1/2 flex flex-col gap-1.5">
-          {[...Array(6)].map((_, i) => (
-            <motion.div
-              key={i}
-              animate={{ 
-                width: isSpeaking ? [6, 20, 10, 24, 6] : 6,
-                opacity: isSpeaking ? [0.4, 1, 0.5, 0.8, 0.4] : 0.1
-              }}
-              transition={{ duration: 0.4 + (i * 0.1), repeat: Infinity }}
-              className="h-[2px] bg-cyan-400 rounded-full"
-            />
-          ))}
-        </div>
-
-        <div className="absolute right-6 top-1/2 -translate-y-1/2 flex flex-col gap-1.5 items-end">
-          {[...Array(6)].map((_, i) => (
-            <motion.div
-              key={i}
-              animate={{ 
-                width: isSpeaking ? [6, 20, 10, 24, 6] : 6,
-                opacity: isSpeaking ? [0.4, 1, 0.5, 0.8, 0.4] : 0.1
-              }}
-              transition={{ duration: 0.4 + (i * 0.1), repeat: Infinity }}
-              className="h-[2px] bg-cyan-400 rounded-full"
-            />
-          ))}
-        </div>
-
         <div className="absolute bottom-6 right-6 flex items-center gap-3">
           <div className="flex items-center gap-2 px-3 py-1.5 glass rounded-lg border-white/5 bg-black/40">
             <Wifi className={cn("w-3 h-3 transition-colors", isSpeaking ? "text-green-400" : "text-white/20")} />
@@ -180,9 +156,11 @@ export default function HolographicInterviewer({
         </div>
       </div>
 
+      {/* 3. LOADING & ERROR OVERLAYS */}
       <AnimatePresence>
-        {(!isLoaded || isGenerating) && (
+        {status === "loading" && (
           <motion.div 
+            key="loading"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
@@ -196,7 +174,22 @@ export default function HolographicInterviewer({
               />
               <Brain className="w-8 h-8 text-accent absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 animate-pulse" />
             </div>
-            <p className="text-[10px] font-black uppercase tracking-[0.5em] text-accent animate-pulse">Initializing Neural 3D Node...</p>
+            <p className="text-[10px] font-black uppercase tracking-[0.5em] text-accent animate-pulse">Initializing Julia 3D Node...</p>
+          </motion.div>
+        )}
+
+        {status === "error" && (
+          <motion.div 
+            key="error"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="absolute inset-0 z-[110] glass backdrop-blur-3xl flex flex-col items-center justify-center p-8 text-center"
+          >
+            <AlertTriangle className="w-12 h-12 text-red-500 mb-4" />
+            <h3 className="text-xl font-bold text-white mb-2 uppercase tracking-tighter">Neural Link Failure</h3>
+            <p className="text-[10px] text-white/40 uppercase tracking-widest leading-relaxed max-w-[240px]">
+              {errorMessage}
+            </p>
           </motion.div>
         )}
       </AnimatePresence>
