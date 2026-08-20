@@ -28,13 +28,15 @@ export default function AvatarTestPage() {
       {/* 
         Import Map: Essential for browser-side resolution of CDN modules.
         Must be placed before the components that import these specifiers.
+        Updated to resolve three/addons/ for internal TalkingHead dependencies.
       */}
       <script
         type="importmap"
         dangerouslySetInnerHTML={{
           __html: JSON.stringify({
             imports: {
-              "three": "https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js/+esm",
+              "three": "https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js",
+              "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.180.0/examples/jsm/",
               "talkinghead": "https://cdn.jsdelivr.net/gh/met4citizen/TalkingHead@1.7/modules/talkinghead.mjs"
             }
           })
