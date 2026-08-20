@@ -6,6 +6,7 @@ import Navbar from "@/components/layout/Navbar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Cpu, Box, Eye, Zap, Mic, MicOff, MessageSquare } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 /**
  * @fileOverview AvatarTestPage - Step 4: Hologram Transformation.
