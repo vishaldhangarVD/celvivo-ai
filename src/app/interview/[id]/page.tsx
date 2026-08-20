@@ -114,7 +114,7 @@ function VirtualArenaContent() {
 
   // ElevenLabs Neural Audio Protocol
   useEffect(() => {
-    if (!isMediaReady || !currentInterviewerQuestion || currentInterviewerQuestion === "Initializing session...") {
+    if (!currentInterviewerQuestion || currentInterviewerQuestion === "Initializing session...") {
       return;
     }
 
@@ -146,8 +146,7 @@ function VirtualArenaContent() {
         });
 
         if (!response.ok) {
-          const errorData = await response.json().catch(() => ({ error: `HTTP ${response.status}` }));
-          throw new Error(errorData.error || 'Neural audio sync failed');
+          throw new Error('Neural audio sync failed');
         }
 
         const audioBlob = await response.blob();
@@ -184,7 +183,7 @@ function VirtualArenaContent() {
         URL.revokeObjectURL(currentAudioUrlRef.current);
       }
     };
-  }, [currentInterviewerQuestion, isMediaReady]);
+  }, [currentInterviewerQuestion]);
 
   // Interview Real-time Countdown Protocol
   useEffect(() => {
@@ -687,7 +686,7 @@ function VirtualArenaContent() {
               <span className="text-[8px] font-black uppercase tracking-widest">You</span>
             </div>
 
-            {/* UPGRADED HOLOGRAPHIC AI INTERVIEWER - Matches Second Reference Image */}
+            {/* UPGRADED HOLOGRAPHIC AI INTERVIEWER - Exact Reference Integration */}
             <div className="absolute bottom-4 right-4 w-[240px] xl:w-[280px] aspect-[3/4] rounded-2xl overflow-hidden border border-cyan-500/30 shadow-[0_0_40px_rgba(34,211,238,0.2)] bg-black">
               <HolographicInterviewer isSpeaking={isAiSpeaking} />
             </div>
