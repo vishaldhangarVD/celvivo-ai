@@ -123,7 +123,6 @@ function VirtualArenaContent() {
       
       // Voice Selection Strategy
       const voices = window.speechSynthesis.getVoices();
-      // Try to find a natural sounding English voice (prefer Google or system female voices)
       const preferredVoice = voices.find(v => 
         (v.lang.startsWith('en') && v.name.includes('Google') && v.name.includes('US')) ||
         (v.lang.startsWith('en') && v.name.includes('Samantha')) ||
@@ -134,7 +133,7 @@ function VirtualArenaContent() {
         utterance.voice = preferredVoice;
       }
 
-      utterance.rate = 0.95; // Slightly slower for clear instruction
+      utterance.rate = 0.95; 
       utterance.pitch = 1.0;
       utterance.volume = 1.0;
 
@@ -149,7 +148,6 @@ function VirtualArenaContent() {
       window.speechSynthesis.speak(utterance);
     };
 
-    // Chrome and some browsers load voices asynchronously
     if (window.speechSynthesis.getVoices().length === 0) {
       window.speechSynthesis.onvoiceschanged = speak;
     } else {
@@ -662,9 +660,12 @@ function VirtualArenaContent() {
               <span className="text-[8px] font-black uppercase tracking-widest">You</span>
             </div>
 
-            {/* UPGRADED HOLOGRAPHIC AI INTERVIEWER */}
+            {/* NEURAL AVATAR MATRIX */}
             <div className="absolute bottom-4 right-4 w-[240px] xl:w-[280px] aspect-[3/4] rounded-2xl overflow-hidden border border-cyan-500/30 shadow-[0_0_40px_rgba(34,211,238,0.2)] bg-black">
-              <HolographicInterviewer isSpeaking={isAiSpeaking} />
+              <HolographicInterviewer 
+                isSpeaking={isAiSpeaking} 
+                currentQuestion={currentInterviewerQuestion} 
+              />
             </div>
 
             <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex items-center gap-3">
