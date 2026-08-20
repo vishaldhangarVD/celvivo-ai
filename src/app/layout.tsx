@@ -28,27 +28,37 @@ export default function RootLayout({
           href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600;700&display=swap"
           rel="stylesheet"
         />
+        {/* Browser-native import map to resolve Three.js and TalkingHead at runtime */}
         <script
           type="importmap"
           dangerouslySetInnerHTML={{
             __html: JSON.stringify({
               imports: {
-                "three": "https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js/+esm",
-                "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.180.0/examples/jsm/"
+                "three": "https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js",
+                "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.180.0/examples/jsm/",
+                "talkinghead": "https://cdn.jsdelivr.net/gh/met4citizen/TalkingHead@1.7/modules/talkinghead.mjs"
               }
             })
+          }}
+        />
+        {/* Browser-only module loader to expose TalkingHead to React without Turbopack interference */}
+        <script
+          type="module"
+          dangerouslySetInnerHTML={{
+            __html: `
+              import { TalkingHead } from 'talkinghead';
+              window.TalkingHeadClass = TalkingHead;
+              window.dispatchEvent(new CustomEvent('talkinghead-ready'));
+            `
           }}
         />
       </head>
 
       <body className="font-body antialiased bg-background text-foreground selection:bg-primary/30">
-        
-
         <FirebaseClientProvider>
           {children}
           <Toaster />
         </FirebaseClientProvider>
-  
       </body>
     </html>
   );

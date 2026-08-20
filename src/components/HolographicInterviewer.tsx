@@ -6,8 +6,8 @@ import { cn } from "@/lib/utils";
 import { Cpu, Brain, Wifi } from "lucide-react";
 
 /**
- * @fileOverview HolographicInterviewer v10.0 - Browser-side Julia Restoration.
- * Uses a CDN-loaded TalkingHead module to avoid bundling errors with Next.js.
+ * @fileOverview HolographicInterviewer v11.0 - Turbopack Safe Browser Restoration.
+ * Uses window-based exposure of the TalkingHead class to avoid dynamic URL import errors.
  */
 
 interface HolographicInterviewerProps {
@@ -30,15 +30,32 @@ export default function HolographicInterviewer({
   useEffect(() => {
     if (!containerRef.current || headRef.current) return;
 
+    /**
+     * Browser-side initialization node.
+     * Waits for the TalkingHead class to be available on the window object.
+     */
     const initHead = async () => {
+      const getTalkingHead = () => {
+        return new Promise((resolve) => {
+          // If the script in layout.tsx has already finished
+          if ((window as any).TalkingHeadClass) {
+            resolve((window as any).TalkingHeadClass);
+            return;
+          }
+          // Otherwise, wait for the custom event
+          const handleReady = () => {
+            window.removeEventListener('talkinghead-ready', handleReady);
+            resolve((window as any).TalkingHeadClass);
+          };
+          window.addEventListener('talkinghead-ready', handleReady);
+        });
+      };
+
       try {
-        // Load TalkingHead from CDN to bypass the Webpack bundling error
-        // @ts-ignore
-        const module = await import("https://cdn.jsdelivr.net/gh/met4citizen/TalkingHead@1.7/modules/talkinghead.mjs");
-        const TalkingHead = module.TalkingHead;
+        const TalkingHead: any = await getTalkingHead();
 
         const head = new TalkingHead(containerRef.current!, {
-          lipsync: false, // Disabling complex lip-sync modules for build stability
+          lipsync: false, // Internal dynamic imports are handled by the importmap
           cameraView: "upper",
           blinking: true,
           lookup: true,
