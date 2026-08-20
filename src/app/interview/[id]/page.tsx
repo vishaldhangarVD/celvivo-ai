@@ -3,7 +3,6 @@ import { Suspense, useEffect, useState, useRef, useMemo } from "react";
 import { useRouter, useParams, useSearchParams } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
 import Link from "next/link";
-import dynamic from 'next/dynamic';
 import { Button } from "@/components/ui/button";
 import { 
   Loader2, 
@@ -47,17 +46,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
-
-// Step 3: Holographic Identity Integration
-const HolographicInterviewer = dynamic(() => import("@/components/HolographicInterviewer"), {
-  ssr: false,
-  loading: () => (
-    <div className="w-full h-full flex flex-col items-center justify-center bg-black">
-      <div className="w-10 h-10 border-2 border-accent/20 border-t-accent rounded-full animate-spin mb-4" />
-      <p className="text-[8px] font-black uppercase tracking-[0.4em] text-accent">Hydrating Neural Mesh...</p>
-    </div>
-  )
-});
+import HolographicInterviewer from "@/components/HolographicInterviewer";
 
 function VirtualArenaContent() {
   const router = useRouter();
@@ -102,13 +91,6 @@ function VirtualArenaContent() {
   }, [db, user?.uid]);
 
   const { data: journey } = useDoc(journeyRef);
-
-  const profileRef = useMemo(() => {
-    if (!db || !user?.uid) return null;
-    return doc(db, 'users', user.uid);
-  }, [db, user?.uid]);
-
-  const { data: profile } = useDoc(profileRef);
 
   // ElevenLabs Audio Management
   const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -619,18 +601,6 @@ function VirtualArenaContent() {
 
   return (
     <div className="h-screen w-full max-h-screen bg-[#050816] flex flex-col relative overflow-hidden">
-      <script
-        type="importmap"
-        dangerouslySetInnerHTML={{
-          __html: JSON.stringify({
-            imports: {
-              "three": "https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js/+esm",
-              "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.180.0/examples/jsm/",
-              "talkinghead": "https://cdn.jsdelivr.net/gh/met4citizen/TalkingHead@1.7/modules/talkinghead.mjs"
-            }
-          })
-        }}
-      />
       <div className="particles-bg" />
       
       <header className="h-16 border-b border-white/5 bg-[#0b0e1a] flex items-center justify-between px-6 shrink-0 z-50">
@@ -717,8 +687,8 @@ function VirtualArenaContent() {
               <span className="text-[8px] font-black uppercase tracking-widest">You</span>
             </div>
 
-            {/* UPGRADED HOLOGRAPHIC AI INTERVIEWER */}
-            <div className="absolute bottom-4 right-4 w-[180px] xl:w-[220px] aspect-[4/3] rounded-2xl overflow-hidden border border-accent/20 shadow-[0_0_40px_rgba(34,211,238,0.15)] bg-black">
+            {/* UPGRADED HOLOGRAPHIC AI INTERVIEWER - Matches Second Reference Image */}
+            <div className="absolute bottom-4 right-4 w-[240px] xl:w-[280px] aspect-[3/4] rounded-2xl overflow-hidden border border-cyan-500/30 shadow-[0_0_40px_rgba(34,211,238,0.2)] bg-black">
               <HolographicInterviewer isSpeaking={isAiSpeaking} />
             </div>
 
