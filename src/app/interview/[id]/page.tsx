@@ -92,11 +92,6 @@ function VirtualArenaContent() {
 
   const { data: journey } = useDoc(journeyRef);
 
-  // ElevenLabs Audio Management
-  const audioRef = useRef<HTMLAudioElement | null>(null);
-  const currentAudioUrlRef = useRef<string | null>(null);
-  const ttsAbortControllerRef = useRef<AbortController | null>(null);
-
   // Dynamic Candidate Identity Resolution
   const formattedName = useMemo(() => {
     const resumeName = journey?.resumeAnalysis?.personalInfo?.fullName;
@@ -112,76 +107,57 @@ function VirtualArenaContent() {
     return lastInterviewer?.text || "Initializing session...";
   }, [transcript]);
 
-  // ElevenLabs Neural Audio Protocol
+  // Web Speech API - Native Free TTS Protocol
   useEffect(() => {
+    if (typeof window === 'undefined' || !window.speechSynthesis) return;
+    
     if (!currentInterviewerQuestion || currentInterviewerQuestion === "Initializing session...") {
       return;
     }
 
-    if (ttsAbortControllerRef.current) {
-      ttsAbortControllerRef.current.abort();
-    }
-    
-    if (audioRef.current) {
-      audioRef.current.pause();
-      audioRef.current.src = "";
-      audioRef.current.load();
-    }
+    // Stop any existing speech immediately
+    window.speechSynthesis.cancel();
 
-    if (currentAudioUrlRef.current) {
-      URL.revokeObjectURL(currentAudioUrlRef.current);
-      currentAudioUrlRef.current = null;
-    }
+    const speak = () => {
+      const utterance = new SpeechSynthesisUtterance(currentInterviewerQuestion);
+      
+      // Voice Selection Strategy
+      const voices = window.speechSynthesis.getVoices();
+      // Try to find a natural sounding English voice (prefer Google or system female voices)
+      const preferredVoice = voices.find(v => 
+        (v.lang.startsWith('en') && v.name.includes('Google') && v.name.includes('US')) ||
+        (v.lang.startsWith('en') && v.name.includes('Samantha')) ||
+        (v.lang.startsWith('en') && v.name.includes('Female'))
+      ) || voices.find(v => v.lang.startsWith('en')) || voices[0];
 
-    const controller = new AbortController();
-    ttsAbortControllerRef.current = controller;
-
-    async function generateAudio() {
-      try {
-        const response = await fetch('/api/tts', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ text: currentInterviewerQuestion }),
-          signal: controller.signal
-        });
-
-        if (!response.ok) {
-          throw new Error('Neural audio sync failed');
-        }
-
-        const audioBlob = await response.blob();
-        const audioUrl = URL.createObjectURL(audioBlob);
-        currentAudioUrlRef.current = audioUrl;
-
-        const audio = new Audio(audioUrl);
-        audioRef.current = audio;
-        
-        audio.onplay = () => setIsAiSpeaking(true);
-        audio.onended = () => setIsAiSpeaking(false);
-        
-        await audio.play().catch(err => {
-          console.warn('[Audio Autoplay] Restricted or interrupted:', err);
-        });
-      } catch (error: any) {
-        if (error.name !== 'AbortError') {
-          console.error('[ElevenLabs Integration] Fault:', error.message);
-        }
+      if (preferredVoice) {
+        utterance.voice = preferredVoice;
       }
-    }
 
-    generateAudio();
+      utterance.rate = 0.95; // Slightly slower for clear instruction
+      utterance.pitch = 1.0;
+      utterance.volume = 1.0;
+
+      // Animation Sync Hooks
+      utterance.onstart = () => setIsAiSpeaking(true);
+      utterance.onend = () => setIsAiSpeaking(false);
+      utterance.onerror = (event) => {
+        console.error("SpeechSynthesis Error:", event);
+        setIsAiSpeaking(false);
+      };
+
+      window.speechSynthesis.speak(utterance);
+    };
+
+    // Chrome and some browsers load voices asynchronously
+    if (window.speechSynthesis.getVoices().length === 0) {
+      window.speechSynthesis.onvoiceschanged = speak;
+    } else {
+      speak();
+    }
 
     return () => {
-      if (ttsAbortControllerRef.current) {
-        ttsAbortControllerRef.current.abort();
-      }
-      if (audioRef.current) {
-        audioRef.current.pause();
-        audioRef.current.src = "";
-      }
-      if (currentAudioUrlRef.current) {
-        URL.revokeObjectURL(currentAudioUrlRef.current);
-      }
+      window.speechSynthesis.cancel();
     };
   }, [currentInterviewerQuestion]);
 
@@ -686,7 +662,7 @@ function VirtualArenaContent() {
               <span className="text-[8px] font-black uppercase tracking-widest">You</span>
             </div>
 
-            {/* UPGRADED HOLOGRAPHIC AI INTERVIEWER - Exact Reference Integration */}
+            {/* UPGRADED HOLOGRAPHIC AI INTERVIEWER */}
             <div className="absolute bottom-4 right-4 w-[240px] xl:w-[280px] aspect-[3/4] rounded-2xl overflow-hidden border border-cyan-500/30 shadow-[0_0_40px_rgba(34,211,238,0.2)] bg-black">
               <HolographicInterviewer isSpeaking={isAiSpeaking} />
             </div>
