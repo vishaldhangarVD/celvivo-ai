@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect, Suspense } from 'react';
@@ -47,7 +48,6 @@ function LoginContent() {
     try {
       await signInWithEmailAndPassword(auth, email, password);
       toast({ title: "Access Granted", description: "Identity verified. Redirecting to Nexus." });
-      // Redirect handled by useEffect state synchronization
     } catch (error: any) {
       toast({
         variant: "destructive",
@@ -62,13 +62,25 @@ function LoginContent() {
   const handleGoogleLogin = async () => {
     if (!auth) return;
     const provider = new GoogleAuthProvider();
+    // Set custom parameters for a better UX in dev environments
+    provider.setCustomParameters({ prompt: 'select_account' });
+    
     try {
       setIsLoading(true);
       await signInWithPopup(auth, provider);
       toast({ title: "Neural Link Established", description: "Successfully authenticated via Google." });
-      // Redirect handled by useEffect state synchronization
     } catch (error: any) {
-      if (error.code !== 'auth/popup-closed-by-user') {
+      console.error("Google Auth Protocol Error:", error);
+      
+      // Specifically handle the domain authorization error
+      if (error.code === 'auth/unauthorized-domain') {
+        const currentHostname = typeof window !== 'undefined' ? window.location.hostname : 'the current domain';
+        toast({
+          variant: "destructive",
+          title: "Domain Not Authorized",
+          description: `The domain "${currentHostname}" is not whitelisted in your Firebase project. Please add it to "Authorized Domains" in the Firebase Console (Auth > Settings).`,
+        });
+      } else if (error.code !== 'auth/popup-closed-by-user') {
         toast({
           variant: "destructive",
           title: "OAuth Failure",
@@ -100,7 +112,6 @@ function LoginContent() {
     }
   };
 
-  // Prevent UI flash: Show high-fidelity loader while syncing identity
   if (authLoading || (user && !authLoading)) {
     return (
       <div className="min-h-screen bg-[#050816] flex items-center justify-center">
