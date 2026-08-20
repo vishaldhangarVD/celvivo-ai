@@ -1,16 +1,15 @@
-
 "use client";
 
 import React, { useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
-import { Cpu, Brain, Wifi, Zap } from "lucide-react";
+import { Cpu, Brain, Wifi } from "lucide-react";
 import { TalkingHead } from "@met4citizen/talkinghead";
 
 /**
- * @fileOverview HolographicInterviewer v8.0 - Julia 3D Restoration.
+ * @fileOverview HolographicInterviewer v9.0 - Julia 3D Restoration.
  * Powered by TalkingHead and julia.glb for high-fidelity 3D interaction.
- * Replaces the 2D hologram with a real-time lip-synced 3D character.
+ * Provides real-time lip-sync and autonomous eye movement.
  */
 
 interface HolographicInterviewerProps {
@@ -61,18 +60,21 @@ export default function HolographicInterviewer({
 
     return () => {
       if (headRef.current) {
-        // Cleanup would go here if TalkingHead supported explicit destroy
+        // TalkingHead doesn't have an explicit destroy, but we stop animations
+        headRef.current.stopSpeaking();
       }
     };
   }, []);
 
-  // Synchronize Speech
+  // Synchronize Speech with 3D Model
   useEffect(() => {
     if (!headRef.current || !isLoaded) return;
 
     if (isSpeaking && currentQuestion) {
+      // Trigger lip-sync and speaking animations
       headRef.current.speakText(currentQuestion);
     } else if (!isSpeaking) {
+      // Stop mouth movement when TTS ends
       headRef.current.stopSpeaking();
     }
   }, [isSpeaking, currentQuestion, isLoaded]);
