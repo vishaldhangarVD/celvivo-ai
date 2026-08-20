@@ -10,14 +10,16 @@ import { Label } from '@/components/ui/label';
 import { Command, ArrowLeft, Chrome, Loader2, AlertCircle, Zap, ShieldCheck, Mail, Lock } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { useAuth, useUser } from '@/firebase';
+import { useAuth, useUser, useFirestore } from '@/firebase';
 import { signInWithEmailAndPassword, signInWithPopup, GoogleAuthProvider, sendPasswordResetEmail } from 'firebase/auth';
+import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 
 function LoginContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const auth = useAuth();
+  const db = useFirestore();
   const { user, loading: authLoading } = useUser();
   const { toast } = useToast();
   
@@ -26,12 +28,14 @@ function LoginContent() {
   const [isLoading, setIsLoading] = useState(false);
   const [isResetting, setIsResetting] = useState(false);
 
-  // Redirection Protocol: Force Home Page (/)
+  const redirectTo = searchParams.get('redirectTo') || '/dashboard';
+
+  // Redirection Protocol: Transition to authenticated destination once user is verified
   useEffect(() => {
     if (user && !authLoading) {
-      router.replace('/');
+      router.replace(redirectTo);
     }
-  }, [user, authLoading, router]);
+  }, [user, authLoading, router, redirectTo]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -60,25 +64,50 @@ function LoginContent() {
   };
 
   const handleGoogleLogin = async () => {
-    if (!auth) return;
+    if (!auth || !db) return;
     const provider = new GoogleAuthProvider();
-    // Set custom parameters for a better UX in dev environments
     provider.setCustomParameters({ prompt: 'select_account' });
     
     try {
       setIsLoading(true);
-      await signInWithPopup(auth, provider);
+      const result = await signInWithPopup(auth, provider);
+      
+      // Verification Protocol: Ensure user has a valid Firestore Profile
+      const userDocRef = doc(db, 'users', result.user.uid);
+      const userDocSnap = await getDoc(userDocRef);
+      
+      if (!userDocSnap.exists()) {
+        // Initialize Profile for New Neural Operator (Google Auth)
+        await setDoc(userDocRef, {
+          uid: result.user.uid,
+          displayName: result.user.displayName || "Operator",
+          email: result.user.email || "",
+          photoURL: result.user.photoURL || null,
+          jobReadinessScore: 0,
+          totalInterviews: 0,
+          plan: "free",
+          subscriptionStatus: "active",
+          freeJourneyUsed: false,
+          isFreeAccess: false,
+          subscriptionId: null,
+          paymentId: null,
+          subscriptionStart: null,
+          subscriptionEnd: null,
+          createdAt: serverTimestamp(),
+        });
+      }
+
       toast({ title: "Neural Link Established", description: "Successfully authenticated via Google." });
+      // useEffect will handle the final transition once state is synced
     } catch (error: any) {
       console.error("Google Auth Protocol Error:", error);
       
-      // Specifically handle the domain authorization error
       if (error.code === 'auth/unauthorized-domain') {
         const currentHostname = typeof window !== 'undefined' ? window.location.hostname : 'the current domain';
         toast({
           variant: "destructive",
           title: "Domain Not Authorized",
-          description: `The domain "${currentHostname}" is not whitelisted in your Firebase project. Please add it to "Authorized Domains" in the Firebase Console (Auth > Settings).`,
+          description: `The domain "${currentHostname}" is not whitelisted in your Firebase project. Please add it to Authorized Domains in Firebase Console.`,
         });
       } else if (error.code !== 'auth/popup-closed-by-user') {
         toast({
