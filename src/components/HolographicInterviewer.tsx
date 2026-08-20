@@ -1,32 +1,36 @@
 
 "use client";
 
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
 import Image from "next/image";
-import { Cpu, Activity, Wifi, Zap } from "lucide-react";
+import { Cpu, Activity, Wifi, Zap, Brain } from "lucide-react";
 
 /**
- * @fileOverview HolographicInterviewer v5.0 - Neural Animatronics.
- * Animates a static PNG using localized CSS/Framer Motion layers.
+ * @fileOverview HolographicInterviewer v7.0 - Independent Neural Animatronics.
+ * Decouples facial features from the body to allow independent movement.
+ * Blazer, Background, and Platform remain 100% stationary.
  */
 
 interface HolographicInterviewerProps {
   isSpeaking?: boolean;
   className?: string;
+  isGenerating?: boolean;
+  videoUrl?: string | null;
   currentQuestion?: string;
 }
 
 export default function HolographicInterviewer({ 
   isSpeaking = false, 
   className,
-  currentQuestion = "" 
+  isGenerating = false
 }: HolographicInterviewerProps) {
   const [isBlinking, setIsBlinking] = useState(false);
+  const [headPos, setHeadPos] = useState({ x: 0, y: 0, rotate: 0 });
   const [eyePos, setEyePos] = useState({ x: 0, y: 0 });
 
-  // 1. Autonomous Blinking Logic
+  // 1. Autonomous Blinking Loop
   useEffect(() => {
     let timeout: NodeJS.Timeout;
     const triggerBlink = () => {
@@ -38,7 +42,22 @@ export default function HolographicInterviewer({
     return () => clearTimeout(timeout);
   }, []);
 
-  // 2. Subtle Eye Movement Logic
+  // 2. Independent Head Movement (Subtle micro-movements)
+  useEffect(() => {
+    let timeout: NodeJS.Timeout;
+    const moveHead = () => {
+      setHeadPos({ 
+        x: (Math.random() - 0.5) * 1.5, 
+        y: (Math.random() - 0.5) * 1,
+        rotate: (Math.random() - 0.5) * 0.5
+      });
+      timeout = setTimeout(moveHead, Math.random() * 3000 + 2000);
+    };
+    moveHead();
+    return () => clearTimeout(timeout);
+  }, []);
+
+  // 3. Independent Eye Movement
   useEffect(() => {
     let timeout: NodeJS.Timeout;
     const moveEyes = () => {
@@ -46,123 +65,103 @@ export default function HolographicInterviewer({
         x: (Math.random() - 0.5) * 2, 
         y: (Math.random() - 0.5) * 1 
       });
-      timeout = setTimeout(moveEyes, Math.random() * 3000 + 1000);
+      timeout = setTimeout(moveEyes, Math.random() * 4000 + 1000);
     };
-    timeout = setTimeout(moveEyes, 2000);
+    moveEyes();
     return () => clearTimeout(timeout);
   }, []);
 
   return (
     <div className={cn(
-      "relative w-full h-full min-h-[300px] flex items-center justify-center bg-[#02040a] overflow-hidden rounded-[2.5rem] border border-cyan-500/20 shadow-2xl shadow-cyan-900/20",
+      "relative w-full h-full min-h-[300px] flex items-center justify-center bg-[#02040a] overflow-hidden rounded-[2.5rem] border border-cyan-500/20 shadow-2xl",
       className
     )}>
       
-      {/* 1. BACKGROUND ENVIRONMENT */}
+      {/* 1. STATIONARY BACKGROUND & BODY LAYER */}
       <div className="absolute inset-0 z-0 pointer-events-none">
         <div className="absolute inset-0 opacity-10 bg-[radial-gradient(circle,white_1px,transparent_1px)] bg-[size:40px_40px]" />
         
-        {/* Projector Platform Glow */}
-        <div className="absolute bottom-[-15%] left-1/2 -translate-x-1/2 w-[140%] aspect-square z-0 opacity-40">
-          <motion.div 
-            animate={{ 
-              scale: isSpeaking ? [1, 1.1, 1] : 1, 
-              opacity: isSpeaking ? [0.4, 0.6, 0.4] : 0.3 
-            }}
-            transition={{ duration: 2, repeat: Infinity }}
-            className="w-full h-full rounded-full bg-[radial-gradient(ellipse_at_center,rgba(34,211,238,0.4)_0%,transparent_70%)] blur-3xl"
-            style={{ transform: 'rotateX(80deg)' }}
-          />
-        </div>
+        {/* The Base Image: Body, Blazer, and Background (STATIONARY) */}
+        <Image
+          src="/avatars/hologram.png"
+          alt="AI Interviewer Body"
+          fill
+          className="object-contain brightness-90 saturate-75 opacity-95"
+          priority
+        />
+
+        {/* Stationary Platform Glow */}
+        <div className="absolute bottom-[-10%] left-1/2 -translate-x-1/2 w-full h-[100px] bg-[radial-gradient(ellipse_at_center,rgba(34,211,238,0.3)_0%,transparent_70%)] blur-xl" />
       </div>
 
-      {/* 2. PRIMARY NEURAL ENTITY (Image + Animatronics) */}
+      {/* 2. INDEPENDENT NEURAL FACE LAYER */}
       <motion.div 
-        className="relative z-10 w-full h-full flex items-center justify-center pointer-events-none"
+        className="absolute inset-0 z-10 pointer-events-none flex items-center justify-center"
         animate={{ 
-          y: [0, -8, 0],
-          rotate: [0, 0.5, 0, -0.5, 0]
+          x: headPos.x, 
+          y: headPos.y,
+          rotate: headPos.rotate
         }}
-        transition={{ 
-          y: { duration: 5, repeat: Infinity, ease: "easeInOut" },
-          rotate: { duration: 8, repeat: Infinity, ease: "easeInOut" }
-        }}
+        transition={{ duration: 2.5, ease: "easeInOut" }}
       >
         <div className="relative w-full h-full max-w-[95%] max-h-[95%]">
-          
-          {/* THE SOURCE PNG */}
-          <Image
-            src="/avatars/hologram.png"
-            alt="AI Interviewer"
-            fill
-            className={cn(
-              "object-contain transition-all duration-700",
-              isSpeaking ? "brightness-125 saturate-110" : "brightness-100 saturate-100"
-            )}
-            priority
-          />
-
-          {/* LOCALIZED ANIMATION OVERLAYS */}
-          
-          {/* Eye Blinking & Micro-movement Layer */}
-          <div className="absolute inset-0 overflow-hidden">
-             {/* Eye Region Masking (Approximate positioning based on reference) */}
-             <motion.div 
-                className="absolute top-[38%] left-1/2 -translate-x-1/2 w-[18%] h-[3%] flex justify-between px-1"
-                animate={{ x: `calc(-50% + ${eyePos.x}px)`, y: eyePos.y }}
+          {/* THE FACE (Clipped copy of the same image to move independently) */}
+          <div className="absolute inset-0 flex items-center justify-center overflow-hidden">
+             <div 
+               className="w-full h-full relative"
+               style={{
+                 backgroundImage: 'url(/avatars/hologram.png)',
+                 backgroundSize: 'contain',
+                 backgroundRepeat: 'no-repeat',
+                 backgroundPosition: 'center',
+                 clipPath: 'ellipse(16% 22% at 50% 41%)', // Isolates the head area
+               }}
              >
-                {/* Left Eye Dip */}
+                {/* 3. INDEPENDENT OPTIC NODE (Eyes) */}
                 <motion.div 
-                  animate={{ opacity: isBlinking ? 0.7 : 0 }}
-                  className="w-[42%] h-full bg-[#0b0e1a] blur-[2px] rounded-full"
-                />
-                {/* Right Eye Dip */}
-                <motion.div 
-                  animate={{ opacity: isBlinking ? 0.7 : 0 }}
-                  className="w-[42%] h-full bg-[#0b0e1a] blur-[2px] rounded-full"
-                />
-             </motion.div>
+                  className="absolute top-[38.2%] left-[45.8%] w-[8.4%] h-[2%] flex justify-between px-[2%]"
+                  animate={{ x: eyePos.x, y: eyePos.y }}
+                  transition={{ duration: 1, ease: "easeOut" }}
+                >
+                  {/* Blinking Logic: Using a soft-edged brightness dip instead of black bars */}
+                  <AnimatePresence>
+                    {isBlinking && (
+                      <motion.div 
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 0.8 }}
+                        exit={{ opacity: 0 }}
+                        className="absolute inset-0 bg-[#02040a] blur-[3px] rounded-full z-20"
+                      />
+                    )}
+                  </AnimatePresence>
+                </motion.div>
+
+                {/* 4. VOCAL MATRIX NODE (Mouth) */}
+                {isSpeaking && (
+                  <motion.div 
+                    className="absolute top-[48.4%] left-[46.5%] w-[7%] h-[1.8%] z-30"
+                    animate={{ 
+                      scaleY: [1, 1.4, 0.8, 1.2, 1],
+                      opacity: [0.7, 1, 0.8, 1, 0.7]
+                    }}
+                    transition={{ duration: 0.15, repeat: Infinity }}
+                  >
+                    {/* Vocal Matrix Light (Simulates mouth movement via light sync) */}
+                    <div className="w-full h-full bg-cyan-400/40 blur-[4px] rounded-full shadow-[0_0_12px_#22d3ee]" />
+                    <div className="absolute inset-0 bg-purple-500/20 blur-[6px] rounded-full" />
+                  </motion.div>
+                )}
+             </div>
           </div>
-
-          {/* Vocal Matrix (Mouth) Layer */}
-          <AnimatePresence>
-            {isSpeaking && (
-              <motion.div 
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                className="absolute top-[48.5%] left-1/2 -translate-x-1/2 w-[6%] h-[2%] pointer-events-none"
-              >
-                 {/* Glowing Vocal Slit */}
-                 <motion.div 
-                   animate={{ 
-                     height: ["20%", "80%", "40%", "90%", "30%"],
-                     opacity: [0.6, 1, 0.7, 0.9, 0.6]
-                   }}
-                   transition={{ duration: 0.15, repeat: Infinity }}
-                   className="w-full bg-cyan-400 blur-[3px] rounded-full shadow-[0_0_10px_#22d3ee]"
-                   style={{ mixBlendMode: 'screen' }}
-                 />
-                 <motion.div 
-                   animate={{ 
-                     scaleX: [1, 1.2, 0.9, 1.1, 1]
-                   }}
-                   transition={{ duration: 0.2, repeat: Infinity }}
-                   className="absolute inset-0 bg-purple-500/30 blur-[6px] rounded-full"
-                 />
-              </motion.div>
-            )}
-          </AnimatePresence>
-
-          {/* Holographic Scanline Overlay */}
-          <div className="absolute inset-0 z-20 pointer-events-none opacity-[0.15] bg-[linear-gradient(rgba(18,16,16,0)_50%,rgba(0,0,0,0.25)_50%)] bg-[size:100%_4px]" />
         </div>
       </motion.div>
 
-      {/* 3. HUD SYSTEM */}
-      <div className="absolute inset-0 z-30 pointer-events-none">
-        
-        {/* Top-Left ID Nodes */}
+      {/* 5. INDEPENDENT ATMOSPHERIC & HUD LAYERS (STATIONARY) */}
+      <div className="absolute inset-0 z-40 pointer-events-none">
+        {/* Futuristic Scanlines */}
+        <div className="absolute inset-0 opacity-10 bg-[linear-gradient(rgba(18,16,16,0)_50%,rgba(0,0,0,0.25)_50%)] bg-[size:100%_4px]" />
+
+        {/* HUD Labels */}
         <div className="absolute top-8 left-8 flex flex-col gap-2">
           <div className="flex items-center gap-3 px-3 py-1.5 glass rounded-lg border-cyan-500/20 bg-black/40">
             <Cpu className="w-3.5 h-3.5 text-cyan-400" />
@@ -184,36 +183,36 @@ export default function HolographicInterviewer({
           </AnimatePresence>
         </div>
 
-        {/* Dual Side Waveforms */}
-        <div className="absolute left-6 top-1/2 -translate-y-1/2 flex flex-col gap-1">
+        {/* Reactive Waveform Matrix (STATIONARY) */}
+        <div className="absolute left-6 top-1/2 -translate-y-1/2 flex flex-col gap-1.5">
           {[...Array(6)].map((_, i) => (
             <motion.div
               key={i}
               animate={{ 
-                width: isSpeaking ? [4, 16, 8, 20, 4] : 4,
-                opacity: isSpeaking ? [0.3, 0.8, 0.4] : 0.1
+                width: isSpeaking ? [6, 20, 10, 24, 6] : 6,
+                opacity: isSpeaking ? [0.4, 1, 0.5, 0.8, 0.4] : 0.1
               }}
-              transition={{ duration: 0.5 + (i * 0.1), repeat: Infinity }}
+              transition={{ duration: 0.4 + (i * 0.1), repeat: Infinity }}
               className="h-[2px] bg-cyan-400 rounded-full"
             />
           ))}
         </div>
 
-        <div className="absolute right-6 top-1/2 -translate-y-1/2 flex flex-col gap-1 items-end">
+        <div className="absolute right-6 top-1/2 -translate-y-1/2 flex flex-col gap-1.5 items-end">
           {[...Array(6)].map((_, i) => (
             <motion.div
               key={i}
               animate={{ 
-                width: isSpeaking ? [4, 16, 8, 20, 4] : 4,
-                opacity: isSpeaking ? [0.3, 0.8, 0.4] : 0.1
+                width: isSpeaking ? [6, 20, 10, 24, 6] : 6,
+                opacity: isSpeaking ? [0.4, 1, 0.5, 0.8, 0.4] : 0.1
               }}
-              transition={{ duration: 0.5 + (i * 0.1), repeat: Infinity }}
+              transition={{ duration: 0.4 + (i * 0.1), repeat: Infinity }}
               className="h-[2px] bg-cyan-400 rounded-full"
             />
           ))}
         </div>
 
-        {/* Bottom System Status */}
+        {/* System Uplink Status */}
         <div className="absolute bottom-8 right-8 flex items-center gap-3">
           <div className="flex items-center gap-2 px-3 py-1.5 glass rounded-lg border-white/5 bg-black/40">
             <Wifi className={cn("w-3 h-3 transition-colors", isSpeaking ? "text-green-400" : "text-white/20")} />
@@ -223,6 +222,28 @@ export default function HolographicInterviewer({
           </div>
         </div>
       </div>
+
+      {/* Generating/Loading Overlay */}
+      <AnimatePresence>
+        {isGenerating && (
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="absolute inset-0 z-[100] glass backdrop-blur-xl flex flex-col items-center justify-center p-8 text-center"
+          >
+            <div className="relative mb-6">
+              <motion.div 
+                animate={{ rotate: 360 }} 
+                transition={{ duration: 3, repeat: Infinity, ease: "linear" }}
+                className="w-20 h-20 rounded-full border-2 border-accent/20 border-t-accent shadow-[0_0_20px_rgba(34,211,238,0.2)]" 
+              />
+              <Brain className="w-8 h-8 text-accent absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 animate-pulse" />
+            </div>
+            <p className="text-[10px] font-black uppercase tracking-[0.5em] text-accent animate-pulse">Neural Synthesis...</p>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
     </div>
   );
