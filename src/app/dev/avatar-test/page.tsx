@@ -5,7 +5,7 @@ import { useState } from 'react';
 import Navbar from "@/components/layout/Navbar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Cpu, Box, Eye, Zap, Mic, MicOff, MessageSquare } from "lucide-react";
+import { Cpu, Box, Eye, Zap, Mic, MicOff, MessageSquare, Activity } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 /**
