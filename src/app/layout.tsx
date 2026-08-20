@@ -28,6 +28,17 @@ export default function RootLayout({
           href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600;700&display=swap"
           rel="stylesheet"
         />
+        <script
+          type="importmap"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify({
+              imports: {
+                "three": "https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js/+esm",
+                "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.180.0/examples/jsm/"
+              }
+            })
+          }}
+        />
       </head>
 
       <body className="font-body antialiased bg-background text-foreground selection:bg-primary/30">

@@ -4,12 +4,10 @@ import React, { useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { Cpu, Brain, Wifi } from "lucide-react";
-import { TalkingHead } from "@met4citizen/talkinghead";
 
 /**
- * @fileOverview HolographicInterviewer v9.0 - Julia 3D Restoration.
- * Powered by TalkingHead and julia.glb for high-fidelity 3D interaction.
- * Provides real-time lip-sync and autonomous eye movement.
+ * @fileOverview HolographicInterviewer v10.0 - Browser-side Julia Restoration.
+ * Uses a CDN-loaded TalkingHead module to avoid bundling errors with Next.js.
  */
 
 interface HolographicInterviewerProps {
@@ -29,27 +27,37 @@ export default function HolographicInterviewer({
   const headRef = useRef<any>(null);
   const [isLoaded, setIsLoaded] = useState(false);
 
-  // Initialize 3D Talking Head
   useEffect(() => {
     if (!containerRef.current || headRef.current) return;
 
     const initHead = async () => {
       try {
+        // Load TalkingHead from CDN to bypass the Webpack bundling error
+        // @ts-ignore
+        const module = await import("https://cdn.jsdelivr.net/gh/met4citizen/TalkingHead@1.7/modules/talkinghead.mjs");
+        const TalkingHead = module.TalkingHead;
+
         const head = new TalkingHead(containerRef.current!, {
-          model: "/avatars/julia.glb",
-          cameraView: "upper", // Upper body framing
-          lipsync: true,
+          lipsync: false, // Disabling complex lip-sync modules for build stability
+          cameraView: "upper",
           blinking: true,
           lookup: true,
           smoothMouth: true,
           background: "transparent"
         });
 
-        await head.promise;
+        // Initialize Julia using the official showAvatar API
+        await head.showAvatar({
+          url: "/avatars/julia.glb",
+          body: "F",
+          avatarMood: "neutral"
+        });
+
+        head.setView("upper");
         headRef.current = head;
         setIsLoaded(true);
 
-        // Start idle animation
+        // Start autonomous idle animation
         head.start();
       } catch (error) {
         console.error("[Julia Engine] Failed to initialize 3D node:", error);
@@ -60,21 +68,19 @@ export default function HolographicInterviewer({
 
     return () => {
       if (headRef.current) {
-        // TalkingHead doesn't have an explicit destroy, but we stop animations
         headRef.current.stopSpeaking();
       }
     };
   }, []);
 
-  // Synchronize Speech with 3D Model
+  // Handle speaking state transitions
   useEffect(() => {
     if (!headRef.current || !isLoaded) return;
 
     if (isSpeaking && currentQuestion) {
-      // Trigger lip-sync and speaking animations
+      // Procedural mouth movement triggered by text
       headRef.current.speakText(currentQuestion);
     } else if (!isSpeaking) {
-      // Stop mouth movement when TTS ends
       headRef.current.stopSpeaking();
     }
   }, [isSpeaking, currentQuestion, isLoaded]);
@@ -96,10 +102,8 @@ export default function HolographicInterviewer({
 
       {/* 2. ATMOSPHERIC HUD LAYERS */}
       <div className="absolute inset-0 z-40 pointer-events-none">
-        {/* Futuristic Scanlines */}
         <div className="absolute inset-0 opacity-10 bg-[linear-gradient(rgba(18,16,16,0)_50%,rgba(0,0,0,0.25)_50%)] bg-[size:100%_4px]" />
 
-        {/* HUD Labels */}
         <div className="absolute top-6 left-6 flex flex-col gap-2">
           <div className="flex items-center gap-3 px-3 py-1.5 glass rounded-lg border-cyan-500/20 bg-black/40">
             <Cpu className="w-3.5 h-3.5 text-cyan-400" />
@@ -121,7 +125,6 @@ export default function HolographicInterviewer({
           </AnimatePresence>
         </div>
 
-        {/* Reactive Waveform Matrix */}
         <div className="absolute left-6 top-1/2 -translate-y-1/2 flex flex-col gap-1.5">
           {[...Array(6)].map((_, i) => (
             <motion.div
@@ -150,7 +153,6 @@ export default function HolographicInterviewer({
           ))}
         </div>
 
-        {/* System Uplink Status */}
         <div className="absolute bottom-6 right-6 flex items-center gap-3">
           <div className="flex items-center gap-2 px-3 py-1.5 glass rounded-lg border-white/5 bg-black/40">
             <Wifi className={cn("w-3 h-3 transition-colors", isSpeaking ? "text-green-400" : "text-white/20")} />
@@ -161,7 +163,6 @@ export default function HolographicInterviewer({
         </div>
       </div>
 
-      {/* Generating/Loading Overlay */}
       <AnimatePresence>
         {(!isLoaded || isGenerating) && (
           <motion.div 
