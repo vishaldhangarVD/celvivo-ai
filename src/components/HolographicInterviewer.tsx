@@ -6,8 +6,9 @@ import { cn } from "@/lib/utils";
 import { Cpu, Brain, Wifi, AlertTriangle } from "lucide-react";
 
 /**
- * @fileOverview HolographicInterviewer v15.0 - Real-time 3D Lip-Sync Fix.
- * Corrects the lipsyncModules initialization error and synchronizes oral matrix.
+ * @fileOverview HolographicInterviewer v16.0 - Final Lip-Sync URL Fix.
+ * Corrects the lipsyncModules configuration to use language codes,
+ * enabling real-time 3D mouth movement without malformed fetch errors.
  */
 
 interface HolographicInterviewerProps {
@@ -54,7 +55,8 @@ export default function HolographicInterviewer({
       try {
         const TalkingHead: any = await getTalkingHead();
 
-        // TalkingHead v1.7 expects lipsyncModules to be an ARRAY, not an object.
+        // TalkingHead v1.7 expects lipsyncModules to be an array of language codes.
+        // It internally resolves these relative to its own module path.
         const head = new TalkingHead(containerRef.current!, {
           lipsync: true, 
           cameraView: "upper",
@@ -62,9 +64,8 @@ export default function HolographicInterviewer({
           lookup: true,
           smoothMouth: true,
           background: "transparent",
-          lipsyncModules: [
-            'https://cdn.jsdelivr.net/gh/met4citizen/TalkingHead@1.7/modules/lipsync-en.mjs'
-          ]
+          lipsyncModules: ["en"],
+          lipsyncLang: "en"
         });
 
         console.log("[Julia] Loading GLB asset: /avatars/julia.glb");
@@ -83,7 +84,7 @@ export default function HolographicInterviewer({
         console.log("[Julia] 3D Engine & Lip-Sync Active");
       } catch (error: any) {
         console.error("[Julia] Critical Engine Failure:", error);
-        setErrorMessage(error?.message || "3D Engine initialized failed.");
+        setErrorMessage(error?.message || "3D Engine initialization failed.");
         setStatus("error");
       }
     };
@@ -106,7 +107,6 @@ export default function HolographicInterviewer({
       
       const triggerVocalMatrix = () => {
         const voices = window.speechSynthesis.getVoices();
-        // Priority: Natural English Female -> Any English Female -> Any English
         const preferredVoice = voices.find(v => v.name.includes('Natural') && v.name.includes('Female') && v.lang.startsWith('en')) ||
                               voices.find(v => v.name.includes('Female') && v.lang.startsWith('en')) ||
                               voices.find(v => v.lang.startsWith('en'));
@@ -124,7 +124,6 @@ export default function HolographicInterviewer({
         );
       };
 
-      // Handle race condition for getVoices()
       if (window.speechSynthesis.getVoices().length === 0) {
         window.speechSynthesis.onvoiceschanged = () => {
           window.speechSynthesis.onvoiceschanged = null;
@@ -145,7 +144,6 @@ export default function HolographicInterviewer({
       className
     )}>
       
-      {/* 3D RENDER TARGET */}
       <div 
         ref={containerRef} 
         className={cn(
@@ -154,7 +152,6 @@ export default function HolographicInterviewer({
         )}
       />
 
-      {/* ATMOSPHERIC HUD LAYERS */}
       <div className="absolute inset-0 z-40 pointer-events-none">
         <div className="absolute inset-0 opacity-10 bg-[linear-gradient(rgba(18,16,16,0)_50%,rgba(0,0,0,0.25)_50%)] bg-[size:100%_4px]" />
 
@@ -204,7 +201,6 @@ export default function HolographicInterviewer({
         </div>
       </div>
 
-      {/* LOADING & ERROR OVERLAYS */}
       <AnimatePresence>
         {status === "loading" && (
           <motion.div 
