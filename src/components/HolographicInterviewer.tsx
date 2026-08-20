@@ -1,15 +1,15 @@
+
 "use client";
 
 import React, { useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
-import { Cpu, Brain, Wifi, AlertTriangle, Activity } from "lucide-react";
+import { Cpu, Brain, Wifi, AlertTriangle, Activity, Volume2 } from "lucide-react";
 
 /**
- * @fileOverview HolographicInterviewer v21.0 - Official TalkingHead v1.7 API Alignment.
- * FIX: Removed non-existent getVisemes().
- * FIX: Corrected speakText signature to use the options object (fixes excludes.every error).
- * FIX: Standardized constructor options for procedural lip-sync.
+ * @fileOverview HolographicInterviewer v24.0 - Robust JSON Parsing & Neural Lip-Sync.
+ * FIXED: Implemented robust fetch wrapper with Content-Type checks to prevent "Unexpected token <" error.
+ * FIXED: Standardized API interaction to handle JSON-wrapped base64 audio.
  */
 
 interface HolographicInterviewerProps {
@@ -44,7 +44,7 @@ export default function HolographicInterviewer({
     if (!containerRef.current || headRef.current) return;
 
     const initHead = async () => {
-      console.log("[Julia] Initializing Standard 3D Arena Matrix");
+      console.log("[Julia] Initializing 3D Matrix...");
 
       const getTalkingHead = () => {
         return new Promise((resolve) => {
@@ -63,9 +63,8 @@ export default function HolographicInterviewer({
       try {
         const TalkingHead: any = await getTalkingHead();
 
-        // OFFICIAL V1.7 CONSTRUCTOR
         const head = new TalkingHead(containerRef.current!, {
-          lipsyncModules: ["en"], // Correct format for procedural lip-sync
+          lipsyncModules: ["en"],
           lipsyncLang: "en",
           cameraView: "upper",
           blinking: true,
@@ -74,7 +73,6 @@ export default function HolographicInterviewer({
           background: "transparent"
         });
 
-        console.log("[Julia] Loading GLB asset: /avatars/julia.glb");
         await head.showAvatar({
           url: "/avatars/julia.glb",
           body: "F",
@@ -84,9 +82,8 @@ export default function HolographicInterviewer({
         head.setView("upper");
         headRef.current = head;
         setStatus("ready");
-        
         head.start();
-        console.log("[Julia] 3D Engine Active with Lip-Sync Modules");
+        console.log("[Julia] 3D Engine Active.");
       } catch (error: any) {
         console.error("[Julia] Critical Engine Failure:", error);
         setErrorMessage(error?.message || "3D Engine initialization failed.");
@@ -110,37 +107,65 @@ export default function HolographicInterviewer({
   }, []);
 
   /**
-   * triggerNeuralSpeech - Uses the official v1.7 speakText API.
-   * This handles text-to-viseme mapping and audio synthesis internally.
+   * triggerNeuralSpeech - Robust Fetch Implementation.
+   * Prevents JSON parsing errors by verifying status and content-type.
    */
   const triggerNeuralSpeech = async (text: string) => {
     if (!headRef.current || !text || status !== "ready") return;
     
     try {
-      console.log("[Julia Speech] Initiating Vocal Sequence:", text.substring(0, 30) + "...");
+      console.log("[Julia Speech] Requesting Neural Audio for:", text.substring(0, 30));
       
-      // OFFICIAL V1.7 API: speakText(text, optionsObject)
-      headRef.current.speakText(text, {
-        onStart: () => {
-          setInternalIsSpeaking(true);
-        },
+      const response = await fetch('/api/google-tts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text })
+      });
+
+      console.log(`[JSON DEBUG] URL: /api/google-tts | STATUS: ${response.status} | CONTENT-TYPE: ${response.headers.get("content-type")}`);
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`TTS API Error (${response.status}): ${errorText.substring(0, 100)}`);
+      }
+
+      const contentType = response.headers.get("content-type") || "";
+      if (!contentType.includes("application/json")) {
+        const textFallback = await response.text();
+        console.error("[Julia Speech] Non-JSON Response Detected:", textFallback.substring(0, 100));
+        throw new Error("Server returned HTML/Text instead of JSON. Check API route stability.");
+      }
+
+      const data = await response.json();
+      if (!data.audioContent) throw new Error("No audioContent in JSON response.");
+
+      // Convert base64 back to binary for 3D engine
+      const binaryString = window.atob(data.audioContent);
+      const len = binaryString.length;
+      const bytes = new Uint8Array(len);
+      for (let i = 0; i < len; i++) {
+        bytes[i] = binaryString.charCodeAt(i);
+      }
+
+      const audioBlob = new Blob([bytes], { type: 'audio/mpeg' });
+      const audioUrl = URL.createObjectURL(audioBlob);
+
+      headRef.current.speakAudio(audioUrl, {
+        onStart: () => setInternalIsSpeaking(true),
         onEnd: () => {
           setInternalIsSpeaking(false);
+          URL.revokeObjectURL(audioUrl);
           if (onSpeechEnd) onSpeechEnd();
-        },
-        onInterrupt: () => {
-          setInternalIsSpeaking(false);
         }
       });
 
-    } catch (err) {
-      console.error("[Julia Speech] Fatal Runtime Error:", err);
+    } catch (err: any) {
+      console.error("[Julia Speech] Fatal Runtime Error:", err.message);
       setInternalIsSpeaking(false);
     }
   };
 
   useEffect(() => {
-    // React to external isSpeaking and currentQuestion changes
     if (isSpeaking && currentQuestion && currentQuestion !== lastSpokenRef.current && status === "ready") {
       lastSpokenRef.current = currentQuestion;
       triggerNeuralSpeech(currentQuestion);
@@ -151,7 +176,7 @@ export default function HolographicInterviewer({
   }, [isSpeaking, currentQuestion, status]);
 
   const runDiagnosticTest = () => {
-    triggerNeuralSpeech("Vocal matrix verification in progress. My 3D lip-synchronization is now fully operational within the neural arena.");
+    triggerNeuralSpeech("System check initiated. I am verifying the neural connection between my vocal matrix and the 3D vertex engines. Is the synchronization optimal?");
   };
 
   return (
@@ -160,7 +185,6 @@ export default function HolographicInterviewer({
       className
     )}>
       
-      {/* 3D Render Target */}
       <div 
         ref={containerRef} 
         className={cn(
@@ -169,7 +193,6 @@ export default function HolographicInterviewer({
         )}
       />
 
-      {/* Holographic HUD Overlay */}
       <div className="absolute inset-0 z-40 pointer-events-none">
         <div className="absolute inset-0 opacity-10 bg-[linear-gradient(rgba(18,16,16,0)_50%,rgba(0,0,0,0.25)_50%)] bg-[size:100%_4px]" />
 
@@ -185,10 +208,10 @@ export default function HolographicInterviewer({
                   internalIsSpeaking ? "bg-green-400 animate-pulse shadow-[0_0_8px_rgba(74,222,128,0.5)]" : "bg-white/20"
                 )} />
                 <span className={cn(
-                  "text-[8px] font-black uppercase tracking-widest transition-colors duration-300", 
+                  "text-[8px] font-black uppercase tracking-widest", 
                   internalIsSpeaking ? "text-green-400" : "text-white/30"
                 )}>
-                  {internalIsSpeaking ? "SPEAKING" : "IDLE"}
+                  {internalIsSpeaking ? "● SPEAKING" : "● IDLE"}
                 </span>
               </div>
             </div>
@@ -198,13 +221,10 @@ export default function HolographicInterviewer({
         <div className="absolute bottom-6 right-6 flex items-center gap-3">
           <div className="flex items-center gap-2 px-3 py-1.5 glass rounded-lg border-white/5 bg-black/40">
             <Wifi className={cn("w-3 h-3 transition-colors", internalIsSpeaking ? "text-green-400" : "text-white/20")} />
-            <span className="text-[7px] font-black uppercase tracking-[0.2em] text-white/30">
-              {internalIsSpeaking ? "SYNTAX STREAMING" : "SIGNAL STABLE"}
-            </span>
+            <span className="text-[7px] font-black uppercase tracking-[0.2em] text-white/30">SIGNAL STABLE</span>
           </div>
         </div>
 
-        {/* Dynamic Waveform Indicator */}
         <div className="absolute bottom-0 left-0 right-0 h-24 overflow-hidden pointer-events-none opacity-20">
            <div className="flex items-center justify-center gap-1 h-full">
               {[...Array(12)].map((_, i) => (
@@ -219,15 +239,13 @@ export default function HolographicInterviewer({
         </div>
       </div>
 
-      {/* Manual Diagnostic Button (Visible on Hover) */}
       <button 
         onClick={runDiagnosticTest}
-        className="absolute bottom-20 left-1/2 -translate-x-1/2 z-50 px-4 py-2 glass rounded-xl text-[8px] font-black uppercase tracking-widest text-white/0 group-hover:text-white/40 hover:text-white transition-all pointer-events-auto"
+        className="absolute bottom-20 left-1/2 -translate-x-1/2 z-50 px-6 py-2 glass rounded-xl text-[8px] font-black uppercase tracking-widest text-white/0 group-hover:text-white/60 hover:text-accent transition-all pointer-events-auto border border-transparent hover:border-accent/20"
       >
-        <Activity className="w-3 h-3 inline mr-2" /> Trigger Vocal Matrix
+        <Volume2 className="w-3 h-3 inline mr-2" /> Trigger Vocal Matrix
       </button>
 
-      {/* State Transitions */}
       <AnimatePresence>
         {status === "loading" && (
           <motion.div 
@@ -245,7 +263,7 @@ export default function HolographicInterviewer({
               />
               <Brain className="w-8 h-8 text-accent absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 animate-pulse" />
             </div>
-            <p className="text-[10px] font-black uppercase tracking-[0.5em] text-accent animate-pulse">Initializing Oral Matrix...</p>
+            <p className="text-[10px] font-black uppercase tracking-[0.5em] text-accent animate-pulse">Synchronizing Neural Core...</p>
           </motion.div>
         )}
 
