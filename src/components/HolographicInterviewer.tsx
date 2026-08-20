@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useEffect, useRef, useState } from "react";
@@ -7,8 +6,8 @@ import { cn } from "@/lib/utils";
 import { Cpu, Brain, Wifi, AlertTriangle } from "lucide-react";
 
 /**
- * @fileOverview HolographicInterviewer v12.0 - Final Browser-Native Restoration.
- * Resolved infinite loading by listening for the global TalkingHeadClass event.
+ * @fileOverview HolographicInterviewer v14.0 - 3D Lip-Sync Implementation.
+ * Consolidation of TTS and Morph Targets for real-time oral synchronization.
  */
 
 interface HolographicInterviewerProps {
@@ -16,34 +15,35 @@ interface HolographicInterviewerProps {
   className?: string;
   isGenerating?: boolean;
   currentQuestion?: string;
+  onSpeechEnd?: () => void;
 }
 
 export default function HolographicInterviewer({ 
   isSpeaking = false, 
   className,
   isGenerating = false,
-  currentQuestion = ""
+  currentQuestion = "",
+  onSpeechEnd
 }: HolographicInterviewerProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const headRef = useRef<any>(null);
   const [status, setStatus] = useState<"loading" | "ready" | "error">("loading");
   const [errorMessage, setErrorMessage] = useState("");
+  const lastSpokenRef = useRef("");
 
   useEffect(() => {
     if (!containerRef.current || headRef.current) return;
 
     const initHead = async () => {
-      console.log("[Julia] Initialization Protocol Started");
+      console.log("[Julia] Neural Oral Matrix Initialization Started");
 
       const getTalkingHead = () => {
         return new Promise((resolve) => {
           if ((window as any).TalkingHeadClass) {
-            console.log("[Julia] Constructor detected in window");
             resolve((window as any).TalkingHeadClass);
             return;
           }
           const handleReady = () => {
-            console.log("[Julia] Received ready event");
             window.removeEventListener('talkinghead-ready', handleReady);
             resolve((window as any).TalkingHeadClass);
           };
@@ -53,15 +53,18 @@ export default function HolographicInterviewer({
 
       try {
         const TalkingHead: any = await getTalkingHead();
-        console.log("[Julia] Creating TalkingHead instance...");
 
         const head = new TalkingHead(containerRef.current!, {
-          lipsync: false, 
+          lipsync: true, // Enable real-time viseme calculation
           cameraView: "upper",
           blinking: true,
           lookup: true,
           smoothMouth: true,
-          background: "transparent"
+          background: "transparent",
+          // Load lip-sync module from the same CDN architecture
+          lipsyncModules: {
+            'en': 'https://cdn.jsdelivr.net/gh/met4citizen/TalkingHead@1.7/modules/lipsync-en.mjs'
+          }
         });
 
         console.log("[Julia] Loading GLB asset: /avatars/julia.glb");
@@ -74,10 +77,10 @@ export default function HolographicInterviewer({
         head.setView("upper");
         headRef.current = head;
         setStatus("ready");
-        console.log("[Julia] Avatar rendering active");
-
-        // Start autonomous behavior
+        
+        // Start autonomous idle behavior
         head.start();
+        console.log("[Julia] 3D Engine & Lip-Sync Ready");
       } catch (error: any) {
         console.error("[Julia] Critical Engine Failure:", error);
         setErrorMessage(error?.message || "3D Engine initialized failed.");
@@ -89,22 +92,39 @@ export default function HolographicInterviewer({
 
     return () => {
       if (headRef.current) {
-        console.log("[Julia] Cleaning up engine node");
         headRef.current.stopSpeaking();
       }
     };
   }, []);
 
-  // Sync speech state
+  // Neural Sync: Bind Prop State to 3D Morph Targets
   useEffect(() => {
     if (!headRef.current || status !== "ready") return;
 
-    if (isSpeaking && currentQuestion) {
-      headRef.current.speakText(currentQuestion);
+    if (isSpeaking && currentQuestion && currentQuestion !== lastSpokenRef.current) {
+      lastSpokenRef.current = currentQuestion;
+      
+      // Select the best voice for the 3D model
+      const voices = window.speechSynthesis.getVoices();
+      const preferredVoice = voices.find(v => 
+        (v.name.includes('Female') || v.name.includes('Natural')) && v.lang.startsWith('en')
+      );
+
+      headRef.current.speakText(
+        currentQuestion,
+        preferredVoice,
+        () => {
+          console.log("[Julia] Vocal Transmission Started");
+        },
+        () => {
+          console.log("[Julia] Vocal Transmission Completed");
+          if (onSpeechEnd) onSpeechEnd();
+        }
+      );
     } else if (!isSpeaking) {
       headRef.current.stopSpeaking();
     }
-  }, [isSpeaking, currentQuestion, status]);
+  }, [isSpeaking, currentQuestion, status, onSpeechEnd]);
 
   return (
     <div className={cn(
@@ -112,7 +132,7 @@ export default function HolographicInterviewer({
       className
     )}>
       
-      {/* 1. 3D RENDER TARGET */}
+      {/* 3D RENDER TARGET */}
       <div 
         ref={containerRef} 
         className={cn(
@@ -121,14 +141,23 @@ export default function HolographicInterviewer({
         )}
       />
 
-      {/* 2. ATMOSPHERIC HUD LAYERS */}
+      {/* ATMOSPHERIC HUD LAYERS */}
       <div className="absolute inset-0 z-40 pointer-events-none">
         <div className="absolute inset-0 opacity-10 bg-[linear-gradient(rgba(18,16,16,0)_50%,rgba(0,0,0,0.25)_50%)] bg-[size:100%_4px]" />
 
         <div className="absolute top-6 left-6 flex flex-col gap-2">
           <div className="flex items-center gap-3 px-3 py-1.5 glass rounded-lg border-cyan-500/20 bg-black/40">
             <Cpu className="w-3.5 h-3.5 text-cyan-400" />
-            <span className="text-[9px] font-black uppercase tracking-[0.4em] text-cyan-400">AI INTERVIEWER (JULIA 3D)</span>
+            <div className="flex items-center gap-2">
+              <span className="text-[9px] font-black uppercase tracking-[0.4em] text-cyan-400">AI INTERVIEWER</span>
+              <span className="text-[9px] text-white/20">|</span>
+              <div className="flex items-center gap-1.5">
+                <div className={cn("w-1 h-1 rounded-full", isSpeaking ? "bg-green-400 animate-pulse" : "bg-white/20")} />
+                <span className={cn("text-[8px] font-black uppercase tracking-widest", isSpeaking ? "text-green-400" : "text-white/30")}>
+                  {isSpeaking ? "SPEAKING" : "IDLE"}
+                </span>
+              </div>
+            </div>
           </div>
           
           <AnimatePresence>
@@ -140,7 +169,7 @@ export default function HolographicInterviewer({
                 className="flex items-center gap-2 px-3 py-1 glass rounded-lg border-purple-500/20 bg-purple-500/10"
               >
                 <div className="w-1.5 h-1.5 rounded-full bg-purple-400 animate-pulse shadow-[0_0_8px_#a855f7]" />
-                <span className="text-[8px] font-black uppercase tracking-[0.4em] text-purple-400">SPEAKING</span>
+                <span className="text-[8px] font-black uppercase tracking-[0.4em] text-purple-400">LIP-SYNC ACTIVE</span>
               </motion.div>
             )}
           </AnimatePresence>
@@ -156,7 +185,7 @@ export default function HolographicInterviewer({
         </div>
       </div>
 
-      {/* 3. LOADING & ERROR OVERLAYS */}
+      {/* LOADING & ERROR OVERLAYS */}
       <AnimatePresence>
         {status === "loading" && (
           <motion.div 
@@ -174,7 +203,7 @@ export default function HolographicInterviewer({
               />
               <Brain className="w-8 h-8 text-accent absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 animate-pulse" />
             </div>
-            <p className="text-[10px] font-black uppercase tracking-[0.5em] text-accent animate-pulse">Initializing Julia 3D Node...</p>
+            <p className="text-[10px] font-black uppercase tracking-[0.5em] text-accent animate-pulse">Synchronizing Oral Matrix...</p>
           </motion.div>
         )}
 

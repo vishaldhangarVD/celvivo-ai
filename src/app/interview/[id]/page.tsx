@@ -1,4 +1,3 @@
-
 "use client";
 import { Suspense, useEffect, useState, useRef, useMemo } from "react";
 import { useRouter, useParams, useSearchParams } from "next/navigation";
@@ -93,36 +92,21 @@ function VirtualArenaContent() {
     return name.charAt(0).toUpperCase() + name.slice(1);
   }, [user, journey]);
 
-  // FREE WEB SPEECH TTS PROTOCOL
-  const executeSpeech = (text: string) => {
-    if (typeof window === 'undefined' || !window.speechSynthesis) return;
-
-    window.speechSynthesis.cancel();
-    const utterance = new SpeechSynthesisUtterance(text);
-    
-    // Voice Selection (Prefer a natural female voice if available)
-    const voices = window.speechSynthesis.getVoices();
-    const preferredVoice = voices.find(v => v.name.includes('Female') || v.name.includes('Google US English'));
-    if (preferredVoice) utterance.voice = preferredVoice;
-
-    utterance.rate = 0.95;
-    utterance.pitch = 1.0;
-
-    utterance.onstart = () => setIsAiSpeaking(true);
-    utterance.onend = () => setIsAiSpeaking(false);
-    utterance.onerror = () => setIsAiSpeaking(false);
-
-    window.speechSynthesis.speak(utterance);
+  /**
+   * Consolidate vocal execution.
+   * Instead of manual speechSynthesis, we now let the 3D component handle it
+   * to ensure perfect lip-sync.
+   */
+  const executeSpeechTrigger = (text: string) => {
+    if (!text) return;
+    setIsAiSpeaking(true);
   };
 
   useEffect(() => {
     const lastMsg = [...transcript].reverse().find(t => t.role === 'interviewer');
     if (lastMsg && !isInitializing && !isSimulationComplete) {
-      executeSpeech(lastMsg.text);
+      executeSpeechTrigger(lastMsg.text);
     }
-    return () => {
-      if (typeof window !== 'undefined') window.speechSynthesis.cancel();
-    };
   }, [transcript, isInitializing, isSimulationComplete]);
 
   // Interview Real-time Countdown Protocol
@@ -286,6 +270,7 @@ function VirtualArenaContent() {
                 isSpeaking={isAiSpeaking} 
                 isGenerating={isInitializing}
                 currentQuestion={transcript[transcript.length-1]?.text} 
+                onSpeechEnd={() => setIsAiSpeaking(false)}
               />
             </div>
           </div>
