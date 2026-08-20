@@ -36,7 +36,6 @@ import {
 } from "lucide-react";
 import { aiMockInterview } from "@/ai/flows/ai-mock-interview-v2";
 import { generateInterviewFeedback } from "@/ai/flows/ai-interview-feedback";
-import { synthesizeAudio } from "@/ai/flows/ai-audio-synthesis";
 import { useUser, useFirestore, useDoc } from "@/firebase";
 import { doc, serverTimestamp, collection, addDoc, getDoc, deleteDoc, updateDoc, setDoc } from "firebase/firestore";
 import { useToast } from "@/hooks/use-toast";
@@ -72,14 +71,10 @@ function VirtualArenaContent() {
   // Neural Avatar Pipeline State
   const [currentSimStage, setCurrentSimStage] = useState<string>("INTRODUCTION");
   const [isAiSpeaking, setIsAiSpeaking] = useState(false);
-  const [isGeneratingAvatar, setIsGeneratingAvatar] = useState(false);
-  const [currentAvatarVideo, setCurrentAvatarVideo] = useState<string | null>(null);
-  const audioPlayerRef = useRef<HTMLAudioElement | null>(null);
 
   const [isMicOn, setIsMicOn] = useState(true);
   const [isCameraOn, setIsCameraOn] = useState(true);
   const [askedQuestions, setAskedQuestions] = useState<string[]>([]);
-  const recognitionRef = useRef<any>(null);
   const userVideoRef = useRef<HTMLVideoElement | null>(null);
   const mediaStreamRef = useRef<MediaStream | null>(null);
   
@@ -98,60 +93,37 @@ function VirtualArenaContent() {
     return name.charAt(0).toUpperCase() + name.slice(1);
   }, [user, journey]);
 
-  // LOCAL AVATAR SERVICE INTEGRATION
-  const triggerAvatarPipeline = async (text: string) => {
-    if (!text) return;
+  // FREE WEB SPEECH TTS PROTOCOL
+  const executeSpeech = (text: string) => {
+    if (typeof window === 'undefined' || !window.speechSynthesis) return;
+
+    window.speechSynthesis.cancel();
+    const utterance = new SpeechSynthesisUtterance(text);
     
-    setIsAiSpeaking(false);
-    setCurrentAvatarVideo(null);
-    setIsGeneratingAvatar(true);
+    // Voice Selection (Prefer a natural female voice if available)
+    const voices = window.speechSynthesis.getVoices();
+    const preferredVoice = voices.find(v => v.name.includes('Female') || v.name.includes('Google US English'));
+    if (preferredVoice) utterance.voice = preferredVoice;
 
-    try {
-      // 1. Generate WAV Audio from Gemini TTS
-      const audioUri = await synthesizeAudio(text);
-      
-      // 2. Call Local Python Avatar Service
-      const response = await fetch("http://localhost:8000/generate-avatar", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ 
-          audio_data: audioUri.split(',')[1], // Just base64
-          image_path: "public/avatars/hologram.png" 
-        })
-      });
+    utterance.rate = 0.95;
+    utterance.pitch = 1.0;
 
-      if (!response.ok) throw new Error("Local Avatar Service Offline");
+    utterance.onstart = () => setIsAiSpeaking(true);
+    utterance.onend = () => setIsAiSpeaking(false);
+    utterance.onerror = () => setIsAiSpeaking(false);
 
-      const data = await response.json();
-      const videoBlob = `data:video/mp4;base64,${data.video_data}`;
-      
-      setCurrentAvatarVideo(videoBlob);
-      setIsGeneratingAvatar(false);
-
-      // 3. Sync Audio and Video Playback
-      if (audioPlayerRef.current) {
-        audioPlayerRef.current.src = audioUri;
-        audioPlayerRef.current.onplay = () => setIsAiSpeaking(true);
-        audioPlayerRef.current.onended = () => setIsAiSpeaking(false);
-        audioPlayerRef.current.play();
-      }
-    } catch (error) {
-      console.warn("[Avatar Pipeline] Falling back to Web Speech API:", error);
-      setIsGeneratingAvatar(false);
-      // Graceful Fallback to browser TTS
-      const utterance = new SpeechSynthesisUtterance(text);
-      utterance.onstart = () => setIsAiSpeaking(true);
-      utterance.onend = () => setIsAiSpeaking(false);
-      window.speechSynthesis.speak(utterance);
-    }
+    window.speechSynthesis.speak(utterance);
   };
 
   useEffect(() => {
     const lastMsg = [...transcript].reverse().find(t => t.role === 'interviewer');
-    if (lastMsg && !isInitializing) {
-      triggerAvatarPipeline(lastMsg.text);
+    if (lastMsg && !isInitializing && !isSimulationComplete) {
+      executeSpeech(lastMsg.text);
     }
-  }, [transcript, isInitializing]);
+    return () => {
+      if (typeof window !== 'undefined') window.speechSynthesis.cancel();
+    };
+  }, [transcript, isInitializing, isSimulationComplete]);
 
   // Interview Real-time Countdown Protocol
   useEffect(() => {
@@ -290,7 +262,6 @@ function VirtualArenaContent() {
   return (
     <div className="h-screen w-full max-h-screen bg-[#050816] flex flex-col relative overflow-hidden">
       <div className="particles-bg" />
-      <audio ref={audioPlayerRef} className="hidden" />
       
       <header className="h-16 border-b border-white/5 bg-[#0b0e1a] flex items-center justify-between px-6 shrink-0 z-50">
         <div className="flex items-center gap-6">
@@ -313,8 +284,7 @@ function VirtualArenaContent() {
             <div className="absolute bottom-4 right-4 w-[240px] xl:w-[280px] aspect-[3/4] rounded-2xl overflow-hidden border border-cyan-500/30 shadow-2xl bg-black">
               <HolographicInterviewer 
                 isSpeaking={isAiSpeaking} 
-                isGenerating={isGeneratingAvatar}
-                videoUrl={currentAvatarVideo}
+                isGenerating={isInitializing}
                 currentQuestion={transcript[transcript.length-1]?.text} 
               />
             </div>
