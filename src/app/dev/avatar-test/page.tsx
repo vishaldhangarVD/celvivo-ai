@@ -9,7 +9,7 @@ import { Cpu, Box, Eye, Zap, Mic, MicOff, MessageSquare, Activity } from "lucide
 import { cn } from "@/lib/utils";
 
 /**
- * @fileOverview AvatarTestPage - Step 4: Hologram Transformation.
+ * @fileOverview AvatarTestPage - Hologram Transformation Test.
  */
 
 const HolographicInterviewer = dynamic(() => import("@/components/HolographicInterviewer"), {
@@ -17,7 +17,7 @@ const HolographicInterviewer = dynamic(() => import("@/components/HolographicInt
   loading: () => (
     <div className="w-full h-full flex flex-col items-center justify-center bg-[#050816]">
       <div className="w-12 h-12 border-2 border-accent/20 border-t-accent rounded-full animate-spin mb-6" />
-      <p className="text-[10px] font-black uppercase tracking-[0.5em] text-accent animate-pulse">Initializing Arena...</p>
+      <p className="text-[10px] font-black uppercase tracking-[0.5em] text-accent animate-pulse">Initialising Matrix...</p>
     </div>
   )
 });
@@ -27,19 +27,6 @@ export default function AvatarTestPage() {
 
   return (
     <div className="min-h-screen bg-[#050816]">
-      <script
-        type="importmap"
-        dangerouslySetInnerHTML={{
-          __html: JSON.stringify({
-            imports: {
-              "three": "https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js/+esm",
-              "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.180.0/examples/jsm/",
-              "talkinghead": "https://cdn.jsdelivr.net/gh/met4citizen/TalkingHead@1.7/modules/talkinghead.mjs"
-            }
-          })
-        }}
-      />
-      
       <div className="particles-bg" />
       <Navbar />
       
@@ -49,10 +36,10 @@ export default function AvatarTestPage() {
             Phase 04: Neural Hologram
           </Badge>
           <h1 className="text-6xl font-bold tracking-tighter text-premium">
-            Julia <span className="text-gradient-purple">AI Core.</span>
+            Hologram <span className="text-gradient-purple">Matrix Core.</span>
           </h1>
           <p className="text-muted-foreground font-light max-w-xl">
-            Transformation of the Julia mesh into a high-fidelity holographic projection for elite simulations.
+            Transformation of the professional identity blueprint into a high-fidelity holographic projection for elite simulations.
           </p>
         </header>
 

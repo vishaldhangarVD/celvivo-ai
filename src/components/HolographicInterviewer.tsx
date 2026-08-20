@@ -7,8 +7,8 @@ import Image from "next/image";
 import { Cpu, Wifi } from "lucide-react";
 
 /**
- * @fileOverview HolographicInterviewer v16.0 - Neural Animatronics.
- * Restores visibility of the hologram(1).png asset and applies live effects.
+ * @fileOverview HolographicInterviewer v17.0 - Corrected Path.
+ * Displays the holographic AI interviewer from /avatars/hologram.png.
  */
 
 interface HolographicInterviewerProps {
@@ -66,9 +66,9 @@ export default function HolographicInterviewer({ isSpeaking = false, className }
         {/* Image Container */}
         <div className="relative w-full h-full max-w-[95%] max-h-[95%]">
           
-          {/* THE MASTER IMAGE */}
+          {/* THE MASTER IMAGE - Corrected Path */}
           <Image
-            src="/avatars/hologram(1).png"
+            src="/avatars/hologram.png"
             alt="AI Interviewer Protocol"
             fill
             className={cn(
@@ -82,8 +82,8 @@ export default function HolographicInterviewer({ isSpeaking = false, className }
 
           {imgError && (
             <div className="absolute inset-0 flex flex-col items-center justify-center text-red-500 bg-black/80">
-              <span className="text-[10px] font-black uppercase tracking-widest">Neural Asset Missing</span>
-              <span className="text-[8px] opacity-60">/avatars/hologram(1).png</span>
+              <span className="text-[10px] font-black uppercase tracking-widest text-center">Neural Asset Missing</span>
+              <span className="text-[8px] opacity-60 text-center">/avatars/hologram.png</span>
             </div>
           )}
 
