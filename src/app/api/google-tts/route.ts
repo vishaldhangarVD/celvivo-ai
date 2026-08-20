@@ -4,7 +4,8 @@ import { GoogleAuth } from 'google-auth-library';
 
 /**
  * @fileOverview Secure Google Cloud TTS Gateway.
- * Returns JSON with base64 audioContent to ensure stable client parsing.
+ * Supports Service Account (OAuth2) and API Key authentication.
+ * Optimized for Firebase Studio environments and resilient credential loading.
  */
 
 export async function POST(req: Request) {
@@ -16,45 +17,71 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Text payload missing." }, { status: 400 });
     }
 
-    const authOptions: any = {
-      scopes: 'https://www.googleapis.com/auth/cloud-platform'
+    // Try to find a valid API Key from various possible env vars as a primary or fallback
+    const apiKey = (
+      process.env.GOOGLE_API_KEY || 
+      process.env.GEMINI_API_KEY || 
+      process.env.GOOGLE_GENAI_API_KEY || 
+      ''
+    ).trim();
+
+    const serviceAccountJson = process.env.GOOGLE_SERVICE_ACCOUNT_JSON;
+
+    let ttsUrl = 'https://texttospeech.googleapis.com/v1/text:synthesize';
+    let headers: Record<string, string> = {
+      'Content-Type': 'application/json',
     };
 
-    if (process.env.GOOGLE_SERVICE_ACCOUNT_JSON) {
+    let authMethod = 'NONE';
+
+    // Protocol A: Service Account (OAuth2) - Preferred if configured
+    if (serviceAccountJson) {
       try {
-        authOptions.credentials = JSON.parse(process.env.GOOGLE_SERVICE_ACCOUNT_JSON);
-      } catch (parseError) {
-        console.error('[Google TTS] Failed to parse GOOGLE_SERVICE_ACCOUNT_JSON');
+        let credentials = JSON.parse(serviceAccountJson);
+        
+        // Handle escaped newlines in the private key which often occur in environment variables
+        if (credentials.private_key && typeof credentials.private_key === 'string') {
+          credentials.private_key = credentials.private_key.replace(/\\n/g, '\n');
+        }
+
+        const auth = new GoogleAuth({
+          credentials,
+          scopes: ['https://www.googleapis.com/auth/cloud-platform']
+        });
+
+        const client = await auth.getClient();
+        const tokenResponse = await client.getAccessToken();
+        const accessToken = tokenResponse.token;
+
+        if (accessToken) {
+          headers['Authorization'] = `Bearer ${accessToken}`;
+          authMethod = 'SERVICE_ACCOUNT';
+        }
+      } catch (authError: any) {
+        console.warn('[Google TTS Auth] Service account authentication failed, attempting API Key fallback:', authError.message);
+        // Continue to API Key fallback
       }
     }
 
-    const auth = new GoogleAuth(authOptions);
-
-    let accessToken: string | null = null;
-    try {
-      const client = await auth.getClient();
-      const tokenResponse = await client.getAccessToken();
-      accessToken = tokenResponse.token || null;
-    } catch (authError: any) {
-      console.error('[Google TTS Auth Error]:', authError.message);
-      return NextResponse.json({ 
-        error: "Google Cloud authentication failed. Verify service account.",
-        details: authError.message
-      }, { status: 401 });
-    }
-
-    if (!accessToken) {
-      return NextResponse.json({ error: "Access token retrieval failed." }, { status: 500 });
+    // Protocol B: API Key Fallback (Used in many Studio prototype environments)
+    if (authMethod === 'NONE') {
+      if (apiKey) {
+        ttsUrl += `?key=${apiKey}`;
+        authMethod = 'API_KEY';
+      } else {
+        console.error('[Google TTS Auth] No valid credentials found (JSON or Key).');
+        return NextResponse.json({ 
+          error: "Google Cloud TTS credentials are not configured.",
+          details: "Please verify that GOOGLE_API_KEY or GOOGLE_SERVICE_ACCOUNT_JSON is set in the environment variables."
+        }, { status: 401 });
+      }
     }
 
     const response = await fetch(
-      `https://texttospeech.googleapis.com/v1/text:synthesize`,
+      ttsUrl,
       {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${accessToken}`,
-        },
+        headers,
         body: JSON.stringify({
           input: { text },
           voice: {
@@ -64,7 +91,7 @@ export async function POST(req: Request) {
           },
           audioConfig: {
             audioEncoding: 'MP3',
-            speakingRate: 0.90,
+            speakingRate: 0.95,
             pitch: 0.0
           }
         }),
@@ -73,15 +100,34 @@ export async function POST(req: Request) {
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({ message: "Google API rejected request" }));
-      return NextResponse.json({ error: "TTS Generation Failed", details: errorData }, { status: response.status });
+      console.error('[Google TTS API Error]:', response.status, JSON.stringify(errorData));
+      
+      // Handle specific API Key or Service Account permission issues
+      if (response.status === 403) {
+        return NextResponse.json({ 
+          error: "Text-to-Speech API access denied.", 
+          details: "Ensure the Text-to-Speech API is enabled in your Google Cloud Console and the credentials have 'Cloud Text-to-Speech API' permissions."
+        }, { status: 403 });
+      }
+
+      return NextResponse.json({ 
+        error: "Google Cloud TTS request failed.", 
+        status: response.status,
+        details: errorData 
+      }, { status: response.status });
     }
 
     const data = await response.json();
     
-    // Explicitly return JSON to prevent client-side "Unexpected token <" parsing errors
+    if (!data.audioContent) {
+      throw new Error("Google API returned success but no audioContent field was found.");
+    }
+
+    // Return pure JSON to ensure stable parsing in client-side fetch
     return NextResponse.json({ 
-      audioContent: data.audioContent, // base64 string
-      success: true 
+      audioContent: data.audioContent,
+      success: true,
+      authMethodUsed: authMethod
     });
 
   } catch (error: any) {
