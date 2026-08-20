@@ -7,8 +7,7 @@ import { Cpu, Box, Eye } from "lucide-react";
 
 /**
  * @fileOverview AvatarTestPage - Step 3: Mesh Verification Route.
- * Uses an Import Map to load 3D modules directly from CDN, bypassing 
- * Next.js build-time resolution errors for TalkingHead.
+ * Uses an Import Map to load 3D modules directly from CDN.
  */
 
 // SSR must be disabled for components relying on browser-only import maps
@@ -27,15 +26,14 @@ export default function AvatarTestPage() {
     <div className="min-h-screen bg-[#050816]">
       {/* 
         Import Map: Essential for browser-side resolution of CDN modules.
-        Must be placed before the components that import these specifiers.
-        Updated to resolve three/addons/ for internal TalkingHead dependencies.
+        Using +esm version for Three.js to ensure proper module bundling.
       */}
       <script
         type="importmap"
         dangerouslySetInnerHTML={{
           __html: JSON.stringify({
             imports: {
-              "three": "https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js",
+              "three": "https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js/+esm",
               "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.180.0/examples/jsm/",
               "talkinghead": "https://cdn.jsdelivr.net/gh/met4citizen/TalkingHead@1.7/modules/talkinghead.mjs"
             }
@@ -55,7 +53,7 @@ export default function AvatarTestPage() {
             Julia <span className="text-gradient-purple">3D Engine.</span>
           </h1>
           <p className="text-muted-foreground font-light max-w-xl">
-            Verifying GPU rendering and mesh integrity via CDN module protocol.
+            Verifying GPU rendering and mesh integrity via official TalkingHead v1.7 API.
           </p>
         </header>
 
@@ -77,7 +75,7 @@ export default function AvatarTestPage() {
              </div>
              <div>
                <p className="text-[8px] font-black text-white/20 uppercase tracking-widest mb-1">Architecture</p>
-               <p className="text-sm font-bold text-white/90">Browser Import Map</p>
+               <p className="text-sm font-bold text-white/90">Official API showAvatar()</p>
              </div>
            </div>
 
@@ -86,8 +84,8 @@ export default function AvatarTestPage() {
                <Box className="w-5 h-5" />
              </div>
              <div>
-               <p className="text-[8px] font-black text-white/20 uppercase tracking-widest mb-1">Source</p>
-               <p className="text-sm font-bold text-white/90">CDN mjs Proxy</p>
+               <p className="text-[8px] font-black text-white/20 uppercase tracking-widest mb-1">Resource</p>
+               <p className="text-sm font-bold text-white/90">/avatars/julia.glb</p>
              </div>
            </div>
 
@@ -96,8 +94,8 @@ export default function AvatarTestPage() {
                <Eye className="w-5 h-5" />
              </div>
              <div>
-               <p className="text-[8px] font-black text-white/20 uppercase tracking-widest mb-1">View</p>
-               <p className="text-sm font-bold text-white/90">Upper Body Fixed</p>
+               <p className="text-[8px] font-black text-white/20 uppercase tracking-widest mb-1">Status</p>
+               <p className="text-sm font-bold text-white/90">Idle Animation Active</p>
              </div>
            </div>
         </div>

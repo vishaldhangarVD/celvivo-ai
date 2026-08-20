@@ -6,11 +6,9 @@ import { Box } from "lucide-react";
 /**
  * @fileOverview HolographicInterviewer - Step 3: 3D Avatar Rendering Protocol.
  * 
- * LOADING STRATEGY:
- * To resolve the "Failed to resolve module specifier" error, this component uses
- * a Browser Import Map defined in the parent page. This allows us to load 
- * TalkingHead and Three.js directly from CDN as browser modules, bypassing 
- * Webpack's static analysis.
+ * Corrected API Usage:
+ * - Replaced invalid showGLB() with official showAvatar().
+ * - Added explicit setView("upper") after loading.
  */
 
 export default function HolographicInterviewer() {
@@ -28,7 +26,7 @@ export default function HolographicInterviewer() {
       try {
         // Resolve TalkingHead from the browser-level import map specifier 'talkinghead'.
         // We use webpackIgnore to ensure the Next.js bundler doesn't attempt to resolve this.
-        // @ts-ignore - 'talkinghead' is resolved by the browser importmap, not node_modules
+        // @ts-ignore - 'talkinghead' is resolved by the browser importmap
         const module: any = await import(/* webpackIgnore: true */ 'talkinghead');
         
         if (!module || !module.TalkingHead) {
@@ -41,7 +39,6 @@ export default function HolographicInterviewer() {
 
         // Step 3: Initialize 3D Engine
         const head = new TalkingHead(containerRef.current, {
-          cameraView: "upper",   // Standard upper-body focus
           eyeContact: true,      // Maintain virtual eye contact
           headMovement: true,    // Natural idle micro-movements
           headSpeaking: true,    // Enable head motion
@@ -51,18 +48,30 @@ export default function HolographicInterviewer() {
 
         headRef.current = head;
 
-        // Load the Julia mesh from the provided local GLB asset
+        // Load the Julia mesh using the official showAvatar API
         try {
-          await head.showGLB("/avatars/julia.glb");
+          await head.showAvatar({
+            url: "/avatars/julia.glb",
+            body: "F",
+            avatarMood: "neutral",
+            avatarIdleEyeContact: 0.7,
+            avatarIdleHeadMove: 0.7,
+            avatarSpeakingEyeContact: 0.7,
+            avatarSpeakingHeadMove: 0.7
+          });
+
+          // Calibration: Set camera to upper body view
+          head.setView("upper");
+
+          if (isMounted) {
+            setLoading(false);
+            console.log("[Neural Mesh] Julia initialized via official showAvatar protocol.");
+          }
         } catch (glbErr: any) {
-          console.error("[Neural Mesh] GLB Resource Error:", glbErr);
-          throw new Error("Failed to load /avatars/julia.glb. Please verify the asset exists in your public/avatars/ directory.");
+          console.error("[Neural Mesh] Julia avatar loading failed:", glbErr);
+          throw new Error(`Avatar Load Fault: ${glbErr.message || "Check /public/avatars/julia.glb path"}`);
         }
 
-        if (isMounted) {
-          setLoading(false);
-          console.log("[Neural Mesh] Julia initialized via browser module protocol.");
-        }
       } catch (err: any) {
         console.error("[Neural Mesh] Runtime Initialization Fault:", err);
         if (isMounted) {
@@ -97,7 +106,7 @@ export default function HolographicInterviewer() {
              <p className="text-[10px] font-black uppercase tracking-[0.4em] text-accent animate-pulse">
                Hydrating Neural Mesh...
              </p>
-             <p className="text-[8px] font-bold uppercase tracking-widest text-white/20">Syncing CDN Modules</p>
+             <p className="text-[8px] font-bold uppercase tracking-widest text-white/20">Official Julia Protocol v1.7</p>
           </div>
         </div>
       )}
