@@ -94,8 +94,6 @@ function VirtualArenaContent() {
 
   /**
    * Consolidate vocal execution.
-   * Instead of manual speechSynthesis, we now let the 3D component handle it
-   * to ensure perfect lip-sync.
    */
   const executeSpeechTrigger = (text: string) => {
     if (!text) return;
@@ -253,46 +251,89 @@ function VirtualArenaContent() {
            <div><h1 className="text-xs font-black uppercase text-white">NEXVOROAI</h1><p className="text-[9px] text-white/40 uppercase font-black">{formattedName}</p></div>
         </div>
         <div className="px-3 py-1 glass rounded-lg border-accent/20 font-mono text-accent flex items-center gap-2"><Timer className="w-3.5 h-3.5" /> {timeLeft}s</div>
-        <Button onClick={() => finalizeSession(transcript)} className="h-9 px-4 rounded-xl bg-red-500/10 text-red-500 border border-red-500/20 text-[9px] uppercase font-bold">End Interview</Button>
+        <div className="flex items-center gap-4">
+          <Button onClick={() => finalizeSession(transcript)} className="h-9 px-4 rounded-xl bg-red-500/10 text-red-500 border border-red-500/20 text-[9px] uppercase font-bold">End Interview</Button>
+        </div>
       </header>
 
       <div className="flex-1 flex overflow-hidden">
+        {/* Left Control Bar */}
         <div className="w-[72px] border-r border-white/5 bg-[#0b0e1a] flex flex-col items-center py-6 gap-8 shrink-0">
           <Link href="/"><Button variant="ghost" size="icon" className="text-white/20"><Home className="w-5" /></Button></Link>
           <Button variant="ghost" size="icon" className="text-accent bg-accent/10 rounded-xl"><Mic className="w-5" /></Button>
         </div>
 
+        {/* Center Canvas: User Webcam */}
         <div className="flex-1 flex flex-col p-3 space-y-1.5 overflow-hidden">
           <div className="flex-1 min-0 relative rounded-[2rem] overflow-hidden bg-black border border-white/5 shadow-2xl">
             <video ref={userVideoRef} autoPlay playsInline muted className={cn("w-full h-full object-cover", !isCameraOn && "hidden")} style={{ transform: 'scaleX(-1)' }} />
-            <div className="absolute bottom-4 right-4 w-[240px] xl:w-[280px] aspect-[3/4] rounded-2xl overflow-hidden border border-cyan-500/30 shadow-2xl bg-black">
-              <HolographicInterviewer 
-                isSpeaking={isAiSpeaking} 
-                isGenerating={isInitializing}
-                currentQuestion={transcript[transcript.length-1]?.text} 
-                onSpeechEnd={() => setIsAiSpeaking(false)}
-              />
+            
+            {/* Status Overlays */}
+            <div className="absolute top-6 left-6 flex items-center gap-3">
+              <Badge className="bg-black/60 backdrop-blur-md border-white/10 text-white/80 py-1.5 px-4 rounded-full flex items-center gap-2">
+                <div className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
+                <span className="text-[10px] font-bold uppercase tracking-widest">LIVE SESSION</span>
+              </Badge>
             </div>
           </div>
 
           <div className="grid grid-cols-4 gap-2 shrink-0 pb-1">
-            <Card className="glass border-white/5 p-2 flex items-center gap-2"><Activity className="w-3.5 h-3.5 text-accent" /> <span className="text-[11px] font-bold">{Math.round((currentIdx/10)*100)}%</span></Card>
+            <Card className="glass border-white/5 p-2 flex items-center gap-2"><Activity className="w-3.5 h-3.5 text-accent" /> <span className="text-[11px] font-bold">{Math.round((currentIdx/10)*100)}% Complete</span></Card>
             <Card className="glass border-white/5 p-2 flex items-center gap-2"><Clock className="w-3.5 h-3.5 text-purple-400" /> <span className="text-[11px] font-bold">{currentSimStage}</span></Card>
           </div>
         </div>
 
-        <div className="w-[300px] xl:w-[320px] border-l border-white/5 bg-[#0b0e1a] flex flex-col shrink-0 overflow-hidden">
-          <div className="flex-1 p-3 flex flex-col space-y-2 overflow-hidden">
-             <div className="flex justify-between items-end px-1"><h3 className="text-[9px] font-black uppercase text-white/30">Question {currentIdx}</h3></div>
-             <div className="flex-1 overflow-y-auto custom-scrollbar pr-1">
-                <Card className="glass border-white/10 bg-[#08090D]/95 p-4 rounded-2xl relative overflow-hidden">
-                    <p className="text-[15px] font-light text-white leading-relaxed">{transcript[transcript.length-1]?.role === 'interviewer' ? transcript[transcript.length-1].text : "..."}</p>
-                </Card>
+        {/* Right Panel: AI Interviewer & Question Node */}
+        <div className="w-[300px] xl:w-[350px] border-l border-white/5 bg-[#0b0e1a] flex flex-col shrink-0 overflow-hidden">
+          <div className="flex-1 p-3 flex flex-col space-y-3 overflow-hidden">
+             {/* Question Node Header */}
+             <div className="flex justify-between items-end px-1 shrink-0">
+               <h3 className="text-[9px] font-black uppercase text-white/30 tracking-widest">Question {currentIdx}</h3>
+               <Badge variant="outline" className="border-accent/30 text-accent text-[8px] uppercase tracking-tighter">AI Node Active</Badge>
+             </div>
+
+             {/* Interview Question Card */}
+             <Card className="glass border-white/10 bg-[#08090D]/95 p-4 rounded-2xl relative overflow-hidden shrink-0 shadow-lg">
+                <div className="absolute top-0 right-0 p-2 opacity-10"><MessageSquare className="w-8 h-8 text-accent" /></div>
+                <p className="text-[14px] font-light text-white leading-relaxed relative z-10">
+                  {transcript[transcript.length-1]?.role === 'interviewer' ? transcript[transcript.length-1].text : "..."}
+                </p>
+             </Card>
+
+             {/* Julia 3D AI Interviewer Card */}
+             <div className="flex-1 min-h-[300px] relative rounded-2xl overflow-hidden border border-white/5 shadow-2xl bg-black/40 group">
+                <HolographicInterviewer 
+                  isSpeaking={isAiSpeaking} 
+                  isGenerating={isInitializing}
+                  currentQuestion={transcript[transcript.length-1]?.text} 
+                  onSpeechEnd={() => setIsAiSpeaking(false)}
+                  className="rounded-2xl"
+                />
              </div>
           </div>
-          <div className="p-3 space-y-2 border-t border-white/5 bg-[#0b0e1a]">
-             <Textarea value={userAnswer} onChange={(e) => setUserAnswer(e.target.value)} placeholder="Type response..." className="min-h-[70px] rounded-xl glass border-white/10 bg-transparent p-2.5 text-sm font-light resize-none" />
-             <Button onClick={handleSend} disabled={isProcessing || !userAnswer.trim()} className="w-full h-10 btn-premium rounded-xl text-[9px] font-black uppercase">Submit Answer</Button>
+
+          {/* User Input Section */}
+          <div className="p-3 space-y-2 border-t border-white/5 bg-[#0b0e1a] shrink-0">
+             <div className="flex items-center justify-between px-1">
+                <label className="text-[8px] font-black uppercase text-white/20 tracking-widest">Candidate Input</label>
+                <div className="flex items-center gap-1.5">
+                   <div className={cn("w-1.5 h-1.5 rounded-full", isProcessing ? "bg-accent animate-pulse" : "bg-white/10")} />
+                   <span className="text-[7px] font-bold text-white/20 uppercase">{isProcessing ? "PROCESSING" : "READY"}</span>
+                </div>
+             </div>
+             <Textarea 
+               value={userAnswer} 
+               onChange={(e) => setUserAnswer(e.target.value)} 
+               placeholder="Synthesize your response..." 
+               className="min-h-[80px] rounded-xl glass border-white/10 bg-transparent p-3 text-sm font-light resize-none focus:border-accent/50 transition-all" 
+             />
+             <Button 
+               onClick={handleSend} 
+               disabled={isProcessing || !userAnswer.trim()} 
+               className="w-full h-11 btn-premium rounded-xl text-[10px] font-black uppercase tracking-[0.2em] shadow-xl group"
+             >
+               {isProcessing ? <Loader2 className="w-4 h-4 animate-spin" /> : <>SUBMIT ANSWER <ChevronRight className="w-4 h-4 ml-1 group-hover:translate-x-0.5 transition-transform" /></>}
+             </Button>
           </div>
         </div>
       </div>
@@ -301,5 +342,5 @@ function VirtualArenaContent() {
 }
 
 export default function VirtualArena() {
-  return <Suspense fallback={<div className="h-screen bg-[#050816]" />}><VirtualArenaContent /></Suspense>;
+  return <Suspense fallback={<div className="h-screen bg-[#050816] flex items-center justify-center"><Loader2 className="w-12 h-12 text-accent animate-spin" /></div>}><VirtualArenaContent /></Suspense>;
 }
