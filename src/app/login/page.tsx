@@ -83,7 +83,8 @@ function LoginContent() {
       } catch (error: any) {
         console.error("Redirect Result Error:", error);
         setIsLoading(false);
-        if (error.code !== 'auth/popup-closed-by-user') {
+        // auth/popup-closed-by-user shouldn't happen here but keeping for safety
+        if (error.code !== 'auth/popup-closed-by-user' && error.code !== 'auth/cancelled-by-user') {
            toast({ 
              variant: "destructive", 
              title: "Authentication Error", 
@@ -98,10 +99,10 @@ function LoginContent() {
 
   // Redirection Protocol: Transition to authenticated destination if session exists
   useEffect(() => {
-    if (user && !authLoading) {
+    if (user && !authLoading && !isLoading) {
       router.replace(redirectTo);
     }
-  }, [user, authLoading, router, redirectTo]);
+  }, [user, authLoading, isLoading, router, redirectTo]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -135,7 +136,7 @@ function LoginContent() {
     
     try {
       setIsLoading(true);
-      // Direct redirect used to prevent popup interruptions in development environments
+      // Use Redirect instead of Popup for maximum environmental stability
       await signInWithRedirect(auth, provider);
     } catch (error: any) {
       console.error("Google Auth Protocol Error:", error);
@@ -168,7 +169,7 @@ function LoginContent() {
     }
   };
 
-  if (authLoading) {
+  if (authLoading || (isLoading && !user)) {
     return (
       <div className="min-h-screen bg-[#050816] flex items-center justify-center">
         <div className="flex flex-col items-center gap-4">
