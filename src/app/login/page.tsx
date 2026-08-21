@@ -1,6 +1,7 @@
+
 'use client';
 
-import { useState, useEffect, Suspense, useCallback } from 'react';
+import { useState, useEffect, Suspense, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -33,6 +34,7 @@ function LoginContent() {
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [isResetting, setIsResetting] = useState(false);
+  const redirectProcessed = useRef(false);
 
   const redirectTo = searchParams.get('redirectTo') || '/dashboard';
 
@@ -72,39 +74,42 @@ function LoginContent() {
 
   /**
    * Redirect Result Handler
-   * Handles the landing back from a signInWithRedirect flow.
-   * Crucial for environments like Cloud Workstations where popups may be blocked.
+   * Crucial for workstation environments where popups are often blocked or automatically closed.
    */
   useEffect(() => {
+    if (!auth || !db || redirectProcessed.current) return;
+    
     async function handleRedirect() {
-      if (!auth || !db) return;
       try {
         const result = await getRedirectResult(auth);
+        redirectProcessed.current = true;
+        
         if (result?.user) {
           setIsLoading(true);
           await ensureUserProfile(result.user);
-          toast({ title: "Nexus Link Established", description: "Identity verified via Redirect." });
+          // Redirect handled by the user-watch effect below
           setIsLoading(false);
         }
       } catch (error: any) {
-        console.error("[Auth] Redirect Error:", error);
+        console.error("[Auth] Redirect Result Error:", error);
         setIsLoading(false);
-        // Only show toast for actual errors, ignore common non-errors
-        if (error.code !== 'auth/cancelled-popup-request' && error.code !== 'auth/no-auth-event') {
+        
+        if (error.code !== 'auth/no-auth-event' && error.code !== 'auth/cancelled-popup-request') {
           toast({
             variant: "destructive",
-            title: "Redirect Failed",
-            description: error.message || "Could not complete redirect handshake.",
+            title: "Authentication Failed",
+            description: error.message || "Could not complete the login handshake.",
           });
         }
       }
     }
+    
     handleRedirect();
   }, [auth, db, ensureUserProfile, toast]);
 
   /**
    * Redirection Protocol
-   * Transitions to the dashboard once Firebase Auth state is verified.
+   * Monitors auth state and transitions to destination.
    */
   useEffect(() => {
     if (user && !authLoading && !isLoading) {
@@ -114,15 +119,9 @@ function LoginContent() {
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!auth) {
-      toast({
-        variant: "destructive",
-        title: "System Offline",
-        description: "Authentication service is unavailable.",
-      });
-      return;
-    }
+    if (!auth) return;
     if (!email || !password) return;
+    
     setIsLoading(true);
     try {
       await signInWithEmailAndPassword(auth, email, password);
@@ -130,64 +129,60 @@ function LoginContent() {
       console.error("[Auth] Password Login Error:", error);
       toast({
         variant: "destructive",
-        title: "Protocol Failure",
-        description: error.message || "Invalid credentials.",
+        title: "Access Denied",
+        description: "Invalid identification or security token.",
       });
       setIsLoading(false);
     }
   };
 
   /**
-   * Google Handshake Protocol
-   * Uses popup method primarily, falling back to redirect if blocked by environment.
+   * Google Authentication Protocol
+   * Primary: Popup
+   * Fallback: Redirect (triggered on block or automatic close in proxied environments)
    */
   const handleGoogleLogin = async () => {
     if (!auth) return;
+    
     const provider = new GoogleAuthProvider();
     provider.setCustomParameters({ prompt: 'select_account' });
     
     setIsLoading(true);
     try {
-      // Attempt Popup first (smoother UX)
       const result = await signInWithPopup(auth, provider);
       if (result.user) {
         await ensureUserProfile(result.user);
-        toast({ title: "Nexus Link Established", description: "Identity verified via Google." });
+        // router.replace will be handled by the user-watch effect
       }
     } catch (error: any) {
-      console.error("[Auth] Google Handshake Error:", error);
+      console.error("[Auth] Google Login Attempt Error:", error.code, error.message);
       
-      // Automatic fallback if popup is blocked by the workstation environment
-      if (error.code === 'auth/popup-blocked') {
+      // auth/popup-closed-by-user can occur automatically in some proxied workstation browsers
+      // if they detect a popup attempt but suppress it silently.
+      if (error.code === 'auth/popup-blocked' || error.code === 'auth/popup-closed-by-user') {
         try {
           await signInWithRedirect(auth, provider);
-          // Execution stops here as the page will redirect
-          return; 
+          // Execution stops here as page redirects
+          return;
         } catch (redirectError: any) {
-          console.error("[Auth] Redirect Fallback Error:", redirectError);
-          toast({ variant: "destructive", title: "Auth Failed", description: "Redirect also failed." });
+          console.error("[Auth] Redirect Fallback Failed:", redirectError);
+          toast({
+            variant: "destructive",
+            title: "Protocol Failure",
+            description: "System could not initialize redirect handshake.",
+          });
           setIsLoading(false);
         }
-      } else {
+      } else if (error.code === 'auth/cancelled-popup-request') {
+        // Just reset loading, another request is already in progress
         setIsLoading(false);
-        
-        let errorMessage = "Google handshake failed.";
-        if (error.code === 'auth/popup-closed-by-user') {
-          errorMessage = "Authentication cancelled by user.";
-        } else if (error.code === 'auth/unauthorized-domain') {
-          errorMessage = `Domain ${window.location.hostname} is not authorized. Register it in Firebase Console > Auth > Settings > Authorized domains.`;
-          console.error(`[CRITICAL] Unauthorized Domain: ${window.location.hostname}`);
-        } else if (error.code === 'auth/cancelled-popup-request') {
-          return; // Suppress duplicate requests
-        } else {
-          errorMessage = error.message || "An unexpected auth error occurred.";
-        }
-
+      } else {
         toast({
           variant: "destructive",
           title: "Handshake Failed",
-          description: errorMessage,
+          description: error.message || "Google authentication encountered a critical fault.",
         });
+        setIsLoading(false);
       }
     }
   };
@@ -196,17 +191,17 @@ function LoginContent() {
     if (!auth || !email) {
       toast({
         variant: "destructive",
-        title: "Identity Required",
-        description: "Please enter your email to receive recovery instructions.",
+        title: "Input Required",
+        description: "Enter your identity email to receive recovery instructions.",
       });
       return;
     }
     setIsResetting(true);
     try {
       await sendPasswordResetEmail(auth, email);
-      toast({ title: "Recovery Sent", description: "Check your inbox for the reset protocol." });
+      toast({ title: "Recovery Protocol Sent", description: "Check your terminal (inbox) for reset instructions." });
     } catch (error: any) {
-      toast({ variant: "destructive", title: "Recovery Failed", description: error.message });
+      toast({ variant: "destructive", title: "Transmission Failed", description: error.message });
     } finally {
       setIsResetting(false);
     }
@@ -215,14 +210,14 @@ function LoginContent() {
   if (authLoading || (isLoading && !user)) {
     return (
       <div className="min-h-screen bg-[#050816] flex items-center justify-center">
-        <div className="flex flex-col items-center gap-4">
-          <div className="relative">
-            <Loader2 className="w-12 h-12 text-accent animate-spin" />
+        <div className="flex flex-col items-center gap-6">
+          <div className="relative w-16 h-16">
+            <Loader2 className="w-full h-full text-accent animate-spin" />
             <div className="absolute inset-0 flex items-center justify-center">
               <div className="w-2 h-2 bg-accent rounded-full animate-pulse" />
             </div>
           </div>
-          <p className="text-[10px] font-bold uppercase tracking-[0.4em] text-accent animate-pulse">Syncing Identity...</p>
+          <p className="text-[10px] font-black uppercase tracking-[0.5em] text-accent animate-pulse">Syncing Identity...</p>
         </div>
       </div>
     );
@@ -274,27 +269,16 @@ function LoginContent() {
             </div>
 
             <CardContent className="space-y-10 p-0 relative z-10">
-              {!auth && (
-                <div className="flex items-center gap-3 p-4 bg-red-500/10 border border-red-500/20 rounded-2xl text-red-400 text-[10px] font-bold uppercase tracking-widest">
-                  <AlertCircle className="w-4 h-4" />
-                  System nodes initializing...
-                </div>
-              )}
-
               <Button 
                 variant="outline" 
                 onClick={handleGoogleLogin}
-                disabled={!auth || isLoading}
+                disabled={isLoading}
                 className="w-full h-16 rounded-2xl glass border-white/10 hover:bg-white/[0.05] hover:shadow-[0_0_30px_rgba(34,211,238,0.15)] flex gap-4 transition-all duration-500 group/btn overflow-hidden relative"
               >
-                {isLoading ? (
-                  <Loader2 className="w-5 h-5 animate-spin text-accent" />
-                ) : (
-                  <div className="flex items-center gap-4">
-                    <Chrome className="w-5 h-5 text-accent transition-transform group-hover/btn:scale-110" />
-                    <span className="text-[10px] font-black uppercase tracking-[0.3em] text-white/90">Continue with Google</span>
-                  </div>
-                )}
+                <div className="flex items-center gap-4">
+                  <Chrome className="w-5 h-5 text-accent transition-transform group-hover/btn:scale-110" />
+                  <span className="text-[10px] font-black uppercase tracking-[0.3em] text-white/90">Continue with Google</span>
+                </div>
               </Button>
 
               <div className="relative">
@@ -326,7 +310,7 @@ function LoginContent() {
                     <button 
                       type="button" 
                       onClick={handleForgotPassword}
-                      disabled={isResetting || !auth}
+                      disabled={isResetting}
                       className="text-[9px] font-bold uppercase tracking-widest text-accent hover:text-white transition-colors"
                     >
                       {isResetting ? "Requesting..." : "Recover?"}
@@ -347,7 +331,7 @@ function LoginContent() {
 
                 <Button 
                   type="submit" 
-                  disabled={isLoading || !auth}
+                  disabled={isLoading}
                   className="w-full h-18 btn-premium text-[11px] font-black tracking-[0.4em] uppercase mt-4 shadow-[0_20px_50px_rgba(147,51,234,0.2)] group/submit"
                 >
                   {isLoading ? (
