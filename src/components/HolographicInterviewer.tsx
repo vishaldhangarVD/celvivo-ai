@@ -3,11 +3,11 @@
 import React, { useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
-import { Cpu, Brain, Wifi, AlertTriangle, Activity, Volume2, Loader2 } from "lucide-react";
+import { Cpu, Brain, Wifi, AlertTriangle, Volume2, Loader2 } from "lucide-react";
 
 /**
- * @fileOverview HolographicInterviewer v40.0 - Stable Browser-Speech Implementation.
- * Uses local SpeechSynthesis via TalkingHead "native" mode for 100% reliable lip-sync.
+ * @fileOverview HolographicInterviewer v42.0 - ElevenLabs Voice Integration.
+ * Reuses the existing /api/tts endpoint to feed ElevenLabs audio to the Julia avatar.
  */
 
 interface HolographicInterviewerProps {
@@ -37,6 +37,7 @@ export default function HolographicInterviewer({
   const [errorMessage, setErrorMessage] = useState("");
   const [internalIsSpeaking, setInternalIsSpeaking] = useState(false);
   const lastSpokenRef = useRef("");
+  const activeAudioUrlRef = useRef<string | null>(null);
 
   useEffect(() => {
     if (!containerRef.current || headRef.current) return;
@@ -59,13 +60,11 @@ export default function HolographicInterviewer({
       try {
         const TalkingHead: any = await getTalkingHead();
 
-        // Initialize with "native" ttsMode for browser SpeechSynthesis support
-        // lipsyncModules must be an array ["en"] for v1.7
+        // Initialize with lipsyncModules as an array of language codes
         const head = new TalkingHead(containerRef.current!, {
           lipsyncModules: ["en"],
           lipsyncLang: "en",
           ttsLang: "en-US",
-          ttsMode: "native",
           cameraView: "upper",
           blinking: true,
           lookup: true,
@@ -86,7 +85,7 @@ export default function HolographicInterviewer({
         headRef.current = head;
         setStatus("ready");
         head.start();
-        console.log("[Julia] 3D Neural Matrix Initialized via Local Vocalization.");
+        console.log("[Julia] 3D Matrix Initialized with ElevenLabs Voice Pipeline.");
       } catch (error: any) {
         console.error("[Julia] Initialization Fault:", error);
         setErrorMessage(error?.message || "3D Matrix initialization failed.");
@@ -102,38 +101,66 @@ export default function HolographicInterviewer({
       if (headRef.current) {
         try {
           headRef.current.stopSpeaking();
-        } catch (e) {
-          // Cleanup ignore
-        }
+        } catch (e) {}
+      }
+      if (activeAudioUrlRef.current) {
+        URL.revokeObjectURL(activeAudioUrlRef.current);
       }
     };
   }, []);
 
   /**
-   * Triggers speech using the TalkingHead native TTS engine.
-   * This handles audio and viseme sync automatically via browser API.
+   * Fetches audio from ElevenLabs and plays it through the Julia avatar.
    */
-  const speakText = (text: string) => {
+  const speakText = async (text: string) => {
     if (!headRef.current || !text || status !== "ready") return;
     
     try {
-      // Ensure any current speech is stopped before starting new
+      // 1. Reset current speech
       headRef.current.stopSpeaking();
-      
-      headRef.current.speakText(text, {
+      if (activeAudioUrlRef.current) {
+        URL.revokeObjectURL(activeAudioUrlRef.current);
+        activeAudioUrlRef.current = null;
+      }
+
+      // 2. Fetch from existing ElevenLabs endpoint
+      const response = await fetch('/api/tts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text })
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error("[Julia ElevenLabs] TTS API Error:", response.status, errorText);
+        throw new Error(`TTS API failed: ${response.status}`);
+      }
+
+      // 3. Process binary audio response
+      const audioBlob = await response.blob();
+      const audioUrl = URL.createObjectURL(audioBlob);
+      activeAudioUrlRef.current = audioUrl;
+
+      // 4. Play through Julia avatar pipeline (No visemes added in this step)
+      headRef.current.speakAudio(audioUrl, [], {
         onStart: () => setInternalIsSpeaking(true),
         onEnd: () => {
           setInternalIsSpeaking(false);
           if (onSpeechEnd) onSpeechEnd();
+          if (activeAudioUrlRef.current) {
+            URL.revokeObjectURL(activeAudioUrlRef.current);
+            activeAudioUrlRef.current = null;
+          }
         }
       });
+
     } catch (err: any) {
-      console.error("[Julia] Speech Fault:", err.message);
+      console.error("[Julia Speech] ElevenLabs Transmission Fault:", err.message);
       setInternalIsSpeaking(false);
     }
   };
 
-  // Automated speech trigger when a new question arrives
+  // Trigger speech when isSpeaking prop changes or a new question arrives
   useEffect(() => {
     if (isSpeaking && currentQuestion && currentQuestion !== lastSpokenRef.current && status === "ready") {
       lastSpokenRef.current = currentQuestion;
@@ -146,7 +173,7 @@ export default function HolographicInterviewer({
 
   // Diagnostic tool for development/testing
   const runVocalDiagnostic = () => {
-    speakText("Vocal matrix diagnostic protocol initiated. I am using my local synthetic vocal engine to ensure 100% availability during this assessment.");
+    speakText("Neural vocal diagnostic initiated. ElevenLabs voice transmission is now synchronized with the Julia protocol.");
   };
 
   return (
@@ -166,10 +193,8 @@ export default function HolographicInterviewer({
 
       {/* Holographic Overlays */}
       <div className="absolute inset-0 z-40 pointer-events-none">
-        {/* CRT Scanline Effect */}
         <div className="absolute inset-0 opacity-10 bg-[linear-gradient(rgba(18,16,16,0)_50%,rgba(0,0,0,0.25)_50%)] bg-[size:100%_4px]" />
 
-        {/* Top Identification Badge */}
         <div className="absolute top-6 left-6 flex flex-col gap-2">
           <div className="flex items-center gap-3 px-3 py-1.5 glass rounded-lg border-cyan-500/20 bg-black/40">
             <Cpu className="w-3.5 h-3.5 text-cyan-400" />
@@ -192,11 +217,10 @@ export default function HolographicInterviewer({
           </div>
         </div>
 
-        {/* Signal Indicator */}
         <div className="absolute bottom-6 right-6 flex items-center gap-3">
           <div className="flex items-center gap-2 px-3 py-1.5 glass rounded-lg border-white/5 bg-black/40">
             <Wifi className={cn("w-3 h-3 transition-colors", internalIsSpeaking ? "text-green-400" : "text-white/20")} />
-            <span className="text-[7px] font-black uppercase tracking-[0.2em] text-white/30">SIGNAL OPTIMAL</span>
+            <span className="text-[7px] font-black uppercase tracking-[0.2em] text-white/30">ELEVENLABS SYNC</span>
           </div>
         </div>
       </div>
@@ -250,7 +274,6 @@ export default function HolographicInterviewer({
           </motion.div>
         )}
       </AnimatePresence>
-
     </div>
   );
 }
