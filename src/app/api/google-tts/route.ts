@@ -1,11 +1,10 @@
-
 import { NextResponse } from 'next/server';
 import { GoogleAuth } from 'google-auth-library';
 
 /**
- * @fileOverview Secure Google Cloud TTS Gateway v12.0.
- * Fixed 401 Authentication Error by implementing robust token management.
- * Supports Service Account (OAuth2) with automatic discovery and API Key fallback.
+ * @fileOverview Secure Google Cloud TTS Gateway v15.0.
+ * Implements dual-protocol authentication (API Key + OAuth2).
+ * Ensures robust JSON responses for all success/error paths.
  */
 
 export async function POST(req: Request) {
@@ -17,7 +16,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Text payload missing." }, { status: 400 });
     }
 
-    // Load API Key as fallback
+    // Load available keys
     const apiKey = (
       process.env.GOOGLE_API_KEY || 
       process.env.GEMINI_API_KEY || 
@@ -25,112 +24,108 @@ export async function POST(req: Request) {
       ''
     ).trim();
 
-    const serviceAccountJson = process.env.GOOGLE_SERVICE_ACCOUNT_JSON;
-
-    let ttsUrl = 'https://texttospeech.googleapis.com/v1/text:synthesize';
-    let headers: Record<string, string> = {
-      'Content-Type': 'application/json',
+    let audioContent = null;
+    let diagnosticInfo = {
+      methodUsed: 'NONE',
+      googleStatus: 0
     };
 
-    let authMethod = 'NONE';
-    let authErrorDetails = '';
+    // PROTOCOL A: API Key (Primary for Prototype Stability)
+    if (apiKey) {
+      try {
+        const ttsUrl = `https://texttospeech.googleapis.com/v1/text:synthesize?key=${apiKey}`;
+        const response = await fetch(ttsUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            input: { text },
+            voice: {
+              languageCode: 'en-US',
+              name: 'en-US-Neural2-F',
+              ssmlGender: 'FEMALE'
+            },
+            audioConfig: {
+              audioEncoding: 'MP3',
+              speakingRate: 1.0,
+              pitch: 0.0
+            }
+          }),
+        });
 
-    // Protocol A: Service Account (OAuth2) - High Priority
-    try {
-      const authOptions: any = {
-        scopes: ['https://www.googleapis.com/auth/cloud-platform']
-      };
-
-      if (serviceAccountJson) {
-        let credentials = JSON.parse(serviceAccountJson);
-        if (credentials.private_key && typeof credentials.private_key === 'string') {
-          credentials.private_key = credentials.private_key.replace(/\\n/g, '\n');
+        diagnosticInfo.googleStatus = response.status;
+        
+        if (response.ok) {
+          const data = await response.json();
+          audioContent = data.audioContent;
+          diagnosticInfo.methodUsed = 'API_KEY';
         }
-        authOptions.credentials = credentials;
-        authOptions.projectId = credentials.project_id;
+      } catch (err) {
+        console.warn('[TTS Protocol A] Failed:', err);
       }
-
-      const auth = new GoogleAuth(authOptions);
-      const client = await auth.getClient();
-      const accessToken = await client.getAccessToken();
-
-      if (accessToken && accessToken.token) {
-        headers['Authorization'] = `Bearer ${accessToken.token}`;
-        authMethod = 'SERVICE_ACCOUNT';
-        console.log(`[TTS Auth] Protocol A Success. Project: ${authOptions.projectId || 'Detected'}`);
-      } else {
-        throw new Error("Failed to retrieve access token from service account.");
-      }
-    } catch (authError: any) {
-      authErrorDetails = authError.message;
-      console.warn('[TTS Auth] Protocol A Failed:', authErrorDetails);
-      // Fallback to Protocol B (API Key)
     }
 
-    // Protocol B: API Key Fallback
-    if (authMethod === 'NONE') {
-      if (apiKey) {
-        ttsUrl += `?key=${apiKey}`;
-        authMethod = 'API_KEY';
-        console.log('[TTS Auth] Protocol B Initiated (API Key).');
-      } else {
-        console.error('[TTS Auth] Identity Exhausted. No valid credentials found.');
+    // PROTOCOL B: Service Account / ADC (Fallback)
+    if (!audioContent) {
+      try {
+        const auth = new GoogleAuth({
+          scopes: ['https://www.googleapis.com/auth/cloud-platform']
+        });
+        const client = await auth.getClient();
+        const headers = await client.getRequestHeaders();
+
+        const response = await fetch('https://texttospeech.googleapis.com/v1/text:synthesize', {
+          method: 'POST',
+          headers: {
+            ...headers,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            input: { text },
+            voice: {
+              languageCode: 'en-US',
+              name: 'en-US-Neural2-F',
+              ssmlGender: 'FEMALE'
+            },
+            audioConfig: {
+              audioEncoding: 'MP3'
+            }
+          }),
+        });
+
+        diagnosticInfo.googleStatus = response.status;
+
+        if (response.ok) {
+          const data = await response.json();
+          audioContent = data.audioContent;
+          diagnosticInfo.methodUsed = 'SERVICE_ACCOUNT';
+        } else {
+          const errorData = await response.json().catch(() => ({ message: "API Rejected Request" }));
+          return NextResponse.json({ 
+            error: "Google Cloud TTS authentication failed.", 
+            status: response.status,
+            details: errorData,
+            diagnostic: diagnosticInfo
+          }, { status: response.status });
+        }
+      } catch (authError: any) {
         return NextResponse.json({ 
-          error: "Google Cloud TTS credentials are not configured.",
-          details: "Verify that GOOGLE_API_KEY or GOOGLE_SERVICE_ACCOUNT_JSON is set."
+          error: "Google Cloud identity provider fault.",
+          details: authError.message,
+          diagnostic: diagnosticInfo
         }, { status: 401 });
       }
     }
 
-    const response = await fetch(
-      ttsUrl,
-      {
-        method: 'POST',
-        headers,
-        body: JSON.stringify({
-          input: { text },
-          voice: {
-            languageCode: 'en-US',
-            name: 'en-US-Neural2-F', // Professional, high-fidelity voice
-            ssmlGender: 'FEMALE'
-          },
-          audioConfig: {
-            audioEncoding: 'MP3',
-            speakingRate: 1.0,
-            pitch: 0.0
-          }
-        }),
-      }
-    );
-
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({ message: "Google API rejected request" }));
-      console.error(`[TTS API Error] Status: ${response.status}`, JSON.stringify(errorData));
-      
-      return NextResponse.json({ 
-        error: "Google Cloud TTS request failed.", 
-        status: response.status,
-        details: errorData,
-        authMethodUsed: authMethod
-      }, { status: response.status });
-    }
-
-    const data = await response.json();
-    
-    if (!data.audioContent) {
-      throw new Error("Google API returned success but no audioContent field was found.");
-    }
-
     return NextResponse.json({ 
-      audioContent: data.audioContent,
+      audioContent,
       success: true,
-      authMethodUsed: authMethod
+      method: diagnosticInfo.methodUsed
     });
 
   } catch (error: any) {
-    console.error('[TTS Gateway Internal Fault]:', error);
+    console.error('[TTS Gateway Fatal]:', error);
     return NextResponse.json({ 
-      error: `Internal Gateway Fault: ${error.message || 'Unknown error'}`,
+      error: `Internal Gateway Fault: ${error.message}`,
       success: false
     }, { status: 500 });
   }
