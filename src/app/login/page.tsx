@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState, useEffect, Suspense } from 'react';
+import { useState, useEffect, Suspense, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -11,7 +11,14 @@ import { Command, ArrowLeft, Chrome, Loader2, AlertCircle, Zap, ShieldCheck, Mai
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth, useUser, useFirestore } from '@/firebase';
-import { signInWithEmailAndPassword, signInWithPopup, GoogleAuthProvider, sendPasswordResetEmail } from 'firebase/auth';
+import { 
+  signInWithEmailAndPassword, 
+  signInWithPopup, 
+  signInWithRedirect,
+  getRedirectResult,
+  GoogleAuthProvider, 
+  sendPasswordResetEmail 
+} from 'firebase/auth';
 import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 
@@ -30,7 +37,61 @@ function LoginContent() {
 
   const redirectTo = searchParams.get('redirectTo') || '/dashboard';
 
-  // Redirection Protocol: Transition to authenticated destination once user is verified
+  // Profile Synchronization Protocol
+  const ensureUserProfile = useCallback(async (authUser: any) => {
+    if (!db) return;
+    try {
+      const userDocRef = doc(db, 'users', authUser.uid);
+      const userDocSnap = await getDoc(userDocRef);
+      
+      if (!userDocSnap.exists()) {
+        await setDoc(userDocRef, {
+          uid: authUser.uid,
+          displayName: authUser.displayName || "Operator",
+          email: authUser.email || "",
+          photoURL: authUser.photoURL || null,
+          jobReadinessScore: 0,
+          totalInterviews: 0,
+          plan: "free",
+          subscriptionStatus: "active",
+          freeJourneyUsed: false,
+          isFreeAccess: false,
+          subscriptionId: null,
+          paymentId: null,
+          subscriptionStart: null,
+          subscriptionEnd: null,
+          createdAt: serverTimestamp(),
+        });
+      }
+    } catch (e) {
+      console.error("Profile Sync Error:", e);
+    }
+  }, [db]);
+
+  // Handle Redirect Results (Fallback path)
+  useEffect(() => {
+    if (!auth || !db) return;
+
+    const handleRedirect = async () => {
+      try {
+        const result = await getRedirectResult(auth);
+        if (result?.user) {
+          await ensureUserProfile(result.user);
+          toast({ title: "Nexus Link Established", description: "Identity verified via redirect." });
+          router.replace(redirectTo);
+        }
+      } catch (error: any) {
+        console.error("Redirect Result Error:", error);
+        if (error.code !== 'auth/popup-closed-by-user') {
+           toast({ variant: "destructive", title: "Handshake Failed", description: error.message });
+        }
+      }
+    };
+
+    handleRedirect();
+  }, [auth, db, ensureUserProfile, router, redirectTo, toast]);
+
+  // Redirection Protocol: Transition to authenticated destination
   useEffect(() => {
     if (user && !authLoading) {
       router.replace(redirectTo);
@@ -43,7 +104,7 @@ function LoginContent() {
       toast({
         variant: "destructive",
         title: "System Offline",
-        description: "Authentication service is unavailable. Please try again later.",
+        description: "Authentication service is unavailable.",
       });
       return;
     }
@@ -51,12 +112,12 @@ function LoginContent() {
     setIsLoading(true);
     try {
       await signInWithEmailAndPassword(auth, email, password);
-      toast({ title: "Access Granted", description: "Identity verified. Redirecting to Nexus." });
+      toast({ title: "Access Granted", description: "Identity verified. Redirecting..." });
     } catch (error: any) {
       toast({
         variant: "destructive",
         title: "Protocol Failure",
-        description: error.message || "Invalid credentials provided.",
+        description: error.message || "Invalid credentials.",
       });
     } finally {
       setIsLoading(false);
@@ -71,53 +132,37 @@ function LoginContent() {
     try {
       setIsLoading(true);
       const result = await signInWithPopup(auth, provider);
-      
-      // Verification Protocol: Ensure user has a valid Firestore Profile
-      const userDocRef = doc(db, 'users', result.user.uid);
-      const userDocSnap = await getDoc(userDocRef);
-      
-      if (!userDocSnap.exists()) {
-        // Initialize Profile for New Neural Operator (Google Auth)
-        await setDoc(userDocRef, {
-          uid: result.user.uid,
-          displayName: result.user.displayName || "Operator",
-          email: result.user.email || "",
-          photoURL: result.user.photoURL || null,
-          jobReadinessScore: 0,
-          totalInterviews: 0,
-          plan: "free",
-          subscriptionStatus: "active",
-          freeJourneyUsed: false,
-          isFreeAccess: false,
-          subscriptionId: null,
-          paymentId: null,
-          subscriptionStart: null,
-          subscriptionEnd: null,
-          createdAt: serverTimestamp(),
-        });
-      }
-
-      toast({ title: "Neural Link Established", description: "Successfully authenticated via Google." });
-      // useEffect will handle the final transition once state is synced
+      await ensureUserProfile(result.user);
+      toast({ title: "Neural Link Established", description: "Authenticated via Google." });
     } catch (error: any) {
       console.error("Google Auth Protocol Error:", error);
       
-      if (error.code === 'auth/unauthorized-domain') {
-        const currentHostname = typeof window !== 'undefined' ? window.location.hostname : 'the current domain';
+      // If popup is blocked or closed, transition to redirect mode
+      if (error.code === 'auth/popup-closed-by-user' || error.code === 'auth/cancelled-popup-request' || error.code === 'auth/popup-blocked') {
+        toast({ title: "Popup Blocked", description: "Rerouting to secure redirect mode..." });
+        try {
+          await signInWithRedirect(auth, provider);
+          // Page will reload, getRedirectResult will handle completion
+        } catch (redirectError: any) {
+          toast({ variant: "destructive", title: "Reroute Failed", description: redirectError.message });
+          setIsLoading(false);
+        }
+      } else if (error.code === 'auth/unauthorized-domain') {
+        const currentHostname = typeof window !== 'undefined' ? window.location.hostname : 'domain';
         toast({
           variant: "destructive",
           title: "Domain Not Authorized",
-          description: `The domain "${currentHostname}" is not whitelisted in your Firebase project. Please add it to Authorized Domains in Firebase Console.`,
+          description: `Add "${currentHostname}" to Firebase Authorized Domains.`,
         });
-      } else if (error.code !== 'auth/popup-closed-by-user') {
+        setIsLoading(false);
+      } else {
         toast({
           variant: "destructive",
           title: "OAuth Failure",
           description: error.message || "Google authentication failed.",
         });
+        setIsLoading(false);
       }
-    } finally {
-      setIsLoading(false);
     }
   };
 
