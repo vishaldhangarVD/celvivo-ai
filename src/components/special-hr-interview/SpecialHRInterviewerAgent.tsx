@@ -4,6 +4,7 @@ import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Cpu, User, Wifi, Brain, ShieldCheck } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { Badge } from "@/components/ui/badge";
 
 interface SpecialHRInterviewerAgentProps {
   isInterviewStarted: boolean;
