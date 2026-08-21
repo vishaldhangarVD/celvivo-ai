@@ -6,10 +6,8 @@ import { cn } from "@/lib/utils";
 import { Cpu, Brain, Wifi, AlertTriangle, Activity, Volume2, Loader2 } from "lucide-react";
 
 /**
- * @fileOverview HolographicInterviewer v30.0 - Clean TalkingHead API Fix.
- * FIXED: Removed invalid getVisemes and getObjectByName calls.
- * FIXED: Implemented resilient Neural-to-Local fallback pipeline.
- * FIXED: Standardized TalkingHead v1.7 API usage.
+ * @fileOverview HolographicInterviewer v40.0 - Stable Browser-Speech Implementation.
+ * Uses local SpeechSynthesis via TalkingHead "native" mode for 100% reliable lip-sync.
  */
 
 interface HolographicInterviewerProps {
@@ -61,10 +59,13 @@ export default function HolographicInterviewer({
       try {
         const TalkingHead: any = await getTalkingHead();
 
-        // Constructor v1.7 - Standard Options
+        // Initialize with "native" ttsMode for browser SpeechSynthesis support
+        // lipsyncModules must be an array ["en"] for v1.7
         const head = new TalkingHead(containerRef.current!, {
-          lipsyncModules: ["en"], // Load lipsync-en.mjs relatively
+          lipsyncModules: ["en"],
           lipsyncLang: "en",
+          ttsLang: "en-US",
+          ttsMode: "native",
           cameraView: "upper",
           blinking: true,
           lookup: true,
@@ -75,6 +76,7 @@ export default function HolographicInterviewer({
           avatarSpeakingHeadMove: 0.8
         });
 
+        // Load Julia Avatar from GLB
         await head.showAvatar({
           url: "/avatars/julia.glb",
           body: "F",
@@ -84,9 +86,9 @@ export default function HolographicInterviewer({
         headRef.current = head;
         setStatus("ready");
         head.start();
-        console.log("[Julia] Neural Matrix v30.0 Synchronized.");
+        console.log("[Julia] 3D Neural Matrix Initialized via Local Vocalization.");
       } catch (error: any) {
-        console.error("[Julia] Simulation Engine Fault:", error);
+        console.error("[Julia] Initialization Fault:", error);
         setErrorMessage(error?.message || "3D Matrix initialization failed.");
         setStatus("error");
       }
@@ -101,45 +103,23 @@ export default function HolographicInterviewer({
         try {
           headRef.current.stopSpeaking();
         } catch (e) {
-          console.warn("[Julia] Cleanup warning:", e);
+          // Cleanup ignore
         }
       }
     };
   }, []);
 
   /**
-   * triggerJuliaSpeech - Orchestrates the speech pipeline with automatic fallback.
+   * Triggers speech using the TalkingHead native TTS engine.
+   * This handles audio and viseme sync automatically via browser API.
    */
-  const triggerJuliaSpeech = async (text: string) => {
+  const speakText = (text: string) => {
     if (!headRef.current || !text || status !== "ready") return;
     
     try {
-      // 1. Attempt Neural Synthesis via Server
-      const response = await fetch('/api/google-tts', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text })
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        if (data.audioContent) {
-          console.log("[Julia Speech] Playing Neural MP3 Matrix.");
-          const audioUrl = `data:audio/mpeg;base64,${data.audioContent}`;
-          
-          headRef.current.speakAudio(audioUrl, {
-            onStart: () => setInternalIsSpeaking(true),
-            onEnd: () => {
-              setInternalIsSpeaking(false);
-              if (onSpeechEnd) onSpeechEnd();
-            }
-          });
-          return;
-        }
-      }
-
-      // 2. Local Fallback if Neural fails
-      console.warn("[Julia Speech] Neural Link Unavailable. Pivoting to Local Vocal Matrix.");
+      // Ensure any current speech is stopped before starting new
+      headRef.current.stopSpeaking();
+      
       headRef.current.speakText(text, {
         onStart: () => setInternalIsSpeaking(true),
         onEnd: () => {
@@ -147,33 +127,26 @@ export default function HolographicInterviewer({
           if (onSpeechEnd) onSpeechEnd();
         }
       });
-
     } catch (err: any) {
-      console.error("[Julia Speech] Critical Execution Fault:", err.message);
-      // Final attempt: Direct local speech if everything else fails
-      try {
-        headRef.current.speakText(text, {
-          onStart: () => setInternalIsSpeaking(true),
-          onEnd: () => setInternalIsSpeaking(false)
-        });
-      } catch (finalErr) {
-        setInternalIsSpeaking(false);
-      }
+      console.error("[Julia] Speech Fault:", err.message);
+      setInternalIsSpeaking(false);
     }
   };
 
+  // Automated speech trigger when a new question arrives
   useEffect(() => {
     if (isSpeaking && currentQuestion && currentQuestion !== lastSpokenRef.current && status === "ready") {
       lastSpokenRef.current = currentQuestion;
-      triggerJuliaSpeech(currentQuestion);
+      speakText(currentQuestion);
     } else if (!isSpeaking && headRef.current) {
       headRef.current.stopSpeaking();
       setInternalIsSpeaking(false);
     }
   }, [isSpeaking, currentQuestion, status]);
 
+  // Diagnostic tool for development/testing
   const runVocalDiagnostic = () => {
-    triggerJuliaSpeech("Vocal matrix diagnostic protocol initiated. My 3D vertex engines are now synchronized with the high-fidelity neural audio stream. I am ready to conduct the technical assessment.");
+    speakText("Vocal matrix diagnostic protocol initiated. I am using my local synthetic vocal engine to ensure 100% availability during this assessment.");
   };
 
   return (
@@ -182,6 +155,7 @@ export default function HolographicInterviewer({
       className
     )}>
       
+      {/* 3D Render Container */}
       <div 
         ref={containerRef} 
         className={cn(
@@ -192,8 +166,10 @@ export default function HolographicInterviewer({
 
       {/* Holographic Overlays */}
       <div className="absolute inset-0 z-40 pointer-events-none">
+        {/* CRT Scanline Effect */}
         <div className="absolute inset-0 opacity-10 bg-[linear-gradient(rgba(18,16,16,0)_50%,rgba(0,0,0,0.25)_50%)] bg-[size:100%_4px]" />
 
+        {/* Top Identification Badge */}
         <div className="absolute top-6 left-6 flex flex-col gap-2">
           <div className="flex items-center gap-3 px-3 py-1.5 glass rounded-lg border-cyan-500/20 bg-black/40">
             <Cpu className="w-3.5 h-3.5 text-cyan-400" />
@@ -216,21 +192,26 @@ export default function HolographicInterviewer({
           </div>
         </div>
 
+        {/* Signal Indicator */}
         <div className="absolute bottom-6 right-6 flex items-center gap-3">
           <div className="flex items-center gap-2 px-3 py-1.5 glass rounded-lg border-white/5 bg-black/40">
             <Wifi className={cn("w-3 h-3 transition-colors", internalIsSpeaking ? "text-green-400" : "text-white/20")} />
-            <span className="text-[7px] font-black uppercase tracking-[0.2em] text-white/30">SIGNAL STABLE</span>
+            <span className="text-[7px] font-black uppercase tracking-[0.2em] text-white/30">SIGNAL OPTIMAL</span>
           </div>
         </div>
       </div>
 
-      <button 
-        onClick={runVocalDiagnostic}
-        className="absolute bottom-10 left-1/2 -translate-x-1/2 z-50 px-6 py-2 glass rounded-xl text-[8px] font-black uppercase tracking-widest text-white/40 hover:text-white transition-all pointer-events-auto border border-white/5 hover:border-accent/30 bg-black/40 backdrop-blur-md"
-      >
-        <Volume2 className="w-3 h-3 inline mr-2" /> TRIGGER VOCAL MATRIX
-      </button>
+      {/* Diagnostic Vocal Trigger */}
+      <div className="absolute bottom-10 left-1/2 -translate-x-1/2 z-50 pointer-events-auto opacity-0 group-hover:opacity-100 transition-opacity">
+        <button 
+          onClick={runVocalDiagnostic}
+          className="px-6 py-2 glass rounded-xl text-[8px] font-black uppercase tracking-widest text-white/40 hover:text-white transition-all border border-white/5 hover:border-accent/30 bg-black/40 backdrop-blur-md flex items-center gap-2"
+        >
+          <Volume2 className="w-3 h-3" /> TRIGGER VOCAL MATRIX
+        </button>
+      </div>
 
+      {/* Loading & Status States */}
       <AnimatePresence>
         {(status === "loading" || isGenerating) && (
           <motion.div 
