@@ -1,3 +1,4 @@
+
 "use client";
 import { Suspense, useEffect, useState, useRef, useMemo } from "react";
 import { useRouter, useParams, useSearchParams } from "next/navigation";
@@ -92,9 +93,6 @@ function VirtualArenaContent() {
     return name.charAt(0).toUpperCase() + name.slice(1);
   }, [user, journey]);
 
-  /**
-   * Consolidate vocal execution.
-   */
   const executeSpeechTrigger = (text: string) => {
     if (!text) return;
     setIsAiSpeaking(true);
@@ -107,7 +105,6 @@ function VirtualArenaContent() {
     }
   }, [transcript, isInitializing, isSimulationComplete]);
 
-  // Interview Real-time Countdown Protocol
   useEffect(() => {
     if (isInitializing || isSimulationComplete || isGeneratingReport) return;
     const interval = setInterval(() => {
@@ -134,6 +131,24 @@ function VirtualArenaContent() {
     startCamera();
     return () => mediaStreamRef.current?.getTracks().forEach(t => t.stop());
   }, []);
+
+  const toggleMic = () => {
+    if (mediaStreamRef.current) {
+      mediaStreamRef.current.getAudioTracks().forEach(track => {
+        track.enabled = !isMicOn;
+      });
+      setIsMicOn(!isMicOn);
+    }
+  };
+
+  const toggleCamera = () => {
+    if (mediaStreamRef.current) {
+      mediaStreamRef.current.getVideoTracks().forEach(track => {
+        track.enabled = !isCameraOn;
+      });
+      setIsCameraOn(!isCameraOn);
+    }
+  };
 
   useEffect(() => {
     async function init() {
@@ -257,24 +272,61 @@ function VirtualArenaContent() {
       </header>
 
       <div className="flex-1 flex overflow-hidden">
-        {/* Left Control Bar */}
         <div className="w-[72px] border-r border-white/5 bg-[#0b0e1a] flex flex-col items-center py-6 gap-8 shrink-0">
           <Link href="/"><Button variant="ghost" size="icon" className="text-white/20"><Home className="w-5" /></Button></Link>
           <Button variant="ghost" size="icon" className="text-accent bg-accent/10 rounded-xl"><Mic className="w-5" /></Button>
         </div>
 
-        {/* Center Canvas: User Webcam */}
         <div className="flex-1 flex flex-col p-3 space-y-1.5 overflow-hidden">
           <div className="flex-1 min-0 relative rounded-[2rem] overflow-hidden bg-black border border-white/5 shadow-2xl">
             <video ref={userVideoRef} autoPlay playsInline muted className={cn("w-full h-full object-cover", !isCameraOn && "hidden")} style={{ transform: 'scaleX(-1)' }} />
             
-            {/* Status Overlays */}
             <div className="absolute top-6 left-6 flex items-center gap-3">
               <Badge className="bg-black/60 backdrop-blur-md border-white/10 text-white/80 py-1.5 px-4 rounded-full flex items-center gap-2">
                 <div className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
                 <span className="text-[10px] font-bold uppercase tracking-widest">LIVE SESSION</span>
               </Badge>
             </div>
+
+            {/* AVATAR CONTROLS: MICROPHONE AND CAMERA TOGGLES */}
+            <div className="absolute bottom-8 left-1/2 -translate-x-1/2 flex items-center gap-4 px-6 py-4 glass rounded-full border-white/10 shadow-2xl z-40">
+               <Button 
+                 variant="ghost" 
+                 size="icon" 
+                 onClick={toggleMic}
+                 className={cn(
+                   "w-12 h-12 rounded-full transition-all",
+                   isMicOn ? "bg-white/5 text-white/70 hover:bg-white/10" : "bg-red-500/20 text-red-500 hover:bg-red-500/30 border border-red-500/40"
+                 )}
+               >
+                 {isMicOn ? <Mic className="w-5 h-5" /> : <MicOff className="w-5 h-5" />}
+               </Button>
+
+               <div className="w-px h-6 bg-white/10" />
+
+               <Button 
+                 variant="ghost" 
+                 size="icon" 
+                 onClick={toggleCamera}
+                 className={cn(
+                   "w-12 h-12 rounded-full transition-all",
+                   isCameraOn ? "bg-white/5 text-white/70 hover:bg-white/10" : "bg-red-500/20 text-red-500 hover:bg-red-500/30 border border-red-500/40"
+                 )}
+               >
+                 {isCameraOn ? <Video className="w-5 h-5" /> : <VideoOff className="w-5 h-5" />}
+               </Button>
+            </div>
+
+            {!isCameraOn && (
+              <div className="absolute inset-0 flex items-center justify-center bg-[#050816]">
+                <div className="text-center space-y-4">
+                  <div className="w-20 h-20 rounded-full bg-white/5 flex items-center justify-center mx-auto border border-white/10">
+                    <VideoOff className="w-8 h-8 text-white/20" />
+                  </div>
+                  <p className="text-[10px] font-black uppercase tracking-[0.4em] text-white/40">Visual Feed Deactivated</p>
+                </div>
+              </div>
+            )}
           </div>
 
           <div className="grid grid-cols-4 gap-2 shrink-0 pb-1">
@@ -283,16 +335,13 @@ function VirtualArenaContent() {
           </div>
         </div>
 
-        {/* Right Panel: AI Interviewer & Question Node */}
         <div className="w-[300px] xl:w-[350px] border-l border-white/5 bg-[#0b0e1a] flex flex-col shrink-0 overflow-hidden">
           <div className="flex-1 p-3 flex flex-col space-y-3 overflow-hidden">
-             {/* Question Node Header */}
              <div className="flex justify-between items-end px-1 shrink-0">
                <h3 className="text-[9px] font-black uppercase text-white/30 tracking-widest">Question {currentIdx}</h3>
                <Badge variant="outline" className="border-accent/30 text-accent text-[8px] uppercase tracking-tighter">AI Node Active</Badge>
              </div>
 
-             {/* Interview Question Card */}
              <Card className="glass border-white/10 bg-[#08090D]/95 p-4 rounded-2xl relative overflow-hidden shrink-0 shadow-lg">
                 <div className="absolute top-0 right-0 p-2 opacity-10"><MessageSquare className="w-8 h-8 text-accent" /></div>
                 <p className="text-[14px] font-light text-white leading-relaxed relative z-10">
@@ -300,7 +349,6 @@ function VirtualArenaContent() {
                 </p>
              </Card>
 
-             {/* Julia 3D AI Interviewer Card */}
              <div className="flex-1 min-h-[300px] relative rounded-2xl overflow-hidden border border-white/5 shadow-2xl bg-black/40 group">
                 <HolographicInterviewer 
                   isSpeaking={isAiSpeaking} 
@@ -312,7 +360,6 @@ function VirtualArenaContent() {
              </div>
           </div>
 
-          {/* User Input Section */}
           <div className="p-3 space-y-2 border-t border-white/5 bg-[#0b0e1a] shrink-0">
              <div className="flex items-center justify-between px-1">
                 <label className="text-[8px] font-black uppercase text-white/20 tracking-widest">Candidate Input</label>
