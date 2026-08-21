@@ -13,6 +13,8 @@ import { useAuth, useUser, useFirestore } from '@/firebase';
 import { 
   signInWithEmailAndPassword, 
   signInWithPopup,
+  signInWithRedirect,
+  getRedirectResult,
   GoogleAuthProvider, 
   sendPasswordResetEmail 
 } from 'firebase/auth';
@@ -65,9 +67,40 @@ function LoginContent() {
       }
     } catch (e) {
       console.error("[Profile Sync] Failed to reconcile user dossier:", e);
-      // We don't block the login if profile sync fails, but we notify
     }
   }, [db]);
+
+  /**
+   * Redirect Result Handler
+   * Handles the landing back from a signInWithRedirect flow.
+   * Crucial for environments like Cloud Workstations where popups may be blocked.
+   */
+  useEffect(() => {
+    async function handleRedirect() {
+      if (!auth || !db) return;
+      try {
+        const result = await getRedirectResult(auth);
+        if (result?.user) {
+          setIsLoading(true);
+          await ensureUserProfile(result.user);
+          toast({ title: "Nexus Link Established", description: "Identity verified via Redirect." });
+          setIsLoading(false);
+        }
+      } catch (error: any) {
+        console.error("[Auth] Redirect Error:", error);
+        setIsLoading(false);
+        // Only show toast for actual errors, ignore common non-errors
+        if (error.code !== 'auth/cancelled-popup-request' && error.code !== 'auth/no-auth-event') {
+          toast({
+            variant: "destructive",
+            title: "Redirect Failed",
+            description: error.message || "Could not complete redirect handshake.",
+          });
+        }
+      }
+    }
+    handleRedirect();
+  }, [auth, db, ensureUserProfile, toast]);
 
   /**
    * Redirection Protocol
@@ -93,7 +126,6 @@ function LoginContent() {
     setIsLoading(true);
     try {
       await signInWithEmailAndPassword(auth, email, password);
-      // useUser hook handles the redirect via useEffect
     } catch (error: any) {
       console.error("[Auth] Password Login Error:", error);
       toast({
@@ -107,7 +139,7 @@ function LoginContent() {
 
   /**
    * Google Handshake Protocol
-   * Uses popup method for maximum compatibility in proxied/Studio environments.
+   * Uses popup method primarily, falling back to redirect if blocked by environment.
    */
   const handleGoogleLogin = async () => {
     if (!auth) return;
@@ -116,32 +148,47 @@ function LoginContent() {
     
     setIsLoading(true);
     try {
+      // Attempt Popup first (smoother UX)
       const result = await signInWithPopup(auth, provider);
       if (result.user) {
         await ensureUserProfile(result.user);
         toast({ title: "Nexus Link Established", description: "Identity verified via Google." });
-        // Redirection is handled by the useEffect above
       }
     } catch (error: any) {
-      console.error("[Auth] Google Popup Error:", error);
-      setIsLoading(false);
+      console.error("[Auth] Google Handshake Error:", error);
       
-      let errorMessage = "Google handshake failed.";
+      // Automatic fallback if popup is blocked by the workstation environment
       if (error.code === 'auth/popup-blocked') {
-        errorMessage = "Identity popup was blocked by the browser. Please allow popups for this site.";
-      } else if (error.code === 'auth/popup-closed-by-user') {
-        errorMessage = "Authentication cancelled by user.";
-      } else if (error.code === 'auth/unauthorized-domain') {
-        errorMessage = `Domain ${window.location.hostname} is not authorized for Google Login.`;
+        try {
+          await signInWithRedirect(auth, provider);
+          // Execution stops here as the page will redirect
+          return; 
+        } catch (redirectError: any) {
+          console.error("[Auth] Redirect Fallback Error:", redirectError);
+          toast({ variant: "destructive", title: "Auth Failed", description: "Redirect also failed." });
+          setIsLoading(false);
+        }
       } else {
-        errorMessage = error.message || "An unexpected auth error occurred.";
-      }
+        setIsLoading(false);
+        
+        let errorMessage = "Google handshake failed.";
+        if (error.code === 'auth/popup-closed-by-user') {
+          errorMessage = "Authentication cancelled by user.";
+        } else if (error.code === 'auth/unauthorized-domain') {
+          errorMessage = `Domain ${window.location.hostname} is not authorized. Register it in Firebase Console > Auth > Settings > Authorized domains.`;
+          console.error(`[CRITICAL] Unauthorized Domain: ${window.location.hostname}`);
+        } else if (error.code === 'auth/cancelled-popup-request') {
+          return; // Suppress duplicate requests
+        } else {
+          errorMessage = error.message || "An unexpected auth error occurred.";
+        }
 
-      toast({
-        variant: "destructive",
-        title: "Handshake Failed",
-        description: errorMessage,
-      });
+        toast({
+          variant: "destructive",
+          title: "Handshake Failed",
+          description: errorMessage,
+        });
+      }
     }
   };
 
