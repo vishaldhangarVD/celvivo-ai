@@ -6,8 +6,8 @@ import { cn } from "@/lib/utils";
 import { Cpu, Brain, Wifi, AlertTriangle, Volume2, Loader2 } from "lucide-react";
 
 /**
- * @fileOverview HolographicInterviewer v42.0 - ElevenLabs Voice Integration.
- * Reuses the existing /api/tts endpoint to feed ElevenLabs audio to the Julia avatar.
+ * @fileOverview HolographicInterviewer v43.0 - Resilient ElevenLabs Integration.
+ * Optimized for low-quota environments with explicit error handling.
  */
 
 interface HolographicInterviewerProps {
@@ -60,7 +60,6 @@ export default function HolographicInterviewer({
       try {
         const TalkingHead: any = await getTalkingHead();
 
-        // Initialize with lipsyncModules as an array of language codes
         const head = new TalkingHead(containerRef.current!, {
           lipsyncModules: ["en"],
           lipsyncLang: "en",
@@ -75,7 +74,6 @@ export default function HolographicInterviewer({
           avatarSpeakingHeadMove: 0.8
         });
 
-        // Load Julia Avatar from GLB
         await head.showAvatar({
           url: "/avatars/julia.glb",
           body: "F",
@@ -85,7 +83,7 @@ export default function HolographicInterviewer({
         headRef.current = head;
         setStatus("ready");
         head.start();
-        console.log("[Julia] 3D Matrix Initialized with ElevenLabs Voice Pipeline.");
+        console.log("[Julia] 3D Matrix Online.");
       } catch (error: any) {
         console.error("[Julia] Initialization Fault:", error);
         setErrorMessage(error?.message || "3D Matrix initialization failed.");
@@ -109,21 +107,16 @@ export default function HolographicInterviewer({
     };
   }, []);
 
-  /**
-   * Fetches audio from ElevenLabs and plays it through the Julia avatar.
-   */
   const speakText = async (text: string) => {
     if (!headRef.current || !text || status !== "ready") return;
     
     try {
-      // 1. Reset current speech
       headRef.current.stopSpeaking();
       if (activeAudioUrlRef.current) {
         URL.revokeObjectURL(activeAudioUrlRef.current);
         activeAudioUrlRef.current = null;
       }
 
-      // 2. Fetch from existing ElevenLabs endpoint
       const response = await fetch('/api/tts', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -131,17 +124,35 @@ export default function HolographicInterviewer({
       });
 
       if (!response.ok) {
-        const errorText = await response.text();
-        console.error("[Julia ElevenLabs] TTS API Error:", response.status, errorText);
+        const contentType = response.headers.get("content-type") || "";
+        let errorInfo = "Unknown Error";
+        
+        try {
+          if (contentType.includes("application/json")) {
+            const json = await response.json();
+            errorInfo = json.details || json.error || "API Error";
+          } else {
+            errorInfo = await response.text();
+          }
+        } catch (e) {
+          errorInfo = `HTTP ${response.status}`;
+        }
+
+        console.error("[Julia ElevenLabs] TTS API Error:", response.status, errorInfo);
+        
+        if (errorInfo.includes("quota_exceeded") || response.status === 429) {
+          setErrorMessage("ElevenLabs voice quota is insufficient. Please add credits or use a shorter/available voice request.");
+          setStatus("error");
+          return;
+        }
+        
         throw new Error(`TTS API failed: ${response.status}`);
       }
 
-      // 3. Process binary audio response
       const audioBlob = await response.blob();
       const audioUrl = URL.createObjectURL(audioBlob);
       activeAudioUrlRef.current = audioUrl;
 
-      // 4. Play through Julia avatar pipeline (No visemes added in this step)
       headRef.current.speakAudio(audioUrl, [], {
         onStart: () => setInternalIsSpeaking(true),
         onEnd: () => {
@@ -155,12 +166,11 @@ export default function HolographicInterviewer({
       });
 
     } catch (err: any) {
-      console.error("[Julia Speech] ElevenLabs Transmission Fault:", err.message);
+      console.error("[Julia Speech] Transmission Fault:", err.message);
       setInternalIsSpeaking(false);
     }
   };
 
-  // Trigger speech when isSpeaking prop changes or a new question arrives
   useEffect(() => {
     if (isSpeaking && currentQuestion && currentQuestion !== lastSpokenRef.current && status === "ready") {
       lastSpokenRef.current = currentQuestion;
@@ -171,9 +181,14 @@ export default function HolographicInterviewer({
     }
   }, [isSpeaking, currentQuestion, status]);
 
-  // Diagnostic tool for development/testing
   const runVocalDiagnostic = () => {
-    speakText("Neural vocal diagnostic initiated. ElevenLabs voice transmission is now synchronized with the Julia protocol.");
+    // Using a very short sentence to minimize credit usage during testing
+    speakText("Hello, welcome to your interview.");
+  };
+
+  const handleClearError = () => {
+    setStatus("ready");
+    setErrorMessage("");
   };
 
   return (
@@ -182,7 +197,6 @@ export default function HolographicInterviewer({
       className
     )}>
       
-      {/* 3D Render Container */}
       <div 
         ref={containerRef} 
         className={cn(
@@ -191,7 +205,6 @@ export default function HolographicInterviewer({
         )}
       />
 
-      {/* Holographic Overlays */}
       <div className="absolute inset-0 z-40 pointer-events-none">
         <div className="absolute inset-0 opacity-10 bg-[linear-gradient(rgba(18,16,16,0)_50%,rgba(0,0,0,0.25)_50%)] bg-[size:100%_4px]" />
 
@@ -204,7 +217,7 @@ export default function HolographicInterviewer({
               <div className="flex items-center gap-1.5">
                 <div className={cn(
                   "w-1 h-1 rounded-full", 
-                  internalIsSpeaking ? "bg-green-400 animate-pulse shadow-[0_0_8px_rgba(74,222,128,0.5)]" : "bg-white/20"
+                  internalIsSpeaking ? "bg-green-400 animate-pulse" : "bg-white/20"
                 )} />
                 <span className={cn(
                   "text-[8px] font-black uppercase tracking-widest", 
@@ -225,7 +238,6 @@ export default function HolographicInterviewer({
         </div>
       </div>
 
-      {/* Diagnostic Vocal Trigger */}
       <div className="absolute bottom-10 left-1/2 -translate-x-1/2 z-50 pointer-events-auto opacity-0 group-hover:opacity-100 transition-opacity">
         <button 
           onClick={runVocalDiagnostic}
@@ -235,7 +247,6 @@ export default function HolographicInterviewer({
         </button>
       </div>
 
-      {/* Loading & Status States */}
       <AnimatePresence>
         {(status === "loading" || isGenerating) && (
           <motion.div 
@@ -264,13 +275,21 @@ export default function HolographicInterviewer({
             key="error"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            className="absolute inset-0 z-50 glass backdrop-blur-3xl flex flex-col items-center justify-center p-8 text-center"
+            className="absolute inset-0 z-[110] glass backdrop-blur-3xl flex flex-col items-center justify-center p-8 text-center"
           >
-            <AlertTriangle className="w-12 h-12 text-red-500 mb-4" />
-            <h3 className="text-xl font-bold text-white mb-2 uppercase tracking-tighter">Neural Link Failure</h3>
-            <p className="text-[10px] text-white/40 uppercase tracking-widest leading-relaxed max-w-[240px]">
-              {errorMessage}
+            <div className="w-12 h-12 rounded-2xl bg-red-500/20 flex items-center justify-center mb-4 border border-red-500/30">
+              <AlertTriangle className="w-6 h-6 text-red-500" />
+            </div>
+            <h3 className="text-sm font-bold text-white mb-2 uppercase tracking-tighter">Neural Link Failure</h3>
+            <p className="text-[10px] text-white/60 uppercase tracking-widest leading-relaxed max-w-[260px] mb-6">
+              {errorMessage || "ElevenLabs voice connection interrupted."}
             </p>
+            <button 
+              onClick={handleClearError}
+              className="px-6 py-2 glass rounded-xl text-[8px] font-black uppercase tracking-widest text-accent hover:bg-accent/10 border border-accent/20"
+            >
+              Reset Matrix
+            </button>
           </motion.div>
         )}
       </AnimatePresence>
