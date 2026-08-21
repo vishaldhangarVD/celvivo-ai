@@ -13,7 +13,6 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth, useUser, useFirestore } from '@/firebase';
 import { 
   signInWithEmailAndPassword, 
-  signInWithPopup, 
   signInWithRedirect,
   getRedirectResult,
   GoogleAuthProvider, 
@@ -68,30 +67,36 @@ function LoginContent() {
     }
   }, [db]);
 
-  // Handle Redirect Results (Fallback path)
+  // Handle Redirect Results (Primary path for Google Login)
   useEffect(() => {
     if (!auth || !db) return;
 
-    const handleRedirect = async () => {
+    const processRedirect = async () => {
       try {
         const result = await getRedirectResult(auth);
         if (result?.user) {
+          setIsLoading(true);
           await ensureUserProfile(result.user);
           toast({ title: "Nexus Link Established", description: "Identity verified via redirect." });
           router.replace(redirectTo);
         }
       } catch (error: any) {
         console.error("Redirect Result Error:", error);
+        setIsLoading(false);
         if (error.code !== 'auth/popup-closed-by-user') {
-           toast({ variant: "destructive", title: "Handshake Failed", description: error.message });
+           toast({ 
+             variant: "destructive", 
+             title: "Authentication Error", 
+             description: error.message || "Failed to process login redirect." 
+           });
         }
       }
     };
 
-    handleRedirect();
+    processRedirect();
   }, [auth, db, ensureUserProfile, router, redirectTo, toast]);
 
-  // Redirection Protocol: Transition to authenticated destination
+  // Redirection Protocol: Transition to authenticated destination if session exists
   useEffect(() => {
     if (user && !authLoading) {
       router.replace(redirectTo);
@@ -119,7 +124,6 @@ function LoginContent() {
         title: "Protocol Failure",
         description: error.message || "Invalid credentials.",
       });
-    } finally {
       setIsLoading(false);
     }
   };
@@ -131,38 +135,16 @@ function LoginContent() {
     
     try {
       setIsLoading(true);
-      const result = await signInWithPopup(auth, provider);
-      await ensureUserProfile(result.user);
-      toast({ title: "Neural Link Established", description: "Authenticated via Google." });
+      // Direct redirect used to prevent popup interruptions in development environments
+      await signInWithRedirect(auth, provider);
     } catch (error: any) {
       console.error("Google Auth Protocol Error:", error);
-      
-      // If popup is blocked or closed, transition to redirect mode
-      if (error.code === 'auth/popup-closed-by-user' || error.code === 'auth/cancelled-popup-request' || error.code === 'auth/popup-blocked') {
-        toast({ title: "Popup Blocked", description: "Rerouting to secure redirect mode..." });
-        try {
-          await signInWithRedirect(auth, provider);
-          // Page will reload, getRedirectResult will handle completion
-        } catch (redirectError: any) {
-          toast({ variant: "destructive", title: "Reroute Failed", description: redirectError.message });
-          setIsLoading(false);
-        }
-      } else if (error.code === 'auth/unauthorized-domain') {
-        const currentHostname = typeof window !== 'undefined' ? window.location.hostname : 'domain';
-        toast({
-          variant: "destructive",
-          title: "Domain Not Authorized",
-          description: `Add "${currentHostname}" to Firebase Authorized Domains.`,
-        });
-        setIsLoading(false);
-      } else {
-        toast({
-          variant: "destructive",
-          title: "OAuth Failure",
-          description: error.message || "Google authentication failed.",
-        });
-        setIsLoading(false);
-      }
+      toast({
+        variant: "destructive",
+        title: "Handshake Failed",
+        description: error.message || "Google redirect initialization failed.",
+      });
+      setIsLoading(false);
     }
   };
 
@@ -186,7 +168,7 @@ function LoginContent() {
     }
   };
 
-  if (authLoading || (user && !authLoading)) {
+  if (authLoading) {
     return (
       <div className="min-h-screen bg-[#050816] flex items-center justify-center">
         <div className="flex flex-col items-center gap-4">
