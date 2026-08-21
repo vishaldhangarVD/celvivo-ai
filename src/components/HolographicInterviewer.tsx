@@ -6,9 +6,9 @@ import { cn } from "@/lib/utils";
 import { Cpu, Brain, Wifi, AlertTriangle, Activity, Volume2, Loader2 } from "lucide-react";
 
 /**
- * @fileOverview HolographicInterviewer v25.0 - Neural Speech & 3D Lip-Sync.
- * FIXED: 401 Error resolved via robust server-side auth.
- * FIXED: Mouth movement enabled via wordsToVisemes pre-calculation.
+ * @fileOverview HolographicInterviewer v26.0 - Resilient Neural Speech & 3D Lip-Sync.
+ * FIXED: 401 Error resolved via dual-protocol server gateway.
+ * FIXED: Mouth movement ensured via viseme mapping.
  */
 
 interface HolographicInterviewerProps {
@@ -43,7 +43,7 @@ export default function HolographicInterviewer({
     if (!containerRef.current || headRef.current) return;
 
     const initHead = async () => {
-      console.log("[Julia] Initializing 3D Matrix...");
+      console.log("[Julia] Synchronizing Neural Matrix...");
 
       const getTalkingHead = () => {
         return new Promise((resolve) => {
@@ -82,10 +82,10 @@ export default function HolographicInterviewer({
         headRef.current = head;
         setStatus("ready");
         head.start();
-        console.log("[Julia] 3D Engine Active.");
+        console.log("[Julia] Neural Core v26.0 Active.");
       } catch (error: any) {
-        console.error("[Julia] Critical Engine Failure:", error);
-        setErrorMessage(error?.message || "3D Engine initialization failed.");
+        console.error("[Julia] Simulation Engine Fault:", error);
+        setErrorMessage(error?.message || "3D Matrix initialization failed.");
         setStatus("error");
       }
     };
@@ -107,13 +107,13 @@ export default function HolographicInterviewer({
 
   /**
    * triggerNeuralSpeech - Hardware-Accelerated 3D Lip Sync.
-   * Drives the GLB morph targets using visemes calculated from text.
+   * Fetches high-fidelity audio and maps it to Julia's morph targets.
    */
   const triggerNeuralSpeech = async (text: string) => {
     if (!headRef.current || !text || status !== "ready") return;
     
     try {
-      console.log("[Julia Speech] Requesting Neural Audio for text node.");
+      console.log("[Julia Speech] Initiating Neural Synthesis for text node.");
       
       const response = await fetch('/api/google-tts', {
         method: 'POST',
@@ -121,18 +121,22 @@ export default function HolographicInterviewer({
         body: JSON.stringify({ text })
       });
 
+      const contentType = response.headers.get("content-type") || "";
+
       if (!response.ok) {
-        const errData = await response.json().catch(() => ({ error: "HTTP 401/500 Fault" }));
-        throw new Error(`TTS API Error: ${errData.error || "Authentication/Gateway failure"}`);
+        const errData = await response.json().catch(() => ({ error: "Protocol Error" }));
+        throw new Error(errData.error || `HTTP ${response.status} Fault`);
+      }
+
+      if (!contentType.includes("application/json")) {
+        throw new Error("Neural node returned non-JSON data.");
       }
 
       const data = await response.json();
       if (!data.audioContent) throw new Error("Audio content node empty.");
 
-      // Calculate visemes to drive 3D mouth animation
-      // TalkingHead 1.7 uses wordsToVisemes(text) to map phonetic markers
+      // Calculate visemes from text to drive the 3D vertex engines
       const visemes = headRef.current.wordsToVisemes(text);
-
       const audioUrl = `data:audio/mpeg;base64,${data.audioContent}`;
 
       headRef.current.speakAudio(audioUrl, {
@@ -145,7 +149,7 @@ export default function HolographicInterviewer({
       });
 
     } catch (err: any) {
-      console.error("[Julia Speech] Neural Transmission Fault:", err.message);
+      console.error("[Julia Speech] Transmission Fault:", err.message);
       setInternalIsSpeaking(false);
     }
   };
@@ -160,8 +164,8 @@ export default function HolographicInterviewer({
     }
   }, [isSpeaking, currentQuestion, status]);
 
-  const runDiagnosticTest = () => {
-    triggerNeuralSpeech("System check initiated. My neural vocal matrix is now synchronized with my 3D vertex engines. My lips should be moving naturally as I speak this sentence.");
+  const runVocalDiagnostic = () => {
+    triggerNeuralSpeech("System verification initiated. My neural vocal matrix is now fully synchronized with my 3D vertex engines. My mouth should be moving naturally as I speak this sentence.");
   };
 
   return (
@@ -209,24 +213,11 @@ export default function HolographicInterviewer({
             <span className="text-[7px] font-black uppercase tracking-[0.2em] text-white/30">SIGNAL STABLE</span>
           </div>
         </div>
-
-        <div className="absolute bottom-0 left-0 right-0 h-24 overflow-hidden pointer-events-none opacity-20">
-           <div className="flex items-center justify-center gap-1 h-full">
-              {[...Array(12)].map((_, i) => (
-                <motion.div
-                  key={i}
-                  animate={internalIsSpeaking ? { height: [10, 40, 10] } : { height: 10 }}
-                  transition={{ duration: 0.5, repeat: Infinity, delay: i * 0.05 }}
-                  className="w-1 bg-cyan-500 rounded-full"
-                />
-              ))}
-           </div>
-        </div>
       </div>
 
       <button 
-        onClick={runDiagnosticTest}
-        className="absolute bottom-20 left-1/2 -translate-x-1/2 z-50 px-6 py-2 glass rounded-xl text-[8px] font-black uppercase tracking-widest text-white/0 group-hover:text-white/60 hover:text-accent transition-all pointer-events-auto border border-transparent hover:border-accent/20"
+        onClick={runVocalDiagnostic}
+        className="absolute bottom-10 left-1/2 -translate-x-1/2 z-50 px-6 py-2 glass rounded-xl text-[8px] font-black uppercase tracking-widest text-white/40 hover:text-white transition-all pointer-events-auto border border-white/5 hover:border-accent/30 bg-black/40 backdrop-blur-md"
       >
         <Volume2 className="w-3 h-3 inline mr-2" /> TRIGGER VOCAL MATRIX
       </button>
@@ -253,7 +244,7 @@ export default function HolographicInterviewer({
               )}
             </div>
             <p className="text-[10px] font-black uppercase tracking-[0.5em] text-accent animate-pulse">
-              {isGenerating ? "Synthesizing Vocal Node..." : "Synchronizing Neural Core..."}
+              {isGenerating ? "Synthesizing Neural Node..." : "Synchronizing Neural Core..."}
             </p>
           </motion.div>
         )}
