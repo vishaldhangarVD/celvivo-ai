@@ -1,20 +1,27 @@
 'use client';
 
 import React, { useState } from 'react';
-import { motion } from 'framer-motion';
 import SpecialHRInterviewerAgent from './SpecialHRInterviewerAgent';
 import SpecialHRInterviewPanel from './SpecialHRInterviewPanel';
+import SpecialHRControls from './SpecialHRControls';
 import { SpecialHRInterviewStatus, SpecialHRUploadStatus } from '@/lib/special-hr-interview/types';
 import { uploadSpecialHRResume } from '@/lib/special-hr-interview/resume-service';
+
+/**
+ * @fileOverview SpecialHRInterviewRoom - The high-fidelity executive interview environment.
+ * Orchestrates the single-viewport layout and isolated session state.
+ */
 
 export default function SpecialHRInterviewRoom() {
   const [interviewStatus, setInterviewStatus] = useState<SpecialHRInterviewStatus>('AWAITING_RESUME');
   const [uploadStatus, setUploadStatus] = useState<SpecialHRUploadStatus>('IDLE');
   const [resumeFileName, setResumeFileName] = useState<string | undefined>();
-  const [resumeFile, setResumeFile] = useState<File | undefined>();
+  
+  // Hardware States
+  const [isMicOn, setIsMicOn] = useState(true);
+  const [isCameraOn, setIsCameraOn] = useState(true);
 
   const handleResumeSelect = async (file: File) => {
-    setResumeFile(file);
     setResumeFileName(file.name);
     setUploadStatus('UPLOADING');
     
@@ -28,7 +35,6 @@ export default function SpecialHRInterviewRoom() {
   };
 
   const handleResetResume = () => {
-    setResumeFile(undefined);
     setResumeFileName(undefined);
     setUploadStatus('IDLE');
     setInterviewStatus('AWAITING_RESUME');
@@ -36,31 +42,51 @@ export default function SpecialHRInterviewRoom() {
 
   const handleStartInterview = () => {
     setInterviewStatus('INTERVIEW_STARTING');
-    // Prepare for agent initialization
     setTimeout(() => {
       setInterviewStatus('IN_PROGRESS');
     }, 2000);
   };
 
+  const handleEndInterview = () => {
+    setInterviewStatus('COMPLETED');
+  };
+
   return (
-    <div className="flex-1 container mx-auto px-6 py-12 flex flex-col lg:flex-row gap-8 min-h-0 overflow-hidden">
-      {/* Left Area: The AI Agent & Executive View */}
-      <div className="flex-1 flex flex-col min-w-0">
-        <SpecialHRInterviewerAgent 
-          isInterviewStarted={interviewStatus === 'IN_PROGRESS' || interviewStatus === 'INTERVIEW_STARTING'} 
-          status={interviewStatus}
-        />
+    <div className="h-full flex flex-col px-8 pb-8 gap-6 overflow-hidden">
+      {/* Upper Logic Section */}
+      <div className="flex-1 flex flex-col lg:flex-row gap-6 min-h-0">
+        
+        {/* Main AI Agent Area */}
+        <div className="flex-1 flex flex-col min-w-0">
+          <SpecialHRInterviewerAgent 
+            isInterviewStarted={interviewStatus === 'IN_PROGRESS' || interviewStatus === 'INTERVIEW_STARTING'} 
+            status={interviewStatus}
+          />
+        </div>
+
+        {/* Identity & Resume Panel */}
+        <div className="lg:w-[420px] shrink-0 h-full overflow-hidden">
+          <SpecialHRInterviewPanel 
+            status={interviewStatus}
+            uploadStatus={uploadStatus}
+            fileName={resumeFileName}
+            onFileSelect={handleResumeSelect}
+            onResetResume={handleResetResume}
+          />
+        </div>
       </div>
 
-      {/* Right Area: Control Panel */}
-      <div className="lg:w-[450px] shrink-0">
-        <SpecialHRInterviewPanel 
+      {/* Bottom Control Protocol */}
+      <div className="h-24 shrink-0">
+        <SpecialHRControls 
           status={interviewStatus}
-          uploadStatus={uploadStatus}
-          fileName={resumeFileName}
-          onFileSelect={handleResumeSelect}
-          onResetResume={handleResetResume}
+          isMicOn={isMicOn}
+          isCameraOn={isCameraOn}
+          onToggleMic={() => setIsMicOn(!isMicOn)}
+          onToggleCamera={() => setIsCameraOn(!isCameraOn)}
           onStart={handleStartInterview}
+          onEnd={handleEndInterview}
+          canStart={uploadStatus === 'SUCCESS' && interviewStatus === 'READY'}
         />
       </div>
     </div>
