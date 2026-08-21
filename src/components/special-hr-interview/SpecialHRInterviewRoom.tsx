@@ -52,12 +52,12 @@ export default function SpecialHRInterviewRoom() {
   };
 
   return (
-    <div className="h-full flex flex-col px-8 pb-8 gap-6 overflow-hidden">
+    <div className="h-full flex flex-col px-6 py-4 gap-4 overflow-hidden min-h-0">
       {/* Upper Logic Section */}
-      <div className="flex-1 flex flex-col lg:flex-row gap-6 min-h-0">
+      <div className="flex-1 flex flex-col lg:flex-row gap-4 min-h-0">
         
         {/* Main AI Agent Area */}
-        <div className="flex-1 flex flex-col min-w-0">
+        <div className="flex-1 flex flex-col min-w-0 h-full">
           <SpecialHRInterviewerAgent 
             isInterviewStarted={interviewStatus === 'IN_PROGRESS' || interviewStatus === 'INTERVIEW_STARTING'} 
             status={interviewStatus}
@@ -65,7 +65,7 @@ export default function SpecialHRInterviewRoom() {
         </div>
 
         {/* Identity & Resume Panel */}
-        <div className="lg:w-[420px] shrink-0 h-full overflow-hidden">
+        <div className="lg:w-[380px] shrink-0 h-full overflow-hidden">
           <SpecialHRInterviewPanel 
             status={interviewStatus}
             uploadStatus={uploadStatus}
@@ -77,7 +77,7 @@ export default function SpecialHRInterviewRoom() {
       </div>
 
       {/* Bottom Control Protocol */}
-      <div className="h-24 shrink-0">
+      <div className="h-20 shrink-0">
         <SpecialHRControls 
           status={interviewStatus}
           isMicOn={isMicOn}
