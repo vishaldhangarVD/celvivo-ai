@@ -12,7 +12,8 @@ import {
   Menu, 
   X,
   Crown,
-  CreditCard
+  CreditCard,
+  Sparkles
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useState, useMemo } from 'react';
@@ -94,6 +95,26 @@ export default function Navbar() {
         <div className="hidden md:flex items-center gap-4">
           {user && (
             <>
+              {/* SPECIAL INTERVIEW BUTTON - PREMIUM DESIGN */}
+              <Link 
+                href="/special-interview" 
+                className={cn(
+                  pillClasses, 
+                  "border-purple-500/30 bg-purple-500/5 hover:border-purple-400 hover:bg-purple-500/10 hover:-translate-y-[3px] hover:scale-[1.05] hover:shadow-[0_0_30px_rgba(168,85,247,0.25)]", 
+                  pathname === '/special-interview' && "bg-purple-500/20 border-purple-500/50 shadow-[0_0_20px_rgba(168,85,247,0.3)]"
+                )}
+              >
+                <div className={cn(
+                  pillIconWrapperClasses, 
+                  "border-purple-500/20 bg-purple-500/10 text-purple-400 group-hover/pill:text-purple-300", 
+                  pathname === '/special-interview' && "bg-purple-500 border-purple-400 text-white"
+                )}>
+                  <Sparkles className="w-2.5 h-2.5 animate-pulse" />
+                </div>
+                SPECIAL INTERVIEW
+                <span className={cn(pillUnderlineClasses, "bg-purple-400 shadow-[0_0_8px_#a855f7]")} />
+              </Link>
+
               <Link 
                 href="/dashboard" 
                 className={cn(pillClasses, pillHoverClasses, pathname === '/dashboard' && pillActiveClasses)}
@@ -247,6 +268,9 @@ export default function Navbar() {
           >
             {user && (
               <>
+                <Link href="/special-interview" onClick={() => setIsOpen(false)} className="text-2xl font-bold tracking-tighter uppercase text-purple-400 hover:text-purple-300 flex items-center gap-4">
+                  <Sparkles className="w-6 h-6" /> Special Interview
+                </Link>
                 <Link href="/dashboard" onClick={() => setIsOpen(false)} className="text-2xl font-bold tracking-tighter uppercase text-white hover:text-accent flex items-center gap-4">
                   <LayoutDashboard className="w-6 h-6" /> Dashboard
                 </Link>
