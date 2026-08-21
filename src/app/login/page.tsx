@@ -36,7 +36,7 @@ function LoginContent() {
 
   const redirectTo = searchParams.get('redirectTo') || '/dashboard';
 
-  // Profile Synchronization Protocol
+  // Profile Synchronization Protocol - Non-blocking
   const ensureUserProfile = useCallback(async (authUser: any) => {
     if (!db) return;
     try {
@@ -63,13 +63,13 @@ function LoginContent() {
         });
       }
     } catch (e) {
-      console.error("Profile Sync Error:", e);
+      console.error("[Profile Sync] Failed to reconcile user dossier:", e);
     }
   }, [db]);
 
   // Handle Redirect Results (Primary path for Google Login)
   useEffect(() => {
-    if (!auth || !db) return;
+    if (!auth) return;
 
     const processRedirect = async () => {
       try {
@@ -77,13 +77,12 @@ function LoginContent() {
         if (result?.user) {
           setIsLoading(true);
           await ensureUserProfile(result.user);
-          toast({ title: "Nexus Link Established", description: "Identity verified via redirect." });
+          toast({ title: "Nexus Link Established", description: "Identity verified via Google." });
           router.replace(redirectTo);
         }
       } catch (error: any) {
-        console.error("Redirect Result Error:", error);
+        console.error("[Auth Protocol] Redirect Result Error:", error);
         setIsLoading(false);
-        // auth/popup-closed-by-user shouldn't happen here but keeping for safety
         if (error.code !== 'auth/popup-closed-by-user' && error.code !== 'auth/cancelled-by-user') {
            toast({ 
              variant: "destructive", 
@@ -95,7 +94,7 @@ function LoginContent() {
     };
 
     processRedirect();
-  }, [auth, db, ensureUserProfile, router, redirectTo, toast]);
+  }, [auth, ensureUserProfile, router, redirectTo, toast]);
 
   // Redirection Protocol: Transition to authenticated destination if session exists
   useEffect(() => {
@@ -118,7 +117,7 @@ function LoginContent() {
     setIsLoading(true);
     try {
       await signInWithEmailAndPassword(auth, email, password);
-      toast({ title: "Access Granted", description: "Identity verified. Redirecting..." });
+      // useUser hook will trigger redirect via the other useEffect
     } catch (error: any) {
       toast({
         variant: "destructive",
@@ -130,16 +129,15 @@ function LoginContent() {
   };
 
   const handleGoogleLogin = async () => {
-    if (!auth || !db) return;
+    if (!auth) return;
     const provider = new GoogleAuthProvider();
     provider.setCustomParameters({ prompt: 'select_account' });
     
     try {
       setIsLoading(true);
-      // Use Redirect instead of Popup for maximum environmental stability
       await signInWithRedirect(auth, provider);
     } catch (error: any) {
-      console.error("Google Auth Protocol Error:", error);
+      console.error("[Auth Protocol] Google Handshake Error:", error);
       toast({
         variant: "destructive",
         title: "Handshake Failed",
@@ -173,7 +171,12 @@ function LoginContent() {
     return (
       <div className="min-h-screen bg-[#050816] flex items-center justify-center">
         <div className="flex flex-col items-center gap-4">
-          <Loader2 className="w-12 h-12 text-accent animate-spin" />
+          <div className="relative">
+            <Loader2 className="w-12 h-12 text-accent animate-spin" />
+            <div className="absolute inset-0 flex items-center justify-center">
+              <div className="w-2 h-2 bg-accent rounded-full animate-pulse" />
+            </div>
+          </div>
           <p className="text-[10px] font-bold uppercase tracking-[0.4em] text-accent animate-pulse">Syncing Identity...</p>
         </div>
       </div>
