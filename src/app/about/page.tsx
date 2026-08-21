@@ -10,7 +10,7 @@ import Image from 'next/image';
 import { useRef } from 'react';
 
 /**
- * @fileOverview About TalentHub AI Page.
+ * @fileOverview About NEXVORO AI Page.
  * Features a premium glassmorphism layout with 3D mouse-tracking interaction for the founder profile.
  */
 
@@ -68,7 +68,7 @@ export default function AboutPage() {
               The Visionary Protocol
             </Badge>
             <h1 className="text-6xl md:text-7xl font-bold tracking-tighter text-premium">
-              About <span className="text-gradient-purple">TalentHub AI.</span>
+              About <span className="text-gradient-purple">NEXVORO AI.</span>
             </h1>
             <p className="text-xl text-muted-foreground font-light leading-relaxed max-w-2xl mx-auto mt-6">
               Empowering students with AI-powered interview success.
@@ -152,7 +152,7 @@ export default function AboutPage() {
                   transition={{ delay: 0.4 }}
                 >
                   <h2 className="text-4xl md:text-5xl font-bold tracking-tight text-white mb-2">Vinay Dange</h2>
-                  <p className="text-accent font-black uppercase tracking-[0.3em] text-xs">Founder & CEO of TalentHub AI</p>
+                  <p className="text-accent font-black uppercase tracking-[0.3em] text-xs">Founder & CEO of NEXVORO AI</p>
                 </motion.div>
               </div>
 
@@ -163,7 +163,7 @@ export default function AboutPage() {
                 className="space-y-6"
               >
                 <p className="text-lg md:text-xl text-white/80 font-light leading-relaxed">
-                  TalentHub AI was created to help students reduce interview fear, improve confidence, strengthen communication skills, and become job-ready through AI-powered interview practice and resume analysis.
+                  NEXVORO AI was created to help students reduce interview fear, improve confidence, strengthen communication skills, and become job-ready through AI-powered interview practice and resume analysis.
                 </p>
                 
                 <div className="grid grid-cols-2 gap-6 pt-6 border-t border-white/5">
@@ -191,7 +191,7 @@ export default function AboutPage() {
           <div className="w-px h-12 bg-gradient-to-b from-transparent via-accent/30 to-transparent mx-auto mb-8" />
           <h3 className="text-[10px] font-black uppercase tracking-[0.5em] text-accent">Bridging the Gap</h3>
           <p className="text-muted-foreground font-light italic leading-relaxed">
-            "We believe talent is universal, but elite interview preparation is not. TalentHub AI is here to democratize high-stakes career placement for the next generation of engineers."
+            "We believe talent is universal, but elite interview preparation is not. NEXVORO AI is here to democratize high-stakes career placement for the next generation of engineers."
           </p>
         </motion.div>
       </main>
