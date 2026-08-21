@@ -14,7 +14,8 @@ import {
   Crown,
   CreditCard,
   Sparkles,
-  Briefcase
+  Briefcase,
+  Info
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useState, useMemo } from 'react';
@@ -62,7 +63,7 @@ export default function Navbar() {
 
   const isFounder = profile?.role === 'founder';
 
-  // Pill Styles for Dashboard and Certificates
+  // Pill Styles for Navigation Buttons
   const pillClasses = "relative flex items-center gap-2.5 px-4 py-1.5 rounded-full glass border-white/10 text-[9px] font-black uppercase tracking-widest text-white transition-all duration-250 group/pill";
   const pillActiveClasses = "bg-cyan-500/20 border-cyan-500/50 shadow-[0_0_20px_rgba(34,211,238,0.3)]";
   const pillHoverClasses = "hover:border-cyan-500/50 hover:bg-white/[0.05] hover:-translate-y-[3px] hover:scale-[1.05] hover:shadow-[0_0_15px_rgba(34,211,238,0.2)]";
@@ -96,7 +97,6 @@ export default function Navbar() {
         <div className="hidden md:flex items-center gap-4">
           {user && (
             <>
-              {/* SPECIAL HR INTERVIEW BUTTON - PREMIUM DESIGN */}
               <Link 
                 href="/special-hr-interview" 
                 className={cn(
@@ -146,6 +146,19 @@ export default function Navbar() {
                 PRICING
                 <span className={pillUnderlineClasses} />
               </Link>
+
+              {/* NEW ABOUT BUTTON */}
+              <Link 
+                href="/about" 
+                className={cn(pillClasses, pillHoverClasses, pathname === '/about' && pillActiveClasses)}
+              >
+                <div className={cn(pillIconWrapperClasses, pathname === '/about' && pillActiveIconWrapperClasses)}>
+                  <Info className="w-2.5 h-2.5" />
+                </div>
+                ABOUT
+                <span className={pillUnderlineClasses} />
+              </Link>
+
               {isFounder && (
                 <Link 
                   href="/founder" 
@@ -177,7 +190,6 @@ export default function Navbar() {
             <>
               {user ? (
                 <div className="flex items-center gap-6">
-                  {/* Verified Track Component */}
                   <Link href="/user-dashboard" className="hidden lg:flex flex-col items-end group transition-all duration-300">
                     <span className="text-white font-bold tracking-[0.2em] text-[10px] md:text-xs leading-none group-hover:text-accent transition-colors">
                       {formattedName.toUpperCase()}
@@ -189,7 +201,6 @@ export default function Navbar() {
 
                   <div className="w-px h-6 bg-white/10 hidden lg:block"></div>
 
-                  {/* Notification Bell */}
                   <button className="relative p-2 text-white/40 hover:text-accent transition-colors group">
                     <Bell className="w-5 h-5" />
                     <span className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full border-2 border-[#080c19]"></span>
@@ -198,7 +209,6 @@ export default function Navbar() {
 
                   <div className="w-px h-6 bg-white/10"></div>
 
-                  {/* Profile Dropdown */}
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                       <button className="outline-none">
@@ -285,6 +295,9 @@ export default function Navbar() {
                 </Link>
                 <Link href="/pricing" onClick={() => setIsOpen(false)} className="text-2xl font-bold tracking-tighter uppercase text-white hover:text-accent flex items-center gap-4">
                   <CreditCard className="w-6 h-6" /> Pricing
+                </Link>
+                <Link href="/about" onClick={() => setIsOpen(false)} className="text-2xl font-bold tracking-tighter uppercase text-white hover:text-accent flex items-center gap-4">
+                  <Info className="w-6 h-6" /> About
                 </Link>
                 <Link href="/user-dashboard" onClick={() => setIsOpen(false)} className="text-2xl font-bold tracking-tighter uppercase text-white hover:text-accent flex items-center gap-4">
                   <ShieldCheck className="w-6 h-6" /> Verified Track
