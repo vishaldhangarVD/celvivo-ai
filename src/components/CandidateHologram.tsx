@@ -16,8 +16,8 @@ interface CandidateHologramProps {
 }
 
 /**
- * @fileOverview CandidateHologram v25.0 - Anatomical Realism & Volumetric Pass.
- * Fixes proportions, hair volume, and skeletal look via fill layering and prioritized sampling.
+ * @fileOverview CandidateHologram v26.0 - Axial Alignment & Frame Optimization.
+ * Hard-codes front-facing rotation, increases scale to fill panel, and enforces centering.
  */
 
 export default function CandidateHologram({ 
@@ -38,15 +38,20 @@ export default function CandidateHologram({
     if (!containerRef.current || !canvasRef.current) return;
 
     let isMounted = true;
-    const width = containerRef.current.clientWidth;
-    const height = containerRef.current.clientHeight;
+    
+    // Get actual container dimensions
+    const rect = containerRef.current.getBoundingClientRect();
+    const width = rect.width;
+    const height = rect.height;
 
-    // 1. Scene & Camera Setup (Portrait Matrix)
+    console.log(`[Hologram] Initializing Matrix: ${width}x${height}`);
+
     const scene = new THREE.Scene();
     scene.background = new THREE.Color(0x001a2e); 
 
+    // Frame the face tightly
     const camera = new THREE.PerspectiveCamera(42, width / height, 0.1, 100);
-    camera.position.set(0, 0.05, 2.5);
+    camera.position.set(0, 0.05, 2.2); // Moved closer from 2.8 -> 2.2
     camera.lookAt(0, 0, 0);
 
     const renderer = new THREE.WebGLRenderer({ 
@@ -73,48 +78,36 @@ export default function CandidateHologram({
     composerRef.current = composer;
 
     const manager = new THREE.LoadingManager();
-    manager.onError = () => {}; 
+    manager.onError = (url) => console.warn(`[Hologram] Resource failed: ${url}`); 
 
     const loader = new GLTFLoader(manager);
     
     loader.load('/models/woman_head.glb', (gltf) => {
       if (!isMounted) return;
 
-      // PROPORTION CORRECTION: Identify the face mesh to calibrate ratios
-      let faceMesh: THREE.Mesh | null = null;
-      gltf.scene.traverse((child) => {
-        if (child.name === "Face_mush_Face_0") faceMesh = child as THREE.Mesh;
-      });
-
-      // Align model rotation (baked offset compensation)
+      // AXIAL ALIGNMENT PROTOCOL
+      // Adjust this value if the model is not looking directly at the camera
       gltf.scene.rotation.y = -0.12; 
+      console.log(`[Hologram] Applied fixed rotation: ${gltf.scene.rotation.y}`);
 
-      // NORMALIZATION & PROPORTION PROTOCOL
+      // NORMALIZATION & CENTERING
       const wholeBox = new THREE.Box3().setFromObject(gltf.scene);
       const center = wholeBox.getCenter(new THREE.Vector3());
       const size = wholeBox.getSize(new THREE.Vector3());
       
       const maxDim = Math.max(size.x, size.y, size.z);
-      const baseScale = 1.6 / maxDim;
+      const targetHeight = 1.8; // Increased from 1.6 to fill panel more
+      const baseScale = targetHeight / maxDim;
 
-      // Apply initial centering and scaling
+      // Reset position to origin and scale
       gltf.scene.position.sub(center);
       gltf.scene.scale.setScalar(baseScale);
+      
+      const normalizedBox = new THREE.Box3().setFromObject(gltf.scene);
+      const finalSize = normalizedBox.getSize(new THREE.Vector3());
+      console.log(`[Hologram] Normalized Dimensions: ${finalSize.x.toFixed(2)}x${finalSize.y.toFixed(2)}x${finalSize.z.toFixed(2)}`);
 
-      // NON-UNIFORM PROPORTION FIX: Check if head is too egg-shaped
-      if (faceMesh) {
-        const faceBox = new THREE.Box3().setFromObject(faceMesh);
-        const faceSize = faceBox.getSize(new THREE.Vector3());
-        const hwRatio = faceSize.x / faceSize.y;
-        console.log(`[Hologram] Proportion Audit - Ratio: ${hwRatio.toFixed(2)}`);
-        
-        // If ratio is too low (thin head), reduce Y scale slightly to round it out
-        if (hwRatio < 0.7) {
-          gltf.scene.scale.y *= 0.88;
-          console.log("[Hologram] Proportions Adjusted: Applied Y-compression.");
-        }
-      }
-
+      // PARTICLE RECONSTRUCTION
       const pointsPool: { pos: THREE.Vector3; type: string }[] = [];
 
       gltf.scene.traverse((child) => {
@@ -123,18 +116,15 @@ export default function CandidateHologram({
           const posAttr = mesh.geometry.attributes.position;
           const name = child.name;
 
-          // Categorization
-          const isFace = name === "Face_mush_Face_0";
-          const isMouth = name === "Mouth_mush_Mouth_0";
-          const isIris = name.includes("Eye_L_Irises") || name.includes("Eye_R_Irises");
+          const isFace = name.includes("Face_mush_Face");
+          const isMouth = name.includes("Mouth_mush_Mouth");
+          const isIris = name.includes("Eye_") && name.includes("Irises");
           const isHairCap = name === "Hair_mush_Hair_Cap_0";
-          const isHairFringe = name.includes("Back_Mat") || name.includes("FrontL_Mat") || name.includes("FrontR_Mat");
-          const isHairSides = name.includes("SideL_Mat") || name.includes("SideR_Mat") || name.includes("SideL_f_Mat") || name.includes("SideR_f_Mat");
+          const isHairOther = name.includes("Hair_mush");
 
-          // Skip torso
           if (name.includes("Torso")) return;
 
-          // SOLIDITY LAYER: Add translucent fill behind wireframe for the face only
+          // SOLIDITY LAYER: Fill behind wireframe
           if (isFace) {
             const fillMaterial = new THREE.MeshBasicMaterial({
               color: 0x003344,
@@ -145,13 +135,13 @@ export default function CandidateHologram({
             });
             const fillMesh = new THREE.Mesh(mesh.geometry.clone(), fillMaterial);
             fillMesh.applyMatrix4(mesh.matrixWorld);
-            fillMesh.scale.multiplyScalar(0.99); // Slightly smaller to prevent Z-fighting with wireframe
+            fillMesh.scale.multiplyScalar(0.99);
             scene.add(fillMesh);
 
             const wireMaterial = new THREE.MeshBasicMaterial({
               color: 0x22d3ee,
               transparent: true,
-              opacity: 0.25,
+              opacity: 0.2,
               wireframe: true,
               depthWrite: false
             });
@@ -160,35 +150,19 @@ export default function CandidateHologram({
             scene.add(wireMesh);
           }
 
-          // MOUTH WIREFRAME: Subdued for cleaner lips
-          if (isMouth) {
-            const mouthWire = new THREE.MeshBasicMaterial({
-              color: 0x22d3ee,
-              transparent: true,
-              opacity: 0.15,
-              wireframe: true,
-              depthWrite: false
-            });
-            const mouthMesh = new THREE.Mesh(mesh.geometry.clone(), mouthWire);
-            mouthMesh.applyMatrix4(mesh.matrixWorld);
-            scene.add(mouthMesh);
-          }
-
           // PARTICLE SAMPLING
           for (let i = 0; i < posAttr.count; i++) {
             const v = new THREE.Vector3(posAttr.getX(i), posAttr.getY(i), posAttr.getZ(i));
             v.applyMatrix4(mesh.matrixWorld);
 
-            // Per-mesh sampling density
             let shouldSample = false;
             let type = 'face';
 
             if (isFace) shouldSample = true;
-            else if (isIris) { shouldSample = Math.random() > 0.4; type = 'eye'; }
-            else if (isMouth) { shouldSample = Math.random() > 0.85; type = 'mouth'; } // Outline only
-            else if (isHairCap) { shouldSample = Math.random() > 0.5; type = 'hair'; } // Prioritize top volume
-            else if (isHairFringe) { shouldSample = Math.random() > 0.85; type = 'hair'; }
-            else if (isHairSides) { shouldSample = Math.random() > 0.96; type = 'hair'; } // Minimal sides
+            else if (isIris) { shouldSample = true; type = 'eye'; }
+            else if (isMouth) { shouldSample = Math.random() > 0.6; type = 'mouth'; }
+            else if (isHairCap) { shouldSample = Math.random() > 0.4; type = 'hair'; }
+            else if (isHairOther) { shouldSample = Math.random() > 0.95; type = 'hair'; }
 
             if (shouldSample) {
               pointsPool.push({ pos: v, type });
@@ -197,8 +171,7 @@ export default function CandidateHologram({
         }
       });
 
-      // Cap and shuffle
-      const finalPool = pointsPool.sort(() => Math.random() - 0.5).slice(0, 14000);
+      const finalPool = pointsPool.sort(() => Math.random() - 0.5).slice(0, 15000);
       const totalParticles = finalPool.length;
 
       const positions = new Float32Array(totalParticles * 3);
@@ -215,10 +188,9 @@ export default function CandidateHologram({
         const t = finalPool[i];
         const i3 = i * 3;
 
-        // Scatter spawn
-        positions[i3] = (Math.random() - 0.5) * 3.0;
-        positions[i3 + 1] = (Math.random() - 0.5) * 3.0;
-        positions[i3 + 2] = (Math.random() - 0.5) * 3.0;
+        positions[i3] = (Math.random() - 0.5) * 4.0;
+        positions[i3 + 1] = (Math.random() - 0.5) * 4.0;
+        positions[i3 + 2] = (Math.random() - 0.5) * 4.0;
 
         targetPositions[i3] = t.pos.x;
         targetPositions[i3 + 1] = t.pos.y;
@@ -250,7 +222,7 @@ export default function CandidateHologram({
             vColor = color;
             vDepth = smoothstep(-0.2, 0.4, position.z);
             vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
-            gl_PointSize = size * (300.0 / -mvPosition.z);
+            gl_PointSize = size * (350.0 / -mvPosition.z);
             gl_Position = projectionMatrix * mvPosition;
           }
         `,
@@ -308,7 +280,6 @@ export default function CandidateHologram({
 
       animate();
       setIsLoading(false);
-      console.log(`[Hologram] Reconstruction Complete - Matrix Count: ${totalParticles}`);
     }, undefined, (err) => {
       console.error("[Hologram] Load Fault:", err);
       setIsLoading(false);
@@ -337,10 +308,7 @@ export default function CandidateHologram({
   return (
     <div ref={containerRef} className={`w-full h-full relative overflow-hidden bg-[#001a2e] ${className ?? ""}`}>
       <canvas ref={canvasRef} className="w-full h-full block" />
-      <div className="absolute inset-0 pointer-events-none">
-        <div className="absolute inset-0 opacity-10 bg-[linear-gradient(rgba(18,16,16,0)_50%,rgba(0,0,0,0.25)_50%)] bg-[size:100%_4px]" />
-      </div>
-
+      
       {isLoading && (
         <div className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-[#001a2e]/60 backdrop-blur-md">
           <div className="w-12 h-12 border-2 border-accent/20 border-t-accent rounded-full animate-spin mb-4" />
