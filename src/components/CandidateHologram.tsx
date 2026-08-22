@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useEffect, useRef, useState } from 'react';
@@ -16,8 +15,9 @@ interface CandidateHologramProps {
 }
 
 /**
- * @fileOverview CandidateHologram v55.0 - FINAL STABLE PROTOCOL.
- * Fixed scale (0.32), fixed framing (z:3.2), and strictly capped hair distribution.
+ * @fileOverview CandidateHologram v60.0 - FINAL STABLE SCALE AND FRAMING.
+ * Targets 0.55 unit height with a closer camera (z:2.2) for optimal panel coverage.
+ * Strictly caps hair to 1200 particles to preserve facial dominance.
  */
 export default function CandidateHologram({ 
   active = true, 
@@ -47,7 +47,7 @@ export default function CandidateHologram({
     scene.background = new THREE.Color(0x001a2e); 
 
     const camera = new THREE.PerspectiveCamera(42, width / height, 0.1, 100);
-    camera.position.set(0, 0, 3.2); 
+    camera.position.set(0, 0, 2.2); // Locked framing for 0.55 scale
     camera.lookAt(0, 0, 0);
 
     const renderer = new THREE.WebGLRenderer({ 
@@ -74,7 +74,8 @@ export default function CandidateHologram({
     composerRef.current = composer;
 
     const manager = new THREE.LoadingManager();
-    manager.onError = () => {}; // Silently ignore texture errors
+    // Silently suppress harmless texture warnings
+    manager.onError = () => {}; 
 
     const loader = new GLTFLoader(manager);
     
@@ -83,18 +84,17 @@ export default function CandidateHologram({
 
       const gltfScene = gltf.scene;
 
-      // 1. AXIAL ALIGNMENT & PROVEN SCALE
+      // 1. AXIAL ALIGNMENT
       gltfScene.rotation.y = -0.12; 
 
+      // 2. PRECISION SCALING (Target 0.55 units height)
       const box = new THREE.Box3().setFromObject(gltfScene);
       const size = box.getSize(new THREE.Vector3());
       const maxDim = Math.max(size.x, size.y, size.z);
-      
-      // Proven stable scale that fits frame at z:3.2
-      const scale = 0.32 / maxDim;
+      const scale = 0.55 / maxDim;
       gltfScene.scale.setScalar(scale);
 
-      // IMPORTANT: RECOMPUTE CENTER POST-SCALE
+      // 3. POST-SCALE CENTERING
       const scaledBox = new THREE.Box3().setFromObject(gltfScene);
       const scaledCenter = scaledBox.getCenter(new THREE.Vector3());
       const scaledSize = scaledBox.getSize(new THREE.Vector3());
@@ -107,7 +107,7 @@ export default function CandidateHologram({
 
       const pointsPool: { pos: THREE.Vector3; type: string }[] = [];
       let counts = { face: 0, hair: 0, eye: 0, mouth: 0 };
-      const HAIR_TOTAL_LIMIT = 1200;
+      const HAIR_TOTAL_LIMIT = 1200; // Strict cap to avoid "blob" look
 
       gltfScene.traverse((child) => {
         if ((child as THREE.Mesh).isMesh) {
@@ -117,7 +117,7 @@ export default function CandidateHologram({
 
           const isFace = name.includes("Face_mush_Face");
           const isMouth = name.includes("Mouth_mush_Mouth");
-          const isIris = name === "Eye_L_Irises_0" || name === "Eye_R_Irises_0";
+          const isIris = name.includes("Eye_L_Irises") || name.includes("Eye_R_Irises");
           const isHairCap = name === "Hair_mush_Hair_Cap_0";
           const isHairOther = name.includes("Hair_mush") && !isHairCap;
           const isTorso = name.includes("Torso");
@@ -192,8 +192,6 @@ export default function CandidateHologram({
         }
       });
 
-      console.log(`[Hologram] Logic Distribution: Face=${counts.face}, Eyes=${counts.eye}, Mouth=${counts.mouth}, Hair=${counts.hair}`);
-
       const totalParticles = pointsPool.length;
       console.log("FINAL COUNTS - Face:", counts.face, "Hair:", counts.hair, "Eyes:", counts.eye, "Mouth:", counts.mouth, "TOTAL PARTICLES:", totalParticles);
 
@@ -206,7 +204,7 @@ export default function CandidateHologram({
       const isMouthArray = new Float32Array(totalParticles); 
 
       const faceColor = new THREE.Color(0x4ff0ff);
-      const hairColor = new THREE.Color(0xff0000); // DEBUG RED
+      const hairColor = new THREE.Color(0x1a5fb4); // Dim blue
 
       for (let i = 0; i < totalParticles; i++) {
         const t = pointsPool[i];
@@ -230,7 +228,7 @@ export default function CandidateHologram({
           colors[i3] = hairColor.r; colors[i3+1] = hairColor.g; colors[i3+2] = hairColor.b;
           sizes[i] = 0.01;
           alphas[i] = t.type === 'hair-cap' ? 0.4 : 0.3;
-          // Add anatomical jitter for hair strands
+          // Anatomical jitter for organic strands
           targetPositions[i3 + 1] += (Math.random() - 0.5) * 0.01;
         } else if (t.type === 'eye') {
           colors[i3] = faceColor.r; colors[i3+1] = faceColor.g; colors[i3+2] = faceColor.b;
