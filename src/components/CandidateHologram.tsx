@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useEffect, useRef, useState, useCallback } from 'react';
@@ -16,8 +17,7 @@ interface CandidateHologramProps {
 
 /**
  * @fileOverview CandidateHologram - The Unified Nexvoro AI Hologram Engine.
- * Handles both the "Synchronizing Identity" loading phase and the live session preview.
- * Features: Procedural baseline, GLB sync, and Dark Navy matrix background.
+ * Uses a React-managed canvas ref to avoid removeChild DOM conflicts.
  */
 
 export default function CandidateHologram({ 
@@ -28,6 +28,7 @@ export default function CandidateHologram({
   isLoader = false
 }: CandidateHologramProps) {
   const containerRef = useRef<HTMLDivElement>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
   const rendererRef = useRef<THREE.WebGLRenderer | null>(null);
   const sceneRef = useRef<THREE.Scene | null>(null);
   const cameraRef = useRef<THREE.PerspectiveCamera | null>(null);
@@ -56,7 +57,7 @@ export default function CandidateHologram({
   }, [active]);
 
   useEffect(() => {
-    if (!containerRef.current) return;
+    if (!containerRef.current || !canvasRef.current) return;
 
     let isMounted = true;
     const width = containerRef.current.clientWidth || 400;
@@ -64,8 +65,7 @@ export default function CandidateHologram({
 
     // 1. Scene & Camera Setup
     const scene = new THREE.Scene();
-    // Set requested permanent Dark Navy background
-    scene.background = new THREE.Color(0x001a2e);
+    scene.background = new THREE.Color(0x001a2e); // Permanent Dark Navy
     sceneRef.current = scene;
 
     const camera = new THREE.PerspectiveCamera(35, width / height, 0.1, 100);
@@ -73,28 +73,24 @@ export default function CandidateHologram({
     camera.lookAt(0, 0, 0);
     cameraRef.current = camera;
 
+    // 2. Renderer Initialization (Using React-managed canvas)
     const renderer = new THREE.WebGLRenderer({ 
+      canvas: canvasRef.current,
       antialias: true, 
       alpha: false, 
       powerPreference: "high-performance" 
     });
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.25));
     renderer.setSize(width, height);
-    
-    // Cleanup container before appending to prevent double-canvas in StrictMode
-    while (containerRef.current.firstChild) {
-      containerRef.current.removeChild(containerRef.current.firstChild);
-    }
-    containerRef.current.appendChild(renderer.domElement);
     rendererRef.current = renderer;
 
-    // 2. Data Buffers
+    // 3. Data Buffers
     const positions = new Float32Array(PARTICLE_COUNT * 3);
     const targetPositions = new Float32Array(PARTICLE_COUNT * 3);
     const colors = new Float32Array(PARTICLE_COUNT * 3);
     const masks = new Int8Array(PARTICLE_COUNT);
 
-    // 3. Generate Procedural Baseline
+    // 4. Generate Procedural Baseline (Immediate Render)
     for (let i = 0; i < PARTICLE_COUNT; i++) {
       const phi = Math.acos(-1 + (2 * i) / PARTICLE_COUNT);
       const theta = Math.sqrt(PARTICLE_COUNT * Math.PI) * phi;
@@ -107,6 +103,7 @@ export default function CandidateHologram({
       targetPositions[i * 3 + 1] = y;
       targetPositions[i * 3 + 2] = z;
 
+      // Define mouth/eye areas for procedural fallback
       if (y < -1.2 && y > -2.2 && Math.abs(x) < 1.0 && z > 1.2) {
         masks[i] = y > -1.7 ? 1 : 2; 
       } else if (y > 0.8 && y < 1.8 && Math.abs(x) > 0.4 && Math.abs(x) < 1.8 && z > 1.4) {
@@ -139,15 +136,17 @@ export default function CandidateHologram({
     scene.add(points);
     pointsRef.current = points;
 
-    // 4. Background GLB Sync
+    // 5. Async GLB Load
     const loader = new GLTFLoader();
     loader.load('/models/face.glb', (gltf) => {
       if (!isMounted) return;
+      
       let headMesh: THREE.Mesh | null = null;
       gltf.scene.traverse((node) => {
         if ((node as THREE.Mesh).isMesh) {
-          if (!headMesh || (node as THREE.Mesh).geometry.attributes.position.count > headMesh.geometry.attributes.position.count) {
-            headMesh = node as THREE.Mesh;
+          const mesh = node as THREE.Mesh;
+          if (!headMesh || mesh.geometry.attributes.position.count > headMesh.geometry.attributes.position.count) {
+            headMesh = mesh;
           }
         }
       });
@@ -176,6 +175,7 @@ export default function CandidateHologram({
           targetPositions[i * 3 + 1] = ty;
           targetPositions[i * 3 + 2] = tz;
 
+          // Recalculate masks for model geometry
           if (ty < -1.1 && ty > -2.4 && Math.abs(tx) < 1.2 && tz > 1.0) {
             masks[i] = ty > -1.75 ? 1 : 2;
           } else if (ty > 0.6 && ty < 1.8 && Math.abs(tx) > 0.5 && Math.abs(tx) < 1.8 && tz > 1.2) {
@@ -188,12 +188,14 @@ export default function CandidateHologram({
       }
       setIsLoading(false);
     }, undefined, (err) => {
-      console.warn("[Hologram] GLB Sync Restricted, Using Procedural Matrix.");
-      if (isMounted) setIsLoading(false);
-      safeStatusChange("PROCEDURAL_BASELINE_ACTIVE");
+      console.warn("[Hologram] GLB Load Failed, Keeping Procedural Fallback");
+      if (isMounted) {
+        setIsLoading(false);
+        safeStatusChange("PROCEDURAL_BASELINE_ACTIVE");
+      }
     });
 
-    // 5. Matrix Animation Loop
+    // 6. Animation Logic
     let time = 0;
     let formationProgress = 0;
 
@@ -217,6 +219,7 @@ export default function CandidateHologram({
           let ty = targetPositions[i3 + 1];
           let tz = targetPositions[i3 + 2];
 
+          // Mouth/Eye isolated animation
           if (masks[i] === 1) ty += speakCycle * 0.08;
           else if (masks[i] === 2) ty -= speakCycle * 0.12;
           else if (masks[i] === 3) ty *= blinkCycle;
@@ -248,6 +251,7 @@ export default function CandidateHologram({
     };
     window.addEventListener('resize', handleResize);
 
+    // 7. Stable Cleanup
     return () => {
       isMounted = false;
       window.removeEventListener('resize', handleResize);
@@ -265,14 +269,18 @@ export default function CandidateHologram({
   return (
     <div 
       ref={containerRef} 
-      className={`w-full h-full relative overflow-hidden rounded-[2rem] ${className ?? ""}`}
+      className={`w-full h-full relative overflow-hidden rounded-[2rem] bg-[#001a2e] ${className ?? ""}`}
     >
-      {/* Visual Scanline HUD */}
+      <canvas 
+        ref={canvasRef} 
+        className="w-full h-full"
+      />
+
+      {/* Cinematic HUD Overlays */}
       <div className="absolute inset-0 z-40 pointer-events-none">
         <div className="absolute inset-0 opacity-10 bg-[linear-gradient(rgba(18,16,16,0)_50%,rgba(0,0,0,0.25)_50%)] bg-[size:100%_4px]" />
       </div>
 
-      {/* Conditional Synchronizing Text Overlay */}
       {isLoader && (
         <div className="absolute inset-x-0 bottom-12 z-50 flex flex-col items-center gap-4">
           <div className="text-center animate-pulse">
