@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useEffect, useRef, useState } from 'react';
@@ -72,7 +73,7 @@ export default function CandidateHologram({
     composerRef.current = composer;
 
     const manager = new THREE.LoadingManager();
-    manager.onError = () => {}; // Silently ignore texture blob errors
+    manager.onError = () => {}; // Silently ignore texture errors
 
     const loader = new GLTFLoader(manager);
     
@@ -193,7 +194,7 @@ export default function CandidateHologram({
 
       const totalParticles = pointsPool.length;
       const positions = new Float32Array(totalParticles * 3);
-      const targetPositions = new Float32Array(totalPositions * 3);
+      const targetPositions = new Float32Array(totalParticles * 3);
       const velocities = new Float32Array(totalParticles * 3);
       const colors = new Float32Array(totalParticles * 3);
       const sizes = new Float32Array(totalParticles); 
