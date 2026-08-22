@@ -1,10 +1,8 @@
-
 'use client';
 
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
-import type { AgentManager } from '@d-id/client-sdk';
 import { useUser, useFirestore } from '@/firebase';
 import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { 
@@ -19,7 +17,8 @@ import {
   Loader2,
   ShieldCheck,
   AlertCircle,
-  MessageSquare
+  MessageSquare,
+  Home
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -27,11 +26,11 @@ import { Card } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import Navbar from '@/components/layout/Navbar';
 import { cn } from '@/lib/utils';
+import Link from 'next/link';
 
 /**
  * @fileOverview Special HR Interview powered by D-ID Agents.
- * Independent simulation track with real-time WebRTC avatar and speech recognition.
- * Optimized for secure client-side credential handling via NEXT_PUBLIC_ environment variables.
+ * Isolated from the main interview flow. Uses server-side config retrieval.
  */
 
 export default function SpecialHRInterview() {
@@ -41,10 +40,11 @@ export default function SpecialHRInterview() {
   const { toast } = useToast();
 
   // D-ID Refs & State
-  const agentManagerRef = useRef<AgentManager | null>(null);
+  const agentManagerRef = useRef<any>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const localVideoRef = useRef<HTMLVideoElement>(null);
   const [connectionStatus, setConnectionStatus] = useState<'connecting' | 'connected' | 'disconnected' | 'error'>('disconnected');
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isDIdSpeaking, setIsDIdSpeaking] = useState(false);
   
   // Local Media State
@@ -61,9 +61,10 @@ export default function SpecialHRInterview() {
   const recognitionRef = useRef<any>(null);
 
   const initSpeechRecognition = useCallback(() => {
+    if (typeof window === 'undefined') return;
     const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
     if (!SpeechRecognition) {
-      toast({ variant: "destructive", title: "Protocol Error", description: "Vocal recognition not supported in this terminal." });
+      console.warn("Vocal recognition not supported in this browser.");
       return;
     }
 
@@ -90,7 +91,7 @@ export default function SpecialHRInterview() {
     };
 
     recognitionRef.current = recognition;
-  }, [toast]);
+  }, []);
 
   const toggleRecording = () => {
     if (isRecording) {
@@ -122,27 +123,24 @@ export default function SpecialHRInterview() {
   const initializeDID = useCallback(async () => {
     if (typeof window === 'undefined') return;
 
-    // Use consistently named NEXT_PUBLIC variables for browser access
-    const agentId = process.env.NEXT_PUBLIC_DID_SPECIAL_HR_AGENT_ID;
-    const clientKey = process.env.NEXT_PUBLIC_DID_CLIENT_KEY;
-
-    if (!agentId || !clientKey) {
-      setConnectionStatus('error');
-      toast({ 
-        variant: "destructive", 
-        title: "Auth Missing", 
-        description: "D-ID Agent credentials not found in environment. Please verify NEXT_PUBLIC_ prefixes." 
-      });
-      return;
-    }
-
     setConnectionStatus('connecting');
 
     try {
+      // 1. Fetch Config from Secure API Route
+      const configRes = await fetch('/api/special-hr-agent');
+      const configData = await configRes.json();
+
+      if (!configRes.ok || !configData.agentId || !configData.clientKey) {
+        setErrorMessage(configData.error || "D-ID Agent credentials not configured.");
+        setConnectionStatus('error');
+        return;
+      }
+
+      // 2. Client-only Dynamic Import
       const { createAgentManager } = await import('@d-id/client-sdk');
 
-      const manager = await createAgentManager(agentId, {
-        auth: { type: 'key', clientKey },
+      const manager = await createAgentManager(configData.agentId, {
+        auth: { type: 'key', clientKey: configData.clientKey },
         callbacks: {
           onSrcObjectReady(event) {
             if (videoRef.current) {
@@ -162,17 +160,19 @@ export default function SpecialHRInterview() {
             }
           },
           onError(error) {
-            console.error("D-ID Error:", error);
+            console.error("D-ID SDK Error:", error);
             setConnectionStatus('error');
+            setErrorMessage("Unable to connect to Special HR Agent.");
           }
         }
       });
 
       agentManagerRef.current = manager;
       await manager.connect();
-    } catch (e) {
-      console.error(e);
+    } catch (e: any) {
+      console.error("[D-ID] Initialization Fault:", e);
       setConnectionStatus('error');
+      setErrorMessage("Unable to connect to Special HR Agent.");
     }
   }, [toast]);
 
@@ -195,8 +195,12 @@ export default function SpecialHRInterview() {
     }
 
     return () => {
-      agentManagerRef.current?.disconnect();
-      if (recognitionRef.current) recognitionRef.current.stop();
+      if (agentManagerRef.current) {
+        agentManagerRef.current.disconnect();
+      }
+      if (recognitionRef.current) {
+        recognitionRef.current.stop();
+      }
     };
   }, [initializeDID, initSpeechRecognition]);
 
@@ -242,11 +246,18 @@ export default function SpecialHRInterview() {
         <div className="flex items-center gap-6">
            <div className={cn(
              "px-4 py-1.5 rounded-full glass border-white/5 flex items-center gap-3 transition-all",
-             connectionStatus === 'connected' ? "bg-green-500/10 border-green-500/20" : "bg-red-500/10 border-red-500/20"
+             connectionStatus === 'connected' ? "bg-green-500/10 border-green-500/20" : 
+             connectionStatus === 'connecting' ? "bg-accent/10 border-accent/20" : 
+             "bg-red-500/10 border-red-500/20"
            )}>
-              <div className={cn("w-2 h-2 rounded-full", connectionStatus === 'connected' ? "bg-green-400 animate-pulse" : "bg-red-400")} />
+              <div className={cn(
+                "w-2 h-2 rounded-full", 
+                connectionStatus === 'connected' ? "bg-green-400 animate-pulse" : 
+                connectionStatus === 'connecting' ? "bg-accent animate-spin" : 
+                "bg-red-400"
+              )} />
               <span className="text-[9px] font-black uppercase tracking-widest text-white/60">
-                {connectionStatus === 'connecting' ? 'SYNCING...' : connectionStatus === 'connected' ? 'AI INTERVIEWER ONLINE' : 'DISCONNECTED'}
+                {connectionStatus === 'connecting' ? 'SYNCING...' : connectionStatus === 'connected' ? 'AI INTERVIEWER ONLINE' : connectionStatus === 'error' ? 'ERROR' : 'DISCONNECTED'}
               </span>
            </div>
         </div>
@@ -302,6 +313,9 @@ export default function SpecialHRInterview() {
                     <p className="text-xs font-light italic">"{currentRecognition}"</p>
                   </div>
                 )}
+                {transcript.length === 0 && !isRecording && (
+                   <p className="text-[10px] text-white/20 text-center py-8">Awaiting initial handshake...</p>
+                )}
              </div>
           </Card>
         </div>
@@ -309,11 +323,20 @@ export default function SpecialHRInterview() {
         {/* AI Interviewer Stage */}
         <div className="flex-1 flex flex-col gap-6">
           <Card className="flex-1 glass border-white/10 bg-[#080c19] rounded-[3rem] relative overflow-hidden shadow-[0_0_100px_rgba(168,85,247,0.1)]">
+            {connectionStatus === 'error' ? (
+              <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/80 z-20 p-12 text-center">
+                 <AlertCircle className="w-12 h-12 text-red-400 mb-6" />
+                 <h3 className="text-xl font-bold mb-2">Protocol Error</h3>
+                 <p className="text-sm text-white/40 max-w-sm mb-8">{errorMessage}</p>
+                 <Button onClick={initializeDID} variant="outline" className="rounded-xl px-8 h-12 text-[10px] uppercase font-bold tracking-widest">Retry Connection</Button>
+              </div>
+            ) : null}
+
             <video 
               ref={videoRef} 
               autoPlay 
               playsInline 
-              className="w-full h-full object-cover"
+              className={cn("w-full h-full object-cover", connectionStatus !== 'connected' && "opacity-0")}
             />
             
             {connectionStatus === 'connecting' && (
@@ -323,15 +346,23 @@ export default function SpecialHRInterview() {
               </div>
             )}
 
-            {/* Speaking Indicator */}
-            <div className="absolute bottom-8 left-8 flex items-center gap-4">
-              <div className="flex items-center gap-2 px-4 py-2 glass rounded-full border-purple-500/30">
-                <div className={cn("w-1.5 h-1.5 rounded-full", isDIdSpeaking ? "bg-purple-400 animate-ping" : "bg-white/10")} />
-                <span className="text-[9px] font-black uppercase text-purple-300 tracking-widest">
-                  {isDIdSpeaking ? "AGENT SPEAKING" : "AGENT LISTENING"}
-                </span>
+            {connectionStatus === 'disconnected' && !errorMessage && (
+              <div className="absolute inset-0 flex items-center justify-center bg-black/40">
+                 <p className="text-[10px] font-black uppercase tracking-[0.4em] text-white/20">Awaiting Signal</p>
               </div>
-            </div>
+            )}
+
+            {/* Speaking Indicator */}
+            {connectionStatus === 'connected' && (
+              <div className="absolute bottom-8 left-8 flex items-center gap-4">
+                <div className="flex items-center gap-2 px-4 py-2 glass rounded-full border-purple-500/30">
+                  <div className={cn("w-1.5 h-1.5 rounded-full", isDIdSpeaking ? "bg-purple-400 animate-ping" : "bg-white/10")} />
+                  <span className="text-[9px] font-black uppercase text-purple-300 tracking-widest">
+                    {isDIdSpeaking ? "AGENT SPEAKING" : "AGENT LISTENING"}
+                  </span>
+                </div>
+              </div>
+            )}
           </Card>
 
           {/* Action Dock */}

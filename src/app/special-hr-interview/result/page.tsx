@@ -18,7 +18,8 @@ import {
   Award,
   Loader2,
   Clock,
-  ArrowRight
+  ArrowRight,
+  AlertCircle
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -54,7 +55,7 @@ function ResultContent() {
     </div>
   );
 
-  const transcript = session.transcript || [];
+  const transcript = (session as any).transcript || [];
 
   return (
     <div className="min-h-screen bg-[#050816] pb-32">
@@ -113,13 +114,13 @@ function ResultContent() {
                    <Clock className="w-5 h-5 text-accent" />
                    <div>
                      <p className="text-[9px] font-black uppercase text-white/30 tracking-widest">Duration</p>
-                     <p className="text-sm font-bold">~{Math.round(session.duration / 60)} Minutes</p>
+                     <p className="text-sm font-bold">~{Math.round((session as any).duration / 60) || 0} Minutes</p>
                    </div>
                  </div>
                  <div className="flex items-center gap-4 text-right">
                    <div>
-                     <p className="text-[9px] font-black uppercase text-white/30 tracking-widest">Date</p>
-                     <p className="text-sm font-bold">Today</p>
+                     <p className="text-[9px] font-black uppercase text-white/30 tracking-widest">Status</p>
+                     <p className="text-sm font-bold text-green-400">Archived</p>
                    </div>
                  </div>
               </Card>
