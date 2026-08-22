@@ -163,11 +163,12 @@ export default function PricingPage() {
       color: "text-purple-400",
       button: "UPGRADE TO PRO",
       features: [
-        "Unlimited AI Interviews",
-        "Resume Intelligence Audit",
+        "Resume Generation — 3/Day",
+        "Aptitude Assessments — 10/Day",
+        "Coding Assessments — 5/Day",
+        "AI Mock Interviews — 8/Day",
+        "30/90-Day Personalized Learning Roadmap",
         "Advanced Performance Feedback",
-        "30/90 Day Learning Roadmap",
-        "Virtual HR Simulation Manager",
         "24/7 AI Career Coach"
       ]
     },
