@@ -15,9 +15,9 @@ interface CandidateHologramProps {
 }
 
 /**
- * @fileOverview CandidateHologram v64.0 - FINAL STABLE PORTRAIT.
+ * @fileOverview CandidateHologram v65.0 - PRECISION VERTICAL CENTERING.
  * Locked at 0.9 unit height with a 1.6 camera distance.
- * Implements precision post-scale centering and vertical look-at calibration.
+ * Applied a 0.15 unit downward nudge for perfect panel alignment.
  */
 export default function CandidateHologram({ 
   active = true, 
@@ -47,8 +47,8 @@ export default function CandidateHologram({
     scene.background = new THREE.Color(0x001a2e); 
 
     const camera = new THREE.PerspectiveCamera(42, width / height, 0.1, 100);
-    camera.position.set(0, -0.05, 1.6); // Lowered Y for better centering
-    camera.lookAt(0, -0.05, 0);
+    camera.position.set(0, -0.15, 1.6); // Lowered to 0.15 for final alignment
+    camera.lookAt(0, -0.15, 0);
 
     const renderer = new THREE.WebGLRenderer({ 
       canvas: canvasRef.current,
@@ -93,13 +93,13 @@ export default function CandidateHologram({
       const scale = 0.9 / maxDim;
       gltfScene.scale.setScalar(scale);
 
-      // 3. POST-SCALE CENTERING + VERTICAL NUDGE
+      // 3. POST-SCALE CENTERING + INCREASED VERTICAL NUDGE
       const scaledBox = new THREE.Box3().setFromObject(gltfScene);
       const scaledCenter = scaledBox.getCenter(new THREE.Vector3());
       const scaledSize = scaledBox.getSize(new THREE.Vector3());
       
       gltfScene.position.x -= scaledCenter.x;
-      gltfScene.position.y -= (scaledCenter.y + 0.05); // Nudge down
+      gltfScene.position.y -= (scaledCenter.y + 0.15); // Nudged down further
       gltfScene.position.z -= scaledCenter.z;
 
       console.log(`[Hologram] Normalized Dimensions: ${scaledSize.x.toFixed(2)}x${scaledSize.y.toFixed(2)}x${scaledSize.z.toFixed(2)}`);
