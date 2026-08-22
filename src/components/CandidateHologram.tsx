@@ -121,7 +121,7 @@ export default function CandidateHologram({
             if (isMouth) mouthWireGeoList.push(bakedGeometry(mesh));
 
             for (let i = 0; i < posAttr.count; i++) {
-              tempV.fromBufferAttribute(posAttr, i);
+              tempV.fromBufferAttribute(posAttr as THREE.BufferAttribute, i);
               tempV.applyMatrix4(mesh.matrixWorld);
 
               if (isFace) facePositions.push(tempV.x, tempV.y, tempV.z);
