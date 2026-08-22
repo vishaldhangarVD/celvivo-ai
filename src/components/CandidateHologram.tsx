@@ -12,9 +12,9 @@ interface CandidateHologramProps {
 }
 
 /**
- * @fileOverview CandidateHologram - High-Stability Lifecycle v11.0.
- * Optimized for low-power GPU environments.
- * Prevents renderer recreation on prop changes using refs.
+ * @fileOverview CandidateHologram - High-Stability Lifecycle v12.0.
+ * Optimized for low-power GPU environments and React Strict Mode.
+ * Eliminates redundant purge cycles causing infinite loading.
  */
 export default function CandidateHologram({ 
   active = true, 
@@ -46,10 +46,8 @@ export default function CandidateHologram({
   useEffect(() => { speakingRef.current = speaking; }, [speaking]);
   useEffect(() => { activeRef.current = active; }, [active]);
 
-  // RESOURCE DISPOSAL
-  const disposeScene = useCallback(() => {
-    console.log("[Hologram] Purging GPU resources...");
-    
+  // RESOURCE DISPOSAL (Recursive)
+  const disposeResources = useCallback(() => {
     if (animationRef.current) {
       cancelAnimationFrame(animationRef.current);
       animationRef.current = null;
@@ -57,7 +55,7 @@ export default function CandidateHologram({
 
     if (sceneRef.current) {
       sceneRef.current.traverse((object) => {
-        if ((object as THREE.Mesh).isMesh || (object as THREE.Points).isPoints) {
+        if ((object as any).isMesh || (object as any).isPoints) {
           const mesh = object as THREE.Mesh | THREE.Points;
           mesh.geometry.dispose();
           if (Array.isArray(mesh.material)) {
@@ -80,7 +78,7 @@ export default function CandidateHologram({
   }, []);
 
   const initEngine = useCallback(() => {
-    // Strict Guard: Prevent multiple renderers or init during disposal
+    // mutex lock to prevent double-init
     if (initializingRef.current || rendererRef.current || disposedRef.current) return;
     if (!containerRef.current || !canvasRef.current) return;
 
@@ -102,30 +100,29 @@ export default function CandidateHologram({
       camera.lookAt(0, 0, 0);
       cameraRef.current = camera;
 
-      // 2. RENDERER (Low Power Config)
+      // 2. RENDERER (Low Power Profile)
       const renderer = new THREE.WebGLRenderer({
         canvas: canvasRef.current,
-        antialias: false, // Reduced GPU load
+        antialias: false,
         alpha: false,
-        powerPreference: "low-power",
-        preserveDrawingBuffer: false
+        powerPreference: "low-power"
       });
       
-      renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.25)); // Aggressive cap
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.25));
       renderer.setSize(rect.width, rect.height);
       rendererRef.current = renderer;
 
-      // 3. LISTENERS
+      // 3. CONTEXT LISTENERS
       const onContextLost = (e: Event) => {
         e.preventDefault();
-        console.warn("[Hologram] Context Lost.");
+        console.warn("[Hologram] GPU Context Lost.");
         setContextLost(true);
         if (animationRef.current) cancelAnimationFrame(animationRef.current);
       };
 
       const onContextRestored = () => {
-        console.log("[Hologram] Context Restored. Re-syncing...");
-        disposeScene();
+        console.log("[Hologram] Context Restored. Re-calibrating...");
+        disposeResources();
         initializingRef.current = false;
         initEngine();
       };
@@ -133,23 +130,30 @@ export default function CandidateHologram({
       canvasRef.current.addEventListener('webglcontextlost', onContextLost, false);
       canvasRef.current.addEventListener('webglcontextrestored', onContextRestored, false);
 
-      // 4. LOAD ASSETS
+      // 4. LOAD ASSET
       const loader = new GLTFLoader();
       loader.load('/models/woman_head.glb', (gltf) => {
-        // Guard against async load after unmount
         if (disposedRef.current || !sceneRef.current) return;
 
         const model = gltf.scene;
         const box = new THREE.Box3().setFromObject(model);
         const size = box.getSize(new THREE.Vector3());
+        
+        console.log("[Hologram] Source Dimensions:", size.x.toFixed(2), size.y.toFixed(2), size.z.toFixed(2));
+
         const scale = 1.4 / Math.max(size.x, size.y, size.z);
         model.scale.setScalar(scale);
 
         const scaledBox = new THREE.Box3().setFromObject(model);
         const scaledCenter = scaledBox.getCenter(new THREE.Vector3());
-        model.position.x -= scaledCenter.x;
+        
+        // Exactly ONE centering offset
         model.position.y -= scaledCenter.y;
-        model.position.z -= scaledCenter.z;
+        
+        const finalBox = new THREE.Box3().setFromObject(model);
+        const finalSize = finalBox.getSize(new THREE.Vector3());
+        console.log("[Hologram] Normalized Dimensions:", finalSize.x.toFixed(2), finalSize.y.toFixed(2), finalSize.z.toFixed(2));
+        console.log("[Hologram] Final model world position.y:", model.position.y);
 
         const facePositions: number[] = [];
         const mouthPositions: number[] = [];
@@ -158,7 +162,7 @@ export default function CandidateHologram({
         let hCount = 0;
 
         model.traverse((child) => {
-          if ((child as THREE.Mesh).isMesh) {
+          if ((child as any).isMesh) {
             const mesh = child as THREE.Mesh;
             const pos = mesh.geometry.attributes.position;
             const name = child.name.toLowerCase();
@@ -169,8 +173,7 @@ export default function CandidateHologram({
                 wireframe: true,
                 transparent: true,
                 opacity: 0.6,
-                blending: THREE.AdditiveBlending,
-                depthWrite: false
+                blending: THREE.AdditiveBlending
               });
               const wireMesh = new THREE.Mesh(mesh.geometry.clone(), wireMat);
               wireMesh.applyMatrix4(mesh.matrixWorld);
@@ -192,21 +195,40 @@ export default function CandidateHologram({
           }
         });
 
-        // Points Materials
+        // 5. POINTS LAYERS
         const faceGeo = new THREE.BufferGeometry().setAttribute('position', new THREE.Float32BufferAttribute(facePositions, 3));
-        const facePoints = new THREE.Points(faceGeo, new THREE.PointsMaterial({ color: 0x4ff0ff, size: 0.025, transparent: true, opacity: 0.85, blending: THREE.AdditiveBlending }));
+        const facePoints = new THREE.Points(faceGeo, new THREE.PointsMaterial({ 
+          color: 0x4ff0ff, 
+          size: 0.025, 
+          transparent: true, 
+          opacity: 0.85, 
+          blending: THREE.AdditiveBlending 
+        }));
         sceneRef.current.add(facePoints);
 
         const hairGeo = new THREE.BufferGeometry().setAttribute('position', new THREE.Float32BufferAttribute(hairPositions, 3));
-        const hairPoints = new THREE.Points(hairGeo, new THREE.PointsMaterial({ color: 0x1a5fb4, size: 0.01, transparent: true, opacity: 0.4, blending: THREE.AdditiveBlending }));
+        const hairPoints = new THREE.Points(hairGeo, new THREE.PointsMaterial({ 
+          color: 0x1a5fb4, 
+          size: 0.01, 
+          transparent: true, 
+          opacity: 0.4, 
+          blending: THREE.AdditiveBlending 
+        }));
         sceneRef.current.add(hairPoints);
 
         const mouthGeo = new THREE.BufferGeometry();
         const mouthTarget = new Float32Array(mouthPositions);
         mouthGeo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(mouthPositions), 3));
-        const mouthPoints = new THREE.Points(mouthGeo, new THREE.PointsMaterial({ color: 0x4ff0ff, size: 0.02, transparent: true, opacity: 0.3, blending: THREE.AdditiveBlending }));
+        const mouthPoints = new THREE.Points(mouthGeo, new THREE.PointsMaterial({ 
+          color: 0x4ff0ff, 
+          size: 0.02, 
+          transparent: true, 
+          opacity: 0.3, 
+          blending: THREE.AdditiveBlending 
+        }));
         sceneRef.current.add(mouthPoints);
 
+        // 6. ANIMATION LOOP
         let time = 0;
         const animate = () => {
           if (disposedRef.current || !rendererRef.current || !sceneRef.current || !cameraRef.current) return;
@@ -215,7 +237,7 @@ export default function CandidateHologram({
 
           sceneRef.current.rotation.y = Math.sin(time * 0.4) * 0.05;
 
-          // React to speaking via ref
+          // Reactive mouth logic using Refs
           if (speakingRef.current) {
             const pArr = mouthGeo.attributes.position.array as Float32Array;
             const amp = Math.abs(Math.sin(time * 15)) * 0.03;
@@ -231,8 +253,9 @@ export default function CandidateHologram({
         animate();
         setIsLoading(false);
         initializingRef.current = false;
+        console.log("[Hologram] Visual Matrix Active.");
       }, undefined, (err) => {
-        console.error("[Hologram] Load Fault:", err);
+        console.error("[Hologram] Model Load Fault:", err);
         initializingRef.current = false;
         setIsLoading(false);
       });
@@ -242,7 +265,7 @@ export default function CandidateHologram({
       initializingRef.current = false;
       setIsLoading(false);
     }
-  }, [disposeScene]);
+  }, [disposeResources]);
 
   // ON MOUNT
   useEffect(() => {
@@ -251,11 +274,11 @@ export default function CandidateHologram({
 
     return () => {
       disposedRef.current = true;
-      disposeScene();
+      disposeResources();
     };
-  }, [initEngine, disposeScene]);
+  }, [initEngine, disposeResources]);
 
-  // RESIZE
+  // RESIZE HANDLER
   useEffect(() => {
     const handleResize = () => {
       if (!containerRef.current || !rendererRef.current || !cameraRef.current) return;
@@ -271,10 +294,13 @@ export default function CandidateHologram({
   }, []);
 
   return (
-    <div ref={containerRef} className={cn("w-full h-full relative overflow-hidden bg-[#000810]", className)}>
+    <div
+      ref={containerRef}
+      className={`w-full h-full relative overflow-hidden bg-[#000810] ${className ?? ""}`}
+    >
       <canvas ref={canvasRef} className="w-full h-full block" />
       
-      {isLoading && !contextLost && (
+      {(isLoading || isLoader) && !contextLost && (
         <div className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-[#000810]/80 backdrop-blur-md">
           <div className="w-12 h-12 border-2 border-accent/20 border-t-accent rounded-full animate-spin mb-4" />
           <p className="text-[10px] font-black uppercase tracking-[0.5em] text-accent animate-pulse">Initialising Matrix...</p>
