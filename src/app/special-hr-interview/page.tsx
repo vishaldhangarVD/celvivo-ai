@@ -3,7 +3,7 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
-import { createAgentManager, type AgentManager } from '@d-id/client-sdk';
+import type { AgentManager } from '@d-id/client-sdk';
 import { useUser, useFirestore } from '@/firebase';
 import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { 
@@ -118,6 +118,8 @@ export default function SpecialHRInterview() {
   };
 
   const initializeDID = useCallback(async () => {
+    if (typeof window === 'undefined') return;
+
     const agentId = process.env.NEXT_PUBLIC_DID_SPECIAL_HR_AGENT_ID;
     const clientKey = process.env.NEXT_PUBLIC_DID_CLIENT_KEY;
 
@@ -130,6 +132,9 @@ export default function SpecialHRInterview() {
     setConnectionStatus('connecting');
 
     try {
+      // Use dynamic import to prevent server-side evaluation errors
+      const { createAgentManager } = await import('@d-id/client-sdk');
+
       const manager = await createAgentManager(agentId, {
         auth: { type: 'key', clientKey },
         callbacks: {
