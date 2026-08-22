@@ -1,8 +1,8 @@
-
 "use client";
 
 import React, { useEffect, useRef, useState } from 'react';
 import * as THREE from 'three';
+import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { Loader2, VideoOff } from "lucide-react";
 
