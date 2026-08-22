@@ -88,15 +88,15 @@ export default function CandidateHologram({
         gltfScene.updateMatrixWorld(true);
 
         const facePositions: number[] = [];
-        const hairPool: number[] = [];
+        const priorityHairPool: number[] = [];
+        const regularHairPool: number[] = [];
         const eyePositions: number[] = [];
         const mouthPositions: number[] = [];
         const faceWireGeoList: THREE.BufferGeometry[] = [];
         const mouthWireGeoList: THREE.BufferGeometry[] = [];
 
         // Bake each mesh's FULL world transform directly into a cloned
-        // geometry, so wireframes and particles always align perfectly
-        // regardless of nesting/bones in the source model.
+        // geometry, so wireframes and particles always align perfectly.
         const bakedGeometry = (mesh: THREE.Mesh) => {
           const geo = mesh.geometry.clone();
           geo.applyMatrix4(mesh.matrixWorld);
@@ -115,6 +115,7 @@ export default function CandidateHologram({
             const isFace = name.includes("Face_mush_Face");
             const isMouth = name.includes("Mouth_mush_Mouth");
             const isEyes = name.includes("Eye_L_Irises") || name.includes("Eye_R_Irises");
+            const isPriorityHair = name.includes("Hair_mush_Hair_Cap_0") || name.includes("Hair_mush_Back_Mat_0");
             const isHair = name.includes("Hair_mush");
 
             if (isFace) faceWireGeoList.push(bakedGeometry(mesh));
@@ -127,20 +128,39 @@ export default function CandidateHologram({
               if (isFace) facePositions.push(tempV.x, tempV.y, tempV.z);
               else if (isMouth) mouthPositions.push(tempV.x, tempV.y, tempV.z);
               else if (isEyes) eyePositions.push(tempV.x, tempV.y, tempV.z);
-              else if (isHair) hairPool.push(tempV.x, tempV.y, tempV.z);
+              else if (isPriorityHair) priorityHairPool.push(tempV.x, tempV.y, tempV.z);
+              else if (isHair) regularHairPool.push(tempV.x, tempV.y, tempV.z);
             }
           }
         });
 
+        // Refined Hair Sampling with priority logic and 2000 particle cap
         const hairPositions: number[] = [];
-        const hairVertexCount = hairPool.length / 3;
-        const hairSampleCount = Math.min(hairVertexCount, 1200);
-        for (let i = 0; i < hairSampleCount; i++) {
-          const idx = Math.floor(Math.random() * hairVertexCount) * 3;
-          hairPositions.push(hairPool[idx], hairPool[idx + 1], hairPool[idx + 2]);
+        const HAIR_CAP = 2000;
+        
+        // 1. Process Priority Pool (Head Cap and Back Mass)
+        const priorityCount = priorityHairPool.length / 3;
+        if (priorityCount > 0) {
+          const sampleFromPriority = Math.min(priorityCount, HAIR_CAP);
+          for (let i = 0; i < sampleFromPriority; i++) {
+            const idx = Math.floor(Math.random() * priorityCount) * 3;
+            hairPositions.push(priorityHairPool[idx], priorityHairPool[idx + 1], priorityHairPool[idx + 2]);
+          }
         }
 
-        const faceWireMat = new THREE.MeshBasicMaterial({ color: 0x4ff0ff, wireframe: true, transparent: true, opacity: 0.6 });
+        // 2. Fill Remainder from Regular Pool if cap not reached
+        const currentCount = hairPositions.length / 3;
+        const regularCount = regularHairPool.length / 3;
+        if (currentCount < HAIR_CAP && regularCount > 0) {
+          const needed = HAIR_CAP - currentCount;
+          const sampleFromRegular = Math.min(regularCount, needed);
+          for (let i = 0; i < sampleFromRegular; i++) {
+            const idx = Math.floor(Math.random() * regularCount) * 3;
+            hairPositions.push(regularHairPool[idx], regularHairPool[idx + 1], regularHairPool[idx + 2]);
+          }
+        }
+
+        const faceWireMat = new THREE.MeshBasicMaterial({ color: 0x4ff0ff, wireframe: true, transparent: true, opacity: 0.45 });
         const mouthWireMat = new THREE.MeshBasicMaterial({ color: 0x4ff0ff, wireframe: true, transparent: true, opacity: 0.25 });
         materials.push(faceWireMat, mouthWireMat);
 
@@ -168,7 +188,7 @@ export default function CandidateHologram({
         };
 
         createPoints(facePositions, 0x4ff0ff, 0.025, 0.85);
-        createPoints(hairPositions, 0x1a5fb4, 0.01, 0.4);
+        createPoints(hairPositions, 0x1a5fb4, 0.018, 0.6);
         createPoints(eyePositions, 0x4ff0ff, 0.012, 0.5, false);
         createPoints(mouthPositions, 0x4ff0ff, 0.02, 0.3);
 
