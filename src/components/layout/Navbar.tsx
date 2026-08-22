@@ -147,7 +147,6 @@ export default function Navbar() {
                 <span className={pillUnderlineClasses} />
               </Link>
 
-              {/* NEW ABOUT BUTTON */}
               <Link 
                 href="/about" 
                 className={cn(pillClasses, pillHoverClasses, pathname === '/about' && pillActiveClasses)}
@@ -177,7 +176,6 @@ export default function Navbar() {
 
         {/* Right Section: System Status & Identity */}
         <div className="flex items-center gap-6">
-          {/* AI Status Badge */}
           <div className="hidden sm:flex items-center gap-3 px-4 py-1.5 rounded-full glass border-white/5 bg-white/[0.02]">
             <div className="relative flex h-2 w-2">
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
