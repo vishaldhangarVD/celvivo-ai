@@ -44,6 +44,7 @@ import { Card } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 import HolographicInterviewer from "@/components/HolographicInterviewer";
+import CandidateHologram from "@/components/CandidateHologram";
 
 function VirtualArenaContent() {
   const router = useRouter();
@@ -68,14 +69,13 @@ function VirtualArenaContent() {
   const [isGeneratingReport, setIsGeneratingReport] = useState(false);
   const [cameraError, setCameraError] = useState<string | null>(null);
   
-  // Neural Avatar Pipeline State
   const [currentSimStage, setCurrentSimStage] = useState<string>("INTRODUCTION");
   const [isAiSpeaking, setIsAiSpeaking] = useState(false);
 
   const [isMicOn, setIsMicOn] = useState(true);
   const [isCameraOn, setIsCameraOn] = useState(true);
   const [askedQuestions, setAskedQuestions] = useState<string[]>([]);
-  const userVideoRef = useRef<HTMLVideoElement | null>(null);
+  const [stream, setStream] = useState<MediaStream | null>(null);
   const mediaStreamRef = useRef<MediaStream | null>(null);
   
   const journeyRef = useMemo(() => {
@@ -121,7 +121,7 @@ function VirtualArenaContent() {
         audio: true,
       });
       mediaStreamRef.current = mediaStream;
-      if (userVideoRef.current) userVideoRef.current.srcObject = mediaStream;
+      setStream(mediaStream);
     } catch (error: any) {
       setCameraError(error?.message || "Camera access required.");
     }
@@ -129,7 +129,9 @@ function VirtualArenaContent() {
 
   useEffect(() => {
     startCamera();
-    return () => mediaStreamRef.current?.getTracks().forEach(t => t.stop());
+    return () => {
+      mediaStreamRef.current?.getTracks().forEach(t => t.stop());
+    };
   }, []);
 
   const toggleMic = () => {
@@ -279,16 +281,19 @@ function VirtualArenaContent() {
 
         <div className="flex-1 flex flex-col p-3 space-y-1.5 overflow-hidden">
           <div className="flex-1 min-0 relative rounded-[2rem] overflow-hidden bg-black border border-white/5 shadow-2xl">
-            <video ref={userVideoRef} autoPlay playsInline muted className={cn("w-full h-full object-cover", !isCameraOn && "hidden")} style={{ transform: 'scaleX(-1)' }} />
+            <CandidateHologram 
+              stream={stream} 
+              isCameraOn={isCameraOn} 
+              className="w-full h-full"
+            />
             
-            <div className="absolute top-6 left-6 flex items-center gap-3">
+            <div className="absolute top-6 left-6 flex items-center gap-3 z-40">
               <Badge className="bg-black/60 backdrop-blur-md border-white/10 text-white/80 py-1.5 px-4 rounded-full flex items-center gap-2">
                 <div className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
                 <span className="text-[10px] font-bold uppercase tracking-widest">LIVE SESSION</span>
               </Badge>
             </div>
 
-            {/* AVATAR CONTROLS: MICROPHONE AND CAMERA TOGGLES */}
             <div className="absolute bottom-8 left-1/2 -translate-x-1/2 flex items-center gap-4 px-6 py-4 glass rounded-full border-white/10 shadow-2xl z-40">
                <Button 
                  variant="ghost" 
@@ -316,17 +321,6 @@ function VirtualArenaContent() {
                  {isCameraOn ? <Video className="w-5 h-5" /> : <VideoOff className="w-5 h-5" />}
                </Button>
             </div>
-
-            {!isCameraOn && (
-              <div className="absolute inset-0 flex items-center justify-center bg-[#050816]">
-                <div className="text-center space-y-4">
-                  <div className="w-20 h-20 rounded-full bg-white/5 flex items-center justify-center mx-auto border border-white/10">
-                    <VideoOff className="w-8 h-8 text-white/20" />
-                  </div>
-                  <p className="text-[10px] font-black uppercase tracking-[0.4em] text-white/40">Visual Feed Deactivated</p>
-                </div>
-              </div>
-            )}
           </div>
 
           <div className="grid grid-cols-4 gap-2 shrink-0 pb-1">
