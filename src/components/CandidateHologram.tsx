@@ -95,6 +95,9 @@ export default function CandidateHologram({
         const faceWireGeoList: THREE.BufferGeometry[] = [];
         const mouthWireGeoList: THREE.BufferGeometry[] = [];
 
+        // For distance filtering
+        const headBox = new THREE.Box3();
+
         // Bake each mesh's FULL world transform directly into a cloned
         // geometry, so wireframes and particles always align perfectly.
         const bakedGeometry = (mesh: THREE.Mesh) => {
@@ -125,42 +128,66 @@ export default function CandidateHologram({
               tempV.fromBufferAttribute(posAttr as THREE.BufferAttribute, i);
               tempV.applyMatrix4(mesh.matrixWorld);
 
-              if (isFace) facePositions.push(tempV.x, tempV.y, tempV.z);
-              else if (isMouth) mouthPositions.push(tempV.x, tempV.y, tempV.z);
-              else if (isEyes) eyePositions.push(tempV.x, tempV.y, tempV.z);
+              if (isFace) {
+                facePositions.push(tempV.x, tempV.y, tempV.z);
+                headBox.expandByPoint(tempV);
+              }
+              else if (isMouth) {
+                mouthPositions.push(tempV.x, tempV.y, tempV.z);
+                headBox.expandByPoint(tempV);
+              }
+              else if (isEyes) {
+                eyePositions.push(tempV.x, tempV.y, tempV.z);
+                headBox.expandByPoint(tempV);
+              }
               else if (isPriorityHair) priorityHairPool.push(tempV.x, tempV.y, tempV.z);
               else if (isHair) regularHairPool.push(tempV.x, tempV.y, tempV.z);
             }
           }
         });
 
-        // Refined Hair Sampling with priority logic and 2000 particle cap
+        // 1. Calculate Head Volume Center and Radius
+        const headCenter = new THREE.Vector3();
+        headBox.getCenter(headCenter);
+        const headSize = new THREE.Vector3();
+        headBox.getSize(headSize);
+        const headRadius = headSize.length() * 0.5;
+
+        // 2. Filter Hair by Distance to Head Center
+        const filterPool = (pool: number[]) => {
+          const result = [];
+          for (let i = 0; i < pool.length; i += 3) {
+            const v = new THREE.Vector3(pool[i], pool[i+1], pool[i+2]);
+            if (v.distanceTo(headCenter) < headRadius * 1.3) {
+              result.push(pool[i], pool[i+1], pool[i+2]);
+            }
+          }
+          return result;
+        };
+
+        const filteredPriority = filterPool(priorityHairPool);
+        const filteredRegular = filterPool(regularHairPool);
+
+        // 3. Sample 2000 particles with 70/30 weight
         const hairPositions: number[] = [];
         const HAIR_CAP = 2000;
-        
-        // 1. Process Priority Pool (Head Cap and Back Mass)
-        const priorityCount = priorityHairPool.length / 3;
-        if (priorityCount > 0) {
-          const sampleFromPriority = Math.min(priorityCount, HAIR_CAP);
-          for (let i = 0; i < sampleFromPriority; i++) {
-            const idx = Math.floor(Math.random() * priorityCount) * 3;
-            hairPositions.push(priorityHairPool[idx], priorityHairPool[idx + 1], priorityHairPool[idx + 2]);
-          }
-        }
+        const PRIORITY_TARGET = Math.floor(HAIR_CAP * 0.7);
+        const REGULAR_TARGET = HAIR_CAP - PRIORITY_TARGET;
 
-        // 2. Fill Remainder from Regular Pool if cap not reached
-        const currentCount = hairPositions.length / 3;
-        const regularCount = regularHairPool.length / 3;
-        if (currentCount < HAIR_CAP && regularCount > 0) {
-          const needed = HAIR_CAP - currentCount;
-          const sampleFromRegular = Math.min(regularCount, needed);
-          for (let i = 0; i < sampleFromRegular; i++) {
-            const idx = Math.floor(Math.random() * regularCount) * 3;
-            hairPositions.push(regularHairPool[idx], regularHairPool[idx + 1], regularHairPool[idx + 2]);
+        const sample = (pool: number[], count: number) => {
+          const poolSize = pool.length / 3;
+          if (poolSize === 0) return;
+          const actualCount = Math.min(poolSize, count);
+          for (let i = 0; i < actualCount; i++) {
+            const idx = Math.floor(Math.random() * poolSize) * 3;
+            hairPositions.push(pool[idx], pool[idx + 1], pool[idx + 2]);
           }
-        }
+        };
 
-        const faceWireMat = new THREE.MeshBasicMaterial({ color: 0x4ff0ff, wireframe: true, transparent: true, opacity: 0.45 });
+        sample(filteredPriority, PRIORITY_TARGET);
+        sample(filteredRegular, REGULAR_TARGET);
+
+        const faceWireMat = new THREE.MeshBasicMaterial({ color: 0x4ff0ff, wireframe: true, transparent: true, opacity: 0.35 });
         const mouthWireMat = new THREE.MeshBasicMaterial({ color: 0x4ff0ff, wireframe: true, transparent: true, opacity: 0.25 });
         materials.push(faceWireMat, mouthWireMat);
 
@@ -187,13 +214,10 @@ export default function CandidateHologram({
           scene.add(new THREE.Points(geo, mat));
         };
 
-        createPoints(facePositions, 0x4ff0ff, 0.025, 0.85);
-        createPoints(hairPositions, 0x1a5fb4, 0.018, 0.6);
+        createPoints(facePositions, 0x4ff0ff, 0.025, 0.9);
+        createPoints(hairPositions, 0x1a5fb4, 0.018, 0.5);
         createPoints(eyePositions, 0x4ff0ff, 0.012, 0.5, false);
         createPoints(mouthPositions, 0x4ff0ff, 0.02, 0.3);
-
-        console.log("[Hologram] Face:", facePositions.length / 3, "Hair:", hairPositions.length / 3, "Eyes:", eyePositions.length / 3, "Mouth:", mouthPositions.length / 3);
-        console.log("[Hologram] Model position:", gltfScene.position);
 
         const animate = () => {
           if (!isMounted || !rendererRef.current) return;
