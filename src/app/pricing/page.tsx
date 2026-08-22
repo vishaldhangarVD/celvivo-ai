@@ -163,10 +163,10 @@ export default function PricingPage() {
       color: "text-purple-400",
       button: "UPGRADE TO PRO",
       features: [
-        "Resume Generation — 3/Day",
-        "Aptitude Assessments — 10/Day",
-        "Coding Assessments — 5/Day",
-        "AI Mock Interviews — 8/Day",
+        "Resume Generation — 3 Uses Every Day",
+        "Aptitude Assessments — 10 Uses Every Day",
+        "Coding Assessments — 5 Uses Every Day",
+        "AI Mock Interviews — 8 Uses Every Day",
         "30/90-Day Personalized Learning Roadmap",
         "Advanced Performance Feedback",
         "24/7 AI Career Coach"
