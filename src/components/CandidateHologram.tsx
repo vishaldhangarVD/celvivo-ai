@@ -16,8 +16,8 @@ interface CandidateHologramProps {
 }
 
 /**
- * @fileOverview CandidateHologram v30.0 - Precision Framing & Auto-Zoom.
- * Implements anatomical centering, 1.4-unit normalization, and projected-corner safety checks.
+ * @fileOverview CandidateHologram v31.0 - Precision Centering Fix.
+ * Implements Post-Scale Centering and framing safety checks.
  */
 
 export default function CandidateHologram({ 
@@ -42,11 +42,14 @@ export default function CandidateHologram({
     const width = rect.width;
     const height = rect.height;
 
+    // Log diagnostic dimensions for the user
+    console.log(`[Hologram Diagnostic] Canvas Parent: ${width.toFixed(0)}x${height.toFixed(0)}`);
+    console.log(`[Hologram Diagnostic] Rect:`, rect);
+
     const scene = new THREE.Scene();
     scene.background = new THREE.Color(0x001a2e); 
 
     const camera = new THREE.PerspectiveCamera(42, width / height, 0.1, 100);
-    // Initial position, will be adjusted by checkVisibility if needed
     camera.position.set(0, 0, 3.2); 
     camera.lookAt(0, 0, 0);
 
@@ -73,7 +76,7 @@ export default function CandidateHologram({
     composer.addPass(bloomPass);
     composerRef.current = composer;
 
-    // SILENT TEXTURE MANAGER: Suppress blob texture warnings
+    // Silent Manager to suppress texture blob warnings
     const manager = new THREE.LoadingManager();
     manager.onError = (url) => {
       if (!url.startsWith('blob:')) {
@@ -86,36 +89,35 @@ export default function CandidateHologram({
     loader.load('/models/woman_head.glb', (gltf) => {
       if (!isMounted) return;
 
+      const gltfScene = gltf.scene;
+
       // 1. AXIAL ALIGNMENT (Hard-coded symmetric frontal)
-      gltf.scene.rotation.y = -0.12; 
+      gltfScene.rotation.y = -0.12; 
 
-      // 2. ANATOMICAL CENTERING & NORMALIZATION
-      let faceMesh: THREE.Mesh | null = null;
-      gltf.scene.traverse((child) => {
-        if ((child as THREE.Mesh).isMesh && child.name.includes("Face_mush_Face")) {
-          faceMesh = child as THREE.Mesh;
-        }
-      });
-
-      const centeringSource = faceMesh || gltf.scene;
-      const rawBox = new THREE.Box3().setFromObject(centeringSource);
-      const center = rawBox.getCenter(new THREE.Vector3());
-      const rawSize = rawBox.getSize(new THREE.Vector3());
+      // 2. PRECISION SCALING & CENTERING
+      // Compute original box
+      const box = new THREE.Box3().setFromObject(gltfScene);
+      const size = box.getSize(new THREE.Vector3());
+      const maxDim = Math.max(size.x, size.y, size.z);
       
-      // Explicitly center the model vertically and horizontally at origin
-      gltf.scene.position.sub(center);
-      
-      // Normalize to exactly 1.4 units height
-      const maxDim = Math.max(rawSize.x, rawSize.y, rawSize.z);
-      const baseScale = 1.4 / maxDim;
-      gltf.scene.scale.setScalar(baseScale);
+      // Normalize to 1.4 units
+      const scale = 1.4 / maxDim;
+      gltfScene.scale.setScalar(scale);
 
-      const finalBox = new THREE.Box3().setFromObject(gltf.scene);
-      const finalSize = finalBox.getSize(new THREE.Vector3());
-      console.log(`[Hologram] Final Normalized Dimensions: ${finalSize.x.toFixed(2)}x${finalSize.y.toFixed(2)}x${finalSize.z.toFixed(2)}`);
+      // IMPORTANT: RECOMPUTE CENTER POST-SCALE
+      const scaledBox = new THREE.Box3().setFromObject(gltfScene);
+      const scaledCenter = scaledBox.getCenter(new THREE.Vector3());
+      
+      // Center based on the NEW scaled coordinates
+      gltfScene.position.x -= scaledCenter.x;
+      gltfScene.position.y -= scaledCenter.y;
+      gltfScene.position.z -= scaledCenter.z;
+
+      console.log(`[Hologram] Normalized Dimensions: ${size.x.toFixed(2)}x${size.y.toFixed(2)}x${size.z.toFixed(2)}`);
 
       // 3. AUTO-ZOOM SAFETY PROTOCOL
       const checkVisibility = () => {
+        const finalBox = new THREE.Box3().setFromObject(gltfScene);
         const corners = [
           new THREE.Vector3(finalBox.min.x, finalBox.min.y, finalBox.min.z),
           new THREE.Vector3(finalBox.min.x, finalBox.min.y, finalBox.max.z),
@@ -137,7 +139,7 @@ export default function CandidateHologram({
             }
           }
           if (allVisible) break;
-          camera.position.z += 0.4;
+          camera.position.z += 0.3;
           camera.updateProjectionMatrix();
         }
       };
@@ -148,7 +150,7 @@ export default function CandidateHologram({
       let hairCount = 0;
       const MAX_HAIR = 1800;
 
-      gltf.scene.traverse((child) => {
+      gltfScene.traverse((child) => {
         if ((child as THREE.Mesh).isMesh) {
           const mesh = child as THREE.Mesh;
           const posAttr = mesh.geometry.attributes.position;
