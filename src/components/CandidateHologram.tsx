@@ -16,8 +16,8 @@ interface CandidateHologramProps {
 }
 
 /**
- * @fileOverview CandidateHologram v22.0 - Final Alignment & Containment Pass.
- * Features: Corrected straight-on rotation, X-axis hair clipping, and depth-aware shading.
+ * @fileOverview CandidateHologram v25.0 - Anatomical Realism & Volumetric Pass.
+ * Fixes proportions, hair volume, and skeletal look via fill layering and prioritized sampling.
  */
 
 export default function CandidateHologram({ 
@@ -46,10 +46,9 @@ export default function CandidateHologram({
     scene.background = new THREE.Color(0x001a2e); 
 
     const camera = new THREE.PerspectiveCamera(42, width / height, 0.1, 100);
-    camera.position.set(0, 0, 2.4);
-    camera.lookAt(0, -0.05, 0);
+    camera.position.set(0, 0.05, 2.5);
+    camera.lookAt(0, 0, 0);
 
-    // 2. Renderer & Post-Processing (Cyan Bloom Protocol)
     const renderer = new THREE.WebGLRenderer({ 
       canvas: canvasRef.current,
       antialias: true, 
@@ -73,29 +72,50 @@ export default function CandidateHologram({
     composer.addPass(bloomPass);
     composerRef.current = composer;
 
-    // 3. Model Loading & Anatomical Sampling Protocol
     const manager = new THREE.LoadingManager();
-    manager.onError = () => {}; // Silencing texture warnings
+    manager.onError = () => {}; 
 
     const loader = new GLTFLoader(manager);
     
     loader.load('/models/woman_head.glb', (gltf) => {
       if (!isMounted) return;
 
-      // FIX: Adjust baked-in rotation so face looks straight at camera
+      // PROPORTION CORRECTION: Identify the face mesh to calibrate ratios
+      let faceMesh: THREE.Mesh | null = null;
+      gltf.scene.traverse((child) => {
+        if (child.name === "Face_mush_Face_0") faceMesh = child as THREE.Mesh;
+      });
+
+      // Align model rotation (baked offset compensation)
       gltf.scene.rotation.y = -0.12; 
 
-      const facePool: THREE.Vector3[] = [];
-      const eyePool: THREE.Vector3[] = [];
-      const mouthPool: THREE.Vector3[] = [];
-      const hairPool: THREE.Vector3[] = [];
-
-      // Extract raw data for normalization
+      // NORMALIZATION & PROPORTION PROTOCOL
       const wholeBox = new THREE.Box3().setFromObject(gltf.scene);
       const center = wholeBox.getCenter(new THREE.Vector3());
       const size = wholeBox.getSize(new THREE.Vector3());
+      
       const maxDim = Math.max(size.x, size.y, size.z);
-      const scale = 1.6 / maxDim;
+      const baseScale = 1.6 / maxDim;
+
+      // Apply initial centering and scaling
+      gltf.scene.position.sub(center);
+      gltf.scene.scale.setScalar(baseScale);
+
+      // NON-UNIFORM PROPORTION FIX: Check if head is too egg-shaped
+      if (faceMesh) {
+        const faceBox = new THREE.Box3().setFromObject(faceMesh);
+        const faceSize = faceBox.getSize(new THREE.Vector3());
+        const hwRatio = faceSize.x / faceSize.y;
+        console.log(`[Hologram] Proportion Audit - Ratio: ${hwRatio.toFixed(2)}`);
+        
+        // If ratio is too low (thin head), reduce Y scale slightly to round it out
+        if (hwRatio < 0.7) {
+          gltf.scene.scale.y *= 0.88;
+          console.log("[Hologram] Proportions Adjusted: Applied Y-compression.");
+        }
+      }
+
+      const pointsPool: { pos: THREE.Vector3; type: string }[] = [];
 
       gltf.scene.traverse((child) => {
         if ((child as THREE.Mesh).isMesh) {
@@ -103,48 +123,84 @@ export default function CandidateHologram({
           const posAttr = mesh.geometry.attributes.position;
           const name = child.name;
 
-          // Exclusion check
-          if (name.includes("Torso")) return;
-
-          // Mesh Classification
+          // Categorization
           const isFace = name === "Face_mush_Face_0";
           const isMouth = name === "Mouth_mush_Mouth_0";
-          const isIris = name === "Eye_L_Irises_0" || name === "Eye_R_Irises_0";
-          const isHair = name.includes("Hair_mush");
+          const isIris = name.includes("Eye_L_Irises") || name.includes("Eye_R_Irises");
+          const isHairCap = name === "Hair_mush_Hair_Cap_0";
+          const isHairFringe = name.includes("Back_Mat") || name.includes("FrontL_Mat") || name.includes("FrontR_Mat");
+          const isHairSides = name.includes("SideL_Mat") || name.includes("SideR_Mat") || name.includes("SideL_f_Mat") || name.includes("SideR_f_Mat");
 
+          // Skip torso
+          if (name.includes("Torso")) return;
+
+          // SOLIDITY LAYER: Add translucent fill behind wireframe for the face only
+          if (isFace) {
+            const fillMaterial = new THREE.MeshBasicMaterial({
+              color: 0x003344,
+              transparent: true,
+              opacity: 0.15,
+              depthWrite: false,
+              side: THREE.FrontSide
+            });
+            const fillMesh = new THREE.Mesh(mesh.geometry.clone(), fillMaterial);
+            fillMesh.applyMatrix4(mesh.matrixWorld);
+            fillMesh.scale.multiplyScalar(0.99); // Slightly smaller to prevent Z-fighting with wireframe
+            scene.add(fillMesh);
+
+            const wireMaterial = new THREE.MeshBasicMaterial({
+              color: 0x22d3ee,
+              transparent: true,
+              opacity: 0.25,
+              wireframe: true,
+              depthWrite: false
+            });
+            const wireMesh = new THREE.Mesh(mesh.geometry.clone(), wireMaterial);
+            wireMesh.applyMatrix4(mesh.matrixWorld);
+            scene.add(wireMesh);
+          }
+
+          // MOUTH WIREFRAME: Subdued for cleaner lips
+          if (isMouth) {
+            const mouthWire = new THREE.MeshBasicMaterial({
+              color: 0x22d3ee,
+              transparent: true,
+              opacity: 0.15,
+              wireframe: true,
+              depthWrite: false
+            });
+            const mouthMesh = new THREE.Mesh(mesh.geometry.clone(), mouthWire);
+            mouthMesh.applyMatrix4(mesh.matrixWorld);
+            scene.add(mouthMesh);
+          }
+
+          // PARTICLE SAMPLING
           for (let i = 0; i < posAttr.count; i++) {
             const v = new THREE.Vector3(posAttr.getX(i), posAttr.getY(i), posAttr.getZ(i));
             v.applyMatrix4(mesh.matrixWorld);
-            v.sub(center).multiplyScalar(scale);
 
-            // Sampling Filters
-            if (isMouth && Math.random() > 0.35) continue; 
-            
-            // FIX: Clip stray hair particles beyond X +/- 0.65 to clean up side clusters
-            if (isHair && (Math.random() > 0.05 || Math.abs(v.x) > 0.65)) continue; 
+            // Per-mesh sampling density
+            let shouldSample = false;
+            let type = 'face';
 
-            if (isFace) facePool.push(v);
-            else if (isMouth) mouthPool.push(v);
-            else if (isIris) eyePool.push(v);
-            else if (isHair) hairPool.push(v);
+            if (isFace) shouldSample = true;
+            else if (isIris) { shouldSample = Math.random() > 0.4; type = 'eye'; }
+            else if (isMouth) { shouldSample = Math.random() > 0.85; type = 'mouth'; } // Outline only
+            else if (isHairCap) { shouldSample = Math.random() > 0.5; type = 'hair'; } // Prioritize top volume
+            else if (isHairFringe) { shouldSample = Math.random() > 0.85; type = 'hair'; }
+            else if (isHairSides) { shouldSample = Math.random() > 0.96; type = 'hair'; } // Minimal sides
+
+            if (shouldSample) {
+              pointsPool.push({ pos: v, type });
+            }
           }
         }
       });
 
-      // Precise Allocation Tiers
-      const sampledEyes = eyePool.sort(() => Math.random() - 0.5).slice(0, 400);
-      const sampledHair = hairPool.sort(() => Math.random() - 0.5).slice(0, 1200);
+      // Cap and shuffle
+      const finalPool = pointsPool.sort(() => Math.random() - 0.5).slice(0, 14000);
+      const totalParticles = finalPool.length;
 
-      const combinedPoints = [
-        ...facePool.map(p => ({ pos: p, type: 'face' })),
-        ...mouthPool.map(p => ({ pos: p, type: 'mouth' })),
-        ...sampledEyes.map(p => ({ pos: p, type: 'eye' })),
-        ...sampledHair.map(p => ({ pos: p, type: 'hair' }))
-      ];
-
-      const totalParticles = combinedPoints.length;
-
-      // 4. Initialize Particle Attributes
       const positions = new Float32Array(totalParticles * 3);
       const targetPositions = new Float32Array(totalParticles * 3);
       const velocities = new Float32Array(totalParticles * 3);
@@ -156,14 +212,13 @@ export default function CandidateHologram({
       const hairColor = new THREE.Color(0x1a5fb4);
 
       for (let i = 0; i < totalParticles; i++) {
-        const t = combinedPoints[i];
+        const t = finalPool[i];
         const i3 = i * 3;
 
-        // Random orbital spawn
-        const r = 2.5;
-        positions[i3] = (Math.random() - 0.5) * r;
-        positions[i3 + 1] = (Math.random() - 0.5) * r;
-        positions[i3 + 2] = (Math.random() - 0.5) * r;
+        // Scatter spawn
+        positions[i3] = (Math.random() - 0.5) * 3.0;
+        positions[i3 + 1] = (Math.random() - 0.5) * 3.0;
+        positions[i3 + 2] = (Math.random() - 0.5) * 3.0;
 
         targetPositions[i3] = t.pos.x;
         targetPositions[i3 + 1] = t.pos.y;
@@ -171,16 +226,12 @@ export default function CandidateHologram({
 
         if (t.type === 'mouth') isMouthArray[i] = 1.0;
 
-        if (t.type === 'face' || t.type === 'eye' || t.type === 'mouth') {
-            colors[i3] = faceColor.r;
-            colors[i3 + 1] = faceColor.g;
-            colors[i3 + 2] = faceColor.b;
-            sizes[i] = t.type === 'eye' ? 0.035 : 0.03; 
+        if (t.type === 'hair') {
+          colors[i3] = hairColor.r; colors[i3+1] = hairColor.g; colors[i3+2] = hairColor.b;
+          sizes[i] = 0.016;
         } else {
-            colors[i3] = hairColor.r;
-            colors[i3 + 1] = hairColor.g;
-            colors[i3 + 2] = hairColor.b;
-            sizes[i] = 0.018;
+          colors[i3] = faceColor.r; colors[i3+1] = faceColor.g; colors[i3+2] = faceColor.b;
+          sizes[i] = t.type === 'eye' ? 0.035 : 0.028;
         }
       }
 
@@ -189,7 +240,6 @@ export default function CandidateHologram({
       geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
       geometry.setAttribute('size', new THREE.BufferAttribute(sizes, 1));
 
-      // 5. Shading Logic: Depth-Based Intensity
       const particleMaterial = new THREE.ShaderMaterial({
         uniforms: { uTime: { value: 0 } },
         vertexShader: `
@@ -222,7 +272,7 @@ export default function CandidateHologram({
       const points = new THREE.Points(geometry, particleMaterial);
       scene.add(points);
 
-      // 6. Physics Loop
+      // Animation loop
       let time = 0;
       const ease = 0.045;
       const damping = 0.90;
@@ -233,7 +283,7 @@ export default function CandidateHologram({
         time += 0.016;
 
         const pArr = geometry.attributes.position.array as Float32Array;
-        const speechIntensity = speaking ? Math.abs(Math.sin(time * 12)) * 0.04 : 0;
+        const speechIntensity = speaking ? Math.abs(Math.sin(time * 15)) * 0.03 : 0;
 
         for (let i = 0; i < totalParticles; i++) {
           const i3 = i * 3;
@@ -251,14 +301,14 @@ export default function CandidateHologram({
         geometry.attributes.position.needsUpdate = true;
 
         points.rotation.y += 0.0015;
-        points.position.y = Math.sin(time * 2.0) * 0.02;
+        points.position.y = Math.sin(time * 1.5) * 0.015;
 
         composer.render();
       };
 
       animate();
       setIsLoading(false);
-      console.log(`[Hologram] Aligned Matrix - Face: ${facePool.length}, Hair: ${sampledHair.length}`);
+      console.log(`[Hologram] Reconstruction Complete - Matrix Count: ${totalParticles}`);
     }, undefined, (err) => {
       console.error("[Hologram] Load Fault:", err);
       setIsLoading(false);
