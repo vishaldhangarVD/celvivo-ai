@@ -183,6 +183,12 @@ export default function PricingPage() {
       popular: true,
       features: [
         "Everything in Pro",
+        "Exclusive HR Interview — 5 Uses Every Day",
+        "Resume Generation",
+        "Aptitude Assessments",
+        "Coding Assessments",
+        "AI Mock Interviews",
+        "Advanced Performance Feedback",
         "High-Fidelity Advanced Reports",
         "Priority Neural Access",
         "Confidence Vector Analysis",
@@ -191,7 +197,8 @@ export default function PricingPage() {
         "Job Readiness Benchmarking",
         "Personalized Career Guidance",
         "Full Resume Blueprint Optimization",
-        "Executive Priority Support"
+        "Executive Priority Support",
+        "24/7 AI Career Coach"
       ]
     }
   ];
@@ -281,7 +288,7 @@ export default function PricingPage() {
                   <p className="text-muted-foreground font-light text-sm leading-relaxed">{plan.description}</p>
                 </div>
 
-                <div className="space-y-4 mb-12 flex-1">
+                <div className="space-y-4 mb-12 flex-1 overflow-y-auto max-h-[400px] pr-2 custom-scrollbar">
                   <p className="text-[10px] font-black uppercase tracking-[0.3em] text-white/20 mb-6 border-b border-white/5 pb-2">Capability Matrix</p>
                   {plan.features.map((feature, j) => (
                     <div key={j} className="flex items-start gap-4 text-sm font-light text-white/70 group">
