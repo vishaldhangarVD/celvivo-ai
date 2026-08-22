@@ -107,6 +107,7 @@ export default function CandidateHologram({
 
       const pointsPool: { pos: THREE.Vector3; type: string }[] = [];
       let counts = { face: 0, hair: 0, eye: 0, mouth: 0 };
+      const HAIR_TOTAL_LIMIT = 1200;
 
       gltfScene.traverse((child) => {
         if ((child as THREE.Mesh).isMesh) {
@@ -153,9 +154,6 @@ export default function CandidateHologram({
 
           // SAMPLING PROTOCOL
           const tempV = new THREE.Vector3();
-          let meshAddedCount = 0;
-          const hairLimit = isHairCap ? 150 : 100;
-
           for (let i = 0; i < posAttr.count; i++) {
             tempV.set(posAttr.getX(i), posAttr.getY(i), posAttr.getZ(i));
             tempV.applyMatrix4(mesh.matrixWorld);
@@ -179,11 +177,11 @@ export default function CandidateHologram({
                 counts.mouth++;
               }
             } else if (isHairCap || isHairOther) {
-              if (meshAddedCount < hairLimit && Math.random() < 0.5) {
+              // GLOBAL HAIR ENFORCEMENT
+              if (counts.hair < HAIR_TOTAL_LIMIT && Math.random() < 0.2) {
                 shouldSample = true;
                 type = isHairCap ? 'hair-cap' : 'hair-side';
                 counts.hair++;
-                meshAddedCount++;
               }
             }
 
@@ -197,6 +195,8 @@ export default function CandidateHologram({
       console.log(`[Hologram] Logic Distribution: Face=${counts.face}, Eyes=${counts.eye}, Mouth=${counts.mouth}, Hair=${counts.hair}`);
 
       const totalParticles = pointsPool.length;
+      console.log("FINAL COUNTS - Face:", counts.face, "Hair:", counts.hair, "Eyes:", counts.eye, "Mouth:", counts.mouth, "TOTAL PARTICLES:", totalParticles);
+
       const positions = new Float32Array(totalParticles * 3);
       const targetPositions = new Float32Array(totalParticles * 3);
       const velocities = new Float32Array(totalParticles * 3);
@@ -206,7 +206,7 @@ export default function CandidateHologram({
       const isMouthArray = new Float32Array(totalParticles); 
 
       const faceColor = new THREE.Color(0x4ff0ff);
-      const hairColor = new THREE.Color(0x1a5fb4);
+      const hairColor = new THREE.Color(0xff0000); // DEBUG RED
 
       for (let i = 0; i < totalParticles; i++) {
         const t = pointsPool[i];
