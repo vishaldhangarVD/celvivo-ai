@@ -15,9 +15,9 @@ interface CandidateHologramProps {
 }
 
 /**
- * @fileOverview CandidateHologram v62.0 - MACRO SCALE PORTRAIT.
- * Targets 0.9 unit height with an ultra-close camera (z:1.6) for maximum panel coverage.
- * Strictly caps hair to 1200 particles to preserve facial dominance.
+ * @fileOverview CandidateHologram v64.0 - FINAL STABLE PORTRAIT.
+ * Locked at 0.9 unit height with a 1.6 camera distance.
+ * Implements precision post-scale centering and vertical look-at calibration.
  */
 export default function CandidateHologram({ 
   active = true, 
@@ -47,8 +47,8 @@ export default function CandidateHologram({
     scene.background = new THREE.Color(0x001a2e); 
 
     const camera = new THREE.PerspectiveCamera(42, width / height, 0.1, 100);
-    camera.position.set(0, 0, 1.6); // Ultra-close framing for 0.9 scale
-    camera.lookAt(0, 0, 0);
+    camera.position.set(0, -0.05, 1.6); // Lowered Y for better centering
+    camera.lookAt(0, -0.05, 0);
 
     const renderer = new THREE.WebGLRenderer({ 
       canvas: canvasRef.current,
@@ -74,8 +74,7 @@ export default function CandidateHologram({
     composerRef.current = composer;
 
     const manager = new THREE.LoadingManager();
-    // Silently suppress harmless texture warnings
-    manager.onError = () => {}; 
+    manager.onError = () => {}; // Silently suppress texture warnings
 
     const loader = new GLTFLoader(manager);
     
@@ -84,30 +83,30 @@ export default function CandidateHologram({
 
       const gltfScene = gltf.scene;
 
-      // 1. AXIAL ALIGNMENT
+      // 1. AXIAL ALIGNMENT (Hard-coded for front-facing symmetry)
       gltfScene.rotation.y = -0.12; 
 
-      // 2. PRECISION SCALING (Target 0.9 units height for frame-filling)
+      // 2. PRECISION SCALING (Stable 0.9 target)
       const box = new THREE.Box3().setFromObject(gltfScene);
       const size = box.getSize(new THREE.Vector3());
       const maxDim = Math.max(size.x, size.y, size.z);
       const scale = 0.9 / maxDim;
       gltfScene.scale.setScalar(scale);
 
-      // 3. POST-SCALE CENTERING
+      // 3. POST-SCALE CENTERING + VERTICAL NUDGE
       const scaledBox = new THREE.Box3().setFromObject(gltfScene);
       const scaledCenter = scaledBox.getCenter(new THREE.Vector3());
       const scaledSize = scaledBox.getSize(new THREE.Vector3());
       
       gltfScene.position.x -= scaledCenter.x;
-      gltfScene.position.y -= scaledCenter.y;
+      gltfScene.position.y -= (scaledCenter.y + 0.05); // Nudge down
       gltfScene.position.z -= scaledCenter.z;
 
       console.log(`[Hologram] Normalized Dimensions: ${scaledSize.x.toFixed(2)}x${scaledSize.y.toFixed(2)}x${scaledSize.z.toFixed(2)}`);
 
       const pointsPool: { pos: THREE.Vector3; type: string }[] = [];
       let counts = { face: 0, hair: 0, eye: 0, mouth: 0 };
-      const HAIR_TOTAL_LIMIT = 1200; // Strict cap to avoid "blob" look
+      const HAIR_TOTAL_LIMIT = 1200;
 
       gltfScene.traverse((child) => {
         if ((child as THREE.Mesh).isMesh) {
@@ -137,7 +136,7 @@ export default function CandidateHologram({
             wireMesh.applyMatrix4(mesh.matrixWorld);
             scene.add(wireMesh);
 
-            // Volumetric Solid Fill (Face Only)
+            // Volumetric Solid Fill
             if (isFace) {
               const fillMaterial = new THREE.MeshBasicMaterial({
                 color: 0x003344,
@@ -177,7 +176,6 @@ export default function CandidateHologram({
                 counts.mouth++;
               }
             } else if (isHairCap || isHairOther) {
-              // GLOBAL HAIR ENFORCEMENT
               if (counts.hair < HAIR_TOTAL_LIMIT && Math.random() < 0.2) {
                 shouldSample = true;
                 type = isHairCap ? 'hair-cap' : 'hair-side';
@@ -204,7 +202,7 @@ export default function CandidateHologram({
       const isMouthArray = new Float32Array(totalParticles); 
 
       const faceColor = new THREE.Color(0x4ff0ff);
-      const hairColor = new THREE.Color(0x1a5fb4); // Dim blue
+      const hairColor = new THREE.Color(0x1a5fb4);
 
       for (let i = 0; i < totalParticles; i++) {
         const t = pointsPool[i];
@@ -227,9 +225,8 @@ export default function CandidateHologram({
         if (t.type.includes('hair')) {
           colors[i3] = hairColor.r; colors[i3+1] = hairColor.g; colors[i3+2] = hairColor.b;
           sizes[i] = 0.01;
-          alphas[i] = t.type === 'hair-cap' ? 0.4 : 0.3;
-          // Anatomical jitter for organic strands
-          targetPositions[i3 + 1] += (Math.random() - 0.5) * 0.01;
+          alphas[i] = 0.4;
+          targetPositions[i3 + 1] += (Math.random() - 0.5) * 0.01; // Jitter
         } else if (t.type === 'eye') {
           colors[i3] = faceColor.r; colors[i3+1] = faceColor.g; colors[i3+2] = faceColor.b;
           sizes[i] = 0.012;
