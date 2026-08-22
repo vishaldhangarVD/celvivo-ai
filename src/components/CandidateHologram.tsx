@@ -16,8 +16,8 @@ interface CandidateHologramProps {
 }
 
 /**
- * @fileOverview CandidateHologram v50.0 - FINAL STABLE PROTOCOL.
- * Fixed scale (0.32), fixed framing (z:3.2), and audited anatomical opacities.
+ * @fileOverview CandidateHologram v55.0 - FINAL STABLE PROTOCOL.
+ * Fixed scale (0.32), fixed framing (z:3.2), and strictly capped hair distribution.
  */
 export default function CandidateHologram({ 
   active = true, 
@@ -154,7 +154,7 @@ export default function CandidateHologram({
           // SAMPLING PROTOCOL
           const tempV = new THREE.Vector3();
           let meshAddedCount = 0;
-          const hairLimit = 150;
+          const hairLimit = isHairCap ? 150 : 100;
 
           for (let i = 0; i < posAttr.count; i++) {
             tempV.set(posAttr.getX(i), posAttr.getY(i), posAttr.getZ(i));
@@ -178,17 +178,10 @@ export default function CandidateHologram({
                 type = 'mouth';
                 counts.mouth++;
               }
-            } else if (isHairCap) {
+            } else if (isHairCap || isHairOther) {
               if (meshAddedCount < hairLimit && Math.random() < 0.5) {
                 shouldSample = true;
-                type = 'hair-cap';
-                counts.hair++;
-                meshAddedCount++;
-              }
-            } else if (isHairOther) {
-              if (meshAddedCount < hairLimit && Math.random() < 0.05) {
-                shouldSample = true;
-                type = 'hair-side';
+                type = isHairCap ? 'hair-cap' : 'hair-side';
                 counts.hair++;
                 meshAddedCount++;
               }
