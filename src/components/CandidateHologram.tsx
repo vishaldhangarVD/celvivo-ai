@@ -16,8 +16,8 @@ interface CandidateHologramProps {
 }
 
 /**
- * @fileOverview CandidateHologram v15.0 - Final High-Fidelity Polish.
- * Implements hard-capped hair sampling, tiered vertex sizes, and chromatic focal separation.
+ * @fileOverview CandidateHologram v18.0 - Anatomical Precision Pass.
+ * Implements specific mesh sampling for eyes/mouth and depth-based shading for facial contours.
  */
 
 export default function CandidateHologram({ 
@@ -41,15 +41,15 @@ export default function CandidateHologram({
     const width = containerRef.current.clientWidth;
     const height = containerRef.current.clientHeight;
 
-    // 1. Scene & Camera Setup (Calibrated Framing)
+    // 1. Scene & Camera Setup (Normalized Portrait Framing)
     const scene = new THREE.Scene();
     scene.background = new THREE.Color(0x001a2e); 
 
     const camera = new THREE.PerspectiveCamera(42, width / height, 0.1, 100);
-    camera.position.set(0, 0.05, 2.6);
-    camera.lookAt(0, 0, 0);
+    camera.position.set(0, 0, 2.4);
+    camera.lookAt(0, -0.05, 0);
 
-    // 2. Renderer & Post-Processing (Soft Cyan Glow)
+    // 2. Renderer & Post-Processing (Cyan Bloom Protocol)
     const renderer = new THREE.WebGLRenderer({ 
       canvas: canvasRef.current,
       antialias: true, 
@@ -73,28 +73,26 @@ export default function CandidateHologram({
     composer.addPass(bloomPass);
     composerRef.current = composer;
 
-    // 3. Model Loading & Weighted Attribute Protocol
+    // 3. Model Loading & Anatomical Sampling Protocol
     const manager = new THREE.LoadingManager();
-    // Suppress harmless texture warnings
-    manager.onError = (url) => {
-      if (url.includes('.png') || url.includes('.jpg') || url.includes('.jpeg')) return;
-      console.warn("[Hologram] Load Fault:", url);
-    };
+    manager.onError = () => {}; // Silently handle texture errors
 
     const loader = new GLTFLoader(manager);
     
     loader.load('/models/woman_head.glb', (gltf) => {
       if (!isMounted) return;
 
-      const facePool: { pos: THREE.Vector3; type: 'face' }[] = [];
-      const hairPool: { pos: THREE.Vector3; type: 'hair' }[] = [];
+      const facePool: THREE.Vector3[] = [];
+      const eyePool: THREE.Vector3[] = [];
+      const mouthPool: THREE.Vector3[] = [];
+      const hairPool: THREE.Vector3[] = [];
 
       // Extract raw data for normalization
       const wholeBox = new THREE.Box3().setFromObject(gltf.scene);
       const center = wholeBox.getCenter(new THREE.Vector3());
       const size = wholeBox.getSize(new THREE.Vector3());
       const maxDim = Math.max(size.x, size.y, size.z);
-      const scale = 1.6 / maxDim; // Normalize to 1.6 units
+      const scale = 1.6 / maxDim;
 
       gltf.scene.traverse((child) => {
         if ((child as THREE.Mesh).isMesh) {
@@ -102,48 +100,48 @@ export default function CandidateHologram({
           const posAttr = mesh.geometry.attributes.position;
           const name = child.name;
 
-          const isFace = name.includes("Face_mush_Face") || 
-                        name.includes("Mouth_mush_Mouth") || 
-                        name.includes("Eye_") || 
-                        name.includes("Cornea_") || 
-                        name.includes("Eyelashes");
-          
+          // Exclusion check
+          if (name.includes("Torso")) return;
+
+          // Mesh Classification
+          const isFace = name === "Face_mush_Face_0";
+          const isMouth = name === "Mouth_mush_Mouth_0";
+          const isIris = name === "Eye_L_Irises_0" || name === "Eye_R_Irises_0";
           const isHair = name.includes("Hair_mush");
-          const isExcluded = name.includes("Torso");
 
-          if (isExcluded) return;
+          for (let i = 0; i < posAttr.count; i++) {
+            // Sampling Filters
+            if (isMouth && Math.random() > 0.35) continue; // Decimate mouth grid
+            if (isHair && Math.random() > 0.1) continue;   // Initial hair reduction
 
-          if (isFace || isHair) {
-            for (let i = 0; i < posAttr.count; i++) {
-              const v = new THREE.Vector3(posAttr.getX(i), posAttr.getY(i), posAttr.getZ(i));
-              v.applyMatrix4(mesh.matrixWorld);
-              v.sub(center).multiplyScalar(scale);
+            const v = new THREE.Vector3(posAttr.getX(i), posAttr.getY(i), posAttr.getZ(i));
+            v.applyMatrix4(mesh.matrixWorld);
+            v.sub(center).multiplyScalar(scale);
 
-              if (isFace) {
-                facePool.push({ pos: v, type: 'face' });
-              } else {
-                hairPool.push({ pos: v, type: 'hair' });
-              }
-            }
+            if (isFace) facePool.push(v);
+            else if (isMouth) mouthPool.push(v);
+            else if (isIris) eyePool.push(v);
+            else if (isHair) hairPool.push(v);
           }
         }
       });
 
-      // Hair Hard-Cap Protocol (Random sampling to exactly 1800 points)
-      const hairTargetCount = 1800;
-      const sampledHair = [];
-      for (let i = 0; i < Math.min(hairTargetCount, hairPool.length); i++) {
-        const randIdx = Math.floor(Math.random() * hairPool.length);
-        sampledHair.push(hairPool[randIdx]);
-      }
+      // Cap Protocols
+      const sampledEyes = eyePool.sort(() => Math.random() - 0.5).slice(0, 400);
+      const sampledHair = hairPool.sort(() => Math.random() - 0.5).slice(0, 1800);
 
-      const combinedPool = [...facePool, ...sampledHair];
-      const totalParticles = combinedPool.length;
+      const combinedPoints = [
+        ...facePool.map(p => ({ pos: p, type: 'face' })),
+        ...mouthPool.map(p => ({ pos: p, type: 'mouth' })),
+        ...sampledEyes.map(p => ({ pos: p, type: 'eye' })),
+        ...sampledHair.map(p => ({ pos: p, type: 'hair' }))
+      ];
 
-      console.log(`[Hologram] Final Polish Breakdown - Face: ${facePool.length}, Hair: ${sampledHair.length}, Total: ${totalParticles}`);
-      console.log(`[Hologram] Normalized Box: ${size.x.toFixed(2)}x${size.y.toFixed(2)}x${size.z.toFixed(2)}`);
+      const totalParticles = combinedPoints.length;
 
-      // 4. Initialize Particle Attributes (Dual Tier: Face vs Hair)
+      console.log(`[Hologram] Precise Breakdown - Face: ${facePool.length}, Mouth: ${mouthPool.length}, Eyes: ${sampledEyes.length}, Hair: ${sampledHair.length}`);
+
+      // 4. Initialize Particle Attributes
       const positions = new Float32Array(totalParticles * 3);
       const targetPositions = new Float32Array(totalParticles * 3);
       const velocities = new Float32Array(totalParticles * 3);
@@ -151,40 +149,35 @@ export default function CandidateHologram({
       const sizes = new Float32Array(totalParticles); 
       const isMouthArray = new Float32Array(totalParticles); 
 
-      const faceColor = new THREE.Color(0x4ff0ff); // Bright Electric Cyan
-      const hairColor = new THREE.Color(0x1a5fb4); // Recessed Cobalt Blue
+      const faceColor = new THREE.Color(0x4ff0ff);
+      const hairColor = new THREE.Color(0x1a5fb4);
 
       for (let i = 0; i < totalParticles; i++) {
-        const t = combinedPool[i];
+        const t = combinedPoints[i];
         const i3 = i * 3;
 
-        // Spawn in orbital sphere
-        const theta = Math.random() * Math.PI * 2;
-        const phi = Math.acos(2 * Math.random() - 1);
-        const r = 2.2;
-        positions[i3] = r * Math.sin(phi) * Math.cos(theta);
-        positions[i3 + 1] = r * Math.sin(phi) * Math.sin(theta);
-        positions[i3 + 2] = r * Math.cos(phi);
+        // Random orbital spawn
+        const r = 2.5;
+        positions[i3] = (Math.random() - 0.5) * r;
+        positions[i3 + 1] = (Math.random() - 0.5) * r;
+        positions[i3 + 2] = (Math.random() - 0.5) * r;
 
         targetPositions[i3] = t.pos.x;
         targetPositions[i3 + 1] = t.pos.y;
         targetPositions[i3 + 2] = t.pos.z;
 
-        // Vocal Matrix Mask (Y-range calibrated for normalized 1.6 height)
-        if (t.type === 'face' && t.pos.y > -0.35 && t.pos.y < -0.15 && Math.abs(t.pos.x) < 0.15 && t.pos.z > 0.1) {
-          isMouthArray[i] = 1.0;
-        }
+        if (t.type === 'mouth') isMouthArray[i] = 1.0;
 
-        if (t.type === 'face') {
+        if (t.type === 'face' || t.type === 'eye' || t.type === 'mouth') {
             colors[i3] = faceColor.r;
             colors[i3 + 1] = faceColor.g;
             colors[i3 + 2] = faceColor.b;
-            sizes[i] = 0.03; // Bold Face Points
+            sizes[i] = t.type === 'eye' ? 0.035 : 0.03; 
         } else {
             colors[i3] = hairColor.r;
             colors[i3 + 1] = hairColor.g;
             colors[i3 + 2] = hairColor.b;
-            sizes[i] = 0.018; // Fine Hair Wisps
+            sizes[i] = 0.018;
         }
       }
 
@@ -193,16 +186,17 @@ export default function CandidateHologram({
       geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
       geometry.setAttribute('size', new THREE.BufferAttribute(sizes, 1));
 
-      // 5. Custom Shader for Tiered Sizing & Blending
+      // 5. Shading Logic: Depth-Based Intensity
       const particleMaterial = new THREE.ShaderMaterial({
-        uniforms: {
-          uTime: { value: 0 },
-        },
+        uniforms: { uTime: { value: 0 } },
         vertexShader: `
           attribute float size;
           varying vec3 vColor;
+          varying float vDepth;
           void main() {
             vColor = color;
+            // Particles at the front (+Z) get 1.0 intensity, back gets 0.6
+            vDepth = smoothstep(-0.2, 0.4, position.z);
             vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
             gl_PointSize = size * (300.0 / -mvPosition.z);
             gl_Position = projectionMatrix * mvPosition;
@@ -210,9 +204,11 @@ export default function CandidateHologram({
         `,
         fragmentShader: `
           varying vec3 vColor;
+          varying float vDepth;
           void main() {
             if (length(gl_PointCoord - vec2(0.5)) > 0.5) discard;
-            gl_FragColor = vec4(vColor, 1.0);
+            float intensity = 0.6 + (vDepth * 0.4);
+            gl_FragColor = vec4(vColor * intensity, 1.0);
           }
         `,
         vertexColors: true,
@@ -224,7 +220,7 @@ export default function CandidateHologram({
       const points = new THREE.Points(geometry, particleMaterial);
       scene.add(points);
 
-      // 6. Physics Animation Loop
+      // 6. Physics Loop
       let time = 0;
       const ease = 0.045;
       const damping = 0.90;
@@ -242,12 +238,9 @@ export default function CandidateHologram({
           for (let j = 0; j < 3; j++) {
             const idx = i3 + j;
             let target = targetPositions[idx];
-            
-            // Vocal Jitter on Mouth Nodes
             if (j === 1 && isMouthArray[i] > 0.5) {
                 target += (Math.random() - 0.5) * speechIntensity;
             }
-
             const force = (target - pArr[idx]) * ease;
             velocities[idx] = (velocities[idx] + force) * damping;
             pArr[idx] += velocities[idx];
@@ -255,8 +248,8 @@ export default function CandidateHologram({
         }
         geometry.attributes.position.needsUpdate = true;
 
-        points.rotation.y += 0.0015; // Slow Idle Rotation
-        points.position.y = Math.sin(time * 2.0) * 0.02; // Vertical Bob
+        points.rotation.y += 0.0015;
+        points.position.y = Math.sin(time * 2.0) * 0.02;
 
         composer.render();
       };
@@ -264,7 +257,7 @@ export default function CandidateHologram({
       animate();
       setIsLoading(false);
     }, undefined, (err) => {
-      console.error("[Hologram] Critical Load Fault:", err);
+      console.error("[Hologram] Load Fault:", err);
       setIsLoading(false);
     });
 
@@ -291,23 +284,11 @@ export default function CandidateHologram({
   return (
     <div ref={containerRef} className={`w-full h-full relative overflow-hidden bg-[#001a2e] ${className ?? ""}`}>
       <canvas ref={canvasRef} className="w-full h-full block" />
-
-      {/* Identity Handshake Overlays */}
-      <div className="absolute inset-0 z-40 pointer-events-none">
+      <div className="absolute inset-0 pointer-events-none">
         <div className="absolute inset-0 opacity-10 bg-[linear-gradient(rgba(18,16,16,0)_50%,rgba(0,0,0,0.25)_50%)] bg-[size:100%_4px]" />
-        
-        {isLoader && (
-          <div className="absolute inset-x-0 bottom-12 z-50 flex flex-col items-center gap-4">
-            <div className="text-center animate-pulse">
-              <span className="text-[10px] font-black tracking-[0.6em] text-accent uppercase">
-                Synchronizing Identity...
-              </span>
-            </div>
-          </div>
-        )}
       </div>
 
-      {isLoading && !isLoader && (
+      {isLoading && (
         <div className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-[#001a2e]/60 backdrop-blur-md">
           <div className="w-12 h-12 border-2 border-accent/20 border-t-accent rounded-full animate-spin mb-4" />
           <p className="text-[10px] font-black uppercase tracking-[0.5em] text-accent animate-pulse">Initializing Matrix...</p>
@@ -316,3 +297,4 @@ export default function CandidateHologram({
     </div>
   );
 }
+
