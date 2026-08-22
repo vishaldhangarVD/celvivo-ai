@@ -16,8 +16,8 @@ interface CandidateHologramProps {
 }
 
 /**
- * @fileOverview CandidateHologram v18.0 - Anatomical Precision Pass.
- * Implements specific mesh sampling for eyes/mouth and depth-based shading for facial contours.
+ * @fileOverview CandidateHologram v22.0 - Final Alignment & Containment Pass.
+ * Features: Corrected straight-on rotation, X-axis hair clipping, and depth-aware shading.
  */
 
 export default function CandidateHologram({ 
@@ -41,7 +41,7 @@ export default function CandidateHologram({
     const width = containerRef.current.clientWidth;
     const height = containerRef.current.clientHeight;
 
-    // 1. Scene & Camera Setup (Normalized Portrait Framing)
+    // 1. Scene & Camera Setup (Portrait Matrix)
     const scene = new THREE.Scene();
     scene.background = new THREE.Color(0x001a2e); 
 
@@ -75,12 +75,15 @@ export default function CandidateHologram({
 
     // 3. Model Loading & Anatomical Sampling Protocol
     const manager = new THREE.LoadingManager();
-    manager.onError = () => {}; // Silently handle texture errors
+    manager.onError = () => {}; // Silencing texture warnings
 
     const loader = new GLTFLoader(manager);
     
     loader.load('/models/woman_head.glb', (gltf) => {
       if (!isMounted) return;
+
+      // FIX: Adjust baked-in rotation so face looks straight at camera
+      gltf.scene.rotation.y = -0.12; 
 
       const facePool: THREE.Vector3[] = [];
       const eyePool: THREE.Vector3[] = [];
@@ -110,13 +113,15 @@ export default function CandidateHologram({
           const isHair = name.includes("Hair_mush");
 
           for (let i = 0; i < posAttr.count; i++) {
-            // Sampling Filters
-            if (isMouth && Math.random() > 0.35) continue; // Decimate mouth grid
-            if (isHair && Math.random() > 0.1) continue;   // Initial hair reduction
-
             const v = new THREE.Vector3(posAttr.getX(i), posAttr.getY(i), posAttr.getZ(i));
             v.applyMatrix4(mesh.matrixWorld);
             v.sub(center).multiplyScalar(scale);
+
+            // Sampling Filters
+            if (isMouth && Math.random() > 0.35) continue; 
+            
+            // FIX: Clip stray hair particles beyond X +/- 0.65 to clean up side clusters
+            if (isHair && (Math.random() > 0.05 || Math.abs(v.x) > 0.65)) continue; 
 
             if (isFace) facePool.push(v);
             else if (isMouth) mouthPool.push(v);
@@ -126,9 +131,9 @@ export default function CandidateHologram({
         }
       });
 
-      // Cap Protocols
+      // Precise Allocation Tiers
       const sampledEyes = eyePool.sort(() => Math.random() - 0.5).slice(0, 400);
-      const sampledHair = hairPool.sort(() => Math.random() - 0.5).slice(0, 1800);
+      const sampledHair = hairPool.sort(() => Math.random() - 0.5).slice(0, 1200);
 
       const combinedPoints = [
         ...facePool.map(p => ({ pos: p, type: 'face' })),
@@ -138,8 +143,6 @@ export default function CandidateHologram({
       ];
 
       const totalParticles = combinedPoints.length;
-
-      console.log(`[Hologram] Precise Breakdown - Face: ${facePool.length}, Mouth: ${mouthPool.length}, Eyes: ${sampledEyes.length}, Hair: ${sampledHair.length}`);
 
       // 4. Initialize Particle Attributes
       const positions = new Float32Array(totalParticles * 3);
@@ -195,7 +198,6 @@ export default function CandidateHologram({
           varying float vDepth;
           void main() {
             vColor = color;
-            // Particles at the front (+Z) get 1.0 intensity, back gets 0.6
             vDepth = smoothstep(-0.2, 0.4, position.z);
             vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
             gl_PointSize = size * (300.0 / -mvPosition.z);
@@ -256,6 +258,7 @@ export default function CandidateHologram({
 
       animate();
       setIsLoading(false);
+      console.log(`[Hologram] Aligned Matrix - Face: ${facePool.length}, Hair: ${sampledHair.length}`);
     }, undefined, (err) => {
       console.error("[Hologram] Load Fault:", err);
       setIsLoading(false);
@@ -297,4 +300,3 @@ export default function CandidateHologram({
     </div>
   );
 }
-
