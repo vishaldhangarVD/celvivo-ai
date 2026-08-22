@@ -95,7 +95,7 @@ function SignupContent() {
           <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-purple-600 to-blue-600 flex items-center justify-center mx-auto mb-8 shadow-2xl shadow-purple-500/20">
             <Command className="text-white w-8 h-8" />
           </div>
-          <h1 className="text-4xl font-bold tracking-tighter mb-4">Initialize Identity.</h1>
+          <h1 className="text-4xl font-bold tracking-tighter mb-4">Welcome to Nexvoro AI.</h1>
           <p className="text-muted-foreground font-light">Join the elite network of performance-ready engineers.</p>
         </div>
 
@@ -113,7 +113,7 @@ function SignupContent() {
                 />
               </div>
               <div className="space-y-2">
-                <Label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Identity Email</Label>
+                <Label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Email address</Label>
                 <Input 
                   type="email"
                   value={email}
@@ -124,7 +124,7 @@ function SignupContent() {
                 />
               </div>
               <div className="space-y-2">
-                <Label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Security Token</Label>
+                <Label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Password</Label>
                 <Input 
                   type="password" 
                   value={password}
@@ -135,7 +135,7 @@ function SignupContent() {
                 />
               </div>
               <div className="space-y-2">
-                <Label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Confirm Token</Label>
+                <Label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Confirm Password</Label>
                 <Input 
                   type="password" 
                   placeholder="••••••••" 
@@ -154,11 +154,11 @@ function SignupContent() {
                 disabled={isLoading}
                 className="md:col-span-2 h-16 btn-premium text-xs font-bold tracking-[0.2em] uppercase mt-4"
               >
-                {isLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : "Initialize Personal Protocol"}
+                {isLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : "Sign In"}
               </Button>
             </form>
             <p className="text-center text-[10px] font-bold tracking-widest uppercase text-muted-foreground">
-              Already verified? <Link href={`/login?redirectTo=${encodeURIComponent(redirectTo)}`} className="text-accent hover:underline">Access Dashboard</Link>
+              Already have an account? <Link href={`/login?redirectTo=${encodeURIComponent(redirectTo)}`} className="text-accent hover:underline">Log In</Link>
             </p>
           </CardContent>
         </Card>
