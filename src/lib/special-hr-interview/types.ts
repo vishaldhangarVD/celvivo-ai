@@ -16,6 +16,7 @@ export interface SpecialHRInterviewSession {
   status: SpecialHRInterviewStatus;
   resumeFileName?: string;
   resumeFile?: File;
+  photoUrl?: string;
   position: string;
   experienceLevel: string;
   isAgentReady: boolean;
