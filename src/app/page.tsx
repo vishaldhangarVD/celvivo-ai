@@ -236,16 +236,16 @@ export default function LandingPage() {
                     <div className="space-y-1">
                       <h2 className="text-3xl font-bold tracking-tighter text-premium">Simulation Protocol</h2>
                       <p className="text-[9px] text-accent font-bold uppercase tracking-[0.5em] flex items-center gap-3">
-                        <Rocket className="w-3.5 h-3.5" /> Sequential Logic Path
+                        <Rocket className="w-3.5 h-3.5" /> INTERVIEW EVALUATION PIPELINE
                       </p>
                     </div>
                     
                     <div className="space-y-3 pl-1">
                       {[
-                        { label: "Aptitude Screening", desc: "Logic Node Audit", color: "text-blue-400" },
-                        { label: "Syntax Matrix", desc: "Implementation Check", color: "text-emerald-400" },
-                        { label: "Neural Arena", desc: "Elite Virtual Interview", color: "text-accent" },
-                        { label: "Master Performance Audit", desc: "Full Analytics Report", color: "text-amber-400" }
+                        { label: "APTITUDE SCREENING", desc: "LOGICAL & QUANTITATIVE ASSESSMENT", color: "text-blue-400" },
+                        { label: "SYNTAX MATRIX", desc: "CODING & IMPLEMENTATION TEST", color: "text-emerald-400" },
+                        { label: "NEURAL ARENA", desc: "AI VIRTUAL INTERVIEW", color: "text-accent" },
+                        { label: "MASTER PERFORMANCE AUDIT", desc: "FINAL ANALYTICS & HIRING REPORT", color: "text-amber-400" }
                       ].map((step, idx, arr) => (
                         <div key={idx} className="flex flex-col">
                           <motion.div 
