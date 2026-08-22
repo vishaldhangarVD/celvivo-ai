@@ -15,8 +15,8 @@ interface CandidateHologramProps {
 }
 
 /**
- * @fileOverview CandidateHologram v60.0 - FINAL STABLE SCALE AND FRAMING.
- * Targets 0.55 unit height with a closer camera (z:2.2) for optimal panel coverage.
+ * @fileOverview CandidateHologram v62.0 - MACRO SCALE PORTRAIT.
+ * Targets 0.9 unit height with an ultra-close camera (z:1.6) for maximum panel coverage.
  * Strictly caps hair to 1200 particles to preserve facial dominance.
  */
 export default function CandidateHologram({ 
@@ -47,7 +47,7 @@ export default function CandidateHologram({
     scene.background = new THREE.Color(0x001a2e); 
 
     const camera = new THREE.PerspectiveCamera(42, width / height, 0.1, 100);
-    camera.position.set(0, 0, 2.2); // Locked framing for 0.55 scale
+    camera.position.set(0, 0, 1.6); // Ultra-close framing for 0.9 scale
     camera.lookAt(0, 0, 0);
 
     const renderer = new THREE.WebGLRenderer({ 
@@ -87,11 +87,11 @@ export default function CandidateHologram({
       // 1. AXIAL ALIGNMENT
       gltfScene.rotation.y = -0.12; 
 
-      // 2. PRECISION SCALING (Target 0.55 units height)
+      // 2. PRECISION SCALING (Target 0.9 units height for frame-filling)
       const box = new THREE.Box3().setFromObject(gltfScene);
       const size = box.getSize(new THREE.Vector3());
       const maxDim = Math.max(size.x, size.y, size.z);
-      const scale = 0.55 / maxDim;
+      const scale = 0.9 / maxDim;
       gltfScene.scale.setScalar(scale);
 
       // 3. POST-SCALE CENTERING
