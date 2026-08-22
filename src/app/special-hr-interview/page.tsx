@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useEffect, useRef, useState, useCallback } from 'react';
@@ -30,6 +31,7 @@ import { cn } from '@/lib/utils';
 /**
  * @fileOverview Special HR Interview powered by D-ID Agents.
  * Independent simulation track with real-time WebRTC avatar and speech recognition.
+ * Optimized for secure client-side credential handling via NEXT_PUBLIC_ environment variables.
  */
 
 export default function SpecialHRInterview() {
@@ -120,19 +122,23 @@ export default function SpecialHRInterview() {
   const initializeDID = useCallback(async () => {
     if (typeof window === 'undefined') return;
 
+    // Use consistently named NEXT_PUBLIC variables for browser access
     const agentId = process.env.NEXT_PUBLIC_DID_SPECIAL_HR_AGENT_ID;
     const clientKey = process.env.NEXT_PUBLIC_DID_CLIENT_KEY;
 
     if (!agentId || !clientKey) {
       setConnectionStatus('error');
-      toast({ variant: "destructive", title: "Auth Missing", description: "D-ID Agent credentials not found." });
+      toast({ 
+        variant: "destructive", 
+        title: "Auth Missing", 
+        description: "D-ID Agent credentials not found in environment. Please verify NEXT_PUBLIC_ prefixes." 
+      });
       return;
     }
 
     setConnectionStatus('connecting');
 
     try {
-      // Use dynamic import to prevent server-side evaluation errors
       const { createAgentManager } = await import('@d-id/client-sdk');
 
       const manager = await createAgentManager(agentId, {
@@ -190,7 +196,7 @@ export default function SpecialHRInterview() {
 
     return () => {
       agentManagerRef.current?.disconnect();
-      recognitionRef.current?.stop();
+      if (recognitionRef.current) recognitionRef.current.stop();
     };
   }, [initializeDID, initSpeechRecognition]);
 
@@ -206,7 +212,7 @@ export default function SpecialHRInterview() {
         transcript: transcript,
         startedAt: serverTimestamp(),
         endedAt: serverTimestamp(),
-        duration: transcript.length * 45 // Simulated duration
+        duration: transcript.length * 45 
       });
 
       toast({ title: "Session Concluded", description: "Dossier successfully archived." });
