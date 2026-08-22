@@ -16,8 +16,8 @@ interface CandidateHologramProps {
 }
 
 /**
- * @fileOverview CandidateHologram - High-Fidelity Neural Identity Projection.
- * Features: UnrealBloom, Weighted Vertex Sampling, Spring Physics, and Pulsing Base.
+ * @fileOverview CandidateHologram - Elite Holographic Reconstruction Engine v5.0.
+ * Features: Procedural Face Fallback, Neural Spring Physics, Bloom, and Scan-line shaders.
  */
 
 export default function CandidateHologram({ 
@@ -41,7 +41,7 @@ export default function CandidateHologram({
     const width = containerRef.current.clientWidth;
     const height = containerRef.current.clientHeight;
 
-    // 1. Scene & Camera
+    // 1. Scene & Camera Setup
     const scene = new THREE.Scene();
     scene.background = new THREE.Color(0x001a2e); 
 
@@ -80,7 +80,7 @@ export default function CandidateHologram({
     const velocities = new Float32Array(PARTICLE_COUNT * 3);
     const colors = new Float32Array(PARTICLE_COUNT * 3);
 
-    // Spawn in a sphere
+    // Initial random spawn in a loose sphere
     for (let i = 0; i < PARTICLE_COUNT; i++) {
       const theta = Math.random() * Math.PI * 2;
       const phi = Math.acos(2 * Math.random() - 1);
@@ -89,10 +89,26 @@ export default function CandidateHologram({
       positions[i * 3 + 1] = r * Math.sin(phi) * Math.sin(theta);
       positions[i * 3 + 2] = r * Math.cos(phi);
       
-      // Default targets to sphere until model loads
-      targetPositions[i * 3] = positions[i * 3] * 0.1;
-      targetPositions[i * 3 + 1] = positions[i * 3 + 1] * 0.1;
-      targetPositions[i * 3 + 2] = positions[i * 3 + 2] * 0.1;
+      // Default procedural face fallback
+      // Base ellipsoid shape
+      const pPhi = Math.acos(2.0 * Math.random() - 1.0);
+      const pTheta = 2.0 * Math.PI * Math.random();
+      let rx = 0.55 * Math.sin(pPhi) * Math.cos(pTheta);
+      let ry = 0.75 * Math.sin(pPhi) * Math.sin(pTheta);
+      let rz = 0.45 * Math.cos(pPhi);
+
+      // Indent eye sockets (y ~ 0.25, x ~ +/- 0.2)
+      const dEyeL = Math.sqrt(Math.pow(rx - 0.2, 2) + Math.pow(ry - 0.25, 2));
+      const dEyeR = Math.sqrt(Math.pow(rx + 0.2, 2) + Math.pow(ry - 0.25, 2));
+      if (dEyeL < 0.12 || dEyeR < 0.12) rz -= 0.08;
+
+      // Indent mouth (y ~ -0.35)
+      const dMouth = Math.sqrt(Math.pow(rx, 2) * 2.0 + Math.pow(ry + 0.35, 2));
+      if (dMouth < 0.15) rz -= 0.06;
+
+      targetPositions[i * 3] = rx;
+      targetPositions[i * 3 + 1] = ry;
+      targetPositions[i * 3 + 2] = rz;
     }
 
     const geometry = new THREE.BufferGeometry();
@@ -105,29 +121,26 @@ export default function CandidateHologram({
         uTime: { value: 0 },
         uScanY: { value: 0 },
         uColor1: { value: new THREE.Color(0x00eaff) },
-        uColor2: { value: new THREE.Color(0x4facfe) },
-        uSpeaking: { value: 0 }
+        uColor2: { value: new THREE.Color(0x4facfe) }
       },
       vertexShader: `
         uniform float uTime;
         uniform float uScanY;
-        uniform float uSpeaking;
         varying float vScan;
         varying vec3 vColor;
         
         void main() {
           vec3 pos = position;
           
-          // Subtle hover movement
-          pos.y += sin(uTime * 1.5 + pos.x * 2.0) * 0.015;
+          // Subtle rotation handled in CPU loop for physics stability
           
-          // Scanline intensity
+          // Scanline intensity based on height
           float distToScan = abs(pos.y - uScanY);
-          vScan = smoothstep(0.15, 0.0, distToScan);
+          vScan = smoothstep(0.12, 0.0, distToScan);
           
-          // Color based on height and scanline
+          // Gradient based on Y
           vColor = mix(vec3(0.0, 0.9, 1.0), vec3(0.3, 0.6, 1.0), (pos.y + 0.8) / 1.6);
-          vColor += vScan * 0.5;
+          vColor += vScan * 0.4;
 
           vec4 mvPosition = modelViewMatrix * vec4(pos, 1.0);
           gl_PointSize = 0.025 * (300.0 / -mvPosition.z);
@@ -154,7 +167,7 @@ export default function CandidateHologram({
     const points = new THREE.Points(geometry, particleMaterial);
     scene.add(points);
 
-    // 4. Base Ring (Projector)
+    // 4. Base Projector Ring
     const ringGeo = new THREE.RingGeometry(0.4, 0.45, 64);
     const ringMat = new THREE.ShaderMaterial({
       uniforms: { uTime: { value: 0 } },
@@ -170,8 +183,8 @@ export default function CandidateHologram({
         varying vec2 vUv;
         void main() {
           float d = distance(vUv, vec2(0.5));
-          float ring = sin(d * 40.0 - uTime * 4.0) * 0.5 + 0.5;
-          gl_FragColor = vec4(0.0, 0.9, 1.0, ring * 0.3);
+          float ring = sin(d * 50.0 - uTime * 4.0) * 0.5 + 0.5;
+          gl_FragColor = vec4(0.0, 0.9, 1.0, ring * 0.2);
         }
       `,
       transparent: true,
@@ -183,29 +196,28 @@ export default function CandidateHologram({
     ring.position.y = -0.9;
     scene.add(ring);
 
-    // 5. Ambient Floating Particles
+    // 5. Ambient Atmospheric Particles
     const ambCount = 30;
     const ambGeo = new THREE.BufferGeometry();
     const ambPos = new Float32Array(ambCount * 3);
     for(let i=0; i<ambCount; i++) {
-      ambPos[i*3] = (Math.random() - 0.5) * 2;
-      ambPos[i*3+1] = (Math.random() - 0.5) * 2;
+      ambPos[i*3] = (Math.random() - 0.5) * 3;
+      ambPos[i*3+1] = (Math.random() - 0.5) * 3;
       ambPos[i*3+2] = (Math.random() - 0.5) * 2;
     }
     ambGeo.setAttribute('position', new THREE.BufferAttribute(ambPos, 3));
-    const ambMat = new THREE.PointsMaterial({ color: 0x00eaff, size: 0.01, transparent: true, opacity: 0.2 });
+    const ambMat = new THREE.PointsMaterial({ color: 0x00eaff, size: 0.01, transparent: true, opacity: 0.15 });
     const ambPoints = new THREE.Points(ambGeo, ambMat);
     scene.add(ambPoints);
 
-    // 6. Model Loading & Vertex Weighted Sampling
+    // 6. Model Loading Logic
     const loader = new GLTFLoader();
+    // Path: /public/models/face-female.glb -> accessible at /models/face-female.glb
     loader.load('/models/face-female.glb', (gltf) => {
       if (!isMounted) return;
-      console.log("[Hologram] Scene Structure:", gltf.scene);
+      console.log("[Hologram] Mesh nodes detected:", gltf.scene);
 
-      const allVertices: THREE.Vector3[] = [];
-      const headVertices: THREE.Vector3[] = [];
-      const hairVertices: THREE.Vector3[] = [];
+      const targetPool: THREE.Vector3[] = [];
 
       gltf.scene.traverse((child) => {
         if ((child as THREE.Mesh).isMesh) {
@@ -213,61 +225,52 @@ export default function CandidateHologram({
           const posAttr = mesh.geometry.attributes.position;
           const name = child.name.toLowerCase();
           
-          // Exclude lower body
-          if (name.includes('body') || name.includes('cloth') || child.position.y < -0.5) return;
+          // Weighted Sampling
+          let density = 1.0;
+          if (name.includes('hair')) density = 0.25;
+          if (name.includes('body') || name.includes('cloth') || child.position.y < -0.5) density = 0;
 
-          for (let i = 0; i < posAttr.count; i++) {
-            const v = new THREE.Vector3(posAttr.getX(i), posAttr.getY(i), posAttr.getZ(i));
-            v.applyMatrix4(mesh.matrixWorld);
-            
-            if (name.includes('head') || name.includes('face') || name.includes('eye')) {
-              headVertices.push(v);
-            } else if (name.includes('hair')) {
-              hairVertices.push(v);
-            } else {
-              allVertices.push(v);
+          if (density > 0) {
+            for (let i = 0; i < posAttr.count; i++) {
+              if (Math.random() > density) continue;
+              const v = new THREE.Vector3(posAttr.getX(i), posAttr.getY(i), posAttr.getZ(i));
+              v.applyMatrix4(mesh.matrixWorld);
+              targetPool.push(v);
             }
           }
         }
       });
 
-      // Combine with weights
-      const targetPool: THREE.Vector3[] = [];
-      targetPool.push(...headVertices);
-      // Sample hair with ~25% density
-      for(let i=0; i<hairVertices.length; i++) {
-        if (Math.random() < 0.25) targetPool.push(hairVertices[i]);
+      if (targetPool.length > 0) {
+        // Normalization
+        const box = new THREE.Box3().setFromPoints(targetPool);
+        const center = box.getCenter(new THREE.Vector3());
+        const size = box.getSize(new THREE.Vector3());
+        const scale = 1.6 / size.y;
+
+        // Face Orientation Detection
+        let forwardPoints = 0;
+        targetPool.forEach(v => { if (v.z - center.z > 0) forwardPoints++; });
+        const rotationY = forwardPoints < targetPool.length / 2 ? Math.PI : 0;
+
+        for (let i = 0; i < PARTICLE_COUNT; i++) {
+          const v = targetPool[i % targetPool.length].clone();
+          v.sub(center).multiplyScalar(scale);
+          v.applyAxisAngle(new THREE.Vector3(0, 1, 0), rotationY);
+          
+          targetPositions[i * 3] = v.x;
+          targetPositions[i * 3 + 1] = v.y;
+          targetPositions[i * 3 + 2] = v.z;
+        }
+        console.log(`[Hologram] High-fidelity model synchronized. Vertices: ${targetPool.length}`);
       }
-      if (targetPool.length === 0) targetPool.push(...allVertices);
-
-      // Normalization
-      const box = new THREE.Box3().setFromPoints(targetPool);
-      const center = box.getCenter(new THREE.Vector3());
-      const size = box.getSize(new THREE.Vector3());
-      const scale = 1.6 / size.y;
-
-      // Auto-rotation Check (Ensure face is forward-looking)
-      let forwardPoints = 0;
-      targetPool.forEach(v => { if (v.z - center.z > 0) forwardPoints++; });
-      const rotationY = forwardPoints < targetPool.length / 2 ? Math.PI : 0;
-
-      for (let i = 0; i < PARTICLE_COUNT; i++) {
-        const v = targetPool[i % targetPool.length].clone();
-        v.sub(center).multiplyScalar(scale);
-        v.applyAxisAngle(new THREE.Vector3(0, 1, 0), rotationY);
-        
-        targetPositions[i * 3] = v.x;
-        targetPositions[i * 3 + 1] = v.y;
-        targetPositions[i * 3 + 2] = v.z;
-      }
-
       setIsLoading(false);
     }, undefined, (err) => {
-      console.warn("[Hologram] GLB Load Failed, using procedural fallback.");
+      console.warn("[Hologram] Model 404/Error, maintaining procedural silhouette.");
       setIsLoading(false);
     });
 
-    // 7. Animation Loop
+    // 7. Physics Animation Loop
     let time = 0;
     const ease = 0.045;
     const damping = 0.90;
@@ -277,12 +280,12 @@ export default function CandidateHologram({
       animationRef.current = requestAnimationFrame(animate);
       time += 0.016;
 
-      // Update Uniforms
+      // Uniform Updates
       particleMaterial.uniforms.uTime.value = time;
       particleMaterial.uniforms.uScanY.value = Math.sin(time * 1.5) * 1.2;
       ringMat.uniforms.uTime.value = time;
 
-      // Physics Loop
+      // Spring Physics Loop
       const posAttr = geometry.attributes.position;
       const pArr = posAttr.array as Float32Array;
 
@@ -297,24 +300,24 @@ export default function CandidateHologram({
       }
       posAttr.needsUpdate = true;
 
-      // Ambient Animation
+      // Ambient Movement
       const ambArr = ambPoints.geometry.attributes.position.array as Float32Array;
       for (let i = 0; i < ambCount; i++) {
         ambArr[i * 3 + 1] += 0.002;
-        if (ambArr[i * 3 + 1] > 1) ambArr[i * 3 + 1] = -1;
+        if (ambArr[i * 3 + 1] > 1.5) ambArr[i * 3 + 1] = -1.5;
       }
       ambPoints.geometry.attributes.position.needsUpdate = true;
 
-      // Idle Bob & Rotation
+      // Global Rotation and Bob
       points.rotation.y += 0.0015;
-      points.position.y = Math.sin(time * 2) * 0.02;
+      points.position.y = Math.sin(time * 2.0) * 0.02;
 
       composer.render();
     };
 
     animate();
 
-    // 8. Cleanup
+    // 8. Lifecycle Management
     const handleResize = () => {
       if (!containerRef.current || !rendererRef.current) return;
       const w = containerRef.current.clientWidth;
@@ -347,7 +350,7 @@ export default function CandidateHologram({
   return (
     <div 
       ref={containerRef} 
-      className={`w-full h-full relative overflow-hidden rounded-[2.5rem] bg-[#001a2e] ${className ?? ""}`}
+      className={`w-full h-full relative overflow-hidden bg-[#001a2e] ${className ?? ""}`}
     >
       <canvas ref={canvasRef} className="w-full h-full block" />
 
