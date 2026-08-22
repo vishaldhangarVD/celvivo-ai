@@ -273,7 +273,8 @@ function VirtualArenaContent() {
   if (isInitializing) {
     return (
       <div className="h-screen w-full bg-[#050816] flex items-center justify-center relative overflow-hidden">
-        <div className="absolute inset-0 z-0">
+        {/* Hologram Stage Diagnostics enabled */}
+        <div className="absolute inset-0 z-0 h-full w-full">
            <HologramFaceLoader isActive={true} />
         </div>
       </div>
