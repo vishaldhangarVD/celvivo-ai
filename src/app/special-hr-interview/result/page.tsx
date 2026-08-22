@@ -22,10 +22,15 @@ import {
   AlertCircle
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Card } from '@/components/ui/card';
+import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import Navbar from '@/components/layout/Navbar';
 import { cn } from '@/lib/utils';
+
+/**
+ * @fileOverview Special HR Result Page.
+ * Displays the transcript and performance metrics from the D-ID session.
+ */
 
 function ResultContent() {
   const router = useRouter();
@@ -72,7 +77,7 @@ function ResultContent() {
               <p className="text-xl text-muted-foreground font-light max-w-xl">Deep-dive into your real-time neural avatar interaction archives.</p>
             </div>
             <div className="flex gap-4">
-              <Button onClick={() => router.push('/dashboard')} className="h-16 px-10 glass border-white/10 rounded-2xl flex gap-3 text-[10px] font-bold tracking-widest uppercase">
+              <Button onClick={() => router.push('/dashboard')} className="h-16 px-10 glass border-white/10 rounded-2xl flex gap-3 text-xs font-bold tracking-widest uppercase">
                 <LayoutDashboard className="w-4 h-4" /> Command Hub
               </Button>
             </div>
@@ -80,7 +85,7 @@ function ResultContent() {
 
           <div className="grid lg:grid-cols-12 gap-12">
             
-            {/* Performance Overview (Placeholder Scores as requested) */}
+            {/* Performance Overview */}
             <div className="lg:col-span-4 space-y-8">
               <Card className="premium-card bg-accent/5 border-accent/20 p-10 space-y-8">
                 <div className="text-center space-y-2">
@@ -103,7 +108,7 @@ function ResultContent() {
 
                 <div className="p-6 glass rounded-[2rem] border-white/5 bg-white/[0.01]">
                    <p className="text-[9px] font-black uppercase text-white/20 tracking-widest mb-3">System Note</p>
-                   <p className="text-xs font-light text-white/60 leading-relaxed italic">
+                   <p className="text-xs font-light text-white/60 leading-relaxed italic text-center">
                      "Automated evaluation of Special HR sessions is currently undergoing neural calibration. Actual transcript data is archived below."
                    </p>
                 </div>

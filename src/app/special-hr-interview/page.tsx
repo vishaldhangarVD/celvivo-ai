@@ -1,10 +1,8 @@
 'use client';
 
-import React, { useEffect, useRef, useState, useCallback } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useUser, useFirestore } from '@/firebase';
-import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { 
   Mic, 
   MicOff, 
@@ -18,32 +16,36 @@ import {
   ShieldCheck,
   AlertCircle,
   MessageSquare,
-  Home
+  Home,
+  ChevronRight
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Card } from '@/components/ui/card';
+import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
+import { useUser, useFirestore } from '@/firebase';
+import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 import Navbar from '@/components/layout/Navbar';
 import { cn } from '@/lib/utils';
 import Link from 'next/link';
 
 /**
- * @fileOverview Special HR Interview powered by D-ID Agents.
- * Isolated from the main interview flow. Uses server-side config retrieval.
+ * @fileOverview Special HR Interview - Powered by D-ID Agents.
+ * Implements real-time WebRTC streaming and autonomous AI conversation.
  */
 
 export default function SpecialHRInterview() {
   const router = useRouter();
-  const { user } = useUser();
+  const { user, loading: authLoading } = useUser();
   const db = useFirestore();
   const { toast } = useToast();
 
   // D-ID Refs & State
   const agentManagerRef = useRef<any>(null);
-  const videoRef = useRef<HTMLVideoElement>(null);
+  const agentVideoRef = useRef<HTMLVideoElement>(null);
   const localVideoRef = useRef<HTMLVideoElement>(null);
-  const [connectionStatus, setConnectionStatus] = useState<'connecting' | 'connected' | 'disconnected' | 'error'>('disconnected');
+  
+  const [status, setStatus] = useState<'INITIALIZING' | 'CONNECTING' | 'CONNECTED' | 'DISCONNECTED' | 'ERROR'>('INITIALIZING');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isDIdSpeaking, setIsDIdSpeaking] = useState(false);
   
@@ -53,156 +55,131 @@ export default function SpecialHRInterview() {
   
   // Interview Content State
   const [transcript, setTranscript] = useState<{ role: 'interviewer' | 'candidate', text: string }[]>([]);
-  const [isRecording, setIsRecording] = useState(false);
-  const [currentRecognition, setCurrentRecognition] = useState("");
+  const [isVocalResponseActive, setIsVocalResponseActive] = useState(false);
   const sessionIdRef = useRef<string>(Math.random().toString(36).substring(7));
 
-  // Speech Recognition (Browser API)
-  const recognitionRef = useRef<any>(null);
-
-  const initSpeechRecognition = useCallback(() => {
-    if (typeof window === 'undefined') return;
-    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-    if (!SpeechRecognition) {
-      console.warn("Vocal recognition not supported in this browser.");
-      return;
-    }
-
-    const recognition = new SpeechRecognition();
-    recognition.continuous = true;
-    recognition.interimResults = true;
-    recognition.lang = 'en-US';
-
-    recognition.onresult = (event: any) => {
-      let finalTranscript = "";
-      for (let i = event.resultIndex; i < event.results.length; ++i) {
-        if (event.results[i].isFinal) {
-          finalTranscript += event.results[i][0].transcript;
-        }
-      }
-      if (finalTranscript) {
-        setCurrentRecognition(finalTranscript);
-      }
-    };
-
-    recognition.onerror = (event: any) => {
-      console.error("Speech Error:", event.error);
-      setIsRecording(false);
-    };
-
-    recognitionRef.current = recognition;
-  }, []);
-
-  const toggleRecording = () => {
-    if (isRecording) {
-      recognitionRef.current?.stop();
-      setIsRecording(false);
-      if (currentRecognition.trim()) {
-        submitAnswer(currentRecognition);
-      }
-    } else {
-      setCurrentRecognition("");
-      recognitionRef.current?.start();
-      setIsRecording(true);
-    }
-  };
-
-  const submitAnswer = async (text: string) => {
-    if (!text.trim() || !agentManagerRef.current) return;
-    
-    setTranscript(prev => [...prev, { role: 'candidate', text }]);
-    setCurrentRecognition("");
-
-    try {
-      await agentManagerRef.current.chat(text);
-    } catch (e) {
-      toast({ variant: "destructive", title: "Transmission Fault", description: "Failed to send data to AI Agent." });
-    }
-  };
-
-  const initializeDID = useCallback(async () => {
-    if (typeof window === 'undefined') return;
-
-    setConnectionStatus('connecting');
-
-    try {
-      // 1. Fetch Config from Secure API Route
-      const configRes = await fetch('/api/special-hr-agent');
-      const configData = await configRes.json();
-
-      if (!configRes.ok || !configData.agentId || !configData.clientKey) {
-        setErrorMessage(configData.error || "D-ID Agent credentials not configured.");
-        setConnectionStatus('error');
-        return;
-      }
-
-      // 2. Client-only Dynamic Import
-      const { createAgentManager } = await import('@d-id/client-sdk');
-
-      const manager = await createAgentManager(configData.agentId, {
-        auth: { type: 'key', clientKey: configData.clientKey },
-        callbacks: {
-          onSrcObjectReady(event) {
-            if (videoRef.current) {
-              videoRef.current.srcObject = event.srcObject;
-            }
-          },
-          onVideoStateChange(state) {
-            setIsDIdSpeaking(state === 'playing');
-          },
-          onConnectionStateChange(state) {
-            if (state === 'connected') setConnectionStatus('connected');
-            if (state === 'disconnected') setConnectionStatus('disconnected');
-          },
-          onNewMessage(message, role) {
-            if (role === 'assistant') {
-              setTranscript(prev => [...prev, { role: 'interviewer', text: message }]);
-            }
-          },
-          onError(error) {
-            console.error("D-ID SDK Error:", error);
-            setConnectionStatus('error');
-            setErrorMessage("Unable to connect to Special HR Agent.");
-          }
-        }
-      });
-
-      agentManagerRef.current = manager;
-      await manager.connect();
-    } catch (e: any) {
-      console.error("[D-ID] Initialization Fault:", e);
-      setConnectionStatus('error');
-      setErrorMessage("Unable to connect to Special HR Agent.");
-    }
-  }, [toast]);
-
-  const startLocalCamera = async () => {
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
-      if (localVideoRef.current) {
-        localVideoRef.current.srcObject = stream;
-      }
-    } catch (e) {
-      console.warn("Local camera access denied.");
-    }
-  };
-
+  // Initialization Protocol
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-      initializeDID();
-      startLocalCamera();
-      initSpeechRecognition();
-    }
+    if (typeof window === 'undefined') return;
+
+    let isMounted = true;
+
+    const initializeAgent = async () => {
+      try {
+        // 1. Fetch browser-safe credentials from our API gateway
+        const configRes = await fetch('/api/special-hr-agent');
+        const configData = await configRes.json();
+
+        if (!configRes.ok) {
+          if (configData.agentIdMissing) setErrorMessage("Special HR Agent ID is missing.");
+          else if (configData.clientKeyMissing) setErrorMessage("Special HR Client Key is missing.");
+          else setErrorMessage("Credentials not configured correctly.");
+          setStatus('ERROR');
+          return;
+        }
+
+        const { agentId, clientKey } = configData;
+
+        // 2. Client-safe dynamic import to prevent SSR "window is not defined"
+        const { createAgentManager } = await import('@d-id/client-sdk');
+
+        // 3. Create the D-ID Agent Manager
+        const manager = await createAgentManager(agentId, {
+          auth: { type: 'key', clientKey },
+          callbacks: {
+            onSrcObjectReady(stream) {
+              console.log("[D-ID] Source stream ready.");
+              if (agentVideoRef.current) {
+                agentVideoRef.current.srcObject = stream;
+              }
+            },
+            onConnectionStateChange(state) {
+              console.log("[D-ID] Connection State Change:", state);
+              if (!isMounted) return;
+              
+              if (state === 'connecting') setStatus('CONNECTING');
+              if (state === 'connected') {
+                setStatus('CONNECTED');
+                toast({ title: "Neural Link Established", description: "The Special HR Agent is online." });
+              }
+              if (state === 'disconnected' || state === 'closed') setStatus('DISCONNECTED');
+              if (state === 'fail') {
+                setStatus('ERROR');
+                setErrorMessage("Unable to connect to Special HR Agent.");
+              }
+            },
+            onVideoStateChange(state) {
+              if (isMounted) setIsDIdSpeaking(state === 'playing');
+            },
+            onNewMessage(messages, type) {
+              if (type === 'assistant' && isMounted) {
+                const text = Array.isArray(messages) ? messages[messages.length - 1] : messages;
+                setTranscript(prev => [...prev, { role: 'interviewer', text }]);
+              }
+            },
+            onError(error, errorData) {
+              console.error("[D-ID] Protocol Fault:", error, errorData);
+              if (isMounted) {
+                setStatus('ERROR');
+                setErrorMessage("Unable to connect to Special HR Agent.");
+              }
+            }
+          }
+        });
+
+        agentManagerRef.current = manager;
+        await manager.connect();
+
+      } catch (err) {
+        console.error("[D-ID] Fatal Handshake Failure:", err);
+        if (isMounted) {
+          setStatus('ERROR');
+          setErrorMessage("Unable to connect to Special HR Agent.");
+        }
+      }
+    };
+
+    initializeAgent();
+
+    // Initialize local preview
+    const startLocalPreview = async () => {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+        if (localVideoRef.current) {
+          localVideoRef.current.srcObject = stream;
+        }
+      } catch (e) {
+        console.warn("Local camera access denied.");
+      }
+    };
+    startLocalPreview();
 
     return () => {
+      isMounted = false;
       if (agentManagerRef.current) {
         agentManagerRef.current.disconnect();
       }
-      if (recognitionRef.current) {
-        recognitionRef.current.stop();
+      if (localVideoRef.current?.srcObject) {
+        (localVideoRef.current.srcObject as MediaStream).getTracks().forEach(t => t.stop());
       }
     };
-  }, [initializeDID, initSpeechRecognition]);
+  }, [toast]);
+
+  const toggleVocalResponse = async () => {
+    if (!agentManagerRef.current || status !== 'CONNECTED') return;
+
+    try {
+      if (isVocalResponseActive) {
+        await agentManagerRef.current.stopListening();
+        setIsVocalResponseActive(false);
+      } else {
+        await agentManagerRef.current.startListening();
+        setIsVocalResponseActive(true);
+      }
+    } catch (e) {
+      toast({ variant: "destructive", title: "Audio Transceiver Fault", description: "Failed to communicate with AI Agent." });
+    }
+  };
 
   const handleEndInterview = async () => {
     if (!user || !db) return;
@@ -214,8 +191,7 @@ export default function SpecialHRInterview() {
         userId: user.uid,
         status: 'completed',
         transcript: transcript,
-        startedAt: serverTimestamp(),
-        endedAt: serverTimestamp(),
+        createdAt: serverTimestamp(),
         duration: transcript.length * 45 
       });
 
@@ -226,6 +202,22 @@ export default function SpecialHRInterview() {
       router.push('/dashboard');
     }
   };
+
+  const toggleMic = () => {
+    if (localVideoRef.current?.srcObject) {
+      (localVideoRef.current.srcObject as MediaStream).getAudioTracks().forEach(t => t.enabled = !isMicOn);
+      setIsMicOn(!isMicOn);
+    }
+  };
+
+  const toggleCamera = () => {
+    if (localVideoRef.current?.srcObject) {
+      (localVideoRef.current.srcObject as MediaStream).getVideoTracks().forEach(t => t.enabled = !isCameraOn);
+      setIsCameraOn(!isCameraOn);
+    }
+  };
+
+  if (authLoading) return null;
 
   return (
     <div className="min-h-screen bg-[#050816] flex flex-col overflow-hidden selection:bg-accent/30">
@@ -246,25 +238,25 @@ export default function SpecialHRInterview() {
         <div className="flex items-center gap-6">
            <div className={cn(
              "px-4 py-1.5 rounded-full glass border-white/5 flex items-center gap-3 transition-all",
-             connectionStatus === 'connected' ? "bg-green-500/10 border-green-500/20" : 
-             connectionStatus === 'connecting' ? "bg-accent/10 border-accent/20" : 
+             status === 'CONNECTED' ? "bg-green-500/10 border-green-500/20" : 
+             status === 'CONNECTING' || status === 'INITIALIZING' ? "bg-accent/10 border-accent/20" : 
              "bg-red-500/10 border-red-500/20"
            )}>
               <div className={cn(
                 "w-2 h-2 rounded-full", 
-                connectionStatus === 'connected' ? "bg-green-400 animate-pulse" : 
-                connectionStatus === 'connecting' ? "bg-accent animate-spin" : 
+                status === 'CONNECTED' ? "bg-green-400 animate-pulse" : 
+                status === 'CONNECTING' || status === 'INITIALIZING' ? "bg-accent animate-spin" : 
                 "bg-red-400"
               )} />
               <span className="text-[9px] font-black uppercase tracking-widest text-white/60">
-                {connectionStatus === 'connecting' ? 'SYNCING...' : connectionStatus === 'connected' ? 'AI INTERVIEWER ONLINE' : connectionStatus === 'error' ? 'ERROR' : 'DISCONNECTED'}
+                {status}
               </span>
            </div>
         </div>
       </header>
 
       <main className="flex-1 flex overflow-hidden p-6 gap-6">
-        {/* Candidate Neural Feed */}
+        {/* Candidate Neural Feed (LEFT) */}
         <div className="w-1/3 flex flex-col gap-6">
           <Card className="flex-1 glass border-white/5 bg-black rounded-[2.5rem] relative overflow-hidden shadow-2xl">
             <video 
@@ -285,13 +277,12 @@ export default function SpecialHRInterview() {
                 <span className="text-[9px] font-black uppercase tracking-widest">LOCAL FEED</span>
               </Badge>
             </div>
-            
             {/* Visual HUD */}
-            <div className="absolute inset-0 pointer-events-none border-[20px] border-black/10">
-               <div className="absolute top-0 left-0 w-8 h-8 border-t-2 border-l-2 border-accent/40" />
-               <div className="absolute top-0 right-0 w-8 h-8 border-t-2 border-r-2 border-accent/40" />
-               <div className="absolute bottom-0 left-0 w-8 h-8 border-b-2 border-l-2 border-accent/40" />
-               <div className="absolute bottom-0 right-0 w-8 h-8 border-b-2 border-r-2 border-accent/40" />
+            <div className="absolute inset-0 pointer-events-none">
+               <div className="absolute top-0 left-0 w-8 h-8 border-t-2 border-l-2 border-accent/40 m-8" />
+               <div className="absolute top-0 right-0 w-8 h-8 border-t-2 border-r-2 border-accent/40 m-8" />
+               <div className="absolute bottom-0 left-0 w-8 h-8 border-b-2 border-l-2 border-accent/40 m-8" />
+               <div className="absolute bottom-0 right-0 w-8 h-8 border-b-2 border-r-2 border-accent/40 m-8" />
             </div>
           </Card>
 
@@ -307,53 +298,41 @@ export default function SpecialHRInterview() {
                     <p className="text-xs font-light leading-relaxed">{msg.text}</p>
                   </div>
                 ))}
-                {isRecording && currentRecognition && (
-                  <div className="text-white/40 animate-pulse">
-                    <p className="text-[8px] font-black uppercase tracking-widest">RECORDING...</p>
-                    <p className="text-xs font-light italic">"{currentRecognition}"</p>
-                  </div>
-                )}
-                {transcript.length === 0 && !isRecording && (
+                {transcript.length === 0 && (
                    <p className="text-[10px] text-white/20 text-center py-8">Awaiting initial handshake...</p>
                 )}
              </div>
           </Card>
         </div>
 
-        {/* AI Interviewer Stage */}
+        {/* AI Interviewer Stage (RIGHT) */}
         <div className="flex-1 flex flex-col gap-6">
           <Card className="flex-1 glass border-white/10 bg-[#080c19] rounded-[3rem] relative overflow-hidden shadow-[0_0_100px_rgba(168,85,247,0.1)]">
-            {connectionStatus === 'error' ? (
+            {status === 'ERROR' ? (
               <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/80 z-20 p-12 text-center">
                  <AlertCircle className="w-12 h-12 text-red-400 mb-6" />
                  <h3 className="text-xl font-bold mb-2">Protocol Error</h3>
                  <p className="text-sm text-white/40 max-w-sm mb-8">{errorMessage}</p>
-                 <Button onClick={initializeDID} variant="outline" className="rounded-xl px-8 h-12 text-[10px] uppercase font-bold tracking-widest">Retry Connection</Button>
+                 <Button onClick={() => window.location.reload()} variant="outline" className="rounded-xl px-8 h-12 text-[10px] uppercase font-bold tracking-widest">Restart Session</Button>
               </div>
             ) : null}
 
             <video 
-              ref={videoRef} 
+              ref={agentVideoRef} 
               autoPlay 
               playsInline 
-              className={cn("w-full h-full object-cover", connectionStatus !== 'connected' && "opacity-0")}
+              className={cn("w-full h-full object-cover", status !== 'CONNECTED' && "opacity-0")}
             />
             
-            {connectionStatus === 'connecting' && (
+            {(status === 'INITIALIZING' || status === 'CONNECTING') && (
               <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/60 backdrop-blur-xl z-10">
                 <Loader2 className="w-12 h-12 text-purple-500 animate-spin mb-6" />
                 <p className="text-[10px] font-black uppercase tracking-[0.5em] text-purple-400 animate-pulse">Initializing Agent Proxy...</p>
               </div>
             )}
 
-            {connectionStatus === 'disconnected' && !errorMessage && (
-              <div className="absolute inset-0 flex items-center justify-center bg-black/40">
-                 <p className="text-[10px] font-black uppercase tracking-[0.4em] text-white/20">Awaiting Signal</p>
-              </div>
-            )}
-
             {/* Speaking Indicator */}
-            {connectionStatus === 'connected' && (
+            {status === 'CONNECTED' && (
               <div className="absolute bottom-8 left-8 flex items-center gap-4">
                 <div className="flex items-center gap-2 px-4 py-2 glass rounded-full border-purple-500/30">
                   <div className={cn("w-1.5 h-1.5 rounded-full", isDIdSpeaking ? "bg-purple-400 animate-ping" : "bg-white/10")} />
@@ -371,7 +350,7 @@ export default function SpecialHRInterview() {
               <Button 
                 variant="ghost" 
                 size="icon" 
-                onClick={() => setIsMicOn(!isMicOn)}
+                onClick={toggleMic}
                 className={cn(
                   "w-14 h-14 rounded-full transition-all duration-500",
                   isMicOn ? "bg-white/5 text-white/60 hover:bg-white/10" : "bg-red-500/20 text-red-400 border border-red-500/40"
@@ -382,7 +361,7 @@ export default function SpecialHRInterview() {
               <Button 
                 variant="ghost" 
                 size="icon" 
-                onClick={() => setIsCameraOn(!isCameraOn)}
+                onClick={toggleCamera}
                 className={cn(
                   "w-14 h-14 rounded-full transition-all duration-500",
                   isCameraOn ? "bg-white/5 text-white/60 hover:bg-white/10" : "bg-red-500/20 text-red-400 border border-red-500/40"
@@ -393,14 +372,14 @@ export default function SpecialHRInterview() {
             </div>
 
             <Button 
-              onClick={toggleRecording}
-              disabled={connectionStatus !== 'connected' || isDIdSpeaking}
+              onClick={toggleVocalResponse}
+              disabled={status !== 'CONNECTED' || isDIdSpeaking}
               className={cn(
                 "h-16 px-12 rounded-full text-xs font-black uppercase tracking-[0.3em] shadow-xl transition-all duration-500 active:scale-95",
-                isRecording ? "bg-red-600 hover:bg-red-500 animate-pulse-glow" : "btn-premium"
+                isVocalResponseActive ? "bg-red-600 hover:bg-red-500 animate-pulse-glow text-white border-none" : "btn-premium"
               )}
             >
-              {isRecording ? "Stop & Transmit" : "Start Vocal Response"}
+              {isVocalResponseActive ? "STOP & TRANSMIT" : "START VOCAL RESPONSE"}
             </Button>
 
             <Button 
