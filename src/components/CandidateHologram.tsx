@@ -153,6 +153,9 @@ export default function CandidateHologram({
 
           // SAMPLING PROTOCOL
           const tempV = new THREE.Vector3();
+          let meshAddedCount = 0;
+          const hairLimit = 150;
+
           for (let i = 0; i < posAttr.count; i++) {
             tempV.set(posAttr.getX(i), posAttr.getY(i), posAttr.getZ(i));
             tempV.applyMatrix4(mesh.matrixWorld);
@@ -176,16 +179,18 @@ export default function CandidateHologram({
                 counts.mouth++;
               }
             } else if (isHairCap) {
-              if (Math.random() < 0.5) {
+              if (meshAddedCount < hairLimit && Math.random() < 0.5) {
                 shouldSample = true;
                 type = 'hair-cap';
                 counts.hair++;
+                meshAddedCount++;
               }
             } else if (isHairOther) {
-              if (Math.random() < 0.05) {
+              if (meshAddedCount < hairLimit && Math.random() < 0.05) {
                 shouldSample = true;
                 type = 'hair-side';
                 counts.hair++;
+                meshAddedCount++;
               }
             }
 
