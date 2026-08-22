@@ -15,9 +15,9 @@ interface CandidateHologramProps {
 }
 
 /**
- * @fileOverview CandidateHologram - Full Reset Protocol.
- * Locked at 1.4 unit height scale and 3.0 camera distance.
- * Implements post-scale re-centering with zero manual offsets.
+ * @fileOverview CandidateHologram - Standard Compatibility Reset.
+ * Uses standard Three.js materials only to avoid shader compilation errors.
+ * Implements strict post-scale auto-centering without manual offsets.
  */
 export default function CandidateHologram({ 
   active = true, 
@@ -41,13 +41,10 @@ export default function CandidateHologram({
     const width = rect.width;
     const height = rect.height;
     
-    console.log(`[Hologram] Canvas Initialized: ${width}x${height}`);
-
     const scene = new THREE.Scene();
     scene.background = new THREE.Color(0x001a2e); 
 
     const camera = new THREE.PerspectiveCamera(42, width / height, 0.1, 100);
-    // RESET: Camera at (0, 0, 3.0) looking at (0, 0, 0)
     camera.position.set(0, 0, 3.0); 
     camera.lookAt(0, 0, 0);
 
@@ -74,8 +71,9 @@ export default function CandidateHologram({
     composer.addPass(bloomPass);
     composerRef.current = composer;
 
+    // Silent loading manager to suppress texture blob warnings
     const manager = new THREE.LoadingManager();
-    manager.onError = () => {}; // Silently suppress texture warnings
+    manager.onError = () => {}; 
 
     const loader = new GLTFLoader(manager);
     
@@ -83,8 +81,6 @@ export default function CandidateHologram({
       if (!isMounted) return;
 
       const gltfScene = gltf.scene;
-
-      // Axial alignment (Fixed front-facing)
       gltfScene.rotation.y = -0.12; 
 
       // 1. SCALING: Target 1.4 units height
@@ -99,20 +95,20 @@ export default function CandidateHologram({
       const scaledCenter = scaledBox.getCenter(new THREE.Vector3());
       const scaledSize = scaledBox.getSize(new THREE.Vector3());
       
-      // Reset: Zero manual offset - just standard subtract center
+      // RESET: Zero manual offset - just standard subtract center
       gltfScene.position.x -= scaledCenter.x;
       gltfScene.position.y -= scaledCenter.y;
       gltfScene.position.z -= scaledCenter.z;
 
-      // 4. DIAGNOSTIC LOGS
+      // 3. DIAGNOSTIC LOGS
       console.log("[Hologram] Normalized Dimensions:", scaledSize.x.toFixed(2), "x", scaledSize.y.toFixed(2), "x", scaledSize.z.toFixed(2));
       console.log("[Hologram] Final model world position:", gltfScene.position);
       console.log("[Hologram] Final model world bounding box:", new THREE.Box3().setFromObject(gltfScene));
       console.log("[Hologram] Camera position:", camera.position);
 
       const pointsPool: { pos: THREE.Vector3; type: string }[] = [];
-      let counts = { face: 0, hair: 0, eye: 0, mouth: 0 };
       const HAIR_TOTAL_LIMIT = 1200;
+      let hairCount = 0;
 
       gltfScene.traverse((child) => {
         if ((child as THREE.Mesh).isMesh) {
@@ -123,33 +119,32 @@ export default function CandidateHologram({
           const isFace = name.includes("Face_mush_Face");
           const isMouth = name.includes("Mouth_mush_Mouth");
           const isIris = name.includes("Eye_L_Irises") || name.includes("Eye_R_Irises");
-          const isHairCap = name === "Hair_mush_Hair_Cap_0";
-          const isHairOther = name.includes("Hair_mush") && !isHairCap;
+          const isHair = name.includes("Hair_mush");
           const isTorso = name.includes("Torso");
 
           if (isTorso) return;
 
-          // Wireframe Layer
+          // Standard Material Overlay (Face Glow)
           if (isFace || isMouth) {
             const wireMaterial = new THREE.MeshBasicMaterial({
-              color: 0x22d3ee,
+              color: 0x4ff0ff,
               wireframe: true,
               transparent: true,
               opacity: isMouth ? 0.25 : 0.6,
+              blending: THREE.AdditiveBlending,
               depthWrite: false
             });
             const wireMesh = new THREE.Mesh(mesh.geometry.clone(), wireMaterial);
             wireMesh.applyMatrix4(mesh.matrixWorld);
             scene.add(wireMesh);
 
-            // Volumetric Solid Fill
+            // Volumetric Fill
             if (isFace) {
               const fillMaterial = new THREE.MeshBasicMaterial({
                 color: 0x003344,
                 transparent: true,
                 opacity: 0.15,
-                depthWrite: false,
-                side: THREE.FrontSide
+                depthWrite: false
               });
               const fillMesh = new THREE.Mesh(mesh.geometry.clone(), fillMaterial);
               fillMesh.applyMatrix4(mesh.matrixWorld);
@@ -157,7 +152,7 @@ export default function CandidateHologram({
             }
           }
 
-          // SAMPLING PROTOCOL
+          // SAMPLING
           const tempV = new THREE.Vector3();
           for (let i = 0; i < posAttr.count; i++) {
             tempV.set(posAttr.getX(i), posAttr.getY(i), posAttr.getZ(i));
@@ -168,24 +163,22 @@ export default function CandidateHologram({
 
             if (isFace) {
               shouldSample = true;
-              counts.face++;
+              type = 'face';
             } else if (isIris) {
-              if (counts.eye < 400 && Math.random() < 0.8) {
+              if (Math.random() < 0.5) {
                 shouldSample = true;
                 type = 'eye';
-                counts.eye++;
               }
             } else if (isMouth) {
               if (Math.random() < 0.1) {
                 shouldSample = true;
                 type = 'mouth';
-                counts.mouth++;
               }
-            } else if (isHairCap || isHairOther) {
-              if (counts.hair < HAIR_TOTAL_LIMIT && Math.random() < 0.2) {
+            } else if (isHair) {
+              if (hairCount < HAIR_TOTAL_LIMIT && Math.random() < 0.1) {
                 shouldSample = true;
-                type = isHairCap ? 'hair-cap' : 'hair-side';
-                counts.hair++;
+                type = 'hair';
+                hairCount++;
               }
             }
 
@@ -197,14 +190,10 @@ export default function CandidateHologram({
       });
 
       const totalParticles = pointsPool.length;
-      console.log("FINAL COUNTS - Face:", counts.face, "Hair:", counts.hair, "Eyes:", counts.eye, "Mouth:", counts.mouth, "TOTAL PARTICLES:", totalParticles);
-
       const positions = new Float32Array(totalParticles * 3);
       const targetPositions = new Float32Array(totalParticles * 3);
       const velocities = new Float32Array(totalParticles * 3);
       const colors = new Float32Array(totalParticles * 3);
-      const sizes = new Float32Array(totalParticles); 
-      const alphas = new Float32Array(totalParticles);
       const isMouthArray = new Float32Array(totalParticles); 
 
       const faceColor = new THREE.Color(0x4ff0ff);
@@ -214,13 +203,10 @@ export default function CandidateHologram({
         const t = pointsPool[i];
         const i3 = i * 3;
 
-        // Random orbital spawn
-        const radius = 2.2;
-        const theta = Math.random() * Math.PI * 2;
-        const phi = Math.acos(2 * Math.random() - 1);
-        positions[i3] = radius * Math.sin(phi) * Math.cos(theta);
-        positions[i3 + 1] = radius * Math.sin(phi) * Math.sin(theta);
-        positions[i3 + 2] = radius * Math.cos(phi);
+        // Spread spawn for effect
+        positions[i3] = (Math.random() - 0.5) * 5;
+        positions[i3 + 1] = (Math.random() - 0.5) * 5;
+        positions[i3 + 2] = (Math.random() - 0.5) * 5;
 
         targetPositions[i3] = t.pos.x;
         targetPositions[i3 + 1] = t.pos.y;
@@ -228,80 +214,35 @@ export default function CandidateHologram({
 
         if (t.type === 'mouth') isMouthArray[i] = 1.0;
 
-        if (t.type.includes('hair')) {
-          colors[i3] = hairColor.r; colors[i3+1] = hairColor.g; colors[i3+2] = hairColor.b;
-          sizes[i] = 0.01;
-          alphas[i] = 0.4;
-          targetPositions[i3 + 1] += (Math.random() - 0.5) * 0.01; // Jitter
-        } else if (t.type === 'eye') {
-          colors[i3] = faceColor.r; colors[i3+1] = faceColor.g; colors[i3+2] = faceColor.b;
-          sizes[i] = 0.012;
-          alphas[i] = 0.5;
-        } else {
-          colors[i3] = faceColor.r; colors[i3+1] = faceColor.g; colors[i3+2] = faceColor.b;
-          sizes[i] = 0.025;
-          alphas[i] = t.type === 'mouth' ? 0.3 : 0.85;
-        }
+        const col = t.type === 'hair' ? hairColor : faceColor;
+        colors[i3] = col.r; colors[i3+1] = col.g; colors[i3+2] = col.b;
       }
 
       const geometry = new THREE.BufferGeometry();
       geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
       geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
-      geometry.setAttribute('size', new THREE.BufferAttribute(sizes, 1));
-      geometry.setAttribute('alpha', new THREE.BufferAttribute(alphas, 1));
 
-      const particleMaterial = new THREE.ShaderMaterial({
-        uniforms: { 
-          uTime: { value: 0 },
-          uScanY: { value: 0 }
-        },
-        vertexShader: `
-          attribute float size;
-          attribute float alpha;
-          varying vec3 vColor;
-          varying float vDepth;
-          varying float vScan;
-          varying float vAlpha;
-          uniform float uScanY;
-          void main() {
-            vColor = color;
-            vAlpha = alpha;
-            vDepth = smoothstep(-0.2, 0.4, position.z);
-            vScan = smoothstep(0.05, 0.0, abs(position.y - uScanY));
-            vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
-            gl_PointSize = size * (350.0 / -mvPosition.z);
-            gl_Position = projectionMatrix * mvPosition;
-          }
-        `,
-        fragmentShader: `
-          varying vec3 vColor;
-          varying float vDepth;
-          varying float vScan;
-          varying float vAlpha;
-          void main() {
-            if (length(gl_PointCoord - vec2(0.5)) > 0.5) discard;
-            float intensity = (0.6 + (vDepth * 0.4)) + (vScan * 0.5);
-            gl_FragColor = vec4(vColor * intensity, vAlpha);
-          }
-        `,
+      // Use STANDARD material to avoid compilation errors
+      const pointsMaterial = new THREE.PointsMaterial({
+        size: 0.02,
         vertexColors: true,
         transparent: true,
+        opacity: 0.85,
         blending: THREE.AdditiveBlending,
         depthWrite: false
       });
 
-      const points = new THREE.Points(geometry, particleMaterial);
+      const points = new THREE.Points(geometry, pointsMaterial);
       scene.add(points);
 
-      // Base projector ring
+      // Base ring
       const ringGeom = new THREE.RingGeometry(0.5, 0.7, 64);
-      const ringMat = new THREE.MeshBasicMaterial({ color: 0x22d3ee, transparent: true, opacity: 0.2, side: THREE.DoubleSide });
+      const ringMat = new THREE.MeshBasicMaterial({ color: 0x4ff0ff, transparent: true, opacity: 0.2, side: THREE.DoubleSide });
       const ring = new THREE.Mesh(ringGeom, ringMat);
       ring.rotation.x = Math.PI / 2;
       ring.position.y = -0.8;
       scene.add(ring);
 
-      // ANIMATION LOOP
       let time = 0;
       const ease = 0.045;
       const damping = 0.90;
@@ -314,9 +255,6 @@ export default function CandidateHologram({
         const pArr = geometry.attributes.position.array as Float32Array;
         const speechIntensity = speaking ? Math.abs(Math.sin(time * 15)) * 0.03 : 0;
         
-        particleMaterial.uniforms.uTime.value = time;
-        particleMaterial.uniforms.uScanY.value = Math.sin(time * 0.8) * 1.5;
-
         for (let i = 0; i < totalParticles; i++) {
           const i3 = i * 3;
           for (let j = 0; j < 3; j++) {
