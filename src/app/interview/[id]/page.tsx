@@ -46,8 +46,8 @@ import { cn } from "@/lib/utils";
 import HolographicInterviewer from "@/components/HolographicInterviewer";
 import CandidateHologram from "@/components/CandidateHologram";
 
-// Dynamic import for the Three.js hologram to prevent SSR errors
-const HologramFaceLoader = dynamic(() => import("@/components/HologramFaceLoader"), { 
+// Consolidating all holographic visuals into CandidateHologram
+const HologramStage = dynamic(() => import("@/components/CandidateHologram"), { 
   ssr: false,
   loading: () => (
     <div className="w-full h-full flex flex-col items-center justify-center bg-[#050816]">
@@ -190,7 +190,6 @@ function VirtualArenaContent() {
           setAskedQuestions([response.nextQuestion]);
           setCurrentSimStage(response.stage);
         }
-        // Materialization delay for the hologram effect
         setTimeout(() => setIsInitializing(false), 3000);
       } else {
         router.push('/interview');
@@ -273,9 +272,8 @@ function VirtualArenaContent() {
   if (isInitializing) {
     return (
       <div className="h-screen w-full bg-[#050816] flex items-center justify-center relative overflow-hidden">
-        {/* Hologram Stage Diagnostics enabled */}
         <div className="absolute inset-0 z-0 h-full w-full">
-           <HologramFaceLoader isActive={true} />
+           <HologramStage isLoader={true} />
         </div>
       </div>
     );
@@ -304,9 +302,9 @@ function VirtualArenaContent() {
 
         <div className="flex-1 flex flex-col p-3 space-y-1.5 overflow-hidden">
           <div className="flex-1 min-0 relative rounded-[2rem] overflow-hidden bg-black border border-white/5 shadow-2xl">
-            <CandidateHologram 
-              stream={stream} 
-              isCameraOn={isCameraOn} 
+            <HologramStage 
+              active={true}
+              speaking={isAiSpeaking}
               className="w-full h-full"
             />
             
