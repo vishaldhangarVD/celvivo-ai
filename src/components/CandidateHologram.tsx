@@ -15,9 +15,9 @@ interface CandidateHologramProps {
 }
 
 /**
- * @fileOverview CandidateHologram v66.0 - PRECISION VERTICAL CENTERING.
- * Locked at 0.9 unit height with a 1.6 camera distance.
- * Applied a 0.4 unit downward nudge for perfect panel alignment.
+ * @fileOverview CandidateHologram - Full Reset Protocol.
+ * Locked at 1.4 unit height scale and 3.0 camera distance.
+ * Implements post-scale re-centering with zero manual offsets.
  */
 export default function CandidateHologram({ 
   active = true, 
@@ -47,9 +47,9 @@ export default function CandidateHologram({
     scene.background = new THREE.Color(0x001a2e); 
 
     const camera = new THREE.PerspectiveCamera(42, width / height, 0.1, 100);
-    // Move camera look target down to -0.3 for central framing
-    camera.position.set(0, -0.3, 1.6); 
-    camera.lookAt(0, -0.3, 0);
+    // RESET: Camera at (0, 0, 3.0) looking at (0, 0, 0)
+    camera.position.set(0, 0, 3.0); 
+    camera.lookAt(0, 0, 0);
 
     const renderer = new THREE.WebGLRenderer({ 
       canvas: canvasRef.current,
@@ -84,27 +84,31 @@ export default function CandidateHologram({
 
       const gltfScene = gltf.scene;
 
-      // 1. AXIAL ALIGNMENT (Hard-coded for front-facing symmetry)
+      // Axial alignment (Fixed front-facing)
       gltfScene.rotation.y = -0.12; 
 
-      // 2. PRECISION SCALING (Stable 0.9 target)
+      // 1. SCALING: Target 1.4 units height
       const box = new THREE.Box3().setFromObject(gltfScene);
       const size = box.getSize(new THREE.Vector3());
       const maxDim = Math.max(size.x, size.y, size.z);
-      const scale = 0.9 / maxDim;
+      const scale = 1.4 / maxDim;
       gltfScene.scale.setScalar(scale);
 
-      // 3. POST-SCALE CENTERING + EXTREME VERTICAL NUDGE
+      // 2. CENTERING: Recompute box AFTER scaling
       const scaledBox = new THREE.Box3().setFromObject(gltfScene);
       const scaledCenter = scaledBox.getCenter(new THREE.Vector3());
       const scaledSize = scaledBox.getSize(new THREE.Vector3());
       
+      // Reset: Zero manual offset - just standard subtract center
       gltfScene.position.x -= scaledCenter.x;
-      // Subtract an additional 0.4 to move the head down significantly
-      gltfScene.position.y -= (scaledCenter.y + 0.4); 
+      gltfScene.position.y -= scaledCenter.y;
       gltfScene.position.z -= scaledCenter.z;
 
-      console.log(`[Hologram] Normalized Dimensions: ${scaledSize.x.toFixed(2)}x${scaledSize.y.toFixed(2)}x${scaledSize.z.toFixed(2)}`);
+      // 4. DIAGNOSTIC LOGS
+      console.log("[Hologram] Normalized Dimensions:", scaledSize.x.toFixed(2), "x", scaledSize.y.toFixed(2), "x", scaledSize.z.toFixed(2));
+      console.log("[Hologram] Final model world position:", gltfScene.position);
+      console.log("[Hologram] Final model world bounding box:", new THREE.Box3().setFromObject(gltfScene));
+      console.log("[Hologram] Camera position:", camera.position);
 
       const pointsPool: { pos: THREE.Vector3; type: string }[] = [];
       let counts = { face: 0, hair: 0, eye: 0, mouth: 0 };
@@ -289,7 +293,7 @@ export default function CandidateHologram({
       const points = new THREE.Points(geometry, particleMaterial);
       scene.add(points);
 
-      // BASE PROJECTOR RING
+      // Base projector ring
       const ringGeom = new THREE.RingGeometry(0.5, 0.7, 64);
       const ringMat = new THREE.MeshBasicMaterial({ color: 0x22d3ee, transparent: true, opacity: 0.2, side: THREE.DoubleSide });
       const ring = new THREE.Mesh(ringGeom, ringMat);
