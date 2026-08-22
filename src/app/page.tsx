@@ -161,13 +161,13 @@ export default function LandingPage() {
       
       <section className="relative flex flex-col items-center justify-center pt-32 pb-16 px-8">
         <div className="container mx-auto max-w-7xl">
-          <div className="grid lg:grid-cols-2 items-center gap-14 mb-12">
+          <div className="grid lg:grid-cols-12 items-center gap-14 mb-12">
             
             <motion.div 
               initial={{ opacity: 0, x: -30 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ duration: 0.8, ease: "easeOut" }}
-              className="space-y-6"
+              className="lg:col-span-5 space-y-6"
             >
               <div className="space-y-6">
                 <motion.div 
@@ -226,7 +226,7 @@ export default function LandingPage() {
               initial={{ opacity: 0, scale: 0.95, x: 30 }} 
               animate={{ opacity: 1, scale: 1, x: 0 }} 
               transition={{ duration: 0.8, delay: 0.2, ease: "easeOut" }}
-              className="relative group w-full"
+              className="lg:col-span-7 relative group w-full"
             >
               <div className="absolute inset-0 bg-accent/20 rounded-[3rem] blur-[80px] opacity-0 group-hover:opacity-20 transition-opacity duration-1000" />
               
@@ -270,14 +270,14 @@ export default function LandingPage() {
                     </div>
                   </div>
                   
-                  <Button 
+                  <button 
                     onClick={handleStartVirtualInterview} 
                     className="w-full h-12 btn-orange-premium text-[9px] font-black tracking-[0.4em] uppercase mt-10 rounded-2xl group/btn overflow-hidden"
                   >
                     <span className="relative z-10 flex items-center justify-center">
                       🚀 Enter Interview Room <ChevronRight className="ml-2 w-3.5 h-3.5 transition-transform group-hover/btn:translate-x-1" />
                     </span>
-                  </Button>
+                  </button>
                 </div>
                 
                 <div className="relative w-full md:w-[40%] min-h-[400px] md:min-h-full overflow-hidden rounded-r-[3rem] bg-black">
@@ -497,7 +497,7 @@ export default function LandingPage() {
 
           <div className="pt-12 border-t border-white/5 flex flex-col md:flex-row justify-between items-center gap-8">
             <p className="text-[10px] font-bold text-white/20 uppercase tracking-[0.3em]">
-              © 2024 NEXVORO AI PROTOCOLS. ALL RIGHTS RESERVED.
+              © 2026 NEXVORO AI PROTOCOLS. ALL RIGHTS RESERVED.
             </p>
             <div className="flex items-center gap-6">
               <div className="flex items-center gap-2 px-3 py-1 glass rounded-full border-green-500/20">
