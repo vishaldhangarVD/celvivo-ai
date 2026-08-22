@@ -45,6 +45,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 import HolographicInterviewer from "@/components/HolographicInterviewer";
 import CandidateHologram from "@/components/CandidateHologram";
+import HologramFaceLoader from "@/components/HologramFaceLoader";
 
 function VirtualArenaContent() {
   const router = useRouter();
@@ -179,7 +180,8 @@ function VirtualArenaContent() {
           setAskedQuestions([response.nextQuestion]);
           setCurrentSimStage(response.stage);
         }
-        setIsInitializing(false);
+        // Simulated delay to appreciate the hologram materialization
+        setTimeout(() => setIsInitializing(false), 2500);
       } else {
         router.push('/interview');
       }
@@ -258,6 +260,14 @@ function VirtualArenaContent() {
     }
   };
 
+  if (isInitializing) {
+    return (
+      <div className="h-screen w-full bg-[#050816]">
+        <HologramFaceLoader isActive={true} />
+      </div>
+    );
+  }
+
   return (
     <div className="h-screen w-full max-h-screen bg-[#050816] flex flex-col relative overflow-hidden">
       <div className="particles-bg" />
@@ -290,7 +300,7 @@ function VirtualArenaContent() {
             <div className="absolute top-6 left-6 flex items-center gap-3 z-40">
               <Badge className="bg-black/60 backdrop-blur-md border-white/10 text-white/80 py-1.5 px-4 rounded-full flex items-center gap-2">
                 <div className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
-                <span className="text-[10px] font-bold uppercase tracking-widest">LIVE SESSION</span>
+                <span className="text-[9px] font-black uppercase tracking-widest">LIVE SESSION</span>
               </Badge>
             </div>
 
