@@ -15,13 +15,13 @@ interface HologramFaceLoaderProps {
 /**
  * @fileOverview HologramFaceLoader - A premium Three.js particle effect for the identity sync screen.
  * Particles materialize into a human face with scanlines and atmospheric glow.
+ * Includes a procedural fallback to ensure visibility even if the model is missing.
  */
 
 export default function HologramFaceLoader({ isActive = true, className }: HologramFaceLoaderProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const rendererRef = useRef<THREE.WebGLRenderer | null>(null);
   const requestRef = useRef<number | null>(null);
-  const [loadError, setLoadError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!containerRef.current || !isActive) return;
@@ -42,6 +42,11 @@ export default function HologramFaceLoader({ isActive = true, className }: Holog
     });
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     renderer.setSize(width, height);
+    
+    // Clear container to prevent duplicate canvases in dev mode
+    while (containerRef.current.firstChild) {
+      containerRef.current.removeChild(containerRef.current.firstChild);
+    }
     containerRef.current.appendChild(renderer.domElement);
     rendererRef.current = renderer;
 
@@ -153,6 +158,19 @@ export default function HologramFaceLoader({ isActive = true, className }: Holog
 
     // 5. Model Loading & Surface Sampling
     const loader = new GLTFLoader();
+    
+    const applyFallbackTarget = () => {
+      console.warn("[Hologram] Using procedural fallback sphere targets.");
+      for (let i = 0; i < PARTICLE_COUNT; i++) {
+        const phi = Math.acos(-1 + (2 * i) / PARTICLE_COUNT);
+        const theta = Math.sqrt(PARTICLE_COUNT * Math.PI) * phi;
+        targetPositions[i * 3] = 4 * Math.cos(theta) * Math.sin(phi);
+        targetPositions[i * 3 + 1] = 4 * Math.sin(theta) * Math.sin(phi);
+        targetPositions[i * 3 + 2] = 4 * Math.cos(phi);
+      }
+      geometry.attributes.targetPosition.needsUpdate = true;
+    };
+
     loader.load('/models/face.glb', 
       (gltf) => {
         let mesh: THREE.Mesh | null = null;
@@ -176,20 +194,13 @@ export default function HologramFaceLoader({ isActive = true, className }: Holog
             targetPositions[i * 3 + 2] = tempPosition.z * scale;
           }
           geometry.attributes.targetPosition.needsUpdate = true;
+        } else {
+          applyFallbackTarget();
         }
       },
       undefined,
       (err) => {
-        console.warn("[Hologram] Face model not found at /models/face.glb. Using fallback sphere.");
-        // Fallback: simple sphere targets
-        for (let i = 0; i < PARTICLE_COUNT; i++) {
-          const phi = Math.acos(-1 + (2 * i) / PARTICLE_COUNT);
-          const theta = Math.sqrt(PARTICLE_COUNT * Math.PI) * phi;
-          targetPositions[i * 3] = 4 * Math.cos(theta) * Math.sin(phi);
-          targetPositions[i * 3 + 1] = 4 * Math.sin(theta) * Math.sin(phi);
-          targetPositions[i * 3 + 2] = 4 * Math.cos(phi);
-        }
-        geometry.attributes.targetPosition.needsUpdate = true;
+        applyFallbackTarget();
       }
     );
 
@@ -210,7 +221,9 @@ export default function HologramFaceLoader({ isActive = true, className }: Holog
       // Slow Y rotation
       points.rotation.y += 0.002;
 
-      renderer.render(scene, camera);
+      if (rendererRef.current) {
+        rendererRef.current.render(scene, camera);
+      }
     };
     animate();
 
@@ -231,7 +244,9 @@ export default function HologramFaceLoader({ isActive = true, className }: Holog
       if (requestRef.current) cancelAnimationFrame(requestRef.current);
       if (rendererRef.current) {
         rendererRef.current.dispose();
-        if (containerRef.current) containerRef.current.removeChild(renderer.domElement);
+        if (containerRef.current && rendererRef.current.domElement.parentNode === containerRef.current) {
+          containerRef.current.removeChild(rendererRef.current.domElement);
+        }
       }
       geometry.dispose();
       material.dispose();

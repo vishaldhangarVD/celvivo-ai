@@ -1,9 +1,9 @@
-
 "use client";
 import { Suspense, useEffect, useState, useRef, useMemo } from "react";
 import { useRouter, useParams, useSearchParams } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
 import Link from "next/link";
+import dynamic from 'next/dynamic';
 import { Button } from "@/components/ui/button";
 import { 
   Loader2, 
@@ -45,7 +45,17 @@ import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 import HolographicInterviewer from "@/components/HolographicInterviewer";
 import CandidateHologram from "@/components/CandidateHologram";
-import HologramFaceLoader from "@/components/HologramFaceLoader";
+
+// Dynamic import for the Three.js hologram to prevent SSR errors
+const HologramFaceLoader = dynamic(() => import("@/components/HologramFaceLoader"), { 
+  ssr: false,
+  loading: () => (
+    <div className="w-full h-full flex flex-col items-center justify-center bg-[#050816]">
+       <Loader2 className="w-12 h-12 text-accent animate-spin mb-4" />
+       <p className="text-[10px] font-black uppercase tracking-[0.5em] text-accent animate-pulse">Initialising Matrix...</p>
+    </div>
+  )
+});
 
 function VirtualArenaContent() {
   const router = useRouter();
@@ -180,8 +190,8 @@ function VirtualArenaContent() {
           setAskedQuestions([response.nextQuestion]);
           setCurrentSimStage(response.stage);
         }
-        // Simulated delay to appreciate the hologram materialization
-        setTimeout(() => setIsInitializing(false), 2500);
+        // Materialization delay for the hologram effect
+        setTimeout(() => setIsInitializing(false), 3000);
       } else {
         router.push('/interview');
       }
@@ -262,8 +272,10 @@ function VirtualArenaContent() {
 
   if (isInitializing) {
     return (
-      <div className="h-screen w-full bg-[#050816]">
-        <HologramFaceLoader isActive={true} />
+      <div className="h-screen w-full bg-[#050816] flex items-center justify-center relative overflow-hidden">
+        <div className="absolute inset-0 z-0">
+           <HologramFaceLoader isActive={true} />
+        </div>
       </div>
     );
   }
@@ -311,7 +323,7 @@ function VirtualArenaContent() {
                  onClick={toggleMic}
                  className={cn(
                    "w-12 h-12 rounded-full transition-all",
-                   isMicOn ? "bg-white/5 text-white/70 hover:bg-white/10" : "bg-red-500/20 text-red-500 hover:bg-red-500/30 border border-red-500/40"
+                   isMicOn ? "bg-white/5 text-white/70 hover:bg-white/10" : "bg-red-500/20 text-red-400 hover:bg-red-500/30 border border-red-500/40"
                  )}
                >
                  {isMicOn ? <Mic className="w-5 h-5" /> : <MicOff className="w-5 h-5" />}
@@ -325,7 +337,7 @@ function VirtualArenaContent() {
                  onClick={toggleCamera}
                  className={cn(
                    "w-12 h-12 rounded-full transition-all",
-                   isCameraOn ? "bg-white/5 text-white/70 hover:bg-white/10" : "bg-red-500/20 text-red-500 hover:bg-red-500/30 border border-red-500/40"
+                   isCameraOn ? "bg-white/5 text-white/70 hover:bg-white/10" : "bg-red-500/20 text-red-400 hover:bg-red-500/30 border border-red-500/40"
                  )}
                >
                  {isCameraOn ? <Video className="w-5 h-5" /> : <VideoOff className="w-5 h-5" />}
