@@ -16,8 +16,8 @@ interface CandidateHologramProps {
 }
 
 /**
- * @fileOverview CandidateHologram - The Unified Nexvoro AI Hologram Engine.
- * Uses a React-managed canvas ref to avoid removeChild DOM conflicts.
+ * @fileOverview CandidateHologram - High-fidelity Neural Identity Projection.
+ * Features normalized geometry, surface-restricted sampling, and tight framing.
  */
 
 export default function CandidateHologram({ 
@@ -40,7 +40,8 @@ export default function CandidateHologram({
   const [isLoading, setIsLoading] = useState(true);
 
   const PARTICLE_COUNT = 14000;
-  const FORMATION_SPEED = 0.02;
+  const FORMATION_SPEED = 0.04; // Faster initial formation
+  const SETTLE_EASE = 0.08;     // Firmer settling for sharp features
 
   const safeStatusChange = useCallback((status: string) => {
     if (typeof onStatusChange === 'function') {
@@ -63,17 +64,17 @@ export default function CandidateHologram({
     const width = containerRef.current.clientWidth || 400;
     const height = containerRef.current.clientHeight || 400;
 
-    // 1. Scene & Camera Setup
+    // 1. Scene & Camera Setup (Tight Framing)
     const scene = new THREE.Scene();
-    scene.background = new THREE.Color(0x001a2e); // Permanent Dark Navy
+    scene.background = new THREE.Color(0x001a2e); 
     sceneRef.current = scene;
 
-    const camera = new THREE.PerspectiveCamera(35, width / height, 0.1, 100);
-    camera.position.set(0, 0, 16); 
+    const camera = new THREE.PerspectiveCamera(45, width / height, 0.1, 100);
+    camera.position.set(0, 0, 3.5); // Framed for head/shoulders
     camera.lookAt(0, 0, 0);
     cameraRef.current = camera;
 
-    // 2. Renderer Initialization (Using React-managed canvas)
+    // 2. Renderer Initialization
     const renderer = new THREE.WebGLRenderer({ 
       canvas: canvasRef.current,
       antialias: true, 
@@ -90,33 +91,32 @@ export default function CandidateHologram({
     const colors = new Float32Array(PARTICLE_COUNT * 3);
     const masks = new Int8Array(PARTICLE_COUNT);
 
-    // 4. Generate Procedural Baseline (Immediate Render)
+    // 4. Generate Procedural Baseline (Ellipsoid Face Shape)
     for (let i = 0; i < PARTICLE_COUNT; i++) {
       const phi = Math.acos(-1 + (2 * i) / PARTICLE_COUNT);
       const theta = Math.sqrt(PARTICLE_COUNT * Math.PI) * phi;
       
-      const x = 2.8 * Math.cos(theta) * Math.sin(phi);
-      const y = 3.5 * Math.sin(theta) * Math.sin(phi);
-      const z = 2.4 * Math.cos(phi);
+      const x = 0.6 * Math.cos(theta) * Math.sin(phi);
+      const y = 0.8 * Math.sin(theta) * Math.sin(phi);
+      const z = 0.5 * Math.cos(phi);
 
       targetPositions[i * 3] = x;
       targetPositions[i * 3 + 1] = y;
       targetPositions[i * 3 + 2] = z;
 
-      // Define mouth/eye areas for procedural fallback
-      if (y < -1.2 && y > -2.2 && Math.abs(x) < 1.0 && z > 1.2) {
-        masks[i] = y > -1.7 ? 1 : 2; 
-      } else if (y > 0.8 && y < 1.8 && Math.abs(x) > 0.4 && Math.abs(x) < 1.8 && z > 1.4) {
-        masks[i] = 3; 
+      // Identify mouth area for procedural fallback animation
+      if (y < -0.2 && y > -0.5 && Math.abs(x) < 0.2 && z > 0.3) {
+        masks[i] = y > -0.35 ? 1 : 2; 
       }
 
-      positions[i * 3] = (Math.random() - 0.5) * 10;
-      positions[i * 3 + 1] = (Math.random() - 0.5) * 10;
-      positions[i * 3 + 2] = (Math.random() - 0.5) * 10;
+      // Initial scatter (Reduced jitter for faster recognition)
+      positions[i * 3] = (Math.random() - 0.5) * 4;
+      positions[i * 3 + 1] = (Math.random() - 0.5) * 4;
+      positions[i * 3 + 2] = (Math.random() - 0.5) * 4;
 
       colors[i * 3] = 0.1; 
-      colors[i * 3 + 1] = 0.7 + Math.random() * 0.3; 
-      colors[i * 3 + 2] = 0.9;
+      colors[i * 3 + 1] = 0.8 + Math.random() * 0.2; 
+      colors[i * 3 + 2] = 0.95;
     }
 
     const geometry = new THREE.BufferGeometry();
@@ -124,7 +124,7 @@ export default function CandidateHologram({
     geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
 
     const material = new THREE.PointsMaterial({
-      size: 0.028,
+      size: 0.022,
       vertexColors: true,
       transparent: true,
       opacity: 0.8,
@@ -136,7 +136,7 @@ export default function CandidateHologram({
     scene.add(points);
     pointsRef.current = points;
 
-    // 5. Async GLB Load
+    // 5. Async GLB Load with Normalization
     const loader = new GLTFLoader();
     loader.load('/models/face.glb', (gltf) => {
       if (!isMounted) return;
@@ -145,6 +145,7 @@ export default function CandidateHologram({
       gltf.scene.traverse((node) => {
         if ((node as THREE.Mesh).isMesh) {
           const mesh = node as THREE.Mesh;
+          // Prefer higher poly meshes for better face detail
           if (!headMesh || mesh.geometry.attributes.position.count > headMesh.geometry.attributes.position.count) {
             headMesh = mesh;
           }
@@ -154,32 +155,43 @@ export default function CandidateHologram({
       if (headMesh) {
         const geo = headMesh.geometry;
         const attr = geo.attributes.position;
-        console.log("Model loaded, vertex count: " + attr.count);
-
+        
+        // Normalization Protocol
         geo.computeBoundingBox();
         const box = geo.boundingBox!;
         const center = new THREE.Vector3();
         const size = new THREE.Vector3();
         box.getCenter(center);
         box.getSize(size);
-
-        const scale = 7.0 / Math.max(size.x, size.y, size.z);
+        
+        console.log(`[Hologram] Normalizing model: ${size.x.toFixed(2)}x${size.y.toFixed(2)}x${size.z.toFixed(2)}`);
+        
+        // Scale to a standard 1.5 unit head height
+        const scale = 1.6 / size.y;
 
         for (let i = 0; i < PARTICLE_COUNT; i++) {
-          const idx = i % attr.count;
+          const idx = (i % attr.count);
           const tx = (attr.getX(idx) - center.x) * scale;
           const ty = (attr.getY(idx) - center.y) * scale;
           const tz = (attr.getZ(idx) - center.z) * scale;
+
+          // Filter sampling to the face region (Upper 75% of model height)
+          // This prevents "blobs" from neck/shoulder geometry
+          const heightFactor = (ty - (box.min.y * scale)) / (size.y * scale);
+          if (heightFactor < 0.25 && Math.random() > 0.2) {
+             // Re-sample if below chin to prioritize face density
+             i--; continue;
+          }
 
           targetPositions[i * 3] = tx;
           targetPositions[i * 3 + 1] = ty;
           targetPositions[i * 3 + 2] = tz;
 
-          // Recalculate masks for model geometry
-          if (ty < -1.1 && ty > -2.4 && Math.abs(tx) < 1.2 && tz > 1.0) {
-            masks[i] = ty > -1.75 ? 1 : 2;
-          } else if (ty > 0.6 && ty < 1.8 && Math.abs(tx) > 0.5 && Math.abs(tx) < 1.8 && tz > 1.2) {
-            masks[i] = 3;
+          // Neural Animation Masks (normalized coordinates)
+          if (ty < -0.15 && ty > -0.45 && Math.abs(tx) < 0.3 && tz > 0.2) {
+            masks[i] = ty > -0.3 ? 1 : 2; // Upper vs Lower Lip
+          } else if (ty > 0.1 && ty < 0.4 && Math.abs(tx) > 0.15 && Math.abs(tx) < 0.5 && tz > 0.3) {
+            masks[i] = 3; // Eyes
           } else {
             masks[i] = 0;
           }
@@ -219,19 +231,21 @@ export default function CandidateHologram({
           let ty = targetPositions[i3 + 1];
           let tz = targetPositions[i3 + 2];
 
-          // Mouth/Eye isolated animation
-          if (masks[i] === 1) ty += speakCycle * 0.08;
-          else if (masks[i] === 2) ty -= speakCycle * 0.12;
+          // Sub-geometric animations
+          if (masks[i] === 1) ty += speakCycle * 0.03;
+          else if (masks[i] === 2) ty -= speakCycle * 0.04;
           else if (masks[i] === 3) ty *= blinkCycle;
 
-          const ease = formationProgress >= 1.0 ? 0.12 : 0.05;
+          // Firm lerp for sharper features
+          const ease = formationProgress >= 1.0 ? SETTLE_EASE : 0.05;
           pArray[i3] += (tx - pArray[i3]) * ease;
           pArray[i3 + 1] += (ty - pArray[i3 + 1]) * ease;
           pArray[i3 + 2] += (tz - pArray[i3 + 2]) * ease;
         }
 
         posAttr.needsUpdate = true;
-        pointsRef.current.rotation.y = Math.sin(time * 0.0004) * 0.02;
+        // Subtle Y-axis life-rotation
+        pointsRef.current.rotation.y = Math.sin(time * 0.0004) * 0.05;
       }
 
       if (rendererRef.current && sceneRef.current && cameraRef.current) {
@@ -251,7 +265,6 @@ export default function CandidateHologram({
     };
     window.addEventListener('resize', handleResize);
 
-    // 7. Stable Cleanup
     return () => {
       isMounted = false;
       window.removeEventListener('resize', handleResize);
@@ -309,3 +322,4 @@ export default function CandidateHologram({
     </div>
   );
 }
+
