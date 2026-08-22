@@ -183,7 +183,7 @@ export default function PricingPage() {
       popular: true,
       features: [
         "Everything in Pro",
-        "Exclusive HR Interview — 5 Uses Every Day",
+        "Elite HR Interview — 5 Priority Sessions Every Day",
         "Resume Generation",
         "Aptitude Assessments",
         "Coding Assessments",
@@ -278,7 +278,7 @@ export default function PricingPage() {
                         initial={{ opacity: 0, scale: 0.9 }}
                         animate={{ opacity: 1, scale: 1 }}
                         exit={{ opacity: 0, scale: 0.9 }}
-                        className="text-6xl font-black tracking-tighter"
+                        className="text-6 font-black tracking-tighter"
                       >
                         {plan.price}
                       </motion.span>
@@ -290,14 +290,25 @@ export default function PricingPage() {
 
                 <div className="space-y-4 mb-12 flex-1 overflow-y-auto max-h-[400px] pr-2 custom-scrollbar">
                   <p className="text-[10px] font-black uppercase tracking-[0.3em] text-white/20 mb-6 border-b border-white/5 pb-2">Capability Matrix</p>
-                  {plan.features.map((feature, j) => (
-                    <div key={j} className="flex items-start gap-4 text-sm font-light text-white/70 group">
-                      <div className={cn("mt-1 shrink-0", plan.popular ? "text-accent" : "text-white/20")}>
-                        <Check className="w-4 h-4" />
+                  {plan.features.map((feature, j) => {
+                    const isEliteFeature = feature.includes("Elite HR Interview");
+                    return (
+                      <div key={j} className={cn(
+                        "flex items-start gap-4 text-sm transition-all group",
+                        isEliteFeature ? "text-accent font-bold" : "font-light text-white/70"
+                      )}>
+                        <div className={cn("mt-1 shrink-0", (plan.popular || isEliteFeature) ? "text-accent" : "text-white/20")}>
+                          <Check className="w-4 h-4" />
+                        </div>
+                        <span className={cn(
+                          "transition-colors leading-snug",
+                          isEliteFeature ? "text-accent" : "group-hover:text-white"
+                        )}>
+                          {feature}
+                        </span>
                       </div>
-                      <span className="group-hover:text-white transition-colors leading-snug">{feature}</span>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
 
                 <Button 
