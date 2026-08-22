@@ -12,9 +12,9 @@ interface CandidateHologramProps {
 }
 
 /**
- * @fileOverview CandidateHologram - High-Stability GPU Protocol v10.0.
- * Defensive implementation to resolve GL_OUT_OF_MEMORY and 'precision' read errors.
- * Uses standard materials, capped pixel ratio, and aggressive disposal logic.
+ * @fileOverview CandidateHologram - High-Stability Lifecycle v11.0.
+ * Optimized for low-power GPU environments.
+ * Prevents renderer recreation on prop changes using refs.
  */
 export default function CandidateHologram({ 
   active = true, 
@@ -24,17 +24,31 @@ export default function CandidateHologram({
 }: CandidateHologramProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  
+  // Three.js Core Refs
   const rendererRef = useRef<THREE.WebGLRenderer | null>(null);
-  const animationRef = useRef<number | null>(null);
   const sceneRef = useRef<THREE.Scene | null>(null);
   const cameraRef = useRef<THREE.PerspectiveCamera | null>(null);
+  const animationRef = useRef<number | null>(null);
   
+  // Lifecycle Guards
+  const initializingRef = useRef(false);
+  const disposedRef = useRef(false);
+  
+  // Prop Sync Refs
+  const speakingRef = useRef(speaking);
+  const activeRef = useRef(active);
+
   const [isLoading, setIsLoading] = useState(true);
   const [contextLost, setContextLost] = useState(false);
 
-  // AGGRESSIVE MEMORY PURGE
+  // Sync props to refs to avoid re-initializing engine
+  useEffect(() => { speakingRef.current = speaking; }, [speaking]);
+  useEffect(() => { activeRef.current = active; }, [active]);
+
+  // RESOURCE DISPOSAL
   const disposeScene = useCallback(() => {
-    console.log("[Hologram] Initializing aggressive memory purge...");
+    console.log("[Hologram] Purging GPU resources...");
     
     if (animationRef.current) {
       cancelAnimationFrame(animationRef.current);
@@ -43,12 +57,12 @@ export default function CandidateHologram({
 
     if (sceneRef.current) {
       sceneRef.current.traverse((object) => {
-        if ((object as any).isMesh || (object as any).isPoints) {
+        if ((object as THREE.Mesh).isMesh || (object as THREE.Points).isPoints) {
           const mesh = object as THREE.Mesh | THREE.Points;
           mesh.geometry.dispose();
           if (Array.isArray(mesh.material)) {
             mesh.material.forEach(m => m.dispose());
-          } else {
+          } else if (mesh.material) {
             mesh.material.dispose();
           }
         }
@@ -59,7 +73,6 @@ export default function CandidateHologram({
 
     if (rendererRef.current) {
       rendererRef.current.dispose();
-      rendererRef.current.forceContextLoss();
       rendererRef.current = null;
     }
     
@@ -67,114 +80,91 @@ export default function CandidateHologram({
   }, []);
 
   const initEngine = useCallback(() => {
+    // Strict Guard: Prevent multiple renderers or init during disposal
+    if (initializingRef.current || rendererRef.current || disposedRef.current) return;
     if (!containerRef.current || !canvasRef.current) return;
 
     const rect = containerRef.current.getBoundingClientRect();
-    const width = rect.width;
-    const height = rect.height;
+    if (rect.width <= 0 || rect.height <= 0) return;
 
-    // 1. DEFENSIVE DIMENSION CHECK
-    if (width <= 0 || height <= 0) {
-      console.warn("[Hologram] Container has no dimensions. Postponing init.");
-      return;
-    }
-
+    initializingRef.current = true;
     setIsLoading(true);
     setContextLost(false);
     
     try {
-      // 2. PROACTIVE CONTEXT CHECK
-      const gl = canvasRef.current.getContext('webgl2') || canvasRef.current.getContext('webgl');
-      if (!gl) {
-        throw new Error("WebGL context unavailable - GPU resources likely locked.");
-      }
-
-      // 3. SCENE & CAMERA
+      // 1. SCENE & CAMERA
       const scene = new THREE.Scene();
       scene.background = new THREE.Color(0x000810);
       sceneRef.current = scene;
 
-      const camera = new THREE.PerspectiveCamera(42, width / height, 0.1, 100);
+      const camera = new THREE.PerspectiveCamera(42, rect.width / rect.height, 0.1, 100);
       camera.position.set(0, 0, 3.0);
       camera.lookAt(0, 0, 0);
       cameraRef.current = camera;
 
-      // 4. RENDERER (Safe creation with pixel ratio cap)
+      // 2. RENDERER (Low Power Config)
       const renderer = new THREE.WebGLRenderer({
         canvas: canvasRef.current,
-        antialias: true,
+        antialias: false, // Reduced GPU load
         alpha: false,
-        powerPreference: "high-performance"
+        powerPreference: "low-power",
+        preserveDrawingBuffer: false
       });
       
-      // REDUCE GPU PRESSURE: Cap at 1.5 max
-      renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
-      renderer.setSize(width, height);
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.25)); // Aggressive cap
+      renderer.setSize(rect.width, rect.height);
       rendererRef.current = renderer;
 
-      // 5. CONTEXT RECOVERY LISTENERS
-      const handleContextLost = (event: Event) => {
-        event.preventDefault();
-        console.warn("[Hologram] WebGL Context Lost. Resources exhausted.");
+      // 3. LISTENERS
+      const onContextLost = (e: Event) => {
+        e.preventDefault();
+        console.warn("[Hologram] Context Lost.");
         setContextLost(true);
         if (animationRef.current) cancelAnimationFrame(animationRef.current);
       };
 
-      const handleContextRestored = () => {
-        console.log("[Hologram] WebGL Context Restored. Re-initializing matrix...");
+      const onContextRestored = () => {
+        console.log("[Hologram] Context Restored. Re-syncing...");
+        disposeScene();
+        initializingRef.current = false;
         initEngine();
       };
 
-      canvasRef.current.addEventListener('webglcontextlost', handleContextLost, false);
-      canvasRef.current.addEventListener('webglcontextrestored', handleContextRestored, false);
+      canvasRef.current.addEventListener('webglcontextlost', onContextLost, false);
+      canvasRef.current.addEventListener('webglcontextrestored', onContextRestored, false);
 
-      // 6. ASSET LOADING
+      // 4. LOAD ASSETS
       const loader = new GLTFLoader();
       loader.load('/models/woman_head.glb', (gltf) => {
-        const model = gltf.scene;
+        // Guard against async load after unmount
+        if (disposedRef.current || !sceneRef.current) return;
 
-        // NORMALIZATION (Exact scale target: 1.4)
+        const model = gltf.scene;
         const box = new THREE.Box3().setFromObject(model);
         const size = box.getSize(new THREE.Vector3());
-        const maxDim = Math.max(size.x, size.y, size.z);
-        const scale = 1.4 / maxDim;
+        const scale = 1.4 / Math.max(size.x, size.y, size.z);
         model.scale.setScalar(scale);
 
-        // AUTO-CENTERING (ONE line for position.y adjustment)
         const scaledBox = new THREE.Box3().setFromObject(model);
         const scaledCenter = scaledBox.getCenter(new THREE.Vector3());
         model.position.x -= scaledCenter.x;
         model.position.y -= scaledCenter.y;
         model.position.z -= scaledCenter.z;
 
-        // DIAGNOSTIC LOGS
-        console.log("[Hologram] Final model world position:", model.position);
-        console.log("[Hologram] Final model world bounding box:", new THREE.Box3().setFromObject(model));
-        console.log("[Hologram] Camera position:", camera.position);
-
-        // Particle Collection
         const facePositions: number[] = [];
-        const eyePositions: number[] = [];
         const mouthPositions: number[] = [];
         const hairPositions: number[] = [];
-
-        // STRICT PARTICLE CAPS
-        const HAIR_TOTAL_LIMIT = 1200;
-        let hairCount = 0;
+        const HAIR_LIMIT = 1200;
+        let hCount = 0;
 
         model.traverse((child) => {
           if ((child as THREE.Mesh).isMesh) {
             const mesh = child as THREE.Mesh;
-            const posAttr = mesh.geometry.attributes.position;
+            const pos = mesh.geometry.attributes.position;
             const name = child.name.toLowerCase();
 
-            const isFace = name.includes("face");
-            const isMouth = name.includes("mouth");
-            const isIris = name.includes("iris");
-            const isHair = name.includes("hair");
-
-            if (isFace) {
-              const wireMaterial = new THREE.MeshBasicMaterial({
+            if (name.includes("face")) {
+              const wireMat = new THREE.MeshBasicMaterial({
                 color: 0x4ff0ff,
                 wireframe: true,
                 transparent: true,
@@ -182,122 +172,96 @@ export default function CandidateHologram({
                 blending: THREE.AdditiveBlending,
                 depthWrite: false
               });
-              const wireMesh = new THREE.Mesh(mesh.geometry.clone(), wireMaterial);
+              const wireMesh = new THREE.Mesh(mesh.geometry.clone(), wireMat);
               wireMesh.applyMatrix4(mesh.matrixWorld);
-              scene.add(wireMesh);
+              sceneRef.current?.add(wireMesh);
             }
 
             const tempV = new THREE.Vector3();
-            // i += 2 to achieve approx 2.4k face particles
-            for (let i = 0; i < posAttr.count; i += 2) {
-              tempV.set(posAttr.getX(i), posAttr.getY(i), posAttr.getZ(i));
+            for (let i = 0; i < pos.count; i += 2) {
+              tempV.set(pos.getX(i), pos.getY(i), pos.getZ(i));
               tempV.applyMatrix4(mesh.matrixWorld);
 
-              if (isFace) facePositions.push(tempV.x, tempV.y, tempV.z);
-              else if (isIris) eyePositions.push(tempV.x, tempV.y, tempV.z);
-              else if (isMouth) mouthPositions.push(tempV.x, tempV.y, tempV.z);
-              else if (isHair && hairCount < HAIR_TOTAL_LIMIT) {
+              if (name.includes("face")) facePositions.push(tempV.x, tempV.y, tempV.z);
+              else if (name.includes("mouth")) mouthPositions.push(tempV.x, tempV.y, tempV.z);
+              else if (name.includes("hair") && hCount < HAIR_LIMIT) {
                 hairPositions.push(tempV.x, tempV.y, tempV.z);
-                hairCount++;
+                hCount++;
               }
             }
           }
         });
 
-        // FACE PARTICLES (Standard PointsMaterial)
-        const faceGeo = new THREE.BufferGeometry();
-        faceGeo.setAttribute('position', new THREE.Float32BufferAttribute(facePositions, 3));
-        const faceMat = new THREE.PointsMaterial({
-          color: 0x4ff0ff,
-          size: 0.025,
-          transparent: true,
-          opacity: 0.85,
-          blending: THREE.AdditiveBlending,
-          depthWrite: false
-        });
-        scene.add(new THREE.Points(faceGeo, faceMat));
+        // Points Materials
+        const faceGeo = new THREE.BufferGeometry().setAttribute('position', new THREE.Float32BufferAttribute(facePositions, 3));
+        const facePoints = new THREE.Points(faceGeo, new THREE.PointsMaterial({ color: 0x4ff0ff, size: 0.025, transparent: true, opacity: 0.85, blending: THREE.AdditiveBlending }));
+        sceneRef.current.add(facePoints);
 
-        // HAIR PARTICLES (Standard PointsMaterial)
-        const hairGeo = new THREE.BufferGeometry();
-        hairGeo.setAttribute('position', new THREE.Float32BufferAttribute(hairPositions, 3));
-        const hairMat = new THREE.PointsMaterial({
-          color: 0x1a5fb4,
-          size: 0.01,
-          transparent: true,
-          opacity: 0.4,
-          blending: THREE.AdditiveBlending,
-          depthWrite: false
-        });
-        scene.add(new THREE.Points(hairGeo, hairMat));
+        const hairGeo = new THREE.BufferGeometry().setAttribute('position', new THREE.Float32BufferAttribute(hairPositions, 3));
+        const hairPoints = new THREE.Points(hairGeo, new THREE.PointsMaterial({ color: 0x1a5fb4, size: 0.01, transparent: true, opacity: 0.4, blending: THREE.AdditiveBlending }));
+        sceneRef.current.add(hairPoints);
 
-        // MOUTH PARTICLES
         const mouthGeo = new THREE.BufferGeometry();
         const mouthTarget = new Float32Array(mouthPositions);
         mouthGeo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(mouthPositions), 3));
-        const mouthMat = new THREE.PointsMaterial({
-          color: 0x4ff0ff,
-          size: 0.02,
-          transparent: true,
-          opacity: 0.3,
-          blending: THREE.AdditiveBlending,
-          depthWrite: false
-        });
-        const mouthPoints = new THREE.Points(mouthGeo, mouthMat);
-        scene.add(mouthPoints);
+        const mouthPoints = new THREE.Points(mouthGeo, new THREE.PointsMaterial({ color: 0x4ff0ff, size: 0.02, transparent: true, opacity: 0.3, blending: THREE.AdditiveBlending }));
+        sceneRef.current.add(mouthPoints);
 
-        // ANIMATION LOOP
         let time = 0;
         const animate = () => {
-          if (!sceneRef.current || !rendererRef.current || !cameraRef.current) return;
+          if (disposedRef.current || !rendererRef.current || !sceneRef.current || !cameraRef.current) return;
           animationRef.current = requestAnimationFrame(animate);
           time += 0.016;
 
-          // Stable Rotation
           sceneRef.current.rotation.y = Math.sin(time * 0.4) * 0.05;
 
-          if (speaking) {
+          // React to speaking via ref
+          if (speakingRef.current) {
             const pArr = mouthGeo.attributes.position.array as Float32Array;
-            const speechAmp = Math.abs(Math.sin(time * 15)) * 0.03;
+            const amp = Math.abs(Math.sin(time * 15)) * 0.03;
             for (let i = 0; i < pArr.length; i += 3) {
-              pArr[i+1] = mouthTarget[i+1] + (Math.random() - 0.5) * speechAmp;
+              pArr[i+1] = mouthTarget[i+1] + (Math.random() - 0.5) * amp;
             }
             mouthGeo.attributes.position.needsUpdate = true;
-          } else {
-            const pArr = mouthGeo.attributes.position.array as Float32Array;
-            if (pArr[1] !== mouthTarget[1]) {
-               for (let i = 0; i < pArr.length; i++) pArr[i] = mouthTarget[i];
-               mouthGeo.attributes.position.needsUpdate = true;
-            }
           }
 
-          // DIRECT RENDER: Avoid composer to save VRAM
           rendererRef.current.render(sceneRef.current, cameraRef.current);
         };
 
         animate();
         setIsLoading(false);
+        initializingRef.current = false;
       }, undefined, (err) => {
         console.error("[Hologram] Load Fault:", err);
+        initializingRef.current = false;
         setIsLoading(false);
       });
+
     } catch (err) {
-      console.error("[Hologram] Fatal WebGL Initialization Fault:", err);
-      setContextLost(true);
+      console.error("[Hologram] Fatal Init:", err);
+      initializingRef.current = false;
       setIsLoading(false);
     }
+  }, [disposeScene]);
 
-  }, [speaking]);
-
+  // ON MOUNT
   useEffect(() => {
+    disposedRef.current = false;
     initEngine();
-    return disposeScene;
+
+    return () => {
+      disposedRef.current = true;
+      disposeScene();
+    };
   }, [initEngine, disposeScene]);
 
+  // RESIZE
   useEffect(() => {
     const handleResize = () => {
       if (!containerRef.current || !rendererRef.current || !cameraRef.current) return;
       const w = containerRef.current.clientWidth;
       const h = containerRef.current.clientHeight;
+      if (w <= 0 || h <= 0) return;
       cameraRef.current.aspect = w / h;
       cameraRef.current.updateProjectionMatrix();
       rendererRef.current.setSize(w, h);
@@ -307,10 +271,7 @@ export default function CandidateHologram({
   }, []);
 
   return (
-    <div 
-      ref={containerRef} 
-      className={`w-full h-full relative overflow-hidden bg-[#000810] ${className ?? ""}`}
-    >
+    <div ref={containerRef} className={cn("w-full h-full relative overflow-hidden bg-[#000810]", className)}>
       <canvas ref={canvasRef} className="w-full h-full block" />
       
       {isLoading && !contextLost && (
@@ -322,13 +283,11 @@ export default function CandidateHologram({
 
       {contextLost && (
         <div className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-red-950/20 backdrop-blur-xl p-8 text-center">
-          <p className="text-[10px] font-black uppercase tracking-widest text-red-400 mb-4">Memory Exhaustion Detected</p>
-          <p className="text-xs text-white/40 mb-6">GPU context is restricted or lost. Please close other heavy tabs and reopen this page.</p>
-          <button onClick={() => window.location.reload()} className="px-6 py-2 glass rounded-xl text-[9px] font-black uppercase tracking-widest text-accent">Attempt Recovery</button>
+          <p className="text-[10px] font-black uppercase tracking-widest text-red-400 mb-4">Neural Buffer Exhausted</p>
+          <p className="text-xs text-white/40 mb-6">GPU context dropped. This occurs when system resources are limited.</p>
+          <button onClick={() => window.location.reload()} className="px-6 py-2 glass rounded-xl text-[9px] font-black uppercase tracking-widest text-accent border border-accent/20">Re-Initialize</button>
         </div>
       )}
-
-      <div className="absolute inset-0 pointer-events-none shadow-[inset_0_0_100px_rgba(79,240,255,0.1)] mix-blend-screen opacity-50" />
     </div>
   );
 }
