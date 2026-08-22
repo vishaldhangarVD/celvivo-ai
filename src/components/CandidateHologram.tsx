@@ -16,10 +16,9 @@ interface CandidateHologramProps {
 }
 
 /**
- * @fileOverview CandidateHologram v45.0 - Final Realism Protocol.
- * Implements anatomical jitter, attribute-weighted sampling, and structural structure emphasis.
+ * @fileOverview CandidateHologram v50.0 - FINAL STABLE PROTOCOL.
+ * Fixed scale (0.32), fixed framing (z:3.2), and audited anatomical opacities.
  */
-
 export default function CandidateHologram({ 
   active = true, 
   speaking = false, 
@@ -41,6 +40,8 @@ export default function CandidateHologram({
     const rect = containerRef.current.getBoundingClientRect();
     const width = rect.width;
     const height = rect.height;
+    
+    console.log(`[Hologram] Canvas Initialized: ${width}x${height}`);
 
     const scene = new THREE.Scene();
     scene.background = new THREE.Color(0x001a2e); 
@@ -82,16 +83,15 @@ export default function CandidateHologram({
 
       const gltfScene = gltf.scene;
 
-      // 1. AXIAL ALIGNMENT (Hard-coded symmetric frontal)
+      // 1. AXIAL ALIGNMENT & PROVEN SCALE
       gltfScene.rotation.y = -0.12; 
 
-      // 2. PRECISION SCALING & CENTERING
       const box = new THREE.Box3().setFromObject(gltfScene);
       const size = box.getSize(new THREE.Vector3());
       const maxDim = Math.max(size.x, size.y, size.z);
       
-      // Normalize to 1.4 units
-      const scale = 1.4 / maxDim;
+      // Proven stable scale that fits frame at z:3.2
+      const scale = 0.32 / maxDim;
       gltfScene.scale.setScalar(scale);
 
       // IMPORTANT: RECOMPUTE CENTER POST-SCALE
@@ -99,17 +99,14 @@ export default function CandidateHologram({
       const scaledCenter = scaledBox.getCenter(new THREE.Vector3());
       const scaledSize = scaledBox.getSize(new THREE.Vector3());
       
-      // Center the model at origin
       gltfScene.position.x -= scaledCenter.x;
       gltfScene.position.y -= scaledCenter.y;
       gltfScene.position.z -= scaledCenter.z;
 
       console.log(`[Hologram] Normalized Dimensions: ${scaledSize.x.toFixed(2)}x${scaledSize.y.toFixed(2)}x${scaledSize.z.toFixed(2)}`);
 
-      // 3. WEIGHTED PARTICLE SAMPLING (Anatomical Tiers)
       const pointsPool: { pos: THREE.Vector3; type: string }[] = [];
-      let hairCount = 0;
-      const HAIR_CAP = 1800;
+      let counts = { face: 0, hair: 0, eye: 0, mouth: 0 };
 
       gltfScene.traverse((child) => {
         if ((child as THREE.Mesh).isMesh) {
@@ -119,78 +116,87 @@ export default function CandidateHologram({
 
           const isFace = name.includes("Face_mush_Face");
           const isMouth = name.includes("Mouth_mush_Mouth");
-          const isIris = name.includes("Eye_") && name.includes("Irises");
-          const isHair = name.includes("Hair_mush");
+          const isIris = name === "Eye_L_Irises_0" || name === "Eye_R_Irises_0";
           const isHairCap = name === "Hair_mush_Hair_Cap_0";
+          const isHairOther = name.includes("Hair_mush") && !isHairCap;
+          const isTorso = name.includes("Torso");
 
-          if (name.includes("Torso")) return;
+          if (isTorso) return;
 
-          // SOLID FILL LAYER (Anatomical Solidity)
-          if (isFace) {
-            const fillMaterial = new THREE.MeshBasicMaterial({
-              color: 0x003344,
-              transparent: true,
-              opacity: 0.15,
-              depthWrite: false,
-              side: THREE.FrontSide
-            });
-            const fillMesh = new THREE.Mesh(mesh.geometry.clone(), fillMaterial);
-            fillMesh.applyMatrix4(mesh.matrixWorld);
-            scene.add(fillMesh);
-
-            // Structural Wireframe
+          // Wireframe Layer
+          if (isFace || isMouth) {
             const wireMaterial = new THREE.MeshBasicMaterial({
               color: 0x22d3ee,
               wireframe: true,
               transparent: true,
-              opacity: 0.6, // Structural Emphasis
+              opacity: isMouth ? 0.25 : 0.6,
               depthWrite: false
             });
             const wireMesh = new THREE.Mesh(mesh.geometry.clone(), wireMaterial);
             wireMesh.applyMatrix4(mesh.matrixWorld);
             scene.add(wireMesh);
-          }
 
-          if (isMouth) {
-            const mouthWireMat = new THREE.MeshBasicMaterial({
-              color: 0x22d3ee,
-              wireframe: true,
-              transparent: true,
-              opacity: 0.25, // Subtle Mouth
-              depthWrite: false
-            });
-            const mouthWire = new THREE.Mesh(mesh.geometry.clone(), mouthWireMat);
-            mouthWire.applyMatrix4(mesh.matrixWorld);
-            scene.add(mouthWire);
+            // Volumetric Solid Fill (Face Only)
+            if (isFace) {
+              const fillMaterial = new THREE.MeshBasicMaterial({
+                color: 0x003344,
+                transparent: true,
+                opacity: 0.15,
+                depthWrite: false,
+                side: THREE.FrontSide
+              });
+              const fillMesh = new THREE.Mesh(mesh.geometry.clone(), fillMaterial);
+              fillMesh.applyMatrix4(mesh.matrixWorld);
+              scene.add(fillMesh);
+            }
           }
 
           // SAMPLING PROTOCOL
+          const tempV = new THREE.Vector3();
           for (let i = 0; i < posAttr.count; i++) {
-            const v = new THREE.Vector3(posAttr.getX(i), posAttr.getY(i), posAttr.getZ(i));
-            v.applyMatrix4(mesh.matrixWorld);
+            tempV.set(posAttr.getX(i), posAttr.getY(i), posAttr.getZ(i));
+            tempV.applyMatrix4(mesh.matrixWorld);
 
             let shouldSample = false;
             let type = 'face';
 
-            if (isFace) shouldSample = true;
-            else if (isIris) { shouldSample = true; type = 'eye'; }
-            else if (isMouth) { shouldSample = Math.random() > 0.65; type = 'mouth'; }
-            else if (isHair) {
-              const density = isHairCap ? 0.45 : 0.08;
-              if (hairCount < HAIR_CAP && Math.random() < density) {
+            if (isFace) {
+              shouldSample = true;
+              counts.face++;
+            } else if (isIris) {
+              if (counts.eye < 400 && Math.random() < 0.8) {
                 shouldSample = true;
-                type = 'hair';
-                hairCount++;
-                // Anatomical Jitter for hair strands
-                v.y += (Math.random() - 0.5) * 0.02;
-                v.x += (Math.random() - 0.5) * 0.01;
+                type = 'eye';
+                counts.eye++;
+              }
+            } else if (isMouth) {
+              if (Math.random() < 0.1) {
+                shouldSample = true;
+                type = 'mouth';
+                counts.mouth++;
+              }
+            } else if (isHairCap) {
+              if (Math.random() < 0.5) {
+                shouldSample = true;
+                type = 'hair-cap';
+                counts.hair++;
+              }
+            } else if (isHairOther) {
+              if (Math.random() < 0.05) {
+                shouldSample = true;
+                type = 'hair-side';
+                counts.hair++;
               }
             }
 
-            if (shouldSample) pointsPool.push({ pos: v, type });
+            if (shouldSample) {
+              pointsPool.push({ pos: tempV.clone(), type });
+            }
           }
         }
       });
+
+      console.log(`[Hologram] Logic Distribution: Face=${counts.face}, Eyes=${counts.eye}, Mouth=${counts.mouth}, Hair=${counts.hair}`);
 
       const totalParticles = pointsPool.length;
       const positions = new Float32Array(totalParticles * 3);
@@ -208,9 +214,13 @@ export default function CandidateHologram({
         const t = pointsPool[i];
         const i3 = i * 3;
 
-        positions[i3] = (Math.random() - 0.5) * 3.0;
-        positions[i3 + 1] = (Math.random() - 0.5) * 3.0;
-        positions[i3 + 2] = (Math.random() - 0.5) * 3.0;
+        // Random orbital spawn
+        const radius = 2.2;
+        const theta = Math.random() * Math.PI * 2;
+        const phi = Math.acos(2 * Math.random() - 1);
+        positions[i3] = radius * Math.sin(phi) * Math.cos(theta);
+        positions[i3 + 1] = radius * Math.sin(phi) * Math.sin(theta);
+        positions[i3 + 2] = radius * Math.cos(phi);
 
         targetPositions[i3] = t.pos.x;
         targetPositions[i3 + 1] = t.pos.y;
@@ -218,18 +228,20 @@ export default function CandidateHologram({
 
         if (t.type === 'mouth') isMouthArray[i] = 1.0;
 
-        if (t.type === 'hair') {
+        if (t.type.includes('hair')) {
           colors[i3] = hairColor.r; colors[i3+1] = hairColor.g; colors[i3+2] = hairColor.b;
           sizes[i] = 0.01;
-          alphas[i] = 0.4;
+          alphas[i] = t.type === 'hair-cap' ? 0.4 : 0.3;
+          // Add anatomical jitter for hair strands
+          targetPositions[i3 + 1] += (Math.random() - 0.5) * 0.01;
         } else if (t.type === 'eye') {
           colors[i3] = faceColor.r; colors[i3+1] = faceColor.g; colors[i3+2] = faceColor.b;
           sizes[i] = 0.012;
           alphas[i] = 0.5;
         } else {
           colors[i3] = faceColor.r; colors[i3+1] = faceColor.g; colors[i3+2] = faceColor.b;
-          sizes[i] = 0.026;
-          alphas[i] = t.type === 'mouth' ? 0.3 : 0.9;
+          sizes[i] = 0.025;
+          alphas[i] = t.type === 'mouth' ? 0.3 : 0.85;
         }
       }
 
@@ -301,7 +313,7 @@ export default function CandidateHologram({
         time += 0.016;
 
         const pArr = geometry.attributes.position.array as Float32Array;
-        const speechIntensity = speaking ? Math.abs(Math.sin(time * 15)) * 0.04 : 0;
+        const speechIntensity = speaking ? Math.abs(Math.sin(time * 15)) * 0.03 : 0;
         
         particleMaterial.uniforms.uTime.value = time;
         particleMaterial.uniforms.uScanY.value = Math.sin(time * 0.8) * 1.5;
@@ -363,7 +375,7 @@ export default function CandidateHologram({
       {isLoading && (
         <div className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-[#001a2e]/60 backdrop-blur-md">
           <div className="w-12 h-12 border-2 border-accent/20 border-t-accent rounded-full animate-spin mb-4" />
-          <p className="text-[10px] font-black uppercase tracking-[0.5em] text-accent animate-pulse">Initializing Matrix...</p>
+          <p className="text-[10px] font-black uppercase tracking-[0.5em] text-accent animate-pulse">Synchronizing Matrix...</p>
         </div>
       )}
     </div>
