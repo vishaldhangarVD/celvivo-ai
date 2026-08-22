@@ -12,7 +12,7 @@ interface CandidateHologramProps {
 }
 
 /**
- * @fileOverview CandidateHologram - GPU Stability & Realism Protocol v7.0.
+ * @fileOverview CandidateHologram - GPU Stability & Realism Protocol v8.0.
  * Defensive implementation to resolve GL_OUT_OF_MEMORY and 'precision' read errors.
  * Uses standard materials and aggressive disposal logic.
  */
@@ -52,11 +52,18 @@ export default function CandidateHologram({
     if (rendererRef.current) {
       rendererRef.current.dispose();
       rendererRef.current.forceContextLoss();
+      rendererRef.current = null;
     }
     
-    sceneRef.current.clear();
-    sceneRef.current = null;
-    if (animationRef.current) cancelAnimationFrame(animationRef.current);
+    if (sceneRef.current) {
+      sceneRef.current.clear();
+      sceneRef.current = null;
+    }
+    
+    if (animationRef.current) {
+      cancelAnimationFrame(animationRef.current);
+      animationRef.current = null;
+    }
   }, []);
 
   const initEngine = useCallback(() => {
@@ -76,6 +83,12 @@ export default function CandidateHologram({
     setContextLost(false);
     
     try {
+      // PROACTIVE CONTEXT CHECK
+      const gl = canvasRef.current.getContext('webgl2') || canvasRef.current.getContext('webgl');
+      if (!gl) {
+        throw new Error("WebGL context unavailable - GPU resources likely locked.");
+      }
+
       // 1. SCENE & CAMERA
       const scene = new THREE.Scene();
       scene.background = new THREE.Color(0x000810);
@@ -86,7 +99,7 @@ export default function CandidateHologram({
       camera.lookAt(0, 0, 0);
       cameraRef.current = camera;
 
-      // 2. RENDERER (Clean direct render, wrapped in try/catch for context safety)
+      // 2. RENDERER (Wrapped for context safety)
       const renderer = new THREE.WebGLRenderer({
         canvas: canvasRef.current,
         antialias: true,
@@ -118,21 +131,26 @@ export default function CandidateHologram({
       loader.load('/models/woman_head.glb', (gltf) => {
         const model = gltf.scene;
 
-        // NORMALIZATION & CENTERING (LOCKED TO 1.4)
+        // NORMALIZATION (Exact scale target: 1.4)
         const box = new THREE.Box3().setFromObject(model);
         const size = box.getSize(new THREE.Vector3());
         const maxDim = Math.max(size.x, size.y, size.z);
         const scale = 1.4 / maxDim;
         model.scale.setScalar(scale);
 
-        // Re-center after scaling
+        // AUTO-CENTERING (ONE line for position.y reset as requested)
         const scaledBox = new THREE.Box3().setFromObject(model);
         const scaledCenter = scaledBox.getCenter(new THREE.Vector3());
         model.position.x -= scaledCenter.x;
         model.position.y -= scaledCenter.y;
         model.position.z -= scaledCenter.z;
 
-        // Categorized point collections
+        // DIAGNOSTIC LOGS
+        console.log("[Hologram] Final model world position:", model.position);
+        console.log("[Hologram] Final model world bounding box:", new THREE.Box3().setFromObject(model));
+        console.log("[Hologram] Camera position:", camera.position);
+
+        // Particle Collection
         const facePositions: number[] = [];
         const eyePositions: number[] = [];
         const mouthPositions: number[] = [];
@@ -267,8 +285,8 @@ export default function CandidateHologram({
           animationRef.current = requestAnimationFrame(animate);
           time += 0.016;
 
-          scene.position.y = Math.sin(time * 1.2) * 0.012;
-          scene.rotation.y = Math.sin(time * 0.4) * 0.05;
+          // Subtle idle movement on Y-axis is removed as per instruction to maintain pure center
+          sceneRef.current.rotation.y = Math.sin(time * 0.4) * 0.05;
 
           if (speaking) {
             const pArr = mouthGeo.attributes.position.array as Float32Array;
@@ -285,7 +303,9 @@ export default function CandidateHologram({
             }
           }
 
-          rendererRef.current.render(scene, cameraRef.current);
+          if (rendererRef.current && cameraRef.current && sceneRef.current) {
+            rendererRef.current.render(sceneRef.current, cameraRef.current);
+          }
         };
 
         animate();
@@ -327,7 +347,7 @@ export default function CandidateHologram({
     >
       <canvas ref={canvasRef} className="w-full h-full block" />
       
-      {isLoading && (
+      {isLoading && !contextLost && (
         <div className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-[#000810]/80 backdrop-blur-md">
           <div className="w-12 h-12 border-2 border-accent/20 border-t-accent rounded-full animate-spin mb-4" />
           <p className="text-[10px] font-black uppercase tracking-[0.5em] text-accent animate-pulse">Initialising Matrix...</p>
