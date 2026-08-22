@@ -13,26 +13,36 @@ interface CandidateHologramProps {
   speaking?: boolean;
   className?: string;
   isLoader?: boolean;
+  audioElement?: HTMLAudioElement | null;
 }
 
 /**
- * @fileOverview CandidateHologram - Elite Holographic Reconstruction Engine v5.0.
- * Features: Procedural Face Fallback, Neural Spring Physics, Bloom, and Scan-line shaders.
+ * @fileOverview CandidateHologram - Audio-Reactive Holographic Reconstruction Engine v6.0.
+ * Features: Depth-reconstruction, Neural Spring Physics, Bloom, Scan-lines, 
+ * and Audio-Reactive Vocal Jitter.
  */
 
 export default function CandidateHologram({ 
   active = true, 
   speaking = false, 
   className,
-  isLoader = false
+  isLoader = false,
+  audioElement = null
 }: CandidateHologramProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const rendererRef = useRef<THREE.WebGLRenderer | null>(null);
   const composerRef = useRef<EffectComposer | null>(null);
+  const bloomPassRef = useRef<UnrealBloomPass | null>(null);
   const animationRef = useRef<number | null>(null);
   
   const [isLoading, setIsLoading] = useState(true);
+
+  // Audio Analysis Refs
+  const audioCtxRef = useRef<AudioContext | null>(null);
+  const analyserRef = useRef<AnalyserNode | null>(null);
+  const dataArrayRef = useRef<Uint8Array | null>(null);
+  const sourceRef = useRef<MediaElementAudioSourceNode | null>(null);
 
   useEffect(() => {
     if (!containerRef.current || !canvasRef.current) return;
@@ -56,7 +66,7 @@ export default function CandidateHologram({
       alpha: false,
       powerPreference: "high-performance"
     });
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.25));
     renderer.setSize(width, height);
     rendererRef.current = renderer;
 
@@ -67,6 +77,7 @@ export default function CandidateHologram({
       0.4,  // Radius
       0.12  // Threshold
     );
+    bloomPassRef.current = bloomPass;
 
     const composer = new EffectComposer(renderer);
     composer.addPass(renderScene);
@@ -79,6 +90,7 @@ export default function CandidateHologram({
     const targetPositions = new Float32Array(PARTICLE_COUNT * 3);
     const velocities = new Float32Array(PARTICLE_COUNT * 3);
     const colors = new Float32Array(PARTICLE_COUNT * 3);
+    const masks = new Float32Array(PARTICLE_COUNT); // 1.0 = mouth region
 
     // Initial random spawn in a loose sphere
     for (let i = 0; i < PARTICLE_COUNT; i++) {
@@ -89,8 +101,7 @@ export default function CandidateHologram({
       positions[i * 3 + 1] = r * Math.sin(phi) * Math.sin(theta);
       positions[i * 3 + 2] = r * Math.cos(phi);
       
-      // Default procedural face fallback
-      // Base ellipsoid shape
+      // Default procedural face fallback (Faceted Ellipsoid)
       const pPhi = Math.acos(2.0 * Math.random() - 1.0);
       const pTheta = 2.0 * Math.PI * Math.random();
       let rx = 0.55 * Math.sin(pPhi) * Math.cos(pTheta);
@@ -102,9 +113,12 @@ export default function CandidateHologram({
       const dEyeR = Math.sqrt(Math.pow(rx + 0.2, 2) + Math.pow(ry - 0.25, 2));
       if (dEyeL < 0.12 || dEyeR < 0.12) rz -= 0.08;
 
-      // Indent mouth (y ~ -0.35)
+      // Indent mouth (y ~ -0.35, x ~ 0)
       const dMouth = Math.sqrt(Math.pow(rx, 2) * 2.0 + Math.pow(ry + 0.35, 2));
-      if (dMouth < 0.15) rz -= 0.06;
+      if (dMouth < 0.15) {
+        rz -= 0.06;
+        masks[i] = 1.0; // Tag as mouth
+      }
 
       targetPositions[i * 3] = rx;
       targetPositions[i * 3 + 1] = ry;
@@ -114,25 +128,33 @@ export default function CandidateHologram({
     const geometry = new THREE.BufferGeometry();
     geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
     geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+    geometry.setAttribute('aMask', new THREE.BufferAttribute(masks, 1));
 
-    // Custom Shader for Scanline and Coloring
+    // Custom Shader for Scanline, Coloring, and Vocal Jitter
     const particleMaterial = new THREE.ShaderMaterial({
       uniforms: {
         uTime: { value: 0 },
         uScanY: { value: 0 },
+        uMouthOpen: { value: 0 },
         uColor1: { value: new THREE.Color(0x00eaff) },
         uColor2: { value: new THREE.Color(0x4facfe) }
       },
       vertexShader: `
         uniform float uTime;
         uniform float uScanY;
+        uniform float uMouthOpen;
+        attribute float aMask;
         varying float vScan;
         varying vec3 vColor;
         
         void main() {
           vec3 pos = position;
           
-          // Subtle rotation handled in CPU loop for physics stability
+          // VOCAL JITTER: Move mouth particles vertically based on volume
+          if (aMask > 0.5) {
+            float jitter = sin(uTime * 50.0 + pos.x * 100.0) * 0.02 * uMouthOpen;
+            pos.y += jitter;
+          }
           
           // Scanline intensity based on height
           float distToScan = abs(pos.y - uScanY);
@@ -212,12 +234,11 @@ export default function CandidateHologram({
 
     // 6. Model Loading Logic
     const loader = new GLTFLoader();
-    // Path: /public/models/face-female.glb -> accessible at /models/face-female.glb
     loader.load('/models/face-female.glb', (gltf) => {
       if (!isMounted) return;
-      console.log("[Hologram] Mesh nodes detected:", gltf.scene);
-
+      
       const targetPool: THREE.Vector3[] = [];
+      const isMouth: boolean[] = [];
 
       gltf.scene.traverse((child) => {
         if ((child as THREE.Mesh).isMesh) {
@@ -225,7 +246,6 @@ export default function CandidateHologram({
           const posAttr = mesh.geometry.attributes.position;
           const name = child.name.toLowerCase();
           
-          // Weighted Sampling
           let density = 1.0;
           if (name.includes('hair')) density = 0.25;
           if (name.includes('body') || name.includes('cloth') || child.position.y < -0.5) density = 0;
@@ -242,7 +262,6 @@ export default function CandidateHologram({
       });
 
       if (targetPool.length > 0) {
-        // Normalization
         const box = new THREE.Box3().setFromPoints(targetPool);
         const center = box.getCenter(new THREE.Vector3());
         const size = box.getSize(new THREE.Vector3());
@@ -253,6 +272,7 @@ export default function CandidateHologram({
         targetPool.forEach(v => { if (v.z - center.z > 0) forwardPoints++; });
         const rotationY = forwardPoints < targetPool.length / 2 ? Math.PI : 0;
 
+        const maskAttr = geometry.attributes.aMask;
         for (let i = 0; i < PARTICLE_COUNT; i++) {
           const v = targetPool[i % targetPool.length].clone();
           v.sub(center).multiplyScalar(scale);
@@ -261,12 +281,14 @@ export default function CandidateHologram({
           targetPositions[i * 3] = v.x;
           targetPositions[i * 3 + 1] = v.y;
           targetPositions[i * 3 + 2] = v.z;
+
+          // Mouth detection logic (Y range approx)
+          maskAttr.array[i] = (v.y > -0.5 && v.y < -0.2 && Math.abs(v.x) < 0.2) ? 1.0 : 0.0;
         }
-        console.log(`[Hologram] High-fidelity model synchronized. Vertices: ${targetPool.length}`);
+        maskAttr.needsUpdate = true;
       }
       setIsLoading(false);
-    }, undefined, (err) => {
-      console.warn("[Hologram] Model 404/Error, maintaining procedural silhouette.");
+    }, undefined, () => {
       setIsLoading(false);
     });
 
@@ -280,10 +302,32 @@ export default function CandidateHologram({
       animationRef.current = requestAnimationFrame(animate);
       time += 0.016;
 
+      // Handle Audio Reactivity
+      let volume = 0;
+      if (analyserRef.current && dataArrayRef.current) {
+        analyserRef.current.getByteFrequencyData(dataArrayRef.current);
+        let sum = 0;
+        for(let i=0; i<dataArrayRef.current.length; i++) sum += dataArrayRef.current[i];
+        volume = (sum / dataArrayRef.current.length) / 255;
+      } else if (speaking) {
+        // Simulate volume peaks if we only have boolean
+        volume = (Math.sin(time * 15.0) * 0.5 + 0.5) * (Math.random() * 0.5 + 0.5);
+      }
+
       // Uniform Updates
       particleMaterial.uniforms.uTime.value = time;
       particleMaterial.uniforms.uScanY.value = Math.sin(time * 1.5) * 1.2;
+      particleMaterial.uniforms.uMouthOpen.value = THREE.MathUtils.lerp(
+        particleMaterial.uniforms.uMouthOpen.value, 
+        volume, 
+        0.3
+      );
       ringMat.uniforms.uTime.value = time;
+
+      // React bloom to volume
+      if (bloomPassRef.current) {
+        bloomPassRef.current.strength = 0.55 + volume * 0.4;
+      }
 
       // Spring Physics Loop
       const posAttr = geometry.attributes.position;
@@ -308,7 +352,6 @@ export default function CandidateHologram({
       }
       ambPoints.geometry.attributes.position.needsUpdate = true;
 
-      // Global Rotation and Bob
       points.rotation.y += 0.0015;
       points.position.y = Math.sin(time * 2.0) * 0.02;
 
@@ -347,6 +390,43 @@ export default function CandidateHologram({
     };
   }, []);
 
+  // Audio Context Initialization
+  useEffect(() => {
+    if (!audioElement || !active) return;
+
+    const initAudio = () => {
+      if (!audioCtxRef.current) {
+        audioCtxRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
+        const analyser = audioCtxRef.current.createAnalyser();
+        analyser.fftSize = 64;
+        analyserRef.current = analyser;
+        dataArrayRef.current = new Uint8Array(analyser.frequencyBinCount);
+
+        try {
+          sourceRef.current = audioCtxRef.current.createMediaElementSource(audioElement);
+          sourceRef.current.connect(analyser);
+          analyser.connect(audioCtxRef.current.destination);
+        } catch (e) {
+          console.warn("[Hologram] Audio source already connected or origin blocked.");
+        }
+      }
+
+      if (audioCtxRef.current.state === 'suspended') {
+        audioCtxRef.current.resume();
+      }
+    };
+
+    // Initialize on prop change or interaction
+    initAudio();
+    window.addEventListener('mousedown', initAudio, { once: true });
+    window.addEventListener('touchstart', initAudio, { once: true });
+
+    return () => {
+      window.removeEventListener('mousedown', initAudio);
+      window.removeEventListener('touchstart', initAudio);
+    };
+  }, [audioElement, active]);
+
   return (
     <div 
       ref={containerRef} 
@@ -365,16 +445,15 @@ export default function CandidateHologram({
                 Synchronizing Identity...
               </span>
             </div>
-            <div className="flex gap-1">
-              {[0, 1, 2].map((i) => (
-                <div 
-                  key={i}
-                  className="w-1 h-1 bg-accent rounded-full animate-bounce"
-                  style={{ animationDelay: `${i * 0.2}s` }}
-                />
-              ))}
-            </div>
           </div>
+        )}
+
+        {/* Audio Active Indicator */}
+        {speaking && (
+           <div className="absolute top-6 right-6 flex items-center gap-2 px-3 py-1 glass rounded-lg border-accent/20">
+             <div className="w-1 h-1 rounded-full bg-accent animate-ping" />
+             <span className="text-[8px] font-black text-accent uppercase tracking-widest">Neural Voice Link</span>
+           </div>
         )}
       </div>
 
