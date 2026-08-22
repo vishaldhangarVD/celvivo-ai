@@ -262,7 +262,7 @@ export default function CandidateHologram({
   return (
     <div 
       ref={containerRef} 
-      className={cn("w-full h-full relative bg-black overflow-hidden rounded-[2rem]", className)}
+      className={`w-full h-full relative bg-black overflow-hidden rounded-[2rem] ${className ?? ""}`}
     >
       {/* Cinematic HUD Overlays */}
       <div className="absolute inset-0 z-40 pointer-events-none">
