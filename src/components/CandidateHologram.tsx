@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useEffect, useRef, useState } from 'react';
@@ -32,17 +31,21 @@ export default function CandidateHologram({
     const initEngine = async () => {
       if (!containerRef.current || !canvasRef.current) return;
 
-      // 1. Scene & Camera Setup
       const scene = new THREE.Scene();
       sceneRef.current = scene;
 
-      const camera = new THREE.PerspectiveCamera(45, containerRef.current.clientWidth / containerRef.current.clientHeight, 0.1, 100);
+      const camera = new THREE.PerspectiveCamera(
+        45, 
+        containerRef.current.clientWidth / containerRef.current.clientHeight, 
+        0.1, 
+        100
+      );
       camera.position.set(0, 0, 3);
       camera.lookAt(0, 0, 0);
 
-      // 2. Renderer Initialization
+      let renderer: THREE.WebGLRenderer;
       try {
-        const renderer = new THREE.WebGLRenderer({ 
+        renderer = new THREE.WebGLRenderer({ 
           canvas: canvasRef.current, 
           antialias: true, 
           alpha: true, 
@@ -56,70 +59,79 @@ export default function CandidateHologram({
         return;
       }
 
-      // 3. Model Loading & Particle Generation
+      const handleResize = () => {
+        if (!containerRef.current || !rendererRef.current) return;
+        const w = containerRef.current.clientWidth;
+        const h = containerRef.current.clientHeight;
+        camera.aspect = w / h;
+        camera.updateProjectionMatrix();
+        rendererRef.current.setSize(w, h);
+      };
+      window.addEventListener('resize', handleResize);
+
       const loader = new GLTFLoader();
       loader.load('/models/woman_head.glb', (gltf) => {
         if (!isMounted) return;
 
         const gltfScene = gltf.scene;
+        gltfScene.updateMatrixWorld(true);
 
-        // Bounding Box Logic (Step-by-Step as specified)
         const boxRaw = new THREE.Box3().setFromObject(gltfScene);
         const sizeRaw = boxRaw.getSize(new THREE.Vector3());
         const maxDim = Math.max(sizeRaw.x, sizeRaw.y, sizeRaw.z);
         const scale = 1.4 / maxDim;
         gltfScene.scale.setScalar(scale);
+        gltfScene.updateMatrixWorld(true);
 
         const newBoundingBox = new THREE.Box3().setFromObject(gltfScene);
         gltfScene.position.sub(newBoundingBox.getCenter(new THREE.Vector3()));
+        gltfScene.updateMatrixWorld(true);
 
         const facePositions: number[] = [];
         const hairPool: number[] = [];
         const eyePositions: number[] = [];
         const mouthPositions: number[] = [];
-
         const faceWireGeoList: THREE.BufferGeometry[] = [];
         const mouthWireGeoList: THREE.BufferGeometry[] = [];
+
+        // Bake each mesh's FULL world transform directly into a cloned
+        // geometry, so wireframes and particles always align perfectly
+        // regardless of nesting/bones in the source model.
+        const bakedGeometry = (mesh: THREE.Mesh) => {
+          const geo = mesh.geometry.clone();
+          geo.applyMatrix4(mesh.matrixWorld);
+          return geo;
+        };
 
         gltfScene.traverse((child) => {
           if ((child as any).isMesh) {
             const mesh = child as THREE.Mesh;
             const name = mesh.name;
-            
             if (name.includes("Torso")) return;
 
             const posAttr = mesh.geometry.attributes.position;
             const tempV = new THREE.Vector3();
 
-            // Category Identification
             const isFace = name.includes("Face_mush_Face");
             const isMouth = name.includes("Mouth_mush_Mouth");
             const isEyes = name.includes("Eye_L_Irises") || name.includes("Eye_R_Irises");
             const isHair = name.includes("Hair_mush");
 
-            // Wireframe Collection
-            if (isFace) faceWireGeoList.push(mesh.geometry);
-            if (isMouth) mouthWireGeoList.push(mesh.geometry);
+            if (isFace) faceWireGeoList.push(bakedGeometry(mesh));
+            if (isMouth) mouthWireGeoList.push(bakedGeometry(mesh));
 
-            // Vertex Sampling
             for (let i = 0; i < posAttr.count; i++) {
               tempV.fromBufferAttribute(posAttr, i);
               tempV.applyMatrix4(mesh.matrixWorld);
 
-              if (isFace) {
-                facePositions.push(tempV.x, tempV.y, tempV.z);
-              } else if (isMouth) {
-                mouthPositions.push(tempV.x, tempV.y, tempV.z);
-              } else if (isEyes) {
-                eyePositions.push(tempV.x, tempV.y, tempV.z);
-              } else if (isHair) {
-                hairPool.push(tempV.x, tempV.y, tempV.z);
-              }
+              if (isFace) facePositions.push(tempV.x, tempV.y, tempV.z);
+              else if (isMouth) mouthPositions.push(tempV.x, tempV.y, tempV.z);
+              else if (isEyes) eyePositions.push(tempV.x, tempV.y, tempV.z);
+              else if (isHair) hairPool.push(tempV.x, tempV.y, tempV.z);
             }
           }
         });
 
-        // Hair Sampling (Hard cap at 1200)
         const hairPositions: number[] = [];
         const hairVertexCount = hairPool.length / 3;
         const hairSampleCount = Math.min(hairVertexCount, 1200);
@@ -128,32 +140,25 @@ export default function CandidateHologram({
           hairPositions.push(hairPool[idx], hairPool[idx + 1], hairPool[idx + 2]);
         }
 
-        // Materials & Scene Construction
         const faceWireMat = new THREE.MeshBasicMaterial({ color: 0x4ff0ff, wireframe: true, transparent: true, opacity: 0.6 });
         const mouthWireMat = new THREE.MeshBasicMaterial({ color: 0x4ff0ff, wireframe: true, transparent: true, opacity: 0.25 });
         materials.push(faceWireMat, mouthWireMat);
 
         faceWireGeoList.forEach(geo => {
-          const m = new THREE.Mesh(geo, faceWireMat);
-          m.position.copy(gltfScene.position);
-          m.scale.copy(gltfScene.scale);
-          scene.add(m);
+          geometries.push(geo);
+          scene.add(new THREE.Mesh(geo, faceWireMat));
         });
 
         mouthWireGeoList.forEach(geo => {
-          const m = new THREE.Mesh(geo, mouthWireMat);
-          m.position.copy(gltfScene.position);
-          m.scale.copy(gltfScene.scale);
-          scene.add(m);
+          geometries.push(geo);
+          scene.add(new THREE.Mesh(geo, mouthWireMat));
         });
 
         const createPoints = (pos: number[], color: number, size: number, opacity: number, additive = true) => {
+          if (pos.length === 0) return;
           const geo = new THREE.BufferGeometry().setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
           const mat = new THREE.PointsMaterial({ 
-            color, 
-            size, 
-            transparent: true, 
-            opacity, 
+            color, size, transparent: true, opacity, 
             blending: additive ? THREE.AdditiveBlending : THREE.NormalBlending,
             depthWrite: false 
           });
@@ -165,13 +170,14 @@ export default function CandidateHologram({
         createPoints(facePositions, 0x4ff0ff, 0.025, 0.85);
         createPoints(hairPositions, 0x1a5fb4, 0.01, 0.4);
         createPoints(eyePositions, 0x4ff0ff, 0.012, 0.5, false);
-        createPoints(mouthPositions, 0x4ff0ff, 0.025, 0.3);
+        createPoints(mouthPositions, 0x4ff0ff, 0.02, 0.3);
 
-        // 4. Animation Loop
+        console.log("[Hologram] Face:", facePositions.length / 3, "Hair:", hairPositions.length / 3, "Eyes:", eyePositions.length / 3, "Mouth:", mouthPositions.length / 3);
+        console.log("[Hologram] Model position:", gltfScene.position);
+
         const animate = () => {
           if (!isMounted || !rendererRef.current) return;
           animationRef.current = requestAnimationFrame(animate);
-
           scene.rotation.y += 0.0015;
           rendererRef.current.render(scene, camera);
         };
@@ -182,6 +188,8 @@ export default function CandidateHologram({
         console.error("[Hologram] GLTF Load Error:", err);
         setIsLoading(false);
       });
+
+      return () => window.removeEventListener('resize', handleResize);
     };
 
     initEngine();
@@ -189,10 +197,8 @@ export default function CandidateHologram({
     return () => {
       isMounted = false;
       if (animationRef.current) cancelAnimationFrame(animationRef.current);
-      
       geometries.forEach(g => g.dispose());
       materials.forEach(m => m.dispose());
-      
       if (rendererRef.current) {
         rendererRef.current.dispose();
         rendererRef.current = null;
@@ -203,7 +209,6 @@ export default function CandidateHologram({
   return (
     <div ref={containerRef} className={`w-full h-full relative overflow-hidden bg-[#000810] ${className ?? ""}`}>
       <canvas ref={canvasRef} className="w-full h-full block" />
-      
       {(isLoading || isLoader) && (
         <div className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-[#000810]/80 backdrop-blur-md">
           <div className="w-12 h-12 border-2 border-accent/20 border-t-accent rounded-full animate-spin mb-4" />
