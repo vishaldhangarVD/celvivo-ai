@@ -137,7 +137,6 @@ export default function CandidateHologram({
           }
         });
 
-        // Compute Head Center for Flow Bias
         const headCenter = new THREE.Vector3();
         const facePtsCount = facePositions.length / 3;
         for (let i = 0; i < facePositions.length; i += 3) {
@@ -147,7 +146,7 @@ export default function CandidateHologram({
         }
         headCenter.divideScalar(facePtsCount);
 
-        const sampleAndFlow = (pool: number[], target: number) => {
+        const sampleClean = (pool: number[], target: number) => {
           const result = [];
           const count = pool.length / 3;
           if (count === 0) return result;
@@ -157,29 +156,23 @@ export default function CandidateHologram({
             let py = pool[idx+1];
             let pz = pool[idx+2];
             
-            // Jitter reuse if pool is smaller than target
+            // Tight jitter reuse if pool is smaller than target
+            // Using +/- 0.002 range for clean surface matching
             if (i >= count) {
-              px += (Math.random() - 0.5) * 0.01;
-              py += (Math.random() - 0.5) * 0.01;
-              pz += (Math.random() - 0.5) * 0.01;
+              px += (Math.random() - 0.5) * 0.004;
+              py += (Math.random() - 0.5) * 0.004;
+              pz += (Math.random() - 0.5) * 0.004;
             }
-
-            // Directional Elongation: Outward from center + Downward gravity
-            const pVec = new THREE.Vector3(px, py, pz);
-            const dirOut = new THREE.Vector3().subVectors(pVec, headCenter).normalize();
-            const flowMag = 0.01 + Math.random() * 0.01;
-            pVec.addScaledVector(dirOut, flowMag);
-            pVec.y -= flowMag;
             
-            result.push(pVec.x, pVec.y, pVec.z);
+            result.push(px, py, pz);
           }
           return result;
         };
 
         const finalHairNodes = [
-          ...sampleAndFlow(capBackPool, 5500),
-          ...sampleAndFlow(frontPool, 1800),
-          ...sampleAndFlow(sidePool, 1700)
+          ...sampleClean(capBackPool, 5500),
+          ...sampleClean(frontPool, 1800),
+          ...sampleClean(sidePool, 1700)
         ];
 
         const faceWireMat = new THREE.MeshBasicMaterial({ color: 0x4ff0ff, wireframe: true, transparent: true, opacity: 0.35 });
@@ -204,14 +197,7 @@ export default function CandidateHologram({
 
         createPoints(facePositions, 0x4ff0ff, 0.025, 0.9);
         
-        // Stratified Hair Materials for realistic variance
-        const hairChunks = [
-          finalHairNodes.slice(0, 9000), // Tier Alpha
-          finalHairNodes.slice(9000, 18000), // Tier Beta
-          finalHairNodes.slice(18000) // Tier Gamma
-        ];
-        
-        // Group nodes for 3 distinct material properties
+        // Stratified Hair Materials for realistic variance with tighter range (+/- 10%)
         const ptsA = [], ptsB = [], ptsC = [];
         for (let i = 0; i < finalHairNodes.length; i += 3) {
           const r = Math.random();
@@ -220,15 +206,12 @@ export default function CandidateHologram({
           else ptsC.push(finalHairNodes[i], finalHairNodes[i+1], finalHairNodes[i+2]);
         }
 
-        createPoints(ptsA, 0x1a5fb4, 0.014, 0.4);
+        createPoints(ptsA, 0x1a5fb4, 0.018, 0.45);
         createPoints(ptsB, 0x1a5fb4, 0.02, 0.5);
-        createPoints(ptsC, 0x1a5fb4, 0.026, 0.6);
+        createPoints(ptsC, 0x1a5fb4, 0.022, 0.55);
 
         createPoints(eyePositions, 0x4ff0ff, 0.012, 0.5, false);
         createPoints(mouthPositions, 0x4ff0ff, 0.02, 0.3);
-
-        console.log("[Hologram] Total Nodes:", (facePositions.length + finalHairNodes.length + eyePositions.length + mouthPositions.length) / 3);
-        console.log("[Hologram] Hair Nodes:", finalHairNodes.length / 3);
 
         const animate = () => {
           if (!isMounted || !rendererRef.current) return;
