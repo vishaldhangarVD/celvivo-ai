@@ -77,17 +77,14 @@ export default function CandidateHologram({
         const gltfScene = gltf.scene;
         gltfScene.updateMatrixWorld(true);
 
-        // 1. Raw Bounding Box
+        // 1. Normalization
         const boxRaw = new THREE.Box3().setFromObject(gltfScene);
         const sizeRaw = boxRaw.getSize(new THREE.Vector3());
-        
-        // 2. Exact 1.4-unit scaling
         const maxDim = Math.max(sizeRaw.x, sizeRaw.y, sizeRaw.z);
         const scale = 1.4 / maxDim;
         gltfScene.scale.setScalar(scale);
         gltfScene.updateMatrixWorld(true);
 
-        // 3. Absolute Centering
         const newBoundingBox = new THREE.Box3().setFromObject(gltfScene);
         const headCenter = newBoundingBox.getCenter(new THREE.Vector3());
         const headHeight = newBoundingBox.max.y - newBoundingBox.min.y;
@@ -155,14 +152,13 @@ export default function CandidateHologram({
           }
         });
 
-        // 4. Hair Reconstruction (6000 Target)
+        // 2. Hair Sampling (6000 Total)
         const samplePool = (pool: number[], target: number) => {
           const result = [];
           const count = pool.length / 3;
           if (count === 0) return result;
           for (let i = 0; i < target; i++) {
             const baseIdx = Math.floor(Math.random() * count) * 3;
-            // High-precision jitter
             const jitter = (Math.random() - 0.5) * 0.002;
             result.push(pool[baseIdx] + jitter, pool[baseIdx + 1] + jitter, pool[baseIdx + 2] + jitter);
           }
@@ -175,7 +171,7 @@ export default function CandidateHologram({
           ...samplePool(sideRaw, 1200)
         ];
 
-        // 5. Materials
+        // 3. Materials
         const faceWireMat = new THREE.MeshBasicMaterial({ color: 0x4ff0ff, wireframe: true, transparent: true, opacity: 0.2 });
         const mouthWireMat = new THREE.MeshBasicMaterial({ color: 0x4ff0ff, wireframe: true, transparent: true, opacity: 0.1 });
         materials.push(faceWireMat, mouthWireMat);
@@ -189,7 +185,7 @@ export default function CandidateHologram({
           const groups = variance > 0 ? 3 : 1;
           const posPerGroup = Math.floor((pos.length / 3) / groups);
 
-          for (let g = 0; i < groups; g++) {
+          for (let g = 0; g < groups; g++) {
             const start = g * posPerGroup * 3;
             const end = (g === groups - 1) ? pos.length : (g + 1) * posPerGroup * 3;
             const slice = pos.slice(start, end);
@@ -207,9 +203,9 @@ export default function CandidateHologram({
           }
         };
 
-        // Render Layers
-        createPoints(facePositions, 0x4ff0ff, 0.025, 0.95, 0.15); // Organic variance
-        createPoints(hairPoints, 0x1a5fb4, 0.02, 0.55, 0.1);
+        // 4. Layers
+        createPoints(facePositions, 0x4ff0ff, 0.025, 0.95, 0.15); // Organic face particles
+        createPoints(hairPoints, 0x1a5fb4, 0.018, 0.5, 0.1);      // Volumetric hair
         createPoints(eyePositions, 0x4ff0ff, 0.012, 0.5, 0, false);
         createPoints(mouthPositions, 0x4ff0ff, 0.02, 0.3);
 
