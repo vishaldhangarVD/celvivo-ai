@@ -77,7 +77,6 @@ export default function CandidateHologram({
         const gltfScene = gltf.scene;
         gltfScene.updateMatrixWorld(true);
 
-        // 1. Normalization
         const boxRaw = new THREE.Box3().setFromObject(gltfScene);
         const sizeRaw = boxRaw.getSize(new THREE.Vector3());
         const maxDim = Math.max(sizeRaw.x, sizeRaw.y, sizeRaw.z);
@@ -91,26 +90,12 @@ export default function CandidateHologram({
         gltfScene.position.sub(headCenter);
         gltfScene.updateMatrixWorld(true);
 
-        const facePositions: number[] = [];
-        const eyePositions: number[] = [];
-        const mouthPositions: number[] = [];
-        
-        const capBackRaw: number[] = [];
-        const frontRaw: number[] = [];
-        const sideRaw: number[] = [];
-
-        const faceWireGeoList: THREE.BufferGeometry[] = [];
-        const mouthWireGeoList: THREE.BufferGeometry[] = [];
-
-        const bakedGeometry = (mesh: THREE.Mesh) => {
-          const geo = mesh.geometry.clone();
-          geo.applyMatrix4(mesh.matrixWorld);
-          return geo;
-        };
-
-        const headRadius = (sizeRaw.y * scale) / 2;
-        const hairRadiusThreshold = headRadius * 1.15; // Tightened filter
-        const yThreshold = - (headHeight * 0.2); // Vertical cutoff below center
+        const facePool: number[] = [];
+        const mouthPool: number[] = [];
+        const eyePool: number[] = [];
+        const capBackPool: number[] = [];
+        const frontPool: number[] = [];
+        const sidePool: number[] = [];
 
         gltfScene.traverse((child) => {
           if ((child as any).isMesh) {
@@ -126,59 +111,71 @@ export default function CandidateHologram({
             const isEyes = name.includes("Eye_L_Irises") || name.includes("Eye_R_Irises");
             const isHair = name.includes("Hair_mush");
 
-            if (isFace) faceWireGeoList.push(bakedGeometry(mesh));
-            if (isMouth) mouthWireGeoList.push(bakedGeometry(mesh));
-
             for (let i = 0; i < posAttr.count; i++) {
               tempV.fromBufferAttribute(posAttr as THREE.BufferAttribute, i);
               tempV.applyMatrix4(mesh.matrixWorld);
-              
-              // Recalculate relative to centered origin
               const worldV = tempV.clone().sub(headCenter);
 
-              if (isFace) facePositions.push(worldV.x, worldV.y, worldV.z);
-              else if (isMouth) mouthPositions.push(worldV.x, worldV.y, worldV.z);
-              else if (isEyes) eyePositions.push(worldV.x, worldV.y, worldV.z);
+              if (isFace) facePool.push(worldV.x, worldV.y, worldV.z);
+              else if (isMouth) mouthPool.push(worldV.x, worldV.y, worldV.z);
+              else if (isEyes) eyePool.push(worldV.x, worldV.y, worldV.z);
               else if (isHair) {
-                // Apply strict distance and vertical filters
-                const dist = Math.sqrt(worldV.x * worldV.x + worldV.y * worldV.y + worldV.z * worldV.z);
-                if (dist <= hairRadiusThreshold && worldV.y > yThreshold) {
-                  if (name.includes("Hair_Cap") || name.includes("Back_Mat")) capBackRaw.push(worldV.x, worldV.y, worldV.z);
-                  else if (name.includes("FrontL") || name.includes("FrontR")) frontRaw.push(worldV.x, worldV.y, worldV.z);
-                  else sideRaw.push(worldV.x, worldV.y, worldV.z);
-                }
+                if (name.includes("Hair_Cap") || name.includes("Back_Mat")) capBackPool.push(worldV.x, worldV.y, worldV.z);
+                else if (name.includes("FrontL") || name.includes("FrontR")) frontPool.push(worldV.x, worldV.y, worldV.z);
+                else sidePool.push(worldV.x, worldV.y, worldV.z);
               }
             }
           }
         });
 
-        // 2. Hair Sampling (6000 Total)
-        const samplePool = (pool: number[], target: number) => {
-          const result = [];
-          const count = pool.length / 3;
-          if (count === 0) return result;
+        // 1. Calculate Head Radius for Hair Filtering
+        let maxFaceDist = 0;
+        for (let i = 0; i < facePool.length; i += 3) {
+          const d = Math.sqrt(facePool[i]**2 + facePool[i+1]**2 + facePool[i+2]**2);
+          if (d > maxFaceDist) maxFaceDist = d;
+        }
+        const filterRadius = maxFaceDist * 1.15;
+        const yCutoff = - (headHeight * 0.2); // Relative to center 0
+
+        // 2. Sample Particles with Jitter Fallback to Ensure Density
+        const sampleWithTarget = (pool: number[], target: number, filter = false) => {
+          const result: number[] = [];
+          const rawCount = pool.length / 3;
+          if (rawCount === 0) return result;
+
+          let validPool: number[] = pool;
+          if (filter) {
+            validPool = [];
+            for (let i = 0; i < pool.length; i += 3) {
+              const x = pool[i], y = pool[i+1], z = pool[i+2];
+              const d = Math.sqrt(x*x + y*y + z*z);
+              if (d <= filterRadius && y > yCutoff) {
+                validPool.push(x, y, z);
+              }
+            }
+          }
+
+          const currentCount = validPool.length / 3;
+          if (currentCount === 0) return result;
+
           for (let i = 0; i < target; i++) {
-            const baseIdx = Math.floor(Math.random() * count) * 3;
-            const jitter = (Math.random() - 0.5) * 0.002;
-            result.push(pool[baseIdx] + jitter, pool[baseIdx + 1] + jitter, pool[baseIdx + 2] + jitter);
+            const idx = Math.floor(Math.random() * currentCount) * 3;
+            const jitter = (Math.random() - 0.5) * 0.004; // Very tight jitter for structured look
+            result.push(validPool[idx] + jitter, validPool[idx + 1] + jitter, validPool[idx + 2] + jitter);
           }
           return result;
         };
 
-        const hairPoints = [
-          ...samplePool(capBackRaw, 3600),
-          ...samplePool(frontRaw, 1200),
-          ...samplePool(sideRaw, 1200)
+        const facePositions = sampleWithTarget(facePool, 6500);
+        const mouthPositions = mouthPool; // 100%
+        const eyePositions = eyePool; // 100%
+        const hairPositions = [
+          ...sampleWithTarget(capBackPool, 3600, true),
+          ...sampleWithTarget(frontPool, 1200, true),
+          ...sampleWithTarget(sidePool, 1200, true)
         ];
 
-        // 3. Materials
-        const faceWireMat = new THREE.MeshBasicMaterial({ color: 0x4ff0ff, wireframe: true, transparent: true, opacity: 0.2 });
-        const mouthWireMat = new THREE.MeshBasicMaterial({ color: 0x4ff0ff, wireframe: true, transparent: true, opacity: 0.1 });
-        materials.push(faceWireMat, mouthWireMat);
-
-        faceWireGeoList.forEach(geo => { geometries.push(geo); scene.add(new THREE.Mesh(geo, faceWireMat)); });
-        mouthWireGeoList.forEach(geo => { geometries.push(geo); scene.add(new THREE.Mesh(geo, mouthWireMat)); });
-
+        // 3. Create Points with Size Variance Tiers
         const createPoints = (pos: number[], color: number, size: number, opacity: number, variance = 0, additive = true) => {
           if (pos.length === 0) return;
           
@@ -203,11 +200,13 @@ export default function CandidateHologram({
           }
         };
 
-        // 4. Layers
-        createPoints(facePositions, 0x4ff0ff, 0.025, 0.95, 0.15); // Organic face particles
-        createPoints(hairPoints, 0x1a5fb4, 0.018, 0.5, 0.1);      // Volumetric hair
+        // Layers
+        createPoints(facePositions, 0x4ff0ff, 0.022, 0.9, 0.15); 
+        createPoints(hairPositions, 0x1a5fb4, 0.02, 0.5, 0.1); 
         createPoints(eyePositions, 0x4ff0ff, 0.012, 0.5, 0, false);
-        createPoints(mouthPositions, 0x4ff0ff, 0.02, 0.3);
+        createPoints(mouthPositions, 0x4ff0ff, 0.018, 0.6);
+
+        console.log("[Hologram] Face Scan Matrix Locked. Total Nodes:", (facePositions.length + hairPositions.length) / 3);
 
         const animate = () => {
           if (!isMounted || !rendererRef.current) return;
