@@ -34,7 +34,12 @@ export default function CandidateHologram({
       const scene = new THREE.Scene();
       sceneRef.current = scene;
 
-      const camera = new THREE.PerspectiveCamera(45, containerRef.current.clientWidth / containerRef.current.clientHeight, 0.1, 100);
+      const camera = new THREE.PerspectiveCamera(
+        45, 
+        containerRef.current.clientWidth / containerRef.current.clientHeight, 
+        0.1, 
+        100
+      );
       camera.position.set(0, 0, 3);
       camera.lookAt(0, 0, 0);
 
@@ -72,24 +77,30 @@ export default function CandidateHologram({
         const gltfScene = gltf.scene;
         gltfScene.updateMatrixWorld(true);
 
+        // 1. Raw Bounding Box
         const boxRaw = new THREE.Box3().setFromObject(gltfScene);
         const sizeRaw = boxRaw.getSize(new THREE.Vector3());
+        
+        // 2. Exact 1.4-unit scaling
         const maxDim = Math.max(sizeRaw.x, sizeRaw.y, sizeRaw.z);
         const scale = 1.4 / maxDim;
         gltfScene.scale.setScalar(scale);
         gltfScene.updateMatrixWorld(true);
 
+        // 3. Absolute Centering
         const newBoundingBox = new THREE.Box3().setFromObject(gltfScene);
-        gltfScene.position.sub(newBoundingBox.getCenter(new THREE.Vector3()));
+        const headCenter = newBoundingBox.getCenter(new THREE.Vector3());
+        const headHeight = newBoundingBox.max.y - newBoundingBox.min.y;
+        gltfScene.position.sub(headCenter);
         gltfScene.updateMatrixWorld(true);
 
         const facePositions: number[] = [];
         const eyePositions: number[] = [];
         const mouthPositions: number[] = [];
         
-        const capBackPool: number[] = [];
-        const frontPool: number[] = [];
-        const sidePool: number[] = [];
+        const capBackRaw: number[] = [];
+        const frontRaw: number[] = [];
+        const sideRaw: number[] = [];
 
         const faceWireGeoList: THREE.BufferGeometry[] = [];
         const mouthWireGeoList: THREE.BufferGeometry[] = [];
@@ -99,6 +110,10 @@ export default function CandidateHologram({
           geo.applyMatrix4(mesh.matrixWorld);
           return geo;
         };
+
+        const headRadius = (sizeRaw.y * scale) / 2;
+        const hairRadiusThreshold = headRadius * 1.15; // Tightened filter
+        const yThreshold = - (headHeight * 0.2); // Vertical cutoff below center
 
         gltfScene.traverse((child) => {
           if ((child as any).isMesh) {
@@ -120,97 +135,82 @@ export default function CandidateHologram({
             for (let i = 0; i < posAttr.count; i++) {
               tempV.fromBufferAttribute(posAttr as THREE.BufferAttribute, i);
               tempV.applyMatrix4(mesh.matrixWorld);
+              
+              // Recalculate relative to centered origin
+              const worldV = tempV.clone().sub(headCenter);
 
-              if (isFace) facePositions.push(tempV.x, tempV.y, tempV.z);
-              else if (isMouth) mouthPositions.push(tempV.x, tempV.y, tempV.z);
-              else if (isEyes) eyePositions.push(tempV.x, tempV.y, tempV.z);
+              if (isFace) facePositions.push(worldV.x, worldV.y, worldV.z);
+              else if (isMouth) mouthPositions.push(worldV.x, worldV.y, worldV.z);
+              else if (isEyes) eyePositions.push(worldV.x, worldV.y, worldV.z);
               else if (isHair) {
-                if (name.includes("Hair_Cap") || name.includes("Back_Mat")) {
-                  capBackPool.push(tempV.x, tempV.y, tempV.z);
-                } else if (name.includes("FrontL") || name.includes("FrontR")) {
-                  frontPool.push(tempV.x, tempV.y, tempV.z);
-                } else {
-                  sidePool.push(tempV.x, tempV.y, tempV.z);
+                // Apply strict distance and vertical filters
+                const dist = Math.sqrt(worldV.x * worldV.x + worldV.y * worldV.y + worldV.z * worldV.z);
+                if (dist <= hairRadiusThreshold && worldV.y > yThreshold) {
+                  if (name.includes("Hair_Cap") || name.includes("Back_Mat")) capBackRaw.push(worldV.x, worldV.y, worldV.z);
+                  else if (name.includes("FrontL") || name.includes("FrontR")) frontRaw.push(worldV.x, worldV.y, worldV.z);
+                  else sideRaw.push(worldV.x, worldV.y, worldV.z);
                 }
               }
             }
           }
         });
 
-        const headCenter = new THREE.Vector3();
-        const facePtsCount = facePositions.length / 3;
-        for (let i = 0; i < facePositions.length; i += 3) {
-          headCenter.x += facePositions[i];
-          headCenter.y += facePositions[i+1];
-          headCenter.z += facePositions[i+2];
-        }
-        headCenter.divideScalar(facePtsCount);
-
-        const sampleClean = (pool: number[], target: number) => {
+        // 4. Hair Reconstruction (6000 Target)
+        const samplePool = (pool: number[], target: number) => {
           const result = [];
           const count = pool.length / 3;
           if (count === 0) return result;
           for (let i = 0; i < target; i++) {
-            const idx = Math.floor(Math.random() * count) * 3;
-            let px = pool[idx];
-            let py = pool[idx+1];
-            let pz = pool[idx+2];
-            
-            // Tight jitter reuse if pool is smaller than target
-            // Using +/- 0.002 range for clean surface matching
-            if (i >= count) {
-              px += (Math.random() - 0.5) * 0.004;
-              py += (Math.random() - 0.5) * 0.004;
-              pz += (Math.random() - 0.5) * 0.004;
-            }
-            
-            result.push(px, py, pz);
+            const baseIdx = Math.floor(Math.random() * count) * 3;
+            // High-precision jitter
+            const jitter = (Math.random() - 0.5) * 0.002;
+            result.push(pool[baseIdx] + jitter, pool[baseIdx + 1] + jitter, pool[baseIdx + 2] + jitter);
           }
           return result;
         };
 
-        const finalHairNodes = [
-          ...sampleClean(capBackPool, 5500),
-          ...sampleClean(frontPool, 1800),
-          ...sampleClean(sidePool, 1700)
+        const hairPoints = [
+          ...samplePool(capBackRaw, 3600),
+          ...samplePool(frontRaw, 1200),
+          ...samplePool(sideRaw, 1200)
         ];
 
-        const faceWireMat = new THREE.MeshBasicMaterial({ color: 0x4ff0ff, wireframe: true, transparent: true, opacity: 0.35 });
-        const mouthWireMat = new THREE.MeshBasicMaterial({ color: 0x4ff0ff, wireframe: true, transparent: true, opacity: 0.25 });
+        // 5. Materials
+        const faceWireMat = new THREE.MeshBasicMaterial({ color: 0x4ff0ff, wireframe: true, transparent: true, opacity: 0.2 });
+        const mouthWireMat = new THREE.MeshBasicMaterial({ color: 0x4ff0ff, wireframe: true, transparent: true, opacity: 0.1 });
         materials.push(faceWireMat, mouthWireMat);
 
         faceWireGeoList.forEach(geo => { geometries.push(geo); scene.add(new THREE.Mesh(geo, faceWireMat)); });
         mouthWireGeoList.forEach(geo => { geometries.push(geo); scene.add(new THREE.Mesh(geo, mouthWireMat)); });
 
-        const createPoints = (pos: number[], color: number, size: number, opacity: number, additive = true) => {
+        const createPoints = (pos: number[], color: number, size: number, opacity: number, variance = 0, additive = true) => {
           if (pos.length === 0) return;
-          const geo = new THREE.BufferGeometry().setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
-          const mat = new THREE.PointsMaterial({ 
-            color, size, transparent: true, opacity, 
-            blending: additive ? THREE.AdditiveBlending : THREE.NormalBlending,
-            depthWrite: false 
-          });
-          geometries.push(geo);
-          materials.push(mat);
-          scene.add(new THREE.Points(geo, mat));
+          
+          const groups = variance > 0 ? 3 : 1;
+          const posPerGroup = Math.floor((pos.length / 3) / groups);
+
+          for (let g = 0; i < groups; g++) {
+            const start = g * posPerGroup * 3;
+            const end = (g === groups - 1) ? pos.length : (g + 1) * posPerGroup * 3;
+            const slice = pos.slice(start, end);
+            
+            const groupSize = size * (1 + (Math.random() - 0.5) * variance);
+            const geo = new THREE.BufferGeometry().setAttribute('position', new THREE.Float32BufferAttribute(slice, 3));
+            const mat = new THREE.PointsMaterial({ 
+              color, size: groupSize, transparent: true, opacity, 
+              blending: additive ? THREE.AdditiveBlending : THREE.NormalBlending,
+              depthWrite: false 
+            });
+            geometries.push(geo);
+            materials.push(mat);
+            scene.add(new THREE.Points(geo, mat));
+          }
         };
 
-        createPoints(facePositions, 0x4ff0ff, 0.025, 0.9);
-        
-        // Stratified Hair Materials for realistic variance with tighter range (+/- 10%)
-        const ptsA = [], ptsB = [], ptsC = [];
-        for (let i = 0; i < finalHairNodes.length; i += 3) {
-          const r = Math.random();
-          if (r < 0.33) ptsA.push(finalHairNodes[i], finalHairNodes[i+1], finalHairNodes[i+2]);
-          else if (r < 0.66) ptsB.push(finalHairNodes[i], finalHairNodes[i+1], finalHairNodes[i+2]);
-          else ptsC.push(finalHairNodes[i], finalHairNodes[i+1], finalHairNodes[i+2]);
-        }
-
-        createPoints(ptsA, 0x1a5fb4, 0.018, 0.45);
-        createPoints(ptsB, 0x1a5fb4, 0.02, 0.5);
-        createPoints(ptsC, 0x1a5fb4, 0.022, 0.55);
-
-        createPoints(eyePositions, 0x4ff0ff, 0.012, 0.5, false);
+        // Render Layers
+        createPoints(facePositions, 0x4ff0ff, 0.025, 0.95, 0.15); // Organic variance
+        createPoints(hairPoints, 0x1a5fb4, 0.02, 0.55, 0.1);
+        createPoints(eyePositions, 0x4ff0ff, 0.012, 0.5, 0, false);
         createPoints(mouthPositions, 0x4ff0ff, 0.02, 0.3);
 
         const animate = () => {
