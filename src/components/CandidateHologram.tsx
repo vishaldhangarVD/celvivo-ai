@@ -162,7 +162,7 @@ export default function CandidateHologram({
         }
         const headRadius = maxFaceDist * 1.4;
 
-        // Filtering and Weighted Sampling Function
+        // Filtering and Jittered Up-Sampling Function
         const filterAndSample = (pool: number[], targetCount: number) => {
           const filtered = [];
           for (let i = 0; i < pool.length; i += 3) {
@@ -172,21 +172,24 @@ export default function CandidateHologram({
             }
           }
           
-          const count = filtered.length / 3;
-          if (count === 0) return [];
-          if (count <= targetCount) return filtered;
+          const filteredCount = filtered.length / 3;
+          if (filteredCount === 0) return [];
 
           const sampled = [];
           for (let i = 0; i < targetCount; i++) {
-            const idx = Math.floor(Math.random() * count) * 3;
-            sampled.push(filtered[idx], filtered[idx+1], filtered[idx+2]);
+            const idx = Math.floor(Math.random() * filteredCount) * 3;
+            // Add jitter +/- 0.005 (total range 0.01)
+            const jitterX = (Math.random() - 0.5) * 0.01;
+            const jitterY = (Math.random() - 0.5) * 0.01;
+            const jitterZ = (Math.random() - 0.5) * 0.01;
+            sampled.push(filtered[idx] + jitterX, filtered[idx + 1] + jitterY, filtered[idx + 2] + jitterZ);
           }
           return sampled;
         };
 
-        const finalCapBack = filterAndSample(capBackPool, 1800);
-        const finalFront = filterAndSample(frontPool, 600);
-        const finalSide = filterAndSample(sidePool, 600);
+        const finalCapBack = filterAndSample(capBackPool, 3000);
+        const finalFront = filterAndSample(frontPool, 1000);
+        const finalSide = filterAndSample(sidePool, 1000);
         
         const hairPositions = [...finalCapBack, ...finalFront, ...finalSide];
 
@@ -220,7 +223,7 @@ export default function CandidateHologram({
         };
 
         createPoints(facePositions, 0x4ff0ff, 0.025, 0.9);
-        createPoints(hairPositions, 0x1a5fb4, 0.02, 0.55);
+        createPoints(hairPositions, 0x1a5fb4, 0.022, 0.55);
         createPoints(eyePositions, 0x4ff0ff, 0.012, 0.5, false);
         createPoints(mouthPositions, 0x4ff0ff, 0.02, 0.3);
 
