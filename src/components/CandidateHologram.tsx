@@ -77,27 +77,28 @@ export default function CandidateHologram({
         const gltfScene = gltf.scene;
         gltfScene.updateMatrixWorld(true);
 
-        // 1. Compute raw bounding box
+        // 1. Geometric Normalization
         const boxRaw = new THREE.Box3().setFromObject(gltfScene);
         const sizeRaw = boxRaw.getSize(new THREE.Vector3());
-        
-        // 2. Apply scale normalization (1.4 units)
         const maxDim = Math.max(sizeRaw.x, sizeRaw.y, sizeRaw.z);
         const scale = 1.4 / maxDim;
         gltfScene.scale.setScalar(scale);
         gltfScene.updateMatrixWorld(true);
 
-        // 3. Recompute and Absolute Centering
+        // 2. Absolute Centering
         const newBoundingBox = new THREE.Box3().setFromObject(gltfScene);
         const headCenter = newBoundingBox.getCenter(new THREE.Vector3());
-        const headHeight = newBoundingBox.max.y - newBoundingBox.min.y;
         gltfScene.position.sub(headCenter);
         gltfScene.updateMatrixWorld(true);
 
         const facePool: number[] = [];
-        const hairPool: number[] = [];
         const eyePool: number[] = [];
         const mouthPool: number[] = [];
+        
+        // Hair categorization pools
+        const hairCapPool: number[] = [];
+        const hairFrontPool: number[] = [];
+        const hairSidePool: number[] = [];
 
         gltfScene.traverse((child) => {
           if ((child as any).isMesh) {
@@ -115,32 +116,47 @@ export default function CandidateHologram({
 
             for (let i = 0; i < posAttr.count; i++) {
               tempV.fromBufferAttribute(posAttr as THREE.BufferAttribute, i);
-              // Transform local vertex to world space (which is now centered around 0,0,0)
               tempV.applyMatrix4(mesh.matrixWorld);
 
               if (isFace) facePool.push(tempV.x, tempV.y, tempV.z);
               else if (isMouth) mouthPool.push(tempV.x, tempV.y, tempV.z);
               else if (isEyes) eyePool.push(tempV.x, tempV.y, tempV.z);
-              else if (isHair) hairPool.push(tempV.x, tempV.y, tempV.z);
+              else if (isHair) {
+                if (name.includes("Hair_Cap") || name.includes("Back_Mat")) {
+                  hairCapPool.push(tempV.x, tempV.y, tempV.z);
+                } else if (name.includes("FrontL") || name.includes("FrontR")) {
+                  hairFrontPool.push(tempV.x, tempV.y, tempV.z);
+                } else {
+                  hairSidePool.push(tempV.x, tempV.y, tempV.z);
+                }
+              }
             }
           }
         });
 
-        // 4. Volumetric Filtering for Hair
+        // 3. Volumetric Constraints for Hair
         const headRadius = (sizeRaw.x * scale) / 2;
         const filterRadius = headRadius * 1.15;
+        const headHeight = newBoundingBox.max.y - newBoundingBox.min.y;
         const yCutoff = - (headHeight * 0.2); // Shoulder line purge
 
-        const filteredHair: number[] = [];
-        for (let i = 0; i < hairPool.length; i += 3) {
-          const x = hairPool[i], y = hairPool[i+1], z = hairPool[i+2];
-          const dist = Math.sqrt(x*x + y*y + z*z);
-          if (dist <= filterRadius && y > yCutoff) {
-            filteredHair.push(x, y, z);
+        const filterPool = (pool: number[]) => {
+          const filtered: number[] = [];
+          for (let i = 0; i < pool.length; i += 3) {
+            const x = pool[i], y = pool[i+1], z = pool[i+2];
+            const dist = Math.sqrt(x*x + y*y + z*z);
+            if (dist <= filterRadius && y > yCutoff) {
+              filtered.push(x, y, z);
+            }
           }
-        }
+          return filtered;
+        };
 
-        // 5. Sampling Target Logic (Using raw vertices for stability check)
+        const fCap = filterPool(hairCapPool);
+        const fFront = filterPool(hairFrontPool);
+        const fSide = filterPool(hairSidePool);
+
+        // 4. Weighted Sampling with Jitter-Duplication for fuller hair
         const sampleNodes = (pool: number[], target: number) => {
           const result: number[] = [];
           const count = pool.length / 3;
@@ -148,22 +164,25 @@ export default function CandidateHologram({
           
           for (let i = 0; i < target; i++) {
             const idx = Math.floor(Math.random() * count) * 3;
+            // Duplication jitter to avoid sparse looks at high targets
             const jitter = (Math.random() - 0.5) * 0.002;
             result.push(pool[idx] + jitter, pool[idx + 1] + jitter, pool[idx + 2] + jitter);
           }
           return result;
         };
 
-        const facePositions = sampleNodes(facePool, 6500);
-        const hairPositions = sampleNodes(filteredHair, 6000);
-        const mouthPositions = mouthPool; // Use raw for precision
-        const eyePositions = eyePool; // Use raw for precision
+        const hairPositions = [
+          ...sampleNodes(fCap, 3600),
+          ...sampleNodes(fFront, 1200),
+          ...sampleNodes(fSide, 1200)
+        ];
 
-        // 6. Points Matrix Construction
+        // 5. Creation Protocol (Points Only)
         const createPoints = (pos: number[], color: number, size: number, opacity: number, variance = 0, additive = true) => {
           if (pos.length === 0) return;
           
-          const groups = variance > 0 ? 3 : 1;
+          // Split into 3 groups for organic size variance
+          const groups = 3;
           const posPerGroup = Math.floor((pos.length / 3) / groups);
 
           for (let g = 0; g < groups; g++) {
@@ -171,6 +190,7 @@ export default function CandidateHologram({
             const end = (g === groups - 1) ? pos.length : (g + 1) * posPerGroup * 3;
             const slice = pos.slice(start, end);
             
+            // Apply size variance per group
             const groupSize = size * (1 + (Math.random() - 0.5) * variance);
             const geo = new THREE.BufferGeometry().setAttribute('position', new THREE.Float32BufferAttribute(slice, 3));
             const mat = new THREE.PointsMaterial({ 
@@ -184,13 +204,13 @@ export default function CandidateHologram({
           }
         };
 
-        // Render Layers
-        createPoints(facePositions, 0x4ff0ff, 0.022, 0.9, 0.15); // Organic Face
+        // Render Matrix (100% vertex sampling for face/eyes/mouth)
+        createPoints(facePool, 0x4ff0ff, 0.022, 0.9, 0.15); // Organic Face
         createPoints(hairPositions, 0x1a5fb4, 0.02, 0.5, 0.1); // Volumetric Hair
-        createPoints(eyePositions, 0x4ff0ff, 0.012, 0.5, 0, false);
-        createPoints(mouthPositions, 0x4ff0ff, 0.018, 0.6);
+        createPoints(eyePool, 0x4ff0ff, 0.012, 0.5, 0, false);
+        createPoints(mouthPool, 0x4ff0ff, 0.018, 0.6);
 
-        console.log("[Hologram] Matrix Locked. Total Nodes:", (facePositions.length + hairPositions.length) / 3);
+        console.log("[Hologram] Face Nodes:", facePool.length / 3, "Hair Nodes:", hairPositions.length / 3);
 
         const animate = () => {
           if (!isMounted || !rendererRef.current) return;
