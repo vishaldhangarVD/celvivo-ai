@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useEffect } from 'react';
@@ -7,6 +6,8 @@ import Navbar from '@/components/layout/Navbar';
 import NavigationControls from '@/components/NavigationControls';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Loader2, 
   ShieldCheck, 
@@ -88,6 +89,7 @@ export default function SpecialHRInterview() {
               <AnimatePresence mode="wait">
                 {status === 'LOADING' ? (
                   <motion.div 
+                    key="loading"
                     initial={{ opacity: 0 }} 
                     animate={{ opacity: 1 }} 
                     exit={{ opacity: 0 }}
@@ -104,6 +106,7 @@ export default function SpecialHRInterview() {
                   </motion.div>
                 ) : status === 'ERROR' ? (
                   <motion.div 
+                    key="error"
                     initial={{ opacity: 0, scale: 0.9 }} 
                     animate={{ opacity: 1, scale: 1 }}
                     className="space-y-6"
@@ -117,6 +120,7 @@ export default function SpecialHRInterview() {
                   </motion.div>
                 ) : (
                   <motion.div 
+                    key="ready"
                     initial={{ opacity: 0, y: 10 }} 
                     animate={{ opacity: 1, y: 0 }}
                     className="space-y-12 w-full"
@@ -126,7 +130,7 @@ export default function SpecialHRInterview() {
                     </div>
                     <div className="space-y-4">
                       <h3 className="text-3xl font-bold tracking-tighter">AI Arena Active</h3>
-                      <p className="text-muted-foreground font-light max-w-sm mx-auto">
+                      <p className="text-muted-foreground font-light max-sm mx-auto">
                         The virtual interviewer widget is now active in the bottom-right corner. Use the microphone to begin the dialogue.
                       </p>
                     </div>
