@@ -23,7 +23,7 @@ import { cn } from '@/lib/utils';
 
 /**
  * @fileOverview Special HR Interview powered by official D-ID Agent Embed.
- * Layout updated to centralize the Agent within the AI Arena panel.
+ * Centralized layout to maximize Agent visibility within the primary panel.
  */
 
 export default function SpecialHRInterview() {
@@ -35,7 +35,7 @@ export default function SpecialHRInterview() {
       <Navbar />
       <NavigationControls />
 
-      {/* Global CSS to override D-ID default floating behavior and centralize it */}
+      {/* Global CSS to override D-ID default floating behavior and enlarge the viewport */}
       <style jsx global>{`
         did-agent {
           display: block !important;
@@ -44,17 +44,22 @@ export default function SpecialHRInterview() {
           position: relative !important;
           bottom: auto !important;
           right: auto !important;
+          margin: 0 auto !important;
           z-index: 1 !important;
         }
-        /* Hide the default D-ID launcher button if it appears outside the container */
+        /* Hide the default D-ID launcher button and suppress floating artifacts */
         #did-agent-launcher {
           display: none !important;
+        }
+        .did-agent-container-style {
+          background-color: transparent !important;
+          box-shadow: none !important;
         }
       `}</style>
 
       {/* 
         Official D-ID Embed Script v2
-        Preserved exactly as working previously.
+        Preserving exact existing configuration and keys.
       */}
       <Script
         id="did-agent-embed-v2"
@@ -119,9 +124,9 @@ export default function SpecialHRInterview() {
             </div>
           </div>
 
-          {/* Interview Central - Main prominent area */}
+          {/* Interview Central - The "AI Arena Active" Box */}
           <div className="lg:col-span-8">
-            <Card className="premium-card bg-[#0b0e1a]/90 border-accent/20 p-8 h-[600px] flex flex-col relative overflow-hidden shadow-2xl">
+            <Card className="premium-card bg-[#0b0e1a]/90 border-accent/20 p-6 h-[600px] flex flex-col relative overflow-hidden shadow-2xl">
               <div className="absolute inset-0 pointer-events-none border-2 border-accent/5 m-2 rounded-[2.5rem]" />
               
               <AnimatePresence mode="wait">
@@ -154,7 +159,7 @@ export default function SpecialHRInterview() {
                       <h3 className="text-xl font-bold text-white">Protocol Fault</h3>
                       <p className="text-sm text-white/50 max-w-xs mx-auto">
                         Unable to connect to AI Interviewer. 
-                        Please ensure the current domain is allowlisted.
+                        Please ensure the current domain is allowlisted in your D-ID dashboard.
                       </p>
                     </div>
                     <Button onClick={() => window.location.reload()} variant="outline" className="rounded-xl px-8 uppercase text-[10px] font-bold tracking-widest border-red-500/20 text-red-400">Restart Session</Button>
@@ -167,7 +172,7 @@ export default function SpecialHRInterview() {
                     className="flex-1 flex flex-col h-full w-full"
                   >
                     {/* Top Status Bar */}
-                    <div className="flex items-center justify-between mb-6 shrink-0 relative z-10">
+                    <div className="flex items-center justify-between mb-4 shrink-0 relative z-10">
                       <div className="flex items-center gap-3">
                         <div className="w-9 h-9 rounded-xl bg-accent/10 border border-accent/20 flex items-center justify-center">
                           <Command className="w-5 h-5 text-accent" />
@@ -180,8 +185,8 @@ export default function SpecialHRInterview() {
                       <Badge className="bg-green-500/10 text-green-400 border border-green-500/20 px-3 py-1 text-[8px] font-black uppercase tracking-widest">Encrypted Stream</Badge>
                     </div>
 
-                    {/* Agent Container - This is where the D-ID agent will live */}
-                    <div className="flex-1 relative rounded-[2rem] overflow-hidden bg-black/40 border border-white/5 shadow-inner group">
+                    {/* Agent Container - This is where the D-ID agent is centered and enlarged */}
+                    <div className="flex-1 relative rounded-[2rem] overflow-hidden bg-black/40 border border-white/5 shadow-inner group p-4 sm:p-10 flex items-center justify-center">
                       <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
                          <div className="text-center opacity-10 group-hover:opacity-20 transition-opacity">
                             <Zap className="w-24 h-24 text-accent animate-pulse mx-auto" />
@@ -189,12 +194,12 @@ export default function SpecialHRInterview() {
                          </div>
                       </div>
                       
-                      {/* The D-ID Agent Web Component */}
+                      {/* The D-ID Agent Web Component - Enforced to fill the parent via global CSS */}
                       <did-agent />
                     </div>
 
                     {/* Bottom Telemetry Action Row */}
-                    <div className="mt-6 grid grid-cols-2 sm:grid-cols-3 gap-4 shrink-0 relative z-10">
+                    <div className="mt-4 grid grid-cols-2 sm:grid-cols-3 gap-4 shrink-0 relative z-10">
                       <div className="flex items-center gap-3 p-3 glass rounded-xl border-green-500/10 bg-green-500/[0.03]">
                         <Mic className="w-4 h-4 text-green-400" />
                         <span className="text-[8px] font-black text-green-400 uppercase tracking-widest">Mic Sync</span>
