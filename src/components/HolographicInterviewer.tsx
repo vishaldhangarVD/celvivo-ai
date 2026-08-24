@@ -6,7 +6,7 @@ import { useToast } from '@/hooks/use-toast';
 
 /**
  * @fileOverview HolographicInterviewer - Audio and Visual Synchronization Hub.
- * Restored version with active TTS logic and holographic state blending.
+ * Manages TTS triggers and communicates state to the Hologram.
  */
 
 export default function HolographicInterviewer({ 
@@ -25,13 +25,17 @@ export default function HolographicInterviewer({
   const { toast } = useToast();
   const [internalSpeaking, setInternalSpeaking] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const lastProcessedQuestion = useRef<string | null>(null);
 
   useEffect(() => {
-    if (!currentQuestion || isGenerating) return;
+    // Only trigger speech if the question is new and we aren't already generating
+    if (!currentQuestion || isGenerating || currentQuestion === lastProcessedQuestion.current) return;
 
     const playSpeech = async () => {
       try {
+        lastProcessedQuestion.current = currentQuestion;
         setInternalSpeaking(true);
+        
         const response = await fetch('/api/tts', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -39,7 +43,7 @@ export default function HolographicInterviewer({
         });
 
         if (!response.ok) {
-          const err = await response.json();
+          const err = await response.json().catch(() => ({ details: 'Unknown Error' }));
           throw new Error(err.details || 'TTS Handshake Failed');
         }
 
