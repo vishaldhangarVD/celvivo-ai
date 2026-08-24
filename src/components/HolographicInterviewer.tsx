@@ -28,7 +28,6 @@ export default function HolographicInterviewer({
   const lastProcessedQuestion = useRef<string | null>(null);
 
   useEffect(() => {
-    // Only trigger speech if the question is new and we aren't already generating
     if (!currentQuestion || isGenerating || currentQuestion === lastProcessedQuestion.current) return;
 
     const playSpeech = async () => {
@@ -44,6 +43,7 @@ export default function HolographicInterviewer({
 
         if (!response.ok) {
           const err = await response.json().catch(() => ({ details: 'Unknown Error' }));
+          console.error("[TTS API Error Detail]", err);
           throw new Error(err.details || 'TTS Handshake Failed');
         }
 

@@ -7,8 +7,8 @@ import { Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 /**
- * @fileOverview CandidateHologram - Stable Particles-Only Hologram.
- * Optimized to load once and animate state changes without re-initializing the scene.
+ * @fileOverview CandidateHologram - Particles-Only Hologram.
+ * Using woman_head.glb with raw vertex sampling for maximum clarity.
  */
 
 export default function CandidateHologram({ 
@@ -33,7 +33,6 @@ export default function CandidateHologram({
     eyeMaterials: THREE.PointsMaterial[];
   } | null>(null);
 
-  // Sync speaking state to ref for animation loop access without re-triggering useEffect
   useEffect(() => {
     speakingRef.current = speaking;
   }, [speaking]);
@@ -76,9 +75,25 @@ export default function CandidateHologram({
         for (let i = 0; i < targetCount; i++) {
           const idx = Math.floor(Math.random() * count);
           const offset = (Math.random() - 0.5) * jitter;
-          finalPositions[i * 3] = positions[idx * 3] + offset;
-          finalPositions[i * 3 + 1] = positions[idx * 3 + 1] + offset;
-          finalPositions[i * 3 + 2] = positions[idx * 3 + 2] + offset;
+          const px = positions[idx * 3] + offset;
+          const py = positions[idx * 3 + 1] + offset;
+          const pz = positions[idx * 3 + 2] + offset;
+
+          // Outlier & Vertical Filter
+          if (headCenter) {
+            const dx = px - headCenter.x;
+            const dy = py - headCenter.y;
+            const dz = pz - headCenter.z;
+            const dist = Math.sqrt(dx*dx + dy*dy + dz*dz);
+            if (dist > radiusLimit || py < yCutoff) {
+              i--; // Retry
+              continue;
+            }
+          }
+
+          finalPositions[i * 3] = px;
+          finalPositions[i * 3 + 1] = py;
+          finalPositions[i * 3 + 2] = pz;
         }
       } else {
         finalPositions = positions;
@@ -92,8 +107,7 @@ export default function CandidateHologram({
         const subPos = finalPositions.slice(g * pointsPerGroup * 3, (g + 1) * pointsPerGroup * 3);
         subGeo.setAttribute('position', new THREE.BufferAttribute(subPos, 3));
         
-        // Organic size variance
-        const sizeVar = 1 + (Math.random() - 0.5) * 0.3;
+        const sizeVar = 1 + (Math.random() - 0.5) * 0.15;
         const mat = new THREE.PointsMaterial({ 
           color, 
           size: size * sizeVar, 
@@ -114,7 +128,7 @@ export default function CandidateHologram({
 
     // 2. Load Model
     const loader = new GLTFLoader();
-    loader.load('/models/default_avatar.glb', (gltf) => {
+    loader.load('/models/woman_head.glb', (gltf) => {
       let faceGeo: THREE.BufferGeometry | null = null;
       let mouthGeo: THREE.BufferGeometry | null = null;
       let irisGeo: THREE.BufferGeometry | null = null;
@@ -153,13 +167,18 @@ export default function CandidateHologram({
         faceGeo.boundingBox!.getCenter(newCenter);
 
         // Create Particle Systems
-        createPoints(faceGeo, '#4ff0ff', 0.022, 0.9, 6500, 0.002);
-        if (mouthGeo) createPoints(mouthGeo, '#4ff0ff', 0.018, 0.6, 1500, 0.002);
+        // Raw sampling for Face and Mouth (targetCount = 0)
+        createPoints(faceGeo, '#4ff0ff', 0.022, 0.9, 0, 0.002);
+        if (mouthGeo) createPoints(mouthGeo, '#4ff0ff', 0.018, 0.6, 0, 0.002);
         if (irisGeo) createPoints(irisGeo, '#4ff0ff', 0.012, 0.5, 0, 0, 0, -Infinity, undefined, true);
 
         const radius = size.length() * scale * 0.5;
         hairGeos.forEach(h => {
-          createPoints(h.geo, '#1a5fb4', 0.02, 0.5, 2000, 0.002);
+          let tCount = 1200;
+          if (h.name.includes('Hair_Cap_0') || h.name.includes('Back_Mat_0')) tCount = 3600;
+          else if (h.name.includes('FrontL_Mat_0') || h.name.includes('FrontR_Mat_0')) tCount = 1200;
+          
+          createPoints(h.geo, '#1a5fb4', 0.02, 0.5, tCount, 0.002, radius * 1.15, newCenter.y - (size.y * scale * 0.2), newCenter);
         });
 
         // Global Centering
@@ -206,7 +225,6 @@ export default function CandidateHologram({
     };
     animate();
 
-    // 4. Cleanup
     return () => {
       cancelAnimationFrame(frameId);
       renderer.dispose();

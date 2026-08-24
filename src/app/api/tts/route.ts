@@ -2,19 +2,15 @@ import { NextResponse } from 'next/server';
 import wav from 'wav';
 
 /**
- * @fileOverview Resilient TTS Gateway v26.0.
+ * @fileOverview Resilient TTS Gateway v26.1.
  * Primary: ElevenLabs (High-fidelity).
  * Fallback: Google Gemini 1.5 Flash TTS (Multi-modal Stability).
- * Optimized for real-time diagnostic reporting.
+ * Enhanced with detailed diagnostic reporting.
  */
 
 let cachedVoiceId: null | string = null;
 const BLOCKED_VOICE_IDS = ['4uN5YeBITFJsw8t45RIV'];
 
-/**
- * Converts raw PCM audio data into a valid WAV buffer.
- * Gemini TTS returns raw PCM (24kHz, 16-bit, Mono).
- */
 async function pcmToWav(
   pcmData: Buffer,
   channels = 1,
@@ -38,10 +34,7 @@ async function pcmToWav(
   });
 }
 
-/**
- * Fallback TTS implementation using Google Gemini.
- */
-async function tryGeminiTTS(text: string): Promise<{ buffer: ArrayBuffer; contentType: string } | null> {
+async function tryGeminiTTS(text: string): Promise<{ buffer: ArrayBuffer; contentType: string; error?: string } | null> {
   const apiKey = (
     process.env.GEMINI_API_KEY || 
     process.env.GOOGLE_GENAI_API_KEY || 
@@ -50,12 +43,10 @@ async function tryGeminiTTS(text: string): Promise<{ buffer: ArrayBuffer; conten
   ).trim();
 
   if (!apiKey) {
-    console.error("[TTS Fallback] FAILED: No Gemini/Google API Key found in environment variables.");
-    return null;
+    return { buffer: new ArrayBuffer(0), contentType: "", error: "No Gemini/Google API Key found." };
   }
 
   try {
-    console.log("[TTS] Handshaking with Gemini 1.5 Flash...");
     const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
     
     const response = await fetch(url, {
@@ -76,17 +67,15 @@ async function tryGeminiTTS(text: string): Promise<{ buffer: ArrayBuffer; conten
 
     if (!response.ok) {
       const errorBody = await response.text();
-      console.error(`[TTS Fallback] Google API Error Status: ${response.status}`);
-      console.error(`[TTS Fallback] Google API Error Response: ${errorBody}`);
-      return null;
+      console.error(`[TTS Fallback Error] Status: ${response.status} Body: ${errorBody}`);
+      return { buffer: new ArrayBuffer(0), contentType: "", error: `Google API Error (${response.status}): ${errorBody}` };
     }
 
     const data = await response.json();
     const audioBase64 = data.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
     
     if (!audioBase64) {
-      console.error("[TTS Fallback] Gemini response parsed successfully but contained NO audio data.");
-      return null;
+      return { buffer: new ArrayBuffer(0), contentType: "", error: "Gemini response contained no audio data." };
     }
 
     const pcmBuffer = Buffer.from(audioBase64, 'base64');
@@ -99,8 +88,8 @@ async function tryGeminiTTS(text: string): Promise<{ buffer: ArrayBuffer; conten
     };
 
   } catch (error: any) {
-    console.error("[TTS Fallback] CRITICAL FAULT during Gemini synthesis:", error.message);
-    return null;
+    console.error("[TTS Fallback Exception]:", error.message);
+    return { buffer: new ArrayBuffer(0), contentType: "", error: error.message };
   }
 }
 
@@ -180,20 +169,20 @@ export async function POST(req: Request) {
     }
 
     console.log("[TTS] Transitioning to Gemini Fallback...");
-    const fallback = await tryGeminiTTS(text);
-    if (fallback) {
-      return new NextResponse(fallback.buffer, {
-        headers: { 'Content-Type': fallback.contentType },
+    const fallbackResult = await tryGeminiTTS(text);
+    if (fallbackResult && fallbackResult.buffer.byteLength > 0) {
+      return new NextResponse(fallbackResult.buffer, {
+        headers: { 'Content-Type': fallbackResult.contentType },
       });
     }
 
     return NextResponse.json({ 
       error: 'TTS Failure',
-      details: 'ElevenLabs and Gemini fallback both failed. Verify API keys and quota.'
+      details: `ElevenLabs and Gemini fallback both failed. Gemini Detail: ${fallbackResult?.error || 'Unknown Error'}`
     }, { status: 500 });
 
   } catch (error: any) {
     console.error('[TTS Gateway] Unhandled Exception:', error.message);
-    return NextResponse.json({ error: 'Internal gateway error.' }, { status: 500 });
+    return NextResponse.json({ error: 'Internal gateway error.', details: error.message }, { status: 500 });
   }
 }
