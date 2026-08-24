@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import Script from 'next/script';
 import Navbar from '@/components/layout/Navbar';
 import NavigationControls from '@/components/NavigationControls';
@@ -16,15 +16,22 @@ import {
   Video, 
   Activity,
   Zap,
-  Command,
-  ChevronRight
+  Command
 } from 'lucide-react';
-import { cn } from '@/lib/utils';
 
 /**
  * @fileOverview Special HR Interview powered by official D-ID Agent Embed.
  * Centralized layout to maximize Agent visibility within the primary panel.
  */
+
+// Fix TypeScript error for the custom D-ID Web Component
+declare global {
+  namespace JSX {
+    interface IntrinsicElements {
+      'did-agent': React.DetailedHTMLProps<React.HTMLAttributes<HTMLElement>, HTMLElement>;
+    }
+  }
+}
 
 export default function SpecialHRInterview() {
   const [status, setStatus] = useState<'LOADING' | 'READY' | 'ERROR'>('LOADING');
@@ -47,19 +54,26 @@ export default function SpecialHRInterview() {
           margin: 0 auto !important;
           z-index: 1 !important;
         }
-        /* Hide the default D-ID launcher button and suppress floating artifacts */
+        /* Suppress internal floating artifacts from the D-ID library */
         #did-agent-launcher {
+          display: none !important;
+        }
+        #did-agent-close-btn {
           display: none !important;
         }
         .did-agent-container-style {
           background-color: transparent !important;
           box-shadow: none !important;
+          position: relative !important;
+          bottom: auto !important;
+          right: auto !important;
+          width: 100% !important;
+          height: 100% !important;
         }
       `}</style>
 
       {/* 
         Official D-ID Embed Script v2
-        Preserving exact existing configuration and keys.
       */}
       <Script
         id="did-agent-embed-v2"
@@ -186,7 +200,7 @@ export default function SpecialHRInterview() {
                     </div>
 
                     {/* Agent Container - This is where the D-ID agent is centered and enlarged */}
-                    <div className="flex-1 relative rounded-[2rem] overflow-hidden bg-black/40 border border-white/5 shadow-inner group p-4 sm:p-10 flex items-center justify-center">
+                    <div className="flex-1 relative rounded-[2rem] overflow-hidden bg-black/40 border border-white/5 shadow-inner group p-4 sm:p-8 flex items-center justify-center">
                       <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
                          <div className="text-center opacity-10 group-hover:opacity-20 transition-opacity">
                             <Zap className="w-24 h-24 text-accent animate-pulse mx-auto" />
