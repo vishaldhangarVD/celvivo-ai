@@ -49,7 +49,7 @@ export default function AptitudeResultPage() {
       updatedAt: serverTimestamp(),
     });
 
-    router.push('/interview/coding');
+    router.push(STAGE_ROUTES.CODING);
   };
 
   const handleRetry = async () => {
@@ -63,7 +63,7 @@ export default function AptitudeResultPage() {
       updatedAt: serverTimestamp(),
     });
 
-    router.push('/interview/aptitude');
+    router.push(STAGE_ROUTES.APTITUDE);
   };
 
   if (loading) return <div className="min-h-screen bg-[#050816] flex items-center justify-center"><Loader2 className="w-12 h-12 text-accent animate-spin" /></div>;
@@ -128,11 +128,10 @@ export default function AptitudeResultPage() {
           </Card>
 
           <div className="flex justify-center gap-6">
-            {isPassed ? (
-              <Button onClick={handleProceed} className="h-20 px-24 btn-premium rounded-[2.5rem] text-xl font-black uppercase tracking-[0.4em] shadow-2xl group">
-                Proceed to Coding Round <ArrowRight className="ml-4 w-8 h-8 transition-transform group-hover:translate-x-2" />
-              </Button>
-            ) : (
+            <Button onClick={handleProceed} className="h-20 px-24 btn-premium rounded-[2.5rem] text-xl font-black uppercase tracking-[0.4em] shadow-2xl group">
+              Proceed to Coding Round <ArrowRight className="ml-4 w-8 h-8 transition-transform group-hover:translate-x-2" />
+            </Button>
+            {!isPassed && (
               <Button onClick={handleRetry} className="h-20 px-16 glass border-white/10 rounded-[2.5rem] text-xl font-black uppercase tracking-widest hover:bg-white/5 transition-all">
                 <RotateCcw className="mr-4 w-8 h-8" /> Retake Assessment
               </Button>

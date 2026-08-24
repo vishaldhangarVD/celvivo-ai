@@ -42,7 +42,6 @@ function CodingResultContent() {
   const { toast } = useToast();
 
   const attemptId = searchParams.get('attemptId');
-  const [expandedNode, setExpandedNode] = useState<string | null>(null);
 
   const attemptRef = useMemo(() => {
     if (!db || !user?.uid || !attemptId) return null;
@@ -111,7 +110,7 @@ function CodingResultContent() {
       updatedAt: serverTimestamp(),
     });
 
-    router.push(`/interview/${activeId}`);
+    router.push(`${STAGE_ROUTES.HR_INTERVIEW}${activeId}`);
   };
 
   if (attemptLoading || journeyLoading) return <div className="h-screen flex items-center justify-center bg-[#050816]"><Loader2 className="w-12 h-12 text-accent animate-spin" /></div>;
@@ -164,7 +163,7 @@ function CodingResultContent() {
                   CONTINUE TO HR ARENA <ArrowRight className="ml-3 w-5 h-5 transition-transform group-hover:translate-x-1" />
                 </Button>
                 {!isPassed && (
-                  <Button onClick={() => router.push('/interview/coding')} className="w-full h-12 glass border-white/10 hover:bg-white/5 rounded-xl text-[10px] font-bold uppercase tracking-widest">
+                  <Button onClick={() => router.push(STAGE_ROUTES.CODING)} className="w-full h-12 glass border-white/10 hover:bg-white/5 rounded-xl text-[10px] font-bold uppercase tracking-widest">
                     <RotateCcw className="mr-2 w-4 h-4" /> Re-initialize Assessment
                   </Button>
                 )}

@@ -183,12 +183,12 @@ export default function CodingEnginePage() {
         codingReport: report,
         codingRoundCompleted: true,
         codingScore: scorePercentage,
-        currentStage: INTERVIEW_STAGES.CODING, // Main bucket
+        currentStage: INTERVIEW_STAGES.CODING_RESULT,
         step: 7,
         updatedAt: serverTimestamp()
       });
 
-      router.push('/interview/coding-result');
+      router.push(STAGE_ROUTES.CODING_RESULT);
     } catch (error) {
       console.error("Finalize Assessment Error:", error);
       setIsFinalizing(false);
@@ -377,7 +377,7 @@ export default function CodingEnginePage() {
 
       if (journey.codingUnlocked !== true) {
         toast({ variant: "destructive", title: "Access Restricted", description: "Complete previous nodes to unlock syntax matrix." });
-        router.push('/interview/aptitude-result');
+        router.push(STAGE_ROUTES.APTITUDE_RESULT);
         return;
       }
 

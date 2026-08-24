@@ -5,12 +5,13 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { Loader2 } from 'lucide-react';
 import { useUser, useFirestore } from '@/firebase';
 import { doc, getDoc, setDoc, deleteDoc, serverTimestamp } from 'firebase/firestore';
-import { INTERVIEW_STAGES, STAGE_ROUTES } from '@/lib/interview-stages';
+import { INTERVIEW_STAGES, STAGE_ROUTES, type InterviewStage } from '@/lib/interview-stages';
 import { useToast } from '@/hooks/use-toast';
 
 /**
  * @fileOverview Interview Route Dispatcher.
  * Handles the logic for starting or resuming the multi-stage interview journey.
+ * Strictly redirects to dedicated standalone pages. No UI logic here.
  */
 
 function InterviewDispatcherContent() {
@@ -35,9 +36,9 @@ function InterviewDispatcherContent() {
         
         await setDoc(journeyRef, {
           sessionId,
-          currentStage: INTERVIEW_STAGES.RESUME,
+          currentStage: INTERVIEW_STAGES.RESUME_UPLOAD,
           step: 1,
-          role: "Software Engineer", // Default calibration
+          role: "Software Engineer", 
           experience: "Senior",
           company: "Standard Tech",
           createdAt: serverTimestamp(),
@@ -45,20 +46,22 @@ function InterviewDispatcherContent() {
         });
 
         toast({ title: "Protocol Initialized", description: "Beginning resume registration." });
-        router.push(STAGE_ROUTES.RESUME);
+        router.push(STAGE_ROUTES.RESUME_UPLOAD);
       } else {
         // 2. Resume Existing Journey
         const snap = await getDoc(journeyRef);
         
         if (snap.exists()) {
           const data = snap.data();
-          const stage = data.currentStage as keyof typeof INTERVIEW_STAGES;
-          const route = STAGE_ROUTES[stage] || STAGE_ROUTES.RESUME;
+          const stage = data.currentStage as InterviewStage;
+          const route = STAGE_ROUTES[stage] || STAGE_ROUTES.RESUME_UPLOAD;
 
           toast({ title: "Session Reconnected", description: `Active stage: ${stage.replace('_', ' ')}` });
           
           if (stage === INTERVIEW_STAGES.HR_INTERVIEW) {
             router.push(`${route}${data.sessionId}`);
+          } else if (stage === INTERVIEW_STAGES.FEEDBACK) {
+             router.push(`${route}${data.sessionId || 'history'}`);
           } else {
             router.push(route);
           }

@@ -54,11 +54,11 @@ const FORBIDDEN_CONCEPTS = [
 function normalizeQuestion(text: string): { fingerprint: string; pattern: string } {
   const clean = text
     .toLowerCase()
-    .replace(/[^\w\s]/g, "") // Remove punctuation
-    .replace(/\s+/g, " ")    // Normalize whitespace
+    .replace(/[^\w\s]/g, "") 
+    .replace(/\s+/g, " ")    
     .trim();
   
-  const pattern = clean.replace(/\d+/g, "X"); // Replace numbers with X to detect templates
+  const pattern = clean.replace(/\d+/g, "X"); 
   return { fingerprint: clean, pattern };
 }
 
@@ -95,7 +95,7 @@ export default function AptitudeEnginePage() {
   const [isEvaluating, setIsEvaluating] = useState(false);
   const [evaluationStep, setEvaluationStep] = useState(0);
   
-  const [timeLeft, setTimeLeft] = useState(1800); // 30 minutes
+  const [timeLeft, setTimeLeft] = useState(1800); 
 
   const initGuard = useRef(false);
   const submissionGuard = useRef(false);
@@ -152,7 +152,6 @@ export default function AptitudeEnginePage() {
         return;
       }
 
-      // Starting a completely fresh session
       try {
         localStorage.removeItem(`aptitude_timer_end_${user.uid}`); 
         const userRef = doc(db, 'users', user.uid);
@@ -270,12 +269,12 @@ export default function AptitudeEnginePage() {
       await updateDoc(journeyRef!, {
         aptitudeReport: finalReport,
         aptitudeStatus: "completed",
-        currentStage: INTERVIEW_STAGES.APTITUDE, // Bucket stage
+        currentStage: INTERVIEW_STAGES.APTITUDE_RESULT,
         step: 5,
         updatedAt: serverTimestamp()
       });
 
-      router.push('/interview/aptitude-result');
+      router.push(STAGE_ROUTES.APTITUDE_RESULT);
     } catch (e) {
       console.error("[APTITUDE SESSION] Submission fault:", e);
       toast({ variant: "destructive", title: "Audit Protocol Fault" });

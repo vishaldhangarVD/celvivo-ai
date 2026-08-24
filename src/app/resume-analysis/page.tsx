@@ -10,10 +10,7 @@ import {
   Check, 
   Search,
   ChevronRight,
-  ShieldCheck,
-  Building2,
-  GraduationCap,
-  Briefcase
+  ShieldCheck
 } from 'lucide-react';
 import { useUser, useFirestore, useDoc } from '@/firebase';
 import { doc, updateDoc, serverTimestamp } from 'firebase/firestore';
@@ -100,12 +97,12 @@ export default function ResumeAnalysisPage() {
     
     await updateDoc(journeyRef, {
       role: selectedRole,
-      currentStage: INTERVIEW_STAGES.RESUME, // Main bucket
+      currentStage: INTERVIEW_STAGES.RESUME_RESULT,
       step: 3,
       updatedAt: serverTimestamp(),
     });
 
-    router.push('/resume-result');
+    router.push(STAGE_ROUTES.RESUME_RESULT);
   };
 
   if (journeyLoading) return <div className="h-screen bg-[#050816] flex items-center justify-center"><Loader2 className="w-12 h-12 text-accent animate-spin" /></div>;
