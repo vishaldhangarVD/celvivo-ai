@@ -21,9 +21,9 @@ const InterviewFeedbackInputSchema = z.object({
   }).optional(),
   aptitudeContext: z.object({
     overallScore: z.number(),
-    quantitative: z.number(),
-    logical: z.number(),
-    english: z.number(),
+    quantitative: z.number().optional(),
+    logical: z.number().optional(),
+    english: z.number().optional(),
     status: z.string(),
   }).optional(),
   codingContext: z.object({

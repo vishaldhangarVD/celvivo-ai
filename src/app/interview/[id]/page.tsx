@@ -46,7 +46,6 @@ import { cn } from "@/lib/utils";
 import HolographicInterviewer from "@/components/HolographicInterviewer";
 import CandidateHologram from "@/components/CandidateHologram";
 
-// Consolidating all holographic visuals into CandidateHologram
 const HologramStage = dynamic(() => import("@/components/CandidateHologram"), { 
   ssr: false,
   loading: () => (
@@ -67,7 +66,7 @@ function VirtualArenaContent() {
   const role = searchParams.get("role") || "Software Engineer";
   const company = searchParams.get("company") || "Standard Tech";
   const exp = searchParams.get("exp") || "Senior";
-  const round = searchParams.get("round") || "Virtual Interview";
+  const round = searchParams.get("round") || "HR Interview";
 
   const [currentIdx, setCurrentIdx] = useState(1);
   const [transcript, setTranscript] = useState<{role: 'interviewer' | 'candidate', text: string}[]>([]);
@@ -175,13 +174,12 @@ function VirtualArenaContent() {
             role, experienceLevel: exp, roundType: round, currentMainQuestionIndex: 1, 
             history: [], targetCompany: company,
             candidateName: data.resumeAnalysis?.personalInfo?.fullName || user.displayName || undefined,
-            resumeSkills: data.resumeAnalysis?.skillAnalysis?.map((s: any) => s.skill) || [],
-            resumeProjects: data.resumeAnalysis?.sections?.projects || [],
+            resumeSkills: data.resumeAnalysis?.analysis?.skillAnalysis?.map((s: any) => s.skill) || data.resumeAnalysis?.skillAnalysis?.map((s: any) => s.skill) || [],
+            resumeProjects: data.resumeAnalysis?.analysis?.sections?.projects || data.resumeAnalysis?.sections?.projects || [],
             resumeSummary: data.resumeAnalysis?.summary || "",
             aptitudeScore: data.aptitudeReport?.overallScore || 0,
             codingScore: data.codingReport?.score || 0,
             askedQuestions: [],
-            debugMode: data.debugMode,
             currentStage: "INTRODUCTION",
             currentDifficulty: "MEDIUM",
             hintUsed: false
@@ -216,8 +214,8 @@ function VirtualArenaContent() {
         role, experienceLevel: exp, roundType: round, currentMainQuestionIndex: currentIdx,
         history: chatHistory, userAnswer: currentAns, targetCompany: company,
         candidateName: formattedName,
-        resumeSkills: journey?.resumeAnalysis?.skillAnalysis?.map((s: any) => s.skill) || [],
-        resumeProjects: journey?.resumeAnalysis?.sections?.projects || [],
+        resumeSkills: journey?.resumeAnalysis?.analysis?.skillAnalysis?.map((s: any) => s.skill) || journey?.resumeAnalysis?.skillAnalysis?.map((s: any) => s.skill) || [],
+        resumeProjects: journey?.resumeAnalysis?.analysis?.sections?.projects || journey?.resumeAnalysis?.sections?.projects || [],
         resumeSummary: journey?.resumeAnalysis?.summary || "",
         aptitudeScore: journey?.aptitudeReport?.overallScore || 0,
         codingScore: journey?.codingReport?.score || 0,
@@ -232,7 +230,7 @@ function VirtualArenaContent() {
 
       if (response.isInterviewComplete) {
         setIsSimulationComplete(true);
-        setTimeout(() => finalizeSession(updatedTranscript), 5000);
+        setTimeout(() => finalizeSession(updatedTranscript), 3000);
       } else {
         setAskedQuestions(prev => [...prev, response.nextQuestion]);
         setCurrentIdx(prev => prev + 1);
@@ -253,10 +251,18 @@ function VirtualArenaContent() {
         interviewTranscript: currentTranscript.map(t => `${t.role}: ${t.text}`).join('\n\n'),
         resumeContext: {
           atsScore: journey?.resumeAnalysis?.atsScore || 0,
-          strengths: journey?.resumeAnalysis?.analysis?.strengths || [],
-          weaknesses: journey?.resumeAnalysis?.analysis?.weaknesses || [],
-          missingSkills: journey?.resumeAnalysis?.analysis?.missingSkills || [],
-        }
+          strengths: journey?.resumeAnalysis?.analysis?.strengths || journey?.resumeAnalysis?.strengths || [],
+          weaknesses: journey?.resumeAnalysis?.analysis?.weaknesses || journey?.resumeAnalysis?.weaknesses || [],
+          missingSkills: journey?.resumeAnalysis?.analysis?.missingSkills || journey?.resumeAnalysis?.missingSkills || [],
+        },
+        aptitudeContext: journey?.aptitudeReport ? {
+          overallScore: journey.aptitudeReport.overallScore,
+          status: journey.aptitudeReport.status
+        } : undefined,
+        codingContext: journey?.codingReport ? {
+          score: journey.codingReport.score,
+          status: journey.codingReport.status
+        } : undefined
       });
       const docRef = await addDoc(collection(db, 'users', user!.uid, 'interviews'), {
         role, company, experienceLevel: exp, history: currentTranscript, 
@@ -265,7 +271,9 @@ function VirtualArenaContent() {
       await deleteDoc(journeyRef!);
       router.push(`/feedback/${docRef.id}`);
     } catch (e) {
+      console.error("Master Audit Error:", e);
       setIsGeneratingReport(false);
+      toast({ variant: "destructive", title: "Audit Generation Failed" });
     }
   };
 
@@ -391,7 +399,7 @@ function VirtualArenaContent() {
              />
              <Button 
                onClick={handleSend} 
-               disabled={isProcessing || !userAnswer.trim()} 
+               disabled={isProcessing || isSimulationComplete || !userAnswer.trim()} 
                className="w-full h-11 btn-premium rounded-xl text-[10px] font-black uppercase tracking-[0.2em] shadow-xl group"
              >
                {isProcessing ? <Loader2 className="w-4 h-4 animate-spin" /> : <>SUBMIT ANSWER <ChevronRight className="w-4 h-4 ml-1 group-hover:translate-x-0.5 transition-transform" /></>}
@@ -399,6 +407,23 @@ function VirtualArenaContent() {
           </div>
         </div>
       </div>
+
+      <AnimatePresence>
+        {isGeneratingReport && (
+          <motion.div 
+            initial={{ opacity: 0 }} 
+            animate={{ opacity: 1 }} 
+            className="fixed inset-0 z-[200] bg-[#050816]/95 backdrop-blur-3xl flex flex-col items-center justify-center p-12 text-center"
+          >
+             <div className="relative mb-12">
+                <div className="w-40 h-40 rounded-full border-2 border-accent/20 border-t-accent animate-spin" />
+                <Award className="w-12 h-12 text-accent absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 animate-pulse" />
+             </div>
+             <h2 className="text-4xl font-bold tracking-tighter text-premium uppercase">Synthesizing Final Master Audit</h2>
+             <p className="text-[10px] font-black uppercase tracking-[0.6em] text-accent animate-pulse mt-4">Calibrating all rounds performance</p>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

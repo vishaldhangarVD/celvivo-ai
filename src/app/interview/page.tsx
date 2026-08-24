@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useMemo } from 'react';
@@ -15,16 +14,20 @@ import {
   ChevronRight, 
   FileText, 
   Briefcase, 
-  CheckCircle2, 
   Loader2,
   Zap,
   Rocket,
   ArrowRight,
   Sparkles,
-  SearchCode
+  GraduationCap,
+  CheckCircle2,
+  Target
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
+import { useUser, useFirestore } from '@/firebase';
+import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
+import { analyzeResume } from '@/ai/flows/ai-resume-analysis';
 
 const IT_ROLES = [
   "Data Analyst", "Data Scientist", "Data Analytics", "Business Analyst", "Power BI Developer",
@@ -40,8 +43,12 @@ const IT_ROLES = [
   "IT Support Engineer", "System Administrator", "Network Engineer"
 ];
 
+const EXPERIENCE_LEVELS = ["Junior", "Mid", "Senior"];
+
 export default function InterviewSetup() {
   const router = useRouter();
+  const { user } = useUser();
+  const db = useFirestore();
   const { toast } = useToast();
 
   const [step, setStep] = useState(1);
@@ -49,6 +56,7 @@ export default function InterviewSetup() {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedRole, setSelectedRole] = useState("");
+  const [selectedExp, setSelectedExp] = useState("Senior");
 
   const filteredRoles = useMemo(() => 
     IT_ROLES.filter(r => r.toLowerCase().includes(searchQuery.toLowerCase())),
@@ -58,28 +66,62 @@ export default function InterviewSetup() {
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const selected = e.target.files[0];
-      const validTypes = ['.pdf', '.doc', '.docx'];
-      const ext = selected.name.substring(selected.name.lastIndexOf('.')).toLowerCase();
-      
-      if (!validTypes.includes(ext)) {
-        toast({ variant: "destructive", title: "Format Error", description: "Please upload PDF or DOCX." });
+      if (selected.type !== 'application/pdf') {
+        toast({ variant: "destructive", title: "Format Error", description: "Please upload a PDF blueprint." });
         return;
       }
-      
+      if (selected.size > 10 * 1024 * 1024) {
+        toast({ variant: "destructive", title: "File Too Large", description: "Limit: 10MB" });
+        return;
+      }
       setFile(selected);
-      setIsAnalyzing(true);
-      // Simulate resume indexing
-      setTimeout(() => {
-        setIsAnalyzing(false);
-        setStep(2);
-        toast({ title: "Blueprint Indexed", description: "Your professional nodes are synchronized." });
-      }, 2000);
+      setStep(2);
+      toast({ title: "Identity Logged", description: "Select your target deployment track." });
     }
   };
 
   const handleRoleSelect = (role: string) => {
     setSelectedRole(role);
     setStep(3);
+  };
+
+  const handleStartJourney = async () => {
+    if (!file || !selectedRole || !user || !db) return;
+    setIsAnalyzing(true);
+    try {
+      const base64 = await new Promise<string>((res) => {
+        const reader = new FileReader();
+        reader.onload = () => res(reader.result as string);
+        reader.readAsDataURL(file);
+      });
+
+      const analysis = await analyzeResume({ 
+        resumeDataUri: base64, 
+        targetRole: selectedRole 
+      });
+
+      const sessionId = Math.random().toString(36).substring(7);
+      await setDoc(doc(db, 'users', user.uid, 'journey', 'active'), {
+        sessionId,
+        role: selectedRole,
+        experience: selectedExp,
+        resumeName: file.name,
+        resumeAnalysis: analysis,
+        currentStage: "Aptitude Assessment",
+        step: 3,
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+        aptitudeStatus: "not_started"
+      });
+
+      toast({ title: "Simulation Calibrated", description: "Aptitude round unlocked." });
+      router.push('/interview/aptitude');
+    } catch (e) {
+      console.error(e);
+      toast({ variant: "destructive", title: "Analysis Failed", description: "Could not process professional blueprint." });
+    } finally {
+      setIsAnalyzing(false);
+    }
   };
 
   return (
@@ -92,9 +134,9 @@ export default function InterviewSetup() {
         <div className="max-w-4xl w-full">
           
           <header className="text-center mb-16 space-y-4">
-            <Badge className="bg-accent/20 text-accent border-none px-6 py-1.5 font-bold tracking-[0.4em] text-[10px] uppercase">Simulation Calibration v6.0</Badge>
+            <Badge className="bg-accent/20 text-accent border-none px-6 py-1.5 font-bold tracking-[0.4em] text-[10px] uppercase">Simulation Onboarding v6.2</Badge>
             <h1 className="text-5xl font-bold tracking-tighter text-premium">
-              Arena <span className="text-gradient-purple">Onboarding.</span>
+              Arena <span className="text-gradient-purple">Registration.</span>
             </h1>
             <div className="flex items-center justify-center gap-4 mt-6">
               {[1, 2, 3].map(i => (
@@ -112,29 +154,22 @@ export default function InterviewSetup() {
                   </div>
                   <div className="space-y-2">
                     <h2 className="text-3xl font-bold">Resume Blueprint Required</h2>
-                    <p className="text-muted-foreground font-light max-w-sm mx-auto italic">Upload your latest blueprint to calibrate the AI interviewer.</p>
+                    <p className="text-muted-foreground font-light max-w-sm mx-auto italic">Upload your latest professional blueprint to calibrate the neural auditor.</p>
                   </div>
 
                   <div 
                     onClick={() => !isAnalyzing && document.getElementById('resume-upload-calibration')?.click()}
                     className={cn(
                       "border-2 border-dashed rounded-[2.5rem] p-12 transition-all cursor-pointer group relative overflow-hidden",
-                      isAnalyzing ? "border-accent bg-accent/5" : "border-white/10 hover:border-accent/30 hover:bg-white/[0.02]"
+                      file ? "border-accent bg-accent/5" : "border-white/10 hover:border-accent/30 hover:bg-white/[0.02]"
                     )}
                   >
-                    <input type="file" id="resume-upload-calibration" className="hidden" accept=".pdf,.doc,.docx" onChange={handleFileChange} />
-                    {isAnalyzing ? (
-                      <div className="flex flex-col items-center gap-4">
-                        <Loader2 className="w-10 h-10 text-accent animate-spin" />
-                        <span className="text-xs font-bold uppercase tracking-[0.3em] text-accent">Synchronizing Neural Node...</span>
-                      </div>
-                    ) : (
-                      <div className="space-y-4">
-                        <FileText className="w-10 h-10 text-muted-foreground group-hover:text-accent mx-auto transition-colors" />
-                        <p className="font-bold text-lg">Select Professional Blueprint</p>
-                        <p className="text-[10px] text-muted-foreground uppercase tracking-widest font-bold">PDF, DOC, DOCX • 10MB LIMIT</p>
-                      </div>
-                    )}
+                    <input type="file" id="resume-upload-calibration" className="hidden" accept=".pdf" onChange={handleFileChange} />
+                    <div className="space-y-4">
+                      <FileText className={cn("w-10 h-10 mx-auto transition-colors", file ? "text-accent" : "text-muted-foreground group-hover:text-accent")} />
+                      <p className="font-bold text-lg">{file ? file.name : "Select Professional Blueprint"}</p>
+                      <p className="text-[10px] text-muted-foreground uppercase tracking-widest font-bold">PDF Only • 10MB LIMIT</p>
+                    </div>
                   </div>
                 </Card>
               </motion.div>
@@ -144,9 +179,9 @@ export default function InterviewSetup() {
                   <div className="flex flex-col md:flex-row justify-between items-end gap-4">
                     <div className="space-y-2">
                       <h2 className="text-2xl font-bold flex items-center gap-3">
-                        <Briefcase className="w-6 h-6 text-accent" /> Target Deployment
+                        <Target className="w-6 h-6 text-accent" /> Deployment Track
                       </h2>
-                      <p className="text-sm text-muted-foreground font-light">Select the role you are being deployed for.</p>
+                      <p className="text-sm text-muted-foreground font-light">Specify your target job role for role-aware questioning.</p>
                     </div>
                     <div className="relative w-full md:w-72 group">
                       <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-white/20 group-focus-within:text-accent transition-colors" />
@@ -177,27 +212,47 @@ export default function InterviewSetup() {
             ) : (
               <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} key="step3">
                 <Card className="premium-card bg-[#0b0e1a]/80 border-accent/20 p-12 text-center space-y-10 relative overflow-hidden">
-                  <div className="absolute top-0 right-0 p-8 opacity-5">
-                    <Sparkles className="w-32 h-32 text-accent" />
-                  </div>
-                  
+                  {isAnalyzing && (
+                    <div className="absolute inset-0 bg-black/60 backdrop-blur-xl z-50 flex flex-col items-center justify-center space-y-6">
+                       <Loader2 className="w-16 h-16 text-accent animate-spin" />
+                       <div className="text-center">
+                         <p className="text-[10px] font-black uppercase tracking-[0.5em] text-accent animate-pulse">Neural Engine Analyzing</p>
+                         <p className="text-xs text-white/40 mt-2">Extracting skills and mapping career nodes...</p>
+                       </div>
+                    </div>
+                  )}
+
                   <div className="w-24 h-24 rounded-full bg-accent/10 border border-accent/20 flex items-center justify-center mx-auto shadow-[0_0_50px_rgba(34,211,238,0.2)]">
                     <Rocket className="w-12 h-12 text-accent" />
                   </div>
                   
                   <div className="space-y-4">
-                    <h2 className="text-4xl font-bold tracking-tighter">Calibration Success</h2>
+                    <h2 className="text-4xl font-bold tracking-tighter">Calibration Ready</h2>
                     <div className="flex flex-col items-center gap-2">
-                       <p className="text-white/60 font-light">Target Identity: <span className="text-white font-bold">{file?.name}</span></p>
-                       <p className="text-white/60 font-light">Deployment Track: <span className="text-accent font-bold uppercase tracking-widest">{selectedRole}</span></p>
+                       <p className="text-white/60 font-light">Role Profile: <span className="text-accent font-bold uppercase tracking-widest">{selectedRole}</span></p>
+                       <div className="flex items-center gap-4 mt-4">
+                         {EXPERIENCE_LEVELS.map(l => (
+                           <button 
+                             key={l} 
+                             onClick={() => setSelectedExp(l)}
+                             className={cn(
+                               "px-6 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all",
+                               selectedExp === l ? "bg-accent text-black" : "glass border-white/10 text-white/40 hover:text-white"
+                             )}
+                           >
+                             {l}
+                           </button>
+                         ))}
+                       </div>
                     </div>
                   </div>
 
                   <Button 
-                    onClick={() => router.push('/special-hr-interview')}
+                    onClick={handleStartJourney}
+                    disabled={isAnalyzing}
                     className="w-full h-20 btn-premium rounded-[2.5rem] text-lg font-black uppercase tracking-[0.3em] shadow-2xl group"
                   >
-                    Start AI Interview <ArrowRight className="ml-4 w-6 h-6 transition-transform group-hover:translate-x-2" />
+                    Initialize Simulation <ArrowRight className="ml-4 w-6 h-6 transition-transform group-hover:translate-x-2" />
                   </Button>
                 </Card>
               </motion.div>
