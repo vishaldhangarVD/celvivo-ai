@@ -115,6 +115,7 @@ const CandidateHologram = memo(({
     // 2. Load Model
     const loader = new GLTFLoader();
     loader.load('/models/woman_head.glb', (gltf) => {
+      console.log("[Hologram] Loading verified model");
       let faceGeo: THREE.BufferGeometry | null = null;
       let mouthGeo: THREE.BufferGeometry | null = null;
       let irisGeo: THREE.BufferGeometry | null = null;
@@ -152,10 +153,15 @@ const CandidateHologram = memo(({
         const finalCenter = new THREE.Vector3();
         faceGeo.boundingBox!.getCenter(finalCenter);
 
-        createPoints(faceGeo, '#4ff0ff', 0.022, 0.9);
+        // Face Boost: 5000 nodes at 0.95 opacity for solid recognition
+        const faceVertexCount = faceGeo.attributes.position.count;
+        console.log("[Hologram] Raw face vertex count:", faceVertexCount);
+        createPoints(faceGeo, '#4ff0ff', 0.022, 0.95, 5000);
+        
         if (mouthGeo) createPoints(mouthGeo, '#4ff0ff', 0.018, 0.6);
         if (irisGeo) createPoints(irisGeo, '#4ff0ff', 0.012, 0.5, 0, true);
 
+        // Hair: 6000 nodes total
         hairGeos.forEach(h => {
           let count = 1200;
           if (h.name.includes('Cap') || h.name.includes('Back')) count = 3600;
@@ -167,6 +173,8 @@ const CandidateHologram = memo(({
             obj.position.sub(finalCenter);
           }
         });
+        
+        console.log("[Hologram] Identity synthesis complete");
       }
 
       sceneElements.current = { scene, camera, renderer };
