@@ -22,7 +22,6 @@ import {
   Twitter,
   Linkedin,
   Github,
-  Mail,
   Command,
   ArrowUpRight
 } from 'lucide-react';
@@ -133,12 +132,10 @@ export default function LandingPage() {
       company: f.company,
       image: f.photoURL || `https://picsum.photos/seed/${f.userId}/200/200`,
       text: f.feedback,
-      rating: Number(f.rating) || 5
+      rating: Math.max(0, Math.min(5, Number(f.rating) || 5))
     })) || [];
     return [...STATIC_TESTIMONIALS, ...dynamic];
   }, [communityFeedback]);
-
-  const hrImg = "/hr.png.png";
 
   const handleStartVirtualInterview = () => {
     if (!user) {
@@ -283,12 +280,13 @@ export default function LandingPage() {
                   <div className="absolute inset-0 bg-gradient-to-br from-accent/10 via-transparent to-transparent opacity-50 z-10" />
                   <div className="absolute inset-0">
                     <Image
-                      src={hrImg}
+                      src="https://picsum.photos/seed/nexvoro_hr/800/1000"
                       alt="AI HR Manager"
                       fill
                       priority
                       sizes="(max-width:768px)100vw,40vw"
                       className="object-cover object-center scale-[1.10]"
+                      data-ai-hint="professional businessman"
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-[#050816]/30 via-transparent to-transparent z-20" />
                     <div className="absolute inset-0 bg-gradient-to-r from-transparent via-cyan-500/5 to-blue-500/10 z-20" />
@@ -406,7 +404,7 @@ export default function LandingPage() {
                 <Card className="glass p-10 rounded-[2.5rem] border-white/5 bg-white/[0.01] hover:bg-white/[0.03] transition-all h-full flex flex-col justify-between group">
                   <div className="space-y-6">
                     <div className="flex gap-1">
-                      {Array.from({ length: Math.max(0, Math.min(5, t.rating)) }).map((_, idx) => (
+                      {Array.from({ length: t.rating }).map((_, idx) => (
                         <Star key={idx} className="w-4 h-4 text-yellow-500 fill-current" />
                       ))}
                     </div>

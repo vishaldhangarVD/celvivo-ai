@@ -56,7 +56,6 @@ async function tryGeminiTTS(text: string): Promise<{ buffer: ArrayBuffer; conten
 
   try {
     console.log("[TTS] Handshaking with Gemini 1.5 Flash...");
-    // Using 1.5-flash as it's the stable GA model supporting audio modality
     const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
     
     const response = await fetch(url, {
@@ -101,7 +100,6 @@ async function tryGeminiTTS(text: string): Promise<{ buffer: ArrayBuffer; conten
 
   } catch (error: any) {
     console.error("[TTS Fallback] CRITICAL FAULT during Gemini synthesis:", error.message);
-    console.error(error.stack);
     return null;
   }
 }
@@ -130,12 +128,7 @@ async function getAvailableVoice(apiKey: string): Promise<string> {
       v.labels?.gender === 'female' || v.name.toLowerCase().includes('female')
     );
 
-    let eligibleVoice = femaleVoices.find((v: any) => {
-      const name = v.name.toLowerCase();
-      return name.includes('indian') || name.includes('rachel') || name.includes('alice');
-    });
-
-    if (!eligibleVoice) eligibleVoice = femaleVoices.length > 0 ? femaleVoices[0] : accessibleVoices[0];
+    let eligibleVoice = femaleVoices.length > 0 ? femaleVoices[0] : accessibleVoices[0];
 
     cachedVoiceId = eligibleVoice.voice_id;
     return cachedVoiceId!;
@@ -146,29 +139,17 @@ async function getAvailableVoice(apiKey: string): Promise<string> {
 }
 
 export async function POST(req: Request) {
-  let text = "";
   try {
-    // START DIAGNOSTIC
-    console.log("[TTS] Request received. Environment check:", {
-      HAS_GEMINI_KEY: !!process.env.GEMINI_API_KEY,
-      HAS_GOOGLE_GENAI_KEY: !!process.env.GOOGLE_GENAI_API_KEY,
-      HAS_ELEVENLABS_KEY: !!process.env.ELEVENLABS_API_KEY
-    });
-
     const body = await req.json().catch(() => null);
     if (!body || !body.text) {
       return NextResponse.json({ error: 'Text node missing.' }, { status: 400 });
     }
-    text = body.text;
-
+    const text = body.text;
     const elevenApiKey = process.env.ELEVENLABS_API_KEY;
     
-    // Attempt Primary Provider: ElevenLabs
     if (elevenApiKey) {
       try {
         const voiceId = await getAvailableVoice(elevenApiKey);
-        const modelId = 'eleven_flash_v2_5';
-
         const response = await fetch(
           `https://api.elevenlabs.io/v1/text-to-speech/${voiceId}`,
           {
@@ -180,14 +161,8 @@ export async function POST(req: Request) {
             },
             body: JSON.stringify({
               text,
-              model_id: modelId,
-              voice_settings: {
-                stability: 0.65,
-                similarity_boost: 0.80,
-                style: 0.05,
-                use_speaker_boost: true,
-                speed: 0.90
-              },
+              model_id: 'eleven_flash_v2_5',
+              voice_settings: { stability: 0.65, similarity_boost: 0.80, style: 0.05, use_speaker_boost: true, speed: 0.90 },
             }),
           }
         );
@@ -196,21 +171,14 @@ export async function POST(req: Request) {
           const audioBuffer = await response.arrayBuffer();
           console.log("[TTS] Used provider: ElevenLabs");
           return new NextResponse(audioBuffer, {
-            headers: {
-              'Content-Type': 'audio/mpeg',
-              'Cache-Control': 'no-store, max-age=0',
-            },
+            headers: { 'Content-Type': 'audio/mpeg', 'Cache-Control': 'no-store, max-age=0' },
           });
-        } else {
-          const elErr = await response.text();
-          console.warn(`[TTS] ElevenLabs rejected (Status ${response.status}): ${elErr}`);
         }
       } catch (e: any) {
         console.warn("[TTS] ElevenLabs path exception:", e.message);
       }
     }
 
-    // Trigger Fallback Provider: Google Gemini
     console.log("[TTS] Transitioning to Gemini Fallback...");
     const fallback = await tryGeminiTTS(text);
     if (fallback) {
