@@ -9,7 +9,7 @@ import { cn } from '@/lib/utils';
 /**
  * @fileOverview CandidateHologram - High-Density Particles-Only Hologram.
  * Implementation: Reverted to stable raw vertex sampling for clarity.
- * Fix: Memoized to prevent remounts from parent re-renders.
+ * Fix: Canvas-ref pattern for visibility and parent height-cascade fixes.
  */
 
 const CandidateHologram = memo(({ 
@@ -23,16 +23,16 @@ const CandidateHologram = memo(({
   speaking?: boolean;
   isLoader?: boolean;
 }) => {
-  const containerRef = useRef<HTMLDivElement>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
   const speakingRef = useRef(speaking);
   const nextBlinkTime = useRef<number>(Date.now() + 3000);
   const isBlinking = useRef<boolean>(false);
+  const eyeMaterialsRef = useRef<THREE.PointsMaterial[]>([]);
   
   const sceneElements = useRef<{
     scene: THREE.Scene;
     camera: THREE.PerspectiveCamera;
     renderer: THREE.WebGLRenderer;
-    eyeMaterials: THREE.PointsMaterial[];
   } | null>(null);
 
   useEffect(() => {
@@ -40,10 +40,12 @@ const CandidateHologram = memo(({
   }, [speaking]);
 
   useEffect(() => {
-    if (!containerRef.current) return;
+    if (!canvasRef.current) return;
 
-    const width = containerRef.current.clientWidth || 400;
-    const height = containerRef.current.clientHeight || 400;
+    const parent = canvasRef.current.parentElement;
+    const width = parent?.clientWidth || 400;
+    const height = parent?.clientHeight || 400;
+    console.log("[Hologram] Container dimensions:", width, height);
 
     // 1. Initialize Scene
     const scene = new THREE.Scene();
@@ -51,12 +53,13 @@ const CandidateHologram = memo(({
     camera.position.set(0, 0, 3);
     camera.lookAt(0, 0, 0);
 
-    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+    const renderer = new THREE.WebGLRenderer({ 
+      canvas: canvasRef.current,
+      antialias: true, 
+      alpha: true 
+    });
     renderer.setSize(width, height);
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-    containerRef.current.appendChild(renderer.domElement);
-
-    const eyeMaterials: THREE.PointsMaterial[] = [];
 
     // Helper: Create Point Cloud from Geometry
     const createPoints = (
@@ -105,14 +108,12 @@ const CandidateHologram = memo(({
         const pts = new THREE.Points(subGeo, mat);
         scene.add(pts);
         
-        if (isEyes) eyeMaterials.push(mat);
+        if (isEyes) eyeMaterialsRef.current.push(mat);
       }
     };
 
     // 2. Load Model
     const loader = new GLTFLoader();
-    console.log("[Hologram] Loading verified model: woman_head.glb");
-    
     loader.load('/models/woman_head.glb', (gltf) => {
       let faceGeo: THREE.BufferGeometry | null = null;
       let mouthGeo: THREE.BufferGeometry | null = null;
@@ -166,11 +167,9 @@ const CandidateHologram = memo(({
             obj.position.sub(finalCenter);
           }
         });
-        
-        console.log("[Hologram] Identity synthesis complete.");
       }
 
-      sceneElements.current = { scene, camera, renderer, eyeMaterials };
+      sceneElements.current = { scene, camera, renderer };
     }, undefined, (err) => {
       console.error("[Hologram] GLB Load Fault:", err);
     });
@@ -182,15 +181,15 @@ const CandidateHologram = memo(({
 
       const now = Date.now();
 
+      // Blinking Logic
       if (now > nextBlinkTime.current && !isBlinking.current) {
         isBlinking.current = true;
-        sceneElements.current.eyeMaterials.forEach(m => m.opacity = 0);
+        console.log("[Hologram] Blink");
+        eyeMaterialsRef.current.forEach(m => m.opacity = 0);
         setTimeout(() => {
-          if (sceneElements.current) {
-            sceneElements.current.eyeMaterials.forEach(m => m.opacity = 0.5);
-            isBlinking.current = false;
-            nextBlinkTime.current = Date.now() + 3000 + Math.random() * 3000;
-          }
+          eyeMaterialsRef.current.forEach(m => m.opacity = 0.5);
+          isBlinking.current = false;
+          nextBlinkTime.current = Date.now() + 3000 + Math.random() * 3000;
         }, 150);
       }
 
@@ -207,7 +206,18 @@ const CandidateHologram = memo(({
     };
     animate();
 
+    const handleResize = () => {
+      if (!canvasRef.current || !canvasRef.current.parentElement) return;
+      const w = canvasRef.current.parentElement.clientWidth;
+      const h = canvasRef.current.parentElement.clientHeight;
+      camera.aspect = w / h;
+      camera.updateProjectionMatrix();
+      renderer.setSize(w, h);
+    };
+    window.addEventListener('resize', handleResize);
+
     return () => {
+      window.removeEventListener('resize', handleResize);
       cancelAnimationFrame(frameId);
       renderer.dispose();
       scene.traverse((obj: any) => {
@@ -217,14 +227,12 @@ const CandidateHologram = memo(({
           else obj.material.dispose();
         }
       });
-      if (containerRef.current?.contains(renderer.domElement)) {
-        containerRef.current.removeChild(renderer.domElement);
-      }
     };
   }, []);
 
   return (
-    <div className={cn("relative overflow-hidden", className)} ref={containerRef}>
+    <div className={cn("relative overflow-hidden w-full h-full", className)}>
+      <canvas ref={canvasRef} className="w-full h-full block" />
       {isLoader && (
         <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 bg-black/20 backdrop-blur-md z-50">
           <Loader2 className="w-10 h-10 text-accent animate-spin" />

@@ -73,7 +73,7 @@ export default function HolographicInterviewer({
   }, [currentQuestion, isGenerating, onSpeechEnd, toast]);
 
   return (
-    <div className={className}>
+    <div className={cn("h-full w-full", className)}>
       <audio ref={audioRef} className="hidden" />
       <CandidateHologram 
         active={true}

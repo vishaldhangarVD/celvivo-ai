@@ -273,7 +273,7 @@ function VirtualArenaContent() {
     return (
       <div className="h-screen w-full bg-[#050816] flex items-center justify-center relative overflow-hidden">
         <div className="absolute inset-0 z-0 h-full w-full">
-           <HologramStage isLoader={true} />
+           <HologramStage isLoader={true} className="w-full h-full" />
         </div>
       </div>
     );
@@ -300,8 +300,8 @@ function VirtualArenaContent() {
           <Button variant="ghost" size="icon" className="text-accent bg-accent/10 rounded-xl"><Mic className="w-5" /></Button>
         </div>
 
-        <div className="flex-1 flex flex-col p-3 space-y-1.5 overflow-hidden">
-          <div className="flex-1 min-0 relative rounded-[2rem] overflow-hidden bg-black border border-white/5 shadow-2xl">
+        <div className="flex-1 flex flex-col p-3 space-y-1.5 overflow-hidden h-full">
+          <div className="flex-1 min-0 relative rounded-[2rem] overflow-hidden bg-black border border-white/5 shadow-2xl h-full">
             <HologramStage 
               active={true}
               speaking={isAiSpeaking}
@@ -351,7 +351,7 @@ function VirtualArenaContent() {
         </div>
 
         <div className="w-[300px] xl:w-[350px] border-l border-white/5 bg-[#0b0e1a] flex flex-col shrink-0 overflow-hidden">
-          <div className="flex-1 p-3 flex flex-col space-y-3 overflow-hidden">
+          <div className="flex-1 p-3 flex flex-col space-y-3 overflow-hidden h-full">
              <div className="flex justify-between items-end px-1 shrink-0">
                <h3 className="text-[9px] font-black uppercase text-white/30 tracking-widest">Question {currentIdx}</h3>
                <Badge variant="outline" className="border-accent/30 text-accent text-[8px] uppercase tracking-tighter">AI Node Active</Badge>
@@ -364,13 +364,13 @@ function VirtualArenaContent() {
                 </p>
              </Card>
 
-             <div className="flex-1 min-h-[300px] relative rounded-2xl overflow-hidden border border-white/5 shadow-2xl bg-black/40 group">
+             <div className="flex-1 min-h-[300px] relative rounded-2xl overflow-hidden border border-white/5 shadow-2xl bg-black/40 group h-full">
                 <HolographicInterviewer 
                   isSpeaking={isAiSpeaking} 
                   isGenerating={isInitializing}
                   currentQuestion={transcript[transcript.length-1]?.text} 
                   onSpeechEnd={() => setIsAiSpeaking(false)}
-                  className="rounded-2xl"
+                  className="rounded-2xl h-full w-full"
                 />
              </div>
           </div>
