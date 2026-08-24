@@ -295,7 +295,7 @@ export default function Dashboard() {
                 <h3 className="text-xs font-bold uppercase tracking-[0.3em] text-white/30 ml-2">AI Career Tools</h3>
                 <div className="grid gap-4">
                   {[
-                    { title: "Start Interview", icon: Mic, color: "text-accent", href: "/interview" },
+                    { title: "Start AI Interview", icon: Mic, color: "text-accent", href: "/interview?action=resume" },
                     { title: "Certificates", icon: Award, color: "text-orange-300", href: "/certificates" },
                     { title: "Skill Gap Analysis", icon: Brain, color: "text-yellow-400", href: "/skill-gap" },
                     { title: "Career Roadmap", icon: Map, color: "text-blue-400", href: "/roadmap" },
@@ -359,7 +359,7 @@ export default function Dashboard() {
                       <History className="w-12 h-12 text-white/5 mx-auto mb-6" />
                       <h3 className="text-xl font-bold mb-2">No interviews yet</h3>
                       <p className="text-muted-foreground font-light text-sm mb-8">Initialize your first simulation to start tracking performance metrics.</p>
-                      <Link href="/interview">
+                      <Link href="/interview?action=start">
                         <Button className="btn-premium px-8">Start Your First Interview</Button>
                       </Link>
                     </div>

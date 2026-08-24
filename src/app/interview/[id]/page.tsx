@@ -181,9 +181,11 @@ function VirtualArenaContent() {
             setTranscript([{ role: 'interviewer', text: response.nextQuestion }]);
             setAskedQuestions([response.nextQuestion]);
             setCurrentSimStage(response.stage);
+
+            await updateDoc(docRef, { currentStage: "HR Interview" });
           } catch (e) {
             console.error("AI Init Error:", e);
-            setTranscript([{ role: 'interviewer', text: "Hello. Welcome to today's interview. Could you please introduce yourself?" }]);
+            setTranscript([{ role: 'interviewer', text: "Hello. Welcome to today's interview. Could you please introduce yourself and share a bit about your journey?" }]);
           }
         }
         setTimeout(() => setIsInitializing(false), 2000);
@@ -442,5 +444,5 @@ function VirtualArenaContent() {
 }
 
 export default function VirtualArena() {
-  return <Suspense fallback={<div className="h-screen bg-[#050816] flex items-center justify-center"><Loader2 className="w-12 h-12 text-accent animate-spin" /></div>}><VirtualArenaContent /></Suspense>;
+  return <Suspense fallback={<div className="min-h-screen bg-[#050816] flex items-center justify-center"><Loader2 className="w-12 h-12 text-accent animate-spin" /></div>}><VirtualArenaContent /></Suspense>;
 }

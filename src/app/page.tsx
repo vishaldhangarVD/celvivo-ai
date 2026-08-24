@@ -137,12 +137,20 @@ export default function LandingPage() {
     return [...STATIC_TESTIMONIALS, ...dynamic];
   }, [communityFeedback]);
 
-  const handleStartVirtualInterview = () => {
+  const handleStartMockInterview = () => {
     if (!user) {
-      router.push('/login?redirectTo=/interview');
+      router.push('/login?redirectTo=/interview?action=start');
       return;
     }
-    router.push('/interview');
+    router.push('/interview?action=start');
+  };
+
+  const handleEnterInterviewRoom = () => {
+    if (!user) {
+      router.push('/login?redirectTo=/interview?action=resume');
+      return;
+    }
+    router.push('/interview?action=resume');
   };
 
   if (authLoading) return <div className="min-h-screen bg-[#050816] flex items-center justify-center"><Loader2 className="w-12 h-12 text-accent animate-spin" /></div>;
@@ -190,10 +198,10 @@ export default function LandingPage() {
 
               <div className="flex flex-wrap gap-4 pt-2">
                 <Button 
-                  onClick={handleStartVirtualInterview} 
+                  onClick={handleStartMockInterview} 
                   className="h-14 px-8 text-xs btn-premium shadow-[0_20px_50px_rgba(147,51,234,0.3)] transition-all hover:scale-105 active:scale-95"
                 >
-                  🎤 Start Mock Interview <Zap className="ml-3 w-4 h-4 fill-current" />
+                  🚀 Start Mock Interview <Zap className="ml-3 w-4 h-4 fill-current" />
                 </Button>
                 <Link href="/resume">
                   <Button variant="outline" className="h-14 px-8 glass border-white/10 rounded-2xl text-[10px] font-bold tracking-widest uppercase hover:bg-white/5">
@@ -238,10 +246,10 @@ export default function LandingPage() {
                     
                     <div className="space-y-3 pl-1">
                       {[
-                        { label: "APTITUDE SCREENING", desc: "LOGICAL & QUANTITATIVE ASSESSMENT", color: "text-blue-400" },
-                        { label: "SYNTAX MATRIX", desc: "CODING & IMPLEMENTATION TEST", color: "text-emerald-400" },
-                        { label: "NEURAL ARENA", desc: "AI VIRTUAL INTERVIEW", color: "text-accent" },
-                        { label: "MASTER PERFORMANCE AUDIT", desc: "FINAL ANALYTICS & HIRING REPORT", color: "text-amber-400" }
+                        { label: "RESUME CALIBRATION", desc: "IDENTITY & SKILL SYNC", color: "text-blue-400" },
+                        { label: "APTITUDE SCREENING", desc: "LOGICAL & QUANTITATIVE ASSESSMENT", color: "text-emerald-400" },
+                        { label: "SYNTAX MATRIX", desc: "CODING & IMPLEMENTATION TEST", color: "text-accent" },
+                        { label: "NEURAL ARENA", desc: "AI VIRTUAL HR INTERVIEW", color: "text-amber-400" }
                       ].map((step, idx, arr) => (
                         <div key={idx} className="flex flex-col">
                           <motion.div 
@@ -267,11 +275,11 @@ export default function LandingPage() {
                   </div>
                   
                   <button 
-                    onClick={handleStartVirtualInterview} 
+                    onClick={handleEnterInterviewRoom} 
                     className="w-full h-12 btn-orange-premium text-[9px] font-black tracking-[0.4em] uppercase mt-10 rounded-2xl group/btn overflow-hidden"
                   >
                     <span className="relative z-10 flex items-center justify-center">
-                      🚀 Enter Interview Room <ChevronRight className="ml-2 w-3.5 h-3.5 transition-transform group-hover/btn:translate-x-1" />
+                      🚪 Enter Interview Room <ChevronRight className="ml-2 w-3.5 h-3.5 transition-transform group-hover/btn:translate-x-1" />
                     </span>
                   </button>
                 </div>

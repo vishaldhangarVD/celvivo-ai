@@ -449,7 +449,8 @@ export default function CodingEnginePage() {
         await updateDoc(journeyRef!, {
           codingQuestions: finalQuestions,
           questionsSessionId: journey.sessionId || "unknown",
-          updatedAt: serverTimestamp()
+          updatedAt: serverTimestamp(),
+          currentStage: "Coding Assessment"
         });
 
         // 4. HISTORY PROTOCOL: Update global user history to avoid repeating these in future attempts.
@@ -519,8 +520,11 @@ export default function CodingEnginePage() {
 
   if (isInitializing || journeyLoading) return (
     <div className="h-screen bg-[#050816] flex flex-col items-center justify-center space-y-12">
-      <Brain className="w-12 h-12 text-accent animate-pulse" />
-      <p className="text-[10px] font-black uppercase tracking-[0.5em] text-accent">Neural Core Synchronizing...</p>
+      <div className="relative">
+         <div className="w-24 h-24 rounded-full border-2 border-accent/20 border-t-accent animate-spin" />
+         <Brain className="w-10 h-10 text-accent absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 animate-pulse" />
+      </div>
+      <p className="text-[10px] font-black uppercase tracking-[0.5em] text-accent animate-pulse">Neural Core Synchronizing...</p>
     </div>
   );
 
@@ -532,7 +536,7 @@ export default function CodingEnginePage() {
       <div className="particles-bg" />
       <Navbar />
       
-      <header className="h-[72px] border-b border-white/5 bg-[#0b0e1a]/80 backdrop-blur-xl flex items-center justify-between px-8 z-50">
+      <header className="h-[72px] border-b border-white/5 bg-[#0b0e1a]/80 backdrop-blur-xl flex items-center justify-between px-8 z-50 sticky top-[72px]">
         <div className="flex items-center gap-6">
           <div className="w-10 h-10 rounded-xl bg-accent/10 flex items-center justify-center border border-accent/20">
              <Code2 className="w-5 h-5 text-accent" />
@@ -557,15 +561,15 @@ export default function CodingEnginePage() {
 
         <div className="flex items-center gap-8">
           <div className={cn(
-            "px-6 py-2 rounded-xl glass border-white/10 font-mono text-xl tabular-nums tracking-widest flex items-center gap-3",
-            timeLeft < 300 && "animate-pulse shadow-[0_0_20px_rgba(34,211,238,0.2)]"
-          )} style={{ color: '#ef4444' }}>
-            <Timer className="w-5 h-5" /> {formatTime(timeLeft)}
+            "px-6 py-2 rounded-xl glass border-white/10 font-mono text-xl tabular-nums tracking-widest flex items-center gap-3 shadow-xl",
+            timeLeft < 300 ? "text-red-500 animate-pulse border-red-500/30 bg-red-500/10" : "text-accent border-accent/20 bg-accent/5"
+          )}>
+            <Timer className={cn("w-5 h-5", timeLeft < 300 && "animate-spin-slow")} /> {formatTime(timeLeft)}
           </div>
         </div>
       </header>
 
-      <main className="flex-1 container-fluid flex overflow-hidden p-4 gap-4">
+      <main className="flex-1 container-fluid flex overflow-hidden p-4 gap-4 mt-20">
         <div className="w-[35%] flex flex-col gap-4">
           <Card className="flex-1 glass bg-white/[0.01] border-white/5 p-8 overflow-y-auto custom-scrollbar rounded-[2.5rem]">
             {currentQ ? (
@@ -574,7 +578,7 @@ export default function CodingEnginePage() {
                   <span className="text-[10px] font-black uppercase tracking-widest text-white/40">Question {currentIdx + 1} of 8</span>
                   <div className="flex items-center gap-2">
                     <Clock className="w-3 h-3 text-white/40" />
-                    <span className="text-[9px] font-bold uppercase tracking-widest" style={{ color: '#ef4444' }}>TIME LEFT: {formatTime(timeLeft)}</span>
+                    <span className="text-[9px] font-bold uppercase tracking-widest" style={{ color: timeLeft < 300 ? '#ef4444' : '#22d3ee' }}>TIME LEFT: {formatTime(timeLeft)}</span>
                   </div>
                 </div>
 
@@ -615,11 +619,11 @@ export default function CodingEnginePage() {
                     <div className="space-y-5 font-mono text-[11px]">
                       <div className="space-y-2">
                         <p className="text-white/20 uppercase tracking-widest text-[9px]">INPUT</p>
-                        <pre className="text-accent whitespace-pre-wrap p-4 glass rounded-xl bg-white/5 border border-white/5">{currentQ.sampleInput || ''}</pre>
+                        <pre className="text-accent whitespace-pre-wrap p-4 glass rounded-xl bg-white/5 border border-white/5 shadow-inner">{currentQ.sampleInput || ''}</pre>
                       </div>
                       <div className="space-y-2">
                         <p className="text-white/20 uppercase tracking-widest text-[9px]">EXPECTED OUTPUT</p>
-                        <pre className="text-green-400 whitespace-pre-wrap p-4 glass rounded-xl bg-white/5 border border-white/5">{currentQ.sampleOutput || ''}</pre>
+                        <pre className="text-green-400 whitespace-pre-wrap p-4 glass rounded-xl bg-white/5 border border-white/5 shadow-inner">{currentQ.sampleOutput || ''}</pre>
                       </div>
                     </div>
                   </div>
@@ -635,21 +639,21 @@ export default function CodingEnginePage() {
         </div>
 
         <div className="flex-1 flex flex-col gap-4">
-          <Card className="p-6 glass border-accent/20 bg-accent/[0.03] rounded-[2rem] flex items-center justify-between">
+          <Card className="p-6 glass border-accent/20 bg-accent/[0.03] rounded-[2rem] flex items-center justify-between shadow-2xl">
             <div className="flex items-center gap-6">
-              <div className="w-12 h-12 rounded-2xl bg-accent/20 flex items-center justify-center text-accent">
+              <div className="w-12 h-12 rounded-2xl bg-accent/20 flex items-center justify-center text-accent border border-accent/20">
                  <Rocket className="w-6 h-6" />
               </div>
               <div>
-                <h3 className="text-sm font-black uppercase tracking-widest text-white">MISSION</h3>
-                <p className="text-[10px] text-white/40 uppercase tracking-widest mt-1">Complete the algorithm logic. Verification is mandatory for progression.</p>
+                <h3 className="text-sm font-black uppercase tracking-widest text-white">MISSION PROTOCOL</h3>
+                <p className="text-[10px] text-white/40 uppercase tracking-widest mt-1">Implement the algorithmic logic. System verification is mandatory for progression.</p>
               </div>
             </div>
             {(isNavigating || countdown !== null) && (
               <div className="flex items-center gap-3 bg-accent/20 px-6 py-2 rounded-xl border border-accent/30 animate-pulse">
                 <Loader2 className="w-4 h-4 text-accent animate-spin" />
                 <span className="text-[9px] font-black text-accent uppercase tracking-widest">
-                  {countdown !== null ? `TRANSITIONING IN ${countdown}S...` : "LOADING NEXT QUESTION..."}
+                  {countdown !== null ? `SYNCING IN ${countdown}S...` : "CALIBRATING NEXT NODE..."}
                 </span>
               </div>
             )}
@@ -660,7 +664,7 @@ export default function CodingEnginePage() {
                <div className="flex items-center gap-12">
                  <div className="flex items-center gap-3">
                     <span className="text-[9px] font-black text-white/30 uppercase tracking-widest">Syntax Node</span>
-                    <Badge variant="outline" className="border-accent/30 text-accent text-[10px] font-mono px-3">
+                    <Badge variant="outline" className="border-accent/30 text-accent text-[10px] font-mono px-3 bg-accent/5">
                       {currentQ?.topic || 'ALGORITHM'}
                     </Badge>
                  </div>
@@ -669,7 +673,7 @@ export default function CodingEnginePage() {
                  <select 
                    value={selectedLang?.id || LANGUAGES[0].id} 
                    onChange={(e) => setSelectedLang(LANGUAGES.find(l => l.id === e.target.value) || LANGUAGES[0])} 
-                   className="h-8 px-3 glass border-white/10 bg-[#0b0e1a] rounded-lg text-[9px] font-black uppercase tracking-widest outline-none focus:border-accent"
+                   className="h-9 px-4 glass border-white/10 bg-[#08090D] rounded-xl text-[9px] font-black uppercase tracking-widest outline-none focus:border-accent shadow-lg transition-all"
                  >
                    {LANGUAGES.map(l => <option key={l.id} value={l.id}>{l.label}</option>)}
                  </select>
@@ -696,7 +700,8 @@ export default function CodingEnginePage() {
                 readOnly: isTimeExpired || isFinalizing || countdown !== null ? true : false, 
                 minimap: { enabled: false },
                 fontFamily: 'JetBrains Mono, monospace',
-                lineHeight: 1.6
+                lineHeight: 1.6,
+                padding: { top: 20, bottom: 20 }
               }} 
             />
 
@@ -705,7 +710,7 @@ export default function CodingEnginePage() {
                 <Button 
                   onClick={handleRunCode} 
                   disabled={isRunning || isSubmitting || isTimeExpired || isNavigating || !currentQ || countdown !== null} 
-                  className="h-12 px-8 glass border-white/10 bg-white/5 text-[10px] font-black uppercase tracking-widest rounded-xl hover:bg-white/10 transition-all"
+                  className="h-12 px-8 glass border-white/10 bg-white/5 text-[10px] font-black uppercase tracking-widest rounded-xl hover:bg-white/10 transition-all shadow-lg"
                 >
                   {isRunning ? <Loader2 className="w-4 animate-spin mr-2" /> : <Activity className="w-4 h-4 mr-2" />} RUN SAMPLE
                 </Button>
@@ -713,12 +718,12 @@ export default function CodingEnginePage() {
                 <Button 
                   onClick={handleSubmitCode} 
                   disabled={isSubmitting || isRunning || isTimeExpired || isNavigating || !currentQ || countdown !== null} 
-                  className="h-12 px-12 btn-premium rounded-xl text-[10px] font-black uppercase tracking-[0.3em] shadow-2xl group"
+                  className="h-12 px-12 btn-premium rounded-xl text-[10px] font-black uppercase tracking-[0.3em] shadow-[0_10px_40px_rgba(147,51,234,0.3)] group"
                 >
                   {isSubmitting ? (
-                    <><Loader2 className="w-4 animate-spin mr-2" /> AUDITING TESTS...</>
+                    <><Loader2 className="w-4 animate-spin mr-2" /> AUDITING...</>
                   ) : (
-                    <><ShieldCheck className="w-4 h-4 mr-2 group-hover:scale-110 transition-transform" /> SUBMIT ANSWER</>
+                    <><ShieldCheck className="w-4 h-4 mr-2 group-hover:scale-110 transition-transform" /> SUBMIT SOLUTION</>
                   )}
                 </Button>
 
@@ -728,51 +733,51 @@ export default function CodingEnginePage() {
                   variant="ghost" 
                   className="h-12 px-6 rounded-xl border border-white/10 text-white/40 text-[10px] font-black uppercase tracking-widest hover:bg-white/5 hover:text-white transition-all"
                 >
-                  <FastForward className="w-4 h-4 mr-2" /> SKIP QUESTION
+                  <FastForward className="w-4 h-4 mr-2" /> SKIP NODE
                 </Button>
               </div>
             </div>
           </Card>
 
-          <Card className="h-[30%] glass border-white/5 bg-[#0b0e1a] flex flex-col overflow-hidden rounded-[2.5rem]">
+          <Card className="h-[30%] glass border-white/5 bg-[#0b0e1a] flex flex-col overflow-hidden rounded-[2.5rem] shadow-2xl">
             <Tabs value={activeTerminalTab} onValueChange={setActiveTerminalTab} className="h-full flex flex-col">
-              <TabsList className="bg-white/[0.03] px-10 h-12 border-b border-white/5 gap-8">
-                <TabsTrigger value="output" className="text-[9px] font-black uppercase tracking-[0.2em] data-[state=active]:text-accent data-[state=active]:bg-transparent border-b-2 border-transparent data-[state=active]:border-accent rounded-none h-full transition-all">Console Output</TabsTrigger>
-                <TabsTrigger value="cases" className="text-[9px] font-black uppercase tracking-[0.2em] data-[state=active]:text-accent data-[state=active]:bg-transparent border-b-2 border-transparent data-[state=active]:border-accent rounded-none h-full transition-all">Audit Trace</TabsTrigger>
+              <TabsList className="bg-[#08090D] px-10 h-14 border-b border-white/5 gap-12 justify-start rounded-none">
+                <TabsTrigger value="output" className="text-[9px] font-black uppercase tracking-[0.3em] data-[state=active]:text-accent data-[state=active]:bg-transparent border-b-2 border-transparent data-[state=active]:border-accent rounded-none h-full transition-all px-0">CONSOLE OUTPUT</TabsTrigger>
+                <TabsTrigger value="cases" className="text-[9px] font-black uppercase tracking-[0.3em] data-[state=active]:text-accent data-[state=active]:bg-transparent border-b-2 border-transparent data-[state=active]:border-accent rounded-none h-full transition-all px-0">AUDIT TRACE</TabsTrigger>
               </TabsList>
               
-              <div className="flex-1 font-mono text-[12px] overflow-hidden bg-black/20">
-                <TabsContent value="output" className="p-8 text-white/60 h-full overflow-y-auto whitespace-pre-wrap leading-relaxed">
+              <div className="flex-1 font-mono text-[13px] overflow-hidden bg-black/40">
+                <TabsContent value="output" className="p-8 text-white/70 h-full overflow-y-auto whitespace-pre-wrap leading-relaxed custom-scrollbar">
                   {terminalOutput}
                 </TabsContent>
 
-                <TabsContent value="cases" className="p-8 h-full overflow-y-auto space-y-4">
+                <TabsContent value="cases" className="p-8 h-full overflow-y-auto space-y-6 custom-scrollbar">
                   {currentResult ? (
-                    <div className="space-y-4">
-                      <div className={cn("p-4 rounded-xl border flex items-center justify-between", 
+                    <div className="space-y-6">
+                      <div className={cn("p-6 rounded-2xl border flex items-center justify-between shadow-lg", 
                         currentResult.status === 'Solved' ? "bg-green-500/10 border-green-500/20" : 
                         currentResult.status === 'Skipped' ? "bg-white/5 border-white/10" : "bg-red-500/10 border-red-500/20")}>
-                         <div className="flex items-center gap-4">
-                            <div className={cn("w-10 h-10 rounded-xl flex items-center justify-center", currentResult.status === 'Solved' ? "bg-green-500/20 text-green-400" : "bg-red-500/10 text-red-400")}>
-                               {currentResult.status === 'Solved' ? <Trophy className="w-5 h-5" /> : <XCircle className="w-5 h-5" />}
+                         <div className="flex items-center gap-6">
+                            <div className={cn("w-12 h-12 rounded-xl flex items-center justify-center border", currentResult.status === 'Solved' ? "bg-green-500/20 text-green-400 border-green-500/30" : "bg-red-500/20 text-red-400 border-red-500/30")}>
+                               {currentResult.status === 'Solved' ? <Trophy className="w-6 h-6" /> : <XCircle className="w-6 h-6" />}
                             </div>
                             <div>
-                               <h4 className={cn("text-sm font-bold", currentResult.status === 'Solved' ? "text-green-400" : "text-red-400")}>
-                                {currentResult.status === 'Solved' ? "SUBMISSION ACCEPTED" : currentResult.status === 'Skipped' ? "QUESTION SKIPPED" : "SUBMISSION FAILED"}
+                               <h4 className={cn("text-lg font-bold tracking-tight", currentResult.status === 'Solved' ? "text-green-400" : "text-red-400")}>
+                                {currentResult.status === 'Solved' ? "NODES VERIFIED" : currentResult.status === 'Skipped' ? "NODE SKIPPED" : "SYNTAX FAILURE"}
                                </h4>
-                               <p className="text-[8px] font-black text-white/30 uppercase tracking-widest">Audit Nodes Passed: {currentResult.passedCount}/{currentResult.totalCount}</p>
+                               <p className="text-[10px] font-black text-white/30 uppercase tracking-[0.2em] mt-1">Audit Passes: {currentResult.passedCount}/{currentResult.totalCount}</p>
                             </div>
                          </div>
                       </div>
 
-                      <div className="grid gap-2">
+                      <div className="grid gap-3">
                         {(currentResult.results || []).map((r: any, i: number) => (
-                          <div key={i} className="p-3 glass border-white/5 rounded-lg bg-white/[0.01] flex items-center justify-between">
-                            <div className="flex items-center gap-3">
-                              <div className={cn("w-1.5 h-1.5 rounded-full", r.passed ? "bg-green-500" : "bg-red-500")} />
-                              <span className="text-[9px] font-black text-white/40 uppercase tracking-widest">Audit Case #{i + 1}</span>
+                          <div key={i} className="p-4 glass border-white/5 rounded-2xl bg-white/[0.01] flex items-center justify-between hover:bg-white/[0.03] transition-all group/node">
+                            <div className="flex items-center gap-4">
+                              <div className={cn("w-2 h-2 rounded-full", r.passed ? "bg-green-500 shadow-[0_0_8px_#22c55e]" : "bg-red-500 shadow-[0_0_8px_#ef4444]")} />
+                              <span className="text-[10px] font-black text-white/40 uppercase tracking-widest group-hover/node:text-white transition-colors">Probe Node #{i + 1}</span>
                             </div>
-                            <Badge variant="outline" className={cn("text-[7px] uppercase py-0", r.passed ? "text-green-400 border-green-500/20" : "text-red-400 border-red-500/20")}>
+                            <Badge variant="outline" className={cn("text-[8px] uppercase py-1 px-4 font-black tracking-widest rounded-lg", r.passed ? "text-green-400 border-green-500/20 bg-green-500/5" : "text-red-400 border-red-500/20 bg-red-500/5")}>
                               {r.status || (r.passed ? "PASSED" : "FAILED")}
                             </Badge>
                           </div>
@@ -780,31 +785,21 @@ export default function CodingEnginePage() {
                       </div>
 
                       {countdown !== null && (
-                        <div className="mt-8 p-6 glass rounded-2xl border-accent/20 bg-accent/5 flex items-center justify-center gap-4 animate-pulse">
-                          <Timer className="w-6 h-6 text-accent" />
-                          <p className="text-sm font-bold uppercase tracking-widest text-white">
-                            Next question in <span className="text-accent text-lg">{countdown}</span> seconds...
+                        <div className="mt-10 p-8 glass rounded-[2.5rem] border-accent/30 bg-accent/5 flex flex-col items-center justify-center gap-6 animate-in fade-in zoom-in duration-500 shadow-2xl">
+                          <div className="relative">
+                             <div className="w-16 h-16 rounded-full border-2 border-accent/20 border-t-accent animate-spin" />
+                             <Timer className="w-6 h-6 text-accent absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" />
+                          </div>
+                          <p className="text-sm font-black uppercase tracking-[0.4em] text-white">
+                            NEXT NODE IN <span className="text-accent text-2xl tabular-nums ml-2">{countdown}S</span>
                           </p>
-                        </div>
-                      )}
-
-                      {isCurrentFailed && countdown === null && (
-                        <div className="mt-8 flex flex-col items-center gap-4">
-                           <p className="text-[10px] text-red-400 font-bold uppercase tracking-widest">Protocol mismatch detected.</p>
-                           <Button 
-                             onClick={handleSkipQuestion}
-                             variant="outline"
-                             className="h-12 px-8 border-red-500/20 text-red-400 hover:bg-red-500/10 rounded-xl text-[10px] font-bold uppercase tracking-widest"
-                           >
-                             Skip This Question
-                           </Button>
                         </div>
                       )}
                     </div>
                   ) : (
-                    <div className="h-full flex flex-col items-center justify-center text-center space-y-4 opacity-20">
-                      <ShieldCheck className="w-10 h-10" />
-                      <p className="text-[10px] font-black text-white uppercase tracking-[0.5em]">Awaiting answer submission...</p>
+                    <div className="h-full flex flex-col items-center justify-center text-center space-y-6 opacity-20 group">
+                      <ShieldCheck className="w-12 h-12 group-hover:scale-110 transition-transform duration-500" />
+                      <p className="text-[10px] font-black text-white uppercase tracking-[0.6em]">Awaiting node submission...</p>
                     </div>
                   )}
                 </TabsContent>
@@ -816,19 +811,19 @@ export default function CodingEnginePage() {
 
       <AnimatePresence>
         {isFinalizing && (
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="fixed inset-0 z-[200] bg-[#050816]/95 backdrop-blur-3xl flex flex-col items-center justify-center p-12 text-center">
-            <div className="relative mb-12">
-              <div className="w-56 h-56 rounded-full border-2 border-accent/20 border-t-accent animate-spin" />
-              <Cpu className="w-14 h-14 text-accent absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 animate-pulse" />
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="fixed inset-0 z-[200] bg-[#050816]/98 backdrop-blur-3xl flex flex-col items-center justify-center p-12 text-center">
+            <div className="relative mb-16">
+              <div className="w-64 h-64 rounded-full border-2 border-accent/20 border-t-accent animate-spin" />
+              <Cpu className="w-16 h-16 text-accent absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 animate-pulse" />
             </div>
-            <h2 className="text-5xl font-bold tracking-tighter text-premium uppercase mb-12">Finalizing Matrix Dossier</h2>
-            <div className="space-y-6 max-w-sm w-full">
-              {["Aggregating Node Telemetry...", "Calculating Logic Precision...", "Validating Matrix Metrics...", "Finalizing Performance Audit..."].map((step, idx) => (
-                <div key={idx} className={cn("flex items-center gap-6 transition-opacity duration-500", submitStep >= idx ? "opacity-100" : "opacity-20")}>
-                  <div className={cn("w-8 h-8 rounded-full border-2 flex items-center justify-center text-[11px] font-black", submitStep > idx ? "bg-green-500 border-green-500 text-black" : "border-white/20 text-white/20")}>
-                    {submitStep > idx ? <Check className="w-4 h-4" /> : idx + 1}
+            <h2 className="text-6xl font-bold tracking-tighter text-premium uppercase mb-16">Synthesizing Dossier</h2>
+            <div className="space-y-8 max-w-md w-full">
+              {["Aggregating Performance...", "Calculating Precision...", "Validating Efficiency...", "Finalizing Archive..."].map((step, idx) => (
+                <div key={idx} className={cn("flex items-center gap-8 transition-all duration-700", submitStep >= idx ? "opacity-100 translate-x-0" : "opacity-10 translate-x-4")}>
+                  <div className={cn("w-10 h-10 rounded-2xl border-2 flex items-center justify-center text-[12px] font-black shadow-lg", submitStep > idx ? "bg-green-500 border-green-500 text-black" : "border-white/10 text-white/20")}>
+                    {submitStep > idx ? <Check className="w-5 h-5" /> : idx + 1}
                   </div>
-                  <span className="text-sm font-bold uppercase tracking-[0.2em] text-white/70">{step}</span>
+                  <span className="text-base font-black uppercase tracking-[0.3em] text-white/80">{step}</span>
                 </div>
               ))}
             </div>

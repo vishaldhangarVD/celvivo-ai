@@ -192,7 +192,8 @@ export default function AptitudeEnginePage() {
           aptitudeTimerEndAt: endAt,
           aptitudeStatus: "in_progress",
           aptitudeReport: null,
-          updatedAt: serverTimestamp()
+          updatedAt: serverTimestamp(),
+          currentStage: "Aptitude Assessment"
         });
 
         await updateDoc(userRef, {
@@ -377,7 +378,8 @@ export default function AptitudeEnginePage() {
       aptitudeStatus: "not_started",
       aptitudeTimerEndAt: null,
       aptitudeReport: null,
-      codingUnlocked: false
+      codingUnlocked: false,
+      currentStage: "Aptitude Assessment"
     });
     window.location.reload();
   };
@@ -499,7 +501,7 @@ export default function AptitudeEnginePage() {
                     <Button 
                       variant="ghost" 
                       onClick={handleReviewLater} 
-                      className={cn("h-16 px-8 rounded-2xl glass border-white/10 text-[10px] font-black uppercase", markedForReview.has(currentIdx) && "bg-orange-500/10 text-orange-400")}
+                      className={cn("h-16 px-8 rounded-2xl glass border-white/10 text-[10px] font-black uppercase", markedForReview.has(currentIdx) && "bg-orange-500/10 text-orange-400 shadow-[0_0_15px_rgba(249,115,22,0.3)]")}
                     >
                       Review Later
                     </Button>
@@ -523,8 +525,8 @@ export default function AptitudeEnginePage() {
                         key={i} 
                         onClick={() => handleNav(i)} 
                         className={cn(
-                          "w-full aspect-square rounded-xl border text-[10px] font-black transition-all", 
-                          currentIdx === i ? "bg-accent border-accent text-black scale-110" : 
+                          "w-full aspect-square rounded-xl border text-[10px] font-black transition-all duration-300", 
+                          currentIdx === i ? "bg-accent border-accent text-black scale-110 shadow-[0_0_15px_rgba(34,211,238,0.5)]" : 
                           markedForReview.has(i) ? "bg-orange-500/20 border-orange-500/40 text-orange-400" : 
                           answers[i] !== undefined ? "bg-green-500/20 border-green-500/40 text-green-400" : 
                           "glass border-white/5 text-white/20"
@@ -558,7 +560,7 @@ export default function AptitudeEnginePage() {
                   <Badge className={cn("px-10 py-4 rounded-2xl font-black tracking-[0.4em] text-xs border-none", result.status === 'Pass' ? "bg-green-500/20 text-green-400" : "bg-red-500/20 text-red-400")}>STATUS: {result.status.toUpperCase()}</Badge>
                 </div>
                 <div className="relative">
-                   <div className="text-[140px] font-black tracking-tighter text-premium tabular-nums leading-none drop-shadow-[0_0_60px_rgba(34,211,238,0.2)]">{result.overallScore}%</div>
+                   <div className={cn("text-[140px] font-black tracking-tighter tabular-nums leading-none drop-shadow-[0_0_60px_rgba(34,211,238,0.2)]", result.status === 'Pass' ? "text-accent" : "text-red-400")}>{result.overallScore}%</div>
                    <p className="text-[11px] font-black uppercase tracking-[0.8em] text-accent mt-4">Cognitive Precision Index</p>
                 </div>
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-12 w-full max-w-5xl pt-12 border-t border-white/5">
@@ -644,7 +646,7 @@ export default function AptitudeEnginePage() {
               <div className="flex justify-center gap-6 pt-12 pb-16">
                 {result.status === 'Pass' ? (
                   <div className="flex flex-col items-center gap-8">
-                    <div className="flex items-center gap-3 text-green-400 px-8 py-3 glass rounded-2xl border-green-500/20 bg-green-500/5">
+                    <div className="flex items-center gap-3 text-green-400 px-8 py-3 glass rounded-2xl border-green-500/20 bg-green-500/5 shadow-[0_0_20px_rgba(34,197,94,0.2)]">
                       <ShieldCheck className="w-5 h-5" />
                       <span className="text-xs font-black uppercase tracking-[0.2em]">Coding Round Unlocked</span>
                     </div>
@@ -652,12 +654,12 @@ export default function AptitudeEnginePage() {
                   </div>
                 ) : (
                   <div className="flex flex-col items-center gap-8 max-w-lg">
-                    <Card className="p-8 glass border-red-500/20 bg-red-500/5 text-center space-y-4 rounded-3xl">
+                    <Card className="p-8 glass border-red-500/20 bg-red-500/5 text-center space-y-4 rounded-3xl shadow-[0_0_30px_rgba(239,68,68,0.1)]">
                        <div className="w-12 h-12 rounded-2xl bg-red-500/20 flex items-center justify-center mx-auto text-red-400">
                          <XCircle className="w-6 h-6" />
                        </div>
                        <div className="space-y-2">
-                         <h3 className="text-xl font-bold text-white">Access Locked</h3>
+                         <h3 className="text-xl font-bold text-white">Access Threshold Not Met</h3>
                          <p className="text-sm text-white/60 font-light leading-relaxed">
                            A minimum efficiency rating of 70% is required in the Aptitude Round to unlock the Syntax Matrix (Coding Round).
                          </p>
