@@ -22,7 +22,7 @@ import { cn } from '@/lib/utils';
 
 /**
  * @fileOverview Special HR Interview powered by official D-ID Agent Embed.
- * Replaces manual SDK logic with native high-reliability embed script.
+ * High-reliability implementation using provided Client Key and Agent ID.
  */
 
 export default function SpecialHRInterview() {
@@ -34,21 +34,31 @@ export default function SpecialHRInterview() {
       <Navbar />
       <NavigationControls />
 
-      {/* Official D-ID Embed Script */}
+      {/* 
+        Official D-ID Embed Script v2
+        Client Key: ck_0T9vL02nSJmsHMLHMYLsB
+        Agent ID: v2_agt_5A5V9r-C
+      */}
       <Script
-        type="module"
+        id="did-agent-embed-v2"
         src="https://agent.d-id.com/v2/index.js"
-        strategy="afterInteractive"
+        type="module"
         data-mode="fabio"
-        data-client-key="ck_y5RkE0IVdM24mck0V3gr6"
-        data-agent-id="v2_agt_4ddTie0Z"
+        data-client-key="ck_0T9vL02nSJmsHMLHMYLsB"
+        data-agent-id="v2_agt_5A5V9r-C"
         data-name="did-agent"
         data-monitor="true"
         data-orientation="horizontal"
         data-position="right"
         data-open-mode="expanded"
-        onLoad={() => setStatus('READY')}
-        onError={() => setStatus('ERROR')}
+        onLoad={() => {
+          console.log("D-ID Agent script initialized.");
+          setStatus('READY');
+        }}
+        onError={(e) => {
+          console.error("D-ID Agent script failed to load:", e);
+          setStatus('ERROR');
+        }}
       />
 
       <main className="flex-1 container mx-auto px-6 pt-32 pb-16 flex flex-col items-center justify-center">
@@ -57,7 +67,12 @@ export default function SpecialHRInterview() {
           {/* Dashboard Info */}
           <div className="lg:col-span-5 space-y-12">
             <header className="space-y-4">
-              <Badge className="bg-purple-500/20 text-purple-400 border-none px-4 py-1 text-[10px] tracking-widest font-black uppercase">Executive HR Protocol</Badge>
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+              >
+                <Badge className="bg-purple-500/20 text-purple-400 border-none px-4 py-1 text-[10px] tracking-widest font-black uppercase">Executive HR Protocol</Badge>
+              </motion.div>
               <h1 className="text-6xl font-bold tracking-tighter text-premium">AI Virtual <span className="text-gradient-purple">Arena.</span></h1>
               <p className="text-lg text-muted-foreground font-light leading-relaxed">
                 You are entering a high-fidelity simulation with our Virtual HR Agent. The D-ID interface will automatically synchronize with your neural profile.
@@ -70,13 +85,19 @@ export default function SpecialHRInterview() {
                  { icon: Activity, label: "Response Mode", val: "REAL-TIME" },
                  { icon: Zap, label: "Interface", val: "D-ID FABIO" }
                ].map((stat, i) => (
-                 <div key={i} className="flex items-center justify-between p-5 glass rounded-2xl border-white/5 bg-white/[0.01]">
+                 <motion.div 
+                   key={i}
+                   initial={{ opacity: 0, x: -20 }}
+                   animate={{ opacity: 1, x: 0 }}
+                   transition={{ delay: i * 0.1 }}
+                   className="flex items-center justify-between p-5 glass rounded-2xl border-white/5 bg-white/[0.01]"
+                 >
                    <div className="flex items-center gap-4 text-white/40">
                      <stat.icon className="w-5 h-5 text-accent" />
                      <span className="text-[10px] font-black uppercase tracking-widest">{stat.label}</span>
                    </div>
                    <span className="text-[10px] font-black text-white uppercase tracking-widest">{stat.val}</span>
-                 </div>
+                 </motion.div>
                ))}
             </div>
           </div>
@@ -100,7 +121,7 @@ export default function SpecialHRInterview() {
                       <Loader2 className="w-full h-full text-accent animate-spin" />
                     </div>
                     <div className="space-y-2">
-                      <h3 className="text-xl font-bold">Establishing Uplink</h3>
+                      <h3 className="text-xl font-bold text-white">Establishing Uplink</h3>
                       <p className="text-[10px] font-black uppercase tracking-[0.5em] text-accent animate-pulse">Connecting to AI Interviewer...</p>
                     </div>
                   </motion.div>
@@ -113,8 +134,11 @@ export default function SpecialHRInterview() {
                   >
                     <AlertCircle className="w-16 h-16 text-red-500 mx-auto" />
                     <div className="space-y-2">
-                      <h3 className="text-xl font-bold">Protocol Fault</h3>
-                      <p className="text-sm text-muted-foreground max-w-xs mx-auto">Unable to connect to AI Interviewer. Please verify your identity and retry.</p>
+                      <h3 className="text-xl font-bold text-white">Protocol Fault</h3>
+                      <p className="text-sm text-muted-foreground max-w-xs mx-auto">
+                        Unable to connect to AI Interviewer. 
+                        Please ensure the current domain is allowlisted in your D-ID dashboard and your Client Key is active.
+                      </p>
                     </div>
                     <Button onClick={() => window.location.reload()} variant="outline" className="rounded-xl px-8 uppercase text-[10px] font-bold tracking-widest border-red-500/20 text-red-400">Restart Session</Button>
                   </motion.div>
@@ -129,19 +153,19 @@ export default function SpecialHRInterview() {
                       <Command className="w-10 h-10 text-accent" />
                     </div>
                     <div className="space-y-4">
-                      <h3 className="text-3xl font-bold tracking-tighter">AI Arena Active</h3>
+                      <h3 className="text-3xl font-bold tracking-tighter text-white">AI Arena Active</h3>
                       <p className="text-muted-foreground font-light max-sm mx-auto">
-                        The virtual interviewer widget is now active in the bottom-right corner. Use the microphone to begin the dialogue.
+                        The virtual interviewer is now ready. Use the controls in the corner widget to start your call.
                       </p>
                     </div>
                     <div className="flex flex-col gap-4 max-w-xs mx-auto">
                       <div className="flex items-center gap-3 p-4 glass rounded-xl border-green-500/20 bg-green-500/5">
                         <Mic className="w-5 h-5 text-green-400" />
-                        <p className="text-[9px] font-black text-green-400 uppercase tracking-widest text-left">Microphone permissions authorized</p>
+                        <p className="text-[9px] font-black text-green-400 uppercase tracking-widest text-left">Microphone authorized</p>
                       </div>
                       <div className="flex items-center gap-3 p-4 glass rounded-xl border-green-500/20 bg-green-500/5">
                         <Video className="w-5 h-5 text-green-400" />
-                        <p className="text-[9px] font-black text-green-400 uppercase tracking-widest text-left">Visual feed synchronized</p>
+                        <p className="text-[9px] font-black text-green-400 uppercase tracking-widest text-left">Visual feed synced</p>
                       </div>
                     </div>
                   </motion.div>
