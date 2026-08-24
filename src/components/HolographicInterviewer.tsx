@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import CandidateHologram from './CandidateHologram';
 import { useToast } from '@/hooks/use-toast';
+import { cn } from '@/lib/utils';
 
 /**
  * @fileOverview HolographicInterviewer - Audio and Visual Synchronization Hub.
