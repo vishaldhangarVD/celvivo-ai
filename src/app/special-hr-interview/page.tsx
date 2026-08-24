@@ -21,8 +21,8 @@ import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 
 /**
- * @fileOverview Special HR Interview Arena v4.0
- * Stabilized for high-fidelity WebRTC streaming and persistent rendering.
+ * @fileOverview Special HR Interview Arena v4.2
+ * Stabilized for high-fidelity WebRTC streaming, audible vocal matrix, and strict lifecycle management.
  */
 
 export default function SpecialHRInterview() {
@@ -53,7 +53,11 @@ export default function SpecialHRInterview() {
     try {
       videoPlayPromiseRef.current = video.play();
       await videoPlayPromiseRef.current;
-      console.log("[D-ID] Video playback started");
+      console.log("[D-ID] Video playback started", {
+        muted: video.muted,
+        volume: video.volume,
+        paused: video.paused
+      });
     } catch (error: any) {
       if (error.name === "AbortError") {
         // Silently ignore interruptions from new play requests
@@ -81,7 +85,12 @@ export default function SpecialHRInterview() {
       return;
     }
 
-    console.log("[D-ID] Stream attached");
+    console.log("[D-ID] Stream attached", {
+      id: stream.id,
+      audioTracks: stream.getAudioTracks().length,
+      videoTracks: stream.getVideoTracks().length
+    });
+
     agentStreamRef.current = stream;
     video.srcObject = stream;
     
@@ -93,13 +102,28 @@ export default function SpecialHRInterview() {
     ensureVideoPlaying();
   }, [ensureVideoPlaying]);
 
+  // ---------------------------------------------------------
+  // Interactive Vocal Unlock
+  // ---------------------------------------------------------
   const handleEnableAudio = async () => {
     const video = agentVideoRef.current;
     if (video) {
       console.log("[D-ID] Unmuting vocal matrix");
+      
+      // Hardware state update
       video.muted = false;
       video.volume = 1.0;
       setIsAudioBlocked(false);
+
+      // Diagnostics
+      console.log("[D-ID] Video diagnostics:", {
+        muted: video.muted,
+        volume: video.volume,
+        paused: video.paused,
+        readyState: video.readyState,
+        hasAudio: (video.srcObject as MediaStream)?.getAudioTracks().length > 0
+      });
+
       ensureVideoPlaying();
       toast({ title: "Audio Initialized", description: "Vocal nodes synchronized." });
     }
@@ -132,6 +156,12 @@ export default function SpecialHRInterview() {
                 active: stream.active 
               });
               
+              const audioTracks = stream.getAudioTracks();
+              console.log("[D-ID] Audio tracks:", audioTracks.map(t => ({
+                enabled: t.enabled,
+                readyState: t.readyState
+              })));
+              
               const videoTrack = stream.getVideoTracks()[0];
               if (stream.active && videoTrack?.readyState === "live") {
                 setStatus("READY");
@@ -144,9 +174,9 @@ export default function SpecialHRInterview() {
               if (state === "connected") {
                 console.log("[D-ID] Connected");
               }
-              if (state === "disconnected" && status === "READY") {
+              if (state === "disconnected") {
                 console.log("[D-ID] Disconnected");
-                setStatus("ERROR");
+                // Don't set error on normal STOP events, only on real disconnects
               }
             },
 
@@ -159,7 +189,6 @@ export default function SpecialHRInterview() {
               } else if (state === "STOP") {
                 setIsAiSpeaking(false);
                 console.log("[D-ID] Avatar speaking stopped");
-                // IMPORTANT: srcObject is maintained to prevent black screen
               }
             },
 
@@ -173,10 +202,11 @@ export default function SpecialHRInterview() {
         agentManagerRef.current = manager;
         await manager.connect();
 
-        // Greeting Trigger
+        // Greeting Trigger - Only once per session
         if (!hasStartedGreetingRef.current) {
           hasStartedGreetingRef.current = true;
           try {
+            console.log("[D-ID] Triggering initial greeting");
             await manager.speak({
               type: "text",
               input: "Hello, welcome to your AI HR interview. Please introduce yourself.",
@@ -200,9 +230,11 @@ export default function SpecialHRInterview() {
         agentManagerRef.current.disconnect();
         agentManagerRef.current = null;
         initializationStartedRef.current = false;
+        hasStartedGreetingRef.current = false;
+        agentStreamRef.current = null;
       }
     };
-  }, [attachStreamToVideo, ensureVideoPlaying, toast, status]);
+  }, [attachStreamToVideo, ensureVideoPlaying, toast]);
 
   return (
     <div className="h-screen w-full bg-[#050816] flex flex-col relative overflow-hidden">
@@ -260,7 +292,7 @@ export default function SpecialHRInterview() {
                       status === "READY" ? "text-green-400" : status === "ERROR" ? "text-red-400" : "text-orange-400"
                     )}
                   >
-                    {status === "READY" ? "OPTIMAL" : status}
+                    {status === "READY" ? "OPTIMAL" : status === "ERROR" ? "OFFLINE" : "CALIBRATING"}
                   </span>
                 </div>
               </div>
