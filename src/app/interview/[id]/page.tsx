@@ -44,6 +44,7 @@ import { Card } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 import HolographicInterviewer from "@/components/HolographicInterviewer";
+import { INTERVIEW_STAGES, STAGE_ROUTES } from "@/lib/interview-stages";
 
 const CandidateHologram = dynamic(() => import("@/components/CandidateHologram"), { 
   ssr: false,
@@ -57,15 +58,12 @@ const CandidateHologram = dynamic(() => import("@/components/CandidateHologram")
 
 function VirtualArenaContent() {
   const router = useRouter();
-  const searchParams = useSearchParams();
+  const params = useParams();
   const { user } = useUser();
   const db = useFirestore();
   const { toast } = useToast();
 
-  const role = searchParams.get("role") || "Software Engineer";
-  const company = searchParams.get("company") || "Standard Tech";
-  const exp = searchParams.get("exp") || "Senior";
-  const round = searchParams.get("round") || "HR Interview";
+  const sessionId = params.id as string;
 
   const [currentIdx, setCurrentIdx] = useState(1);
   const [transcript, setTranscript] = useState<{role: 'interviewer' | 'candidate', text: string}[]>([]);
@@ -131,70 +129,45 @@ function VirtualArenaContent() {
     };
   }, []);
 
-  const toggleMic = () => {
-    if (mediaStreamRef.current) {
-      mediaStreamRef.current.getAudioTracks().forEach(track => {
-        track.enabled = !isMicOn;
-      });
-      setIsMicOn(!isMicOn);
-    }
-  };
-
-  const toggleCamera = () => {
-    if (mediaStreamRef.current) {
-      mediaStreamRef.current.getVideoTracks().forEach(track => {
-        track.enabled = !isCameraOn;
-      });
-      setIsCameraOn(!isCameraOn);
-    }
-  };
-
   useEffect(() => {
     async function init() {
-      if (!user || !db || !role || !company) return;
-      const docRef = doc(db, 'users', user.uid, 'journey', 'active');
-      const snap = await getDoc(docRef);
+      if (!user || !db || !journey) return;
       
-      if (snap.exists()) {
-        const data = snap.data();
-        if (transcript.length === 0) {
-          try {
-            const response = await aiMockInterview({
-              role, 
-              experienceLevel: exp, 
-              roundType: round, 
-              currentMainQuestionIndex: 1, 
-              history: [], 
-              targetCompany: company,
-              candidateName: data.resumeAnalysis?.personalInfo?.fullName || user.displayName || undefined,
-              resumeSkills: data.resumeAnalysis?.analysis?.technicalSkills?.map((s: any) => s.skill) || data.resumeAnalysis?.missingSkills || [],
-              resumeProjects: data.resumeAnalysis?.analysis?.sections?.projects || [],
-              resumeSummary: data.resumeAnalysis?.summary || "",
-              aptitudeScore: data.aptitudeReport?.overallScore || 0,
-              codingScore: data.codingReport?.score || 0,
-              askedQuestions: [],
-              currentStage: "INTRODUCTION",
-              currentDifficulty: "MEDIUM",
-              hintUsed: false
-            });
-            
-            setTranscript([{ role: 'interviewer', text: response.nextQuestion }]);
-            setAskedQuestions([response.nextQuestion]);
-            setCurrentSimStage(response.stage);
+      if (transcript.length === 0) {
+        try {
+          const response = await aiMockInterview({
+            role: journey.role, 
+            experienceLevel: journey.experience, 
+            roundType: "Final HR Round", 
+            currentMainQuestionIndex: 1, 
+            history: [], 
+            targetCompany: journey.company,
+            candidateName: journey.resumeAnalysis?.personalInfo?.fullName || user.displayName || undefined,
+            resumeSkills: journey.resumeAnalysis?.analysis?.technicalSkills?.map((s: any) => s.skill) || journey.resumeAnalysis?.missingSkills || [],
+            resumeProjects: journey.resumeAnalysis?.analysis?.sections?.projects || [],
+            resumeSummary: journey.resumeAnalysis?.summary || "",
+            aptitudeScore: journey.aptitudeReport?.overallScore || 0,
+            codingScore: journey.codingReport?.score || 0,
+            askedQuestions: [],
+            currentStage: "INTRODUCTION",
+            currentDifficulty: "MEDIUM",
+            hintUsed: false
+          });
+          
+          setTranscript([{ role: 'interviewer', text: response.nextQuestion }]);
+          setAskedQuestions([response.nextQuestion]);
+          setCurrentSimStage(response.stage);
 
-            await updateDoc(docRef, { currentStage: "HR Interview" });
-          } catch (e) {
-            console.error("AI Init Error:", e);
-            setTranscript([{ role: 'interviewer', text: "Hello. Welcome to today's interview. Could you please introduce yourself and share a bit about your journey?" }]);
-          }
+          await updateDoc(journeyRef!, { currentStage: INTERVIEW_STAGES.HR_INTERVIEW });
+        } catch (e) {
+          console.error("AI Init Error:", e);
+          setTranscript([{ role: 'interviewer', text: "Hello. Welcome to today's interview. Could you please introduce yourself and share a bit about your journey?" }]);
         }
-        setTimeout(() => setIsInitializing(false), 2000);
-      } else {
-        router.push('/interview');
       }
+      setTimeout(() => setIsInitializing(false), 2000);
     }
     init();
-  }, [user, db, role, company, exp, round, router]);
+  }, [user, db, journey, journeyRef]);
 
   const handleSend = async () => {
     if (!userAnswer.trim() || isProcessing || isSimulationComplete) return;
@@ -211,13 +184,13 @@ function VirtualArenaContent() {
       });
 
       const response = await aiMockInterview({
-        role, 
-        experienceLevel: exp, 
-        roundType: round, 
+        role: journey!.role, 
+        experienceLevel: journey!.experience, 
+        roundType: "Final HR Round", 
         currentMainQuestionIndex: currentIdx + 1,
         history: chatHistory, 
         userAnswer: currentAns, 
-        targetCompany: company,
+        targetCompany: journey!.company,
         candidateName: formattedName,
         resumeSkills: journey?.resumeAnalysis?.analysis?.technicalSkills?.map((s: any) => s.skill) || [],
         resumeProjects: journey?.resumeAnalysis?.analysis?.sections?.projects || [],
@@ -253,9 +226,9 @@ function VirtualArenaContent() {
     setIsGeneratingReport(true);
     try {
       const finalAudit = await generateInterviewFeedback({
-        role, 
-        company, 
-        experienceLevel: exp, 
+        role: journey!.role, 
+        company: journey!.company, 
+        experienceLevel: journey!.experience, 
         interviewTranscript: currentTranscript.map(t => `${t.role}: ${t.text}`).join('\n\n'),
         resumeContext: {
           atsScore: journey?.resumeAnalysis?.atsScore || 0,
@@ -274,21 +247,44 @@ function VirtualArenaContent() {
       });
 
       const docRef = await addDoc(collection(db, 'users', user!.uid, 'interviews'), {
-        role, 
-        company, 
-        experienceLevel: exp, 
+        role: journey!.role, 
+        company: journey!.company, 
+        experienceLevel: journey!.experience, 
         history: currentTranscript, 
         overallScore: finalAudit.overallScore, 
         feedback: finalAudit, 
         createdAt: serverTimestamp(),
       });
 
-      await deleteDoc(journeyRef!);
+      await updateDoc(journeyRef!, {
+        currentStage: INTERVIEW_STAGES.FEEDBACK,
+        step: 9,
+        updatedAt: serverTimestamp()
+      });
+
       router.push(`/feedback/${docRef.id}`);
     } catch (e) {
       console.error("Master Audit Error:", e);
       setIsGeneratingReport(false);
       toast({ variant: "destructive", title: "Audit Generation Failed" });
+    }
+  };
+
+  const toggleMic = () => {
+    if (mediaStreamRef.current) {
+      mediaStreamRef.current.getAudioTracks().forEach(track => {
+        track.enabled = !isMicOn;
+      });
+      setIsMicOn(!isMicOn);
+    }
+  };
+
+  const toggleCamera = () => {
+    if (mediaStreamRef.current) {
+      mediaStreamRef.current.getVideoTracks().forEach(track => {
+        track.enabled = !isCameraOn;
+      });
+      setIsCameraOn(!isCameraOn);
     }
   };
 

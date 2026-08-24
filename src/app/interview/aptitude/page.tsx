@@ -39,6 +39,7 @@ import { generateAptitudeTest, type AptitudeQuestion } from '@/ai/flows/ai-aptit
 import { evaluateAptitude } from '@/ai/flows/ai-aptitude-evaluator';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
+import { INTERVIEW_STAGES, STAGE_ROUTES } from '@/lib/interview-stages';
 
 const FORBIDDEN_CONCEPTS = [
   "velocity doubles",
@@ -93,7 +94,6 @@ export default function AptitudeEnginePage() {
   const [isInitializing, setIsInitializing] = useState(true);
   const [isEvaluating, setIsEvaluating] = useState(false);
   const [evaluationStep, setEvaluationStep] = useState(0);
-  const [result, setResult] = useState<any>(null);
   
   const [timeLeft, setTimeLeft] = useState(1800); // 30 minutes
 
@@ -123,7 +123,6 @@ export default function AptitudeEnginePage() {
       const existingQuestions = data.aptitudeQuestions || [];
       const isValidSet = existingQuestions.length === 20 && existingQuestions.every(validateAptitudeQuestion);
 
-      // Resuming existing in-progress session
       if (isValidSet && data.aptitudeStatus === "in_progress") {
         setQuestions(existingQuestions);
         setAnswers(data.aptitudeAnswers || {});
@@ -153,18 +152,9 @@ export default function AptitudeEnginePage() {
         return;
       }
 
-      // Already completed - viewing results
-      if (data.aptitudeStatus === "completed" && data.aptitudeReport) {
-        setQuestions(existingQuestions);
-        setAnswers(data.aptitudeAnswers || {});
-        setResult(data.aptitudeReport);
-        setIsInitializing(false);
-        return;
-      }
-
       // Starting a completely fresh session
       try {
-        localStorage.removeItem(`aptitude_timer_end_${user.uid}`); // Force clear stale timer
+        localStorage.removeItem(`aptitude_timer_end_${user.uid}`); 
         const userRef = doc(db, 'users', user.uid);
         const userSnap = await getDoc(userRef);
         const history = userSnap.data()?.aptitudeQuestionHistory || [];
@@ -182,7 +172,7 @@ export default function AptitudeEnginePage() {
           return norm.fingerprint;
         });
         
-        const endAt = Date.now() + 30 * 60 * 1000; // Fresh 30 minutes
+        const endAt = Date.now() + 30 * 60 * 1000; 
         localStorage.setItem(`aptitude_timer_end_${user.uid}`, endAt.toString());
         
         await updateDoc(journeyRef, {
@@ -193,7 +183,7 @@ export default function AptitudeEnginePage() {
           aptitudeStatus: "in_progress",
           aptitudeReport: null,
           updatedAt: serverTimestamp(),
-          currentStage: "Aptitude Assessment"
+          currentStage: INTERVIEW_STAGES.APTITUDE
         });
 
         await updateDoc(userRef, {
@@ -216,7 +206,7 @@ export default function AptitudeEnginePage() {
   }, [db, user?.uid, journey, journeyLoading, journeyRef, router, toast]);
 
   const handleSubmit = useCallback(async () => {
-    if (submissionGuard.current || isEvaluating || !journey || !journeyRef || result) return;
+    if (submissionGuard.current || isEvaluating || !journey || !journeyRef) return;
     submissionGuard.current = true;
     setIsEvaluating(true);
 
@@ -277,33 +267,29 @@ export default function AptitudeEnginePage() {
         details: formattedResults 
       };
 
-      setResult(finalReport);
-      
       await updateDoc(journeyRef!, {
         aptitudeReport: finalReport,
         aptitudeStatus: "completed",
-        currentStage: finalReport.status === 'Pass' ? 'Coding Assessment' : 'Aptitude Assessment',
-        codingUnlocked: finalReport.status === 'Pass',
-        step: 3,
+        currentStage: INTERVIEW_STAGES.APTITUDE_RESULT,
+        step: 5,
         updatedAt: serverTimestamp()
       });
 
+      router.push(STAGE_ROUTES.APTITUDE_RESULT);
     } catch (e) {
       console.error("[APTITUDE SESSION] Submission fault:", e);
       toast({ variant: "destructive", title: "Audit Protocol Fault" });
     } finally {
       setIsEvaluating(false);
     }
-  }, [isEvaluating, journey, journeyRef, questions, answers, result, toast, user?.uid, timeLeft]);
+  }, [isEvaluating, journey, journeyRef, questions, answers, toast, user?.uid, timeLeft, router]);
 
-  // Sync ref with latest submit handler
   useEffect(() => {
     submitRef.current = handleSubmit;
   }, [handleSubmit]);
 
-  // Main Timer Logic
   useEffect(() => {
-    if (isInitializing || isEvaluating || result) return;
+    if (isInitializing || isEvaluating) return;
     
     const tick = () => {
       const localEndAt = localStorage.getItem(`aptitude_timer_end_${user?.uid}`);
@@ -319,17 +305,16 @@ export default function AptitudeEnginePage() {
     };
 
     const timerInterval = setInterval(tick, 1000);
-    tick(); // Run immediate first tick
+    tick(); 
     
     return () => clearInterval(timerInterval);
-  }, [isInitializing, isEvaluating, result, user?.uid]);
+  }, [isInitializing, isEvaluating, user?.uid]);
 
   const handleOptionSelect = async (optIdx: number) => {
-    if (!journeyRef || result) return;
+    if (!journeyRef) return;
     const newAnswers = { ...answers, [currentIdx]: optIdx };
     setAnswers(newAnswers);
     
-    // Once answered, remove from "Review Later" list if it was there
     if (markedForReview.has(currentIdx)) {
       setMarkedForReview(prev => {
         const n = new Set(prev);
@@ -342,13 +327,13 @@ export default function AptitudeEnginePage() {
   };
 
   const handleNav = (newIdx: number) => {
-    if (!journeyRef || result) return;
+    if (!journeyRef) return;
     setCurrentIdx(newIdx);
     updateDoc(journeyRef, { aptitudeCurrentIndex: newIdx });
   };
 
   const handleReviewLater = () => {
-    if (!journeyRef || result) return;
+    if (!journeyRef) return;
     
     setMarkedForReview(prev => {
       const n = new Set(prev);
@@ -356,32 +341,12 @@ export default function AptitudeEnginePage() {
         n.delete(currentIdx);
       } else {
         n.add(currentIdx);
-        // Move to next question automatically as per requirement
         if (currentIdx < questions.length - 1) {
           handleNav(currentIdx + 1);
         }
       }
       return n;
     });
-  };
-
-  const handleRetry = async () => {
-    if (!journeyRef || !user) return;
-    setIsInitializing(true);
-    initGuard.current = false;
-    submissionGuard.current = false;
-    localStorage.removeItem(`aptitude_timer_end_${user.uid}`);
-    await updateDoc(journeyRef, {
-      aptitudeQuestions: null,
-      aptitudeAnswers: null,
-      aptitudeCurrentIndex: 0,
-      aptitudeStatus: "not_started",
-      aptitudeTimerEndAt: null,
-      aptitudeReport: null,
-      codingUnlocked: false,
-      currentStage: "Aptitude Assessment"
-    });
-    window.location.reload();
   };
 
   const formatTime = (seconds: number) => {
@@ -407,15 +372,22 @@ export default function AptitudeEnginePage() {
     );
   }
 
-  if (questions.length === 0 && !result && !isEvaluating) {
-     return (
-       <div className="h-screen bg-[#050816] flex flex-col items-center justify-center p-12 text-center">
-         <XCircle className="w-16 h-16 text-red-500 mb-6" />
-         <h2 className="text-2xl font-bold text-white mb-2">Protocol Desynchronization</h2>
-         <p className="text-muted-foreground mb-8 text-sm max-w-md">System failed to load unique questions. Please restart the session.</p>
-         <Button onClick={handleRetry} className="btn-premium px-12 h-14 uppercase tracking-widest text-xs">Restart Session</Button>
-       </div>
-     );
+  if (isEvaluating) {
+    return (
+      <div className="h-screen bg-[#050816] flex flex-col items-center justify-center p-12 text-center">
+        <div className="relative mb-16">
+          <div className="w-40 h-40 rounded-full border-2 border-accent/20 border-t-accent animate-spin" />
+          <Cpu className="w-12 h-12 text-accent absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 animate-pulse" />
+        </div>
+        <div className="space-y-8 max-w-lg w-full">
+          <h2 className="text-4xl font-bold tracking-tighter text-premium uppercase">AI Performance Audit</h2>
+          <div className="space-y-4">
+             <Progress value={(evaluationStep + 1) * 25} className="h-1.5" />
+             <p className="text-[10px] font-black uppercase tracking-[0.6em] text-accent animate-pulse">{["Processing Nodes", "Mapping Logic", "Calibrating Score", "Finalizing Audit"][evaluationStep]}</p>
+          </div>
+        </div>
+      </div>
+    );
   }
 
   const currentQ = questions[currentIdx];
@@ -436,242 +408,105 @@ export default function AptitudeEnginePage() {
           </div>
         </div>
 
-        {!result && (
-          <div className={cn(
-            "px-6 py-2 rounded-xl glass border-white/10 font-mono text-2xl tabular-nums tracking-wider shadow-2xl",
-            timeLeft <= 60 ? "text-red-500 animate-pulse border-red-500/30 bg-red-500/10" : 
-            timeLeft <= 300 ? "text-orange-400 border-orange-500/30 bg-orange-500/10" : 
-            "text-accent border-accent/30 bg-accent/10"
-          )}>
-            <div className="flex items-center gap-3">
-              <Timer className={cn("w-5 h-5", timeLeft <= 60 && "animate-spin-slow")} />
-              <span className="font-black">{formatTime(timeLeft)}</span>
-            </div>
+        <div className={cn(
+          "px-6 py-2 rounded-xl glass border-white/10 font-mono text-2xl tabular-nums tracking-wider shadow-2xl",
+          timeLeft <= 60 ? "text-red-500 animate-pulse border-red-500/30 bg-red-500/10" : 
+          timeLeft <= 300 ? "text-orange-400 border-orange-500/30 bg-orange-500/10" : 
+          "text-accent border-accent/30 bg-accent/10"
+        )}>
+          <div className="flex items-center gap-3">
+            <Timer className={cn("w-5 h-5", timeLeft <= 60 && "animate-spin-slow")} />
+            <span className="font-black">{formatTime(timeLeft)}</span>
           </div>
-        )}
+        </div>
       </header>
 
       <main className="flex-1 container mx-auto px-6 pt-12 pb-16">
-        <AnimatePresence mode="wait">
-          {!result && !isEvaluating ? (
-            <div className="grid lg:grid-cols-12 gap-8">
-              <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="lg:col-span-9 space-y-6">
-                <div className="space-y-2">
-                  <div className="flex justify-between items-end px-2 text-[10px] font-black uppercase tracking-widest text-white/30">
-                    <span>Question {currentIdx + 1} of {questions.length}</span>
-                    <span className="text-accent">{Math.round(((currentIdx + 1) / questions.length) * 100)}%</span>
-                  </div>
-                  <Progress value={((currentIdx + 1) / questions.length) * 100} className="h-1 bg-white/5" />
-                </div>
-
-                <Card className="premium-card bg-white/[0.01] border-white/5 p-12 min-h-[480px] relative flex flex-col justify-center">
-                  <div className="absolute top-0 right-0 p-8">
-                    <Badge variant="outline" className="border-accent/20 text-accent text-[9px] font-black uppercase px-3">{currentQ?.difficulty || "Medium"}</Badge>
-                  </div>
-                  
-                  <div className="max-w-3xl mx-auto w-full space-y-10">
-                    <div className="space-y-4">
-                      <Badge className="bg-purple-500/10 text-purple-400 border-none text-[9px] font-black uppercase tracking-widest">{currentQ?.category || "Logic"}</Badge>
-                      <h2 className="text-3xl font-bold tracking-tight text-white/90 leading-tight whitespace-pre-wrap">{currentQ?.question}</h2>
-                    </div>
-
-                    <div className="grid md:grid-cols-2 gap-4">
-                      {currentQ?.options?.map((opt, i) => (
-                        <button 
-                          key={i} 
-                          onClick={() => handleOptionSelect(i)} 
-                          className={cn("p-6 rounded-2xl border text-left transition-all group flex items-center gap-6", 
-                          answers[currentIdx] === i ? "bg-accent/20 border-accent text-accent shadow-[0_0_30px_rgba(34,211,238,0.1)]" : "glass border-white/5 hover:border-white/20 text-white/60")}
-                        >
-                          <div className={cn("w-10 h-10 rounded-xl border flex items-center justify-center text-xs font-black shrink-0", 
-                            answers[currentIdx] === i ? "bg-accent border-accent text-black" : "border-white/10 group-hover:border-white/30")}
-                          >
-                            {String.fromCharCode(65 + i)}
-                          </div>
-                          <span className="text-sm font-medium leading-relaxed">{opt}</span>
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                </Card>
-
-                <div className="h-24 glass rounded-[2.5rem] border-white/5 p-4 flex items-center justify-between shadow-2xl">
-                  <div className="flex gap-4">
-                    <Button variant="ghost" onClick={() => handleNav(Math.max(0, currentIdx - 1))} disabled={currentIdx === 0} className="h-16 px-8 rounded-2xl glass border-white/10 text-[10px] font-black uppercase"><ChevronLeft className="w-4 h-4 mr-2" /> Back</Button>
-                    <Button 
-                      variant="ghost" 
-                      onClick={handleReviewLater} 
-                      className={cn("h-16 px-8 rounded-2xl glass border-white/10 text-[10px] font-black uppercase", markedForReview.has(currentIdx) && "bg-orange-500/10 text-orange-400 shadow-[0_0_15px_rgba(249,115,22,0.3)]")}
-                    >
-                      Review Later
-                    </Button>
-                  </div>
-                  <div className="flex gap-4">
-                    {currentIdx < questions.length - 1 ? (
-                      <Button onClick={() => handleNav(Math.min(questions.length - 1, currentIdx + 1))} className="h-16 px-12 btn-premium rounded-2xl text-[10px] font-black uppercase">Commit & Next <ChevronRight className="ml-2 w-4 h-4" /></Button>
-                    ) : (
-                      <Button onClick={handleSubmit} className="h-16 px-12 bg-green-600 hover:bg-green-500 text-white rounded-2xl text-[10px] font-black uppercase shadow-lg group">Submit Audit <ShieldCheck className="ml-2 w-4 h-4 group-hover:scale-110 transition-transform" /></Button>
-                    )}
-                  </div>
-                </div>
-              </motion.div>
-
-              <div className="lg:col-span-3">
-                <Card className="premium-card bg-white/[0.01] border-white/5 p-8 space-y-8 sticky top-[168px]">
-                  <h3 className="text-xs font-black uppercase tracking-[0.3em] text-accent flex items-center gap-3"><LayoutGrid className="w-4 h-4" /> Node Matrix</h3>
-                  <div className="grid grid-cols-5 gap-3">
-                    {questions.map((_, i) => (
-                      <button 
-                        key={i} 
-                        onClick={() => handleNav(i)} 
-                        className={cn(
-                          "w-full aspect-square rounded-xl border text-[10px] font-black transition-all duration-300", 
-                          currentIdx === i ? "bg-accent border-accent text-black scale-110 shadow-[0_0_15px_rgba(34,211,238,0.5)]" : 
-                          markedForReview.has(i) ? "bg-orange-500/20 border-orange-500/40 text-orange-400" : 
-                          answers[i] !== undefined ? "bg-green-500/20 border-green-500/40 text-green-400" : 
-                          "glass border-white/5 text-white/20"
-                        )}
-                      >
-                        {i + 1}
-                      </button>
-                    ))}
-                  </div>
-                </Card>
+        <div className="grid lg:grid-cols-12 gap-8">
+          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="lg:col-span-9 space-y-6">
+            <div className="space-y-2">
+              <div className="flex justify-between items-end px-2 text-[10px] font-black uppercase tracking-widest text-white/30">
+                <span>Question {currentIdx + 1} of {questions.length}</span>
+                <span className="text-accent">{Math.round(((currentIdx + 1) / questions.length) * 100)}%</span>
               </div>
+              <Progress value={((currentIdx + 1) / questions.length) * 100} className="h-1 bg-white/5" />
             </div>
-          ) : isEvaluating ? (
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex flex-col items-center justify-center p-12 text-center min-h-[600px]">
-              <div className="relative mb-16">
-                <div className="w-40 h-40 rounded-full border-2 border-accent/20 border-t-accent animate-spin" />
-                <Cpu className="w-12 h-12 text-accent absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 animate-pulse" />
+
+            <Card className="premium-card bg-white/[0.01] border-white/5 p-12 min-h-[480px] relative flex flex-col justify-center">
+              <div className="absolute top-0 right-0 p-8">
+                <Badge variant="outline" className="border-accent/20 text-accent text-[9px] font-black uppercase px-3">{currentQ?.difficulty || "Medium"}</Badge>
               </div>
-              <div className="space-y-8 max-w-lg w-full">
-                <h2 className="text-4xl font-bold tracking-tighter text-premium uppercase">AI Performance Audit</h2>
+              
+              <div className="max-w-3xl mx-auto w-full space-y-10">
                 <div className="space-y-4">
-                   <Progress value={(evaluationStep + 1) * 25} className="h-1.5" />
-                   <p className="text-[10px] font-black uppercase tracking-[0.6em] text-accent animate-pulse">{["Processing Nodes", "Mapping Logic", "Calibrating Score", "Finalizing Audit"][evaluationStep]}</p>
+                  <Badge className="bg-purple-500/10 text-purple-400 border-none text-[9px] font-black uppercase tracking-widest">{currentQ?.category || "Logic"}</Badge>
+                  <h2 className="text-3xl font-bold tracking-tight text-white/90 leading-tight whitespace-pre-wrap">{currentQ?.question}</h2>
                 </div>
-              </div>
-            </motion.div>
-          ) : (
-            <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="space-y-12">
-              <Card className="premium-card p-16 flex flex-col items-center text-center space-y-12 bg-white/[0.01] border-white/5 relative overflow-hidden">
-                <div className="absolute top-0 right-0 p-12">
-                  <Badge className={cn("px-10 py-4 rounded-2xl font-black tracking-[0.4em] text-xs border-none", result.status === 'Pass' ? "bg-green-500/20 text-green-400" : "bg-red-500/20 text-red-400")}>STATUS: {result.status.toUpperCase()}</Badge>
-                </div>
-                <div className="relative">
-                   <div className={cn("text-[140px] font-black tracking-tighter tabular-nums leading-none drop-shadow-[0_0_60px_rgba(34,211,238,0.2)]", result.status === 'Pass' ? "text-accent" : "text-red-400")}>{result.overallScore}%</div>
-                   <p className="text-[11px] font-black uppercase tracking-[0.8em] text-accent mt-4">Cognitive Precision Index</p>
-                </div>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-12 w-full max-w-5xl pt-12 border-t border-white/5">
-                  {[
-                    { label: "Correct Nodes", val: result.correctCount, icon: CheckCircle2, color: "text-green-400" },
-                    { label: "Failed Probes", val: result.wrongCount, icon: XCircle, color: "text-red-400" },
-                    { label: "Not Answered", val: result.notAnsweredCount || 0, icon: AlertCircle, color: "text-orange-400" },
-                    { label: "Total Probes", val: questions.length, icon: Timer, color: "text-purple-400" }
-                  ].map((s, i) => (
-                    <div key={i} className="space-y-3">
-                      <div className="flex items-center justify-center gap-3 text-[10px] font-black uppercase text-white/30"><s.icon className={cn("w-4 h-4", s.color)} /> {s.label}</div>
-                      <p className="text-3xl font-bold text-white/90">{s.val}</p>
-                    </div>
-                  ))}
-                </div>
-              </Card>
 
-              {/* Dynamic Question Review Section */}
-              <div className="max-w-5xl mx-auto space-y-8">
-                <div className="flex items-center justify-between px-4">
-                  <h3 className="text-2xl font-bold flex items-center gap-3">
-                    <History className="w-6 h-6 text-accent" /> Question Intelligence Review
-                  </h3>
-                  <Badge variant="outline" className="border-white/10 text-white/40 uppercase text-[10px] tracking-widest">Audited Archive</Badge>
-                </div>
-                
-                <div className="grid gap-6">
-                  {result.details?.map((item: any, idx: number) => (
-                    <motion.div
-                      key={idx}
-                      initial={{ opacity: 0, y: 20 }}
-                      whileInView={{ opacity: 1, y: 0 }}
-                      viewport={{ once: true }}
-                      transition={{ delay: idx * 0.05 }}
+                <div className="grid md:grid-cols-2 gap-4">
+                  {currentQ?.options?.map((opt, i) => (
+                    <button 
+                      key={i} 
+                      onClick={() => handleOptionSelect(i)} 
+                      className={cn("p-6 rounded-2xl border text-left transition-all group flex items-center gap-6", 
+                      answers[currentIdx] === i ? "bg-accent/20 border-accent text-accent shadow-[0_0_30px_rgba(34,211,238,0.1)]" : "glass border-white/5 hover:border-white/20 text-white/60")}
                     >
-                      <Card className="glass p-8 rounded-[2.5rem] border-white/5 bg-white/[0.01] hover:bg-white/[0.02] transition-all relative overflow-hidden group">
-                         <div className={cn(
-                           "absolute top-0 left-0 bottom-0 w-1.5",
-                           item.userAnswer === "Not Answered" ? "bg-orange-500/40" : 
-                           item.isCorrect ? "bg-green-500/40" : "bg-red-500/40"
-                         )} />
-                         
-                         <div className="flex justify-between items-start mb-6">
-                            <div className="space-y-1">
-                               <Badge className="bg-white/5 text-white/40 border-none text-[8px] font-black uppercase tracking-widest">NODE 0{idx + 1} • {item.category}</Badge>
-                               <h4 className="text-xl font-bold text-white/90 leading-tight">{item.question}</h4>
-                            </div>
-                            <div className="shrink-0 flex items-center gap-2">
-                               {item.userAnswer === "Not Answered" ? (
-                                 <Badge variant="outline" className="border-orange-500/20 text-orange-400 text-[9px] font-black uppercase py-1 px-3">NOT ANSWERED</Badge>
-                               ) : item.isCorrect ? (
-                                 <Badge variant="outline" className="border-green-500/20 text-green-400 text-[9px] font-black uppercase py-1 px-3 flex gap-1.5 items-center"><CircleCheck className="w-3 h-3" /> PASS</Badge>
-                               ) : (
-                                 <Badge variant="outline" className="border-red-500/20 text-red-400 text-[9px] font-black uppercase py-1 px-3 flex gap-1.5 items-center"><AlertCircle className="w-3 h-3" /> FAIL</Badge>
-                               )}
-                            </div>
-                         </div>
-
-                         <div className="grid md:grid-cols-2 gap-6 pt-6 border-t border-white/5">
-                            <div className="space-y-2">
-                               <p className="text-[9px] font-black uppercase text-white/20 tracking-widest">Candidate Input</p>
-                               <div className={cn(
-                                 "p-4 rounded-xl text-sm font-medium",
-                                 item.userAnswer === "Not Answered" ? "bg-white/5 text-white/40" :
-                                 item.isCorrect ? "bg-green-500/10 text-green-400" : "bg-red-500/10 text-red-400"
-                               )}>
-                                 {item.userAnswer}
-                               </div>
-                            </div>
-                            <div className="space-y-2">
-                               <p className="text-[9px] font-black uppercase text-white/20 tracking-widest">Verified Baseline</p>
-                               <div className="p-4 rounded-xl bg-accent/10 text-accent text-sm font-bold">
-                                 {item.correctAnswer}
-                               </div>
-                            </div>
-                         </div>
-                      </Card>
-                    </motion.div>
+                      <div className={cn("w-10 h-10 rounded-xl border flex items-center justify-center text-xs font-black shrink-0", 
+                        answers[currentIdx] === i ? "bg-accent border-accent text-black" : "border-white/10 group-hover:border-white/30")}
+                      >
+                        {String.fromCharCode(65 + i)}
+                      </div>
+                      <span className="text-sm font-medium leading-relaxed">{opt}</span>
+                    </button>
                   ))}
                 </div>
               </div>
+            </Card>
 
-              <div className="flex justify-center gap-6 pt-12 pb-16">
-                {result.status === 'Pass' ? (
-                  <div className="flex flex-col items-center gap-8">
-                    <div className="flex items-center gap-3 text-green-400 px-8 py-3 glass rounded-2xl border-green-500/20 bg-green-500/5 shadow-[0_0_20px_rgba(34,197,94,0.2)]">
-                      <ShieldCheck className="w-5 h-5" />
-                      <span className="text-xs font-black uppercase tracking-[0.2em]">Coding Round Unlocked</span>
-                    </div>
-                    <Button onClick={() => router.push('/interview/coding')} className="h-20 px-24 btn-premium rounded-[2.5rem] text-xl font-black uppercase tracking-[0.4em] shadow-2xl group">Proceed to Coding Round <ChevronRight className="ml-4 w-8 h-8 group-hover:translate-x-2 transition-transform" /></Button>
-                  </div>
+            <div className="h-24 glass rounded-[2.5rem] border-white/5 p-4 flex items-center justify-between shadow-2xl">
+              <div className="flex gap-4">
+                <Button variant="ghost" onClick={() => handleNav(Math.max(0, currentIdx - 1))} disabled={currentIdx === 0} className="h-16 px-8 rounded-2xl glass border-white/10 text-[10px] font-black uppercase"><ChevronLeft className="w-4 h-4 mr-2" /> Back</Button>
+                <Button 
+                  variant="ghost" 
+                  onClick={handleReviewLater} 
+                  className={cn("h-16 px-8 rounded-2xl glass border-white/10 text-[10px] font-black uppercase", markedForReview.has(currentIdx) && "bg-orange-500/10 text-orange-400 shadow-[0_0_15px_rgba(249,115,22,0.3)]")}
+                >
+                  Review Later
+                </Button>
+              </div>
+              <div className="flex gap-4">
+                {currentIdx < questions.length - 1 ? (
+                  <Button onClick={() => handleNav(Math.min(questions.length - 1, currentIdx + 1))} className="h-16 px-12 btn-premium rounded-2xl text-[10px] font-black uppercase">Commit & Next <ChevronRight className="ml-2 w-4 h-4" /></Button>
                 ) : (
-                  <div className="flex flex-col items-center gap-8 max-w-lg">
-                    <Card className="p-8 glass border-red-500/20 bg-red-500/5 text-center space-y-4 rounded-3xl shadow-[0_0_30px_rgba(239,68,68,0.1)]">
-                       <div className="w-12 h-12 rounded-2xl bg-red-500/20 flex items-center justify-center mx-auto text-red-400">
-                         <XCircle className="w-6 h-6" />
-                       </div>
-                       <div className="space-y-2">
-                         <h3 className="text-xl font-bold text-white">Access Threshold Not Met</h3>
-                         <p className="text-sm text-white/60 font-light leading-relaxed">
-                           A minimum efficiency rating of 70% is required in the Aptitude Round to unlock the Syntax Matrix (Coding Round).
-                         </p>
-                       </div>
-                    </Card>
-                    <Button onClick={handleRetry} className="h-20 px-16 glass border-white/10 rounded-[2.5rem] text-xl font-black uppercase tracking-widest hover:bg-white/5 transition-all"><RotateCcw className="mr-4 w-8 h-8" /> RETAKE APTITUDE</Button>
-                  </div>
+                  <Button onClick={handleSubmit} className="h-16 px-12 bg-green-600 hover:bg-green-500 text-white rounded-2xl text-[10px] font-black uppercase shadow-lg group">Submit Audit <ShieldCheck className="ml-2 w-4 h-4 group-hover:scale-110 transition-transform" /></Button>
                 )}
               </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
+            </div>
+          </motion.div>
+
+          <div className="lg:col-span-3">
+            <Card className="premium-card bg-white/[0.01] border-white/5 p-8 space-y-8 sticky top-[168px]">
+              <h3 className="text-xs font-black uppercase tracking-[0.3em] text-accent flex items-center gap-3"><LayoutGrid className="w-4 h-4" /> Node Matrix</h3>
+              <div className="grid grid-cols-5 gap-3">
+                {questions.map((_, i) => (
+                  <button 
+                    key={i} 
+                    onClick={() => handleNav(i)} 
+                    className={cn(
+                      "w-full aspect-square rounded-xl border text-[10px] font-black transition-all duration-300", 
+                      currentIdx === i ? "bg-accent border-accent text-black scale-110 shadow-[0_0_15px_rgba(34,211,238,0.5)]" : 
+                      markedForReview.has(i) ? "bg-orange-500/20 border-orange-500/40 text-orange-400" : 
+                      answers[i] !== undefined ? "bg-green-500/20 border-green-500/40 text-green-400" : 
+                      "glass border-white/5 text-white/20"
+                    )}
+                  >
+                    {i + 1}
+                  </button>
+                ))}
+              </div>
+            </Card>
+          </div>
+        </div>
       </main>
       <NavigationControls onHome={() => router.push('/')} onBack={() => router.push('/dashboard')} />
     </div>
