@@ -20,15 +20,15 @@ import {
 import { useToast } from '@/hooks/use-toast';
 
 /**
- * @fileOverview Special HR Interview - D-ID SDK Dynamic Loading Protocol.
- * Resolves "window is not defined" by loading SDK only on the client.
+ * @fileOverview Special HR Interview - D-ID SDK High-Fidelity Rendering Protocol.
+ * Resolves the "black screen" issue by ensuring correct MediaStream assignment and Z-index layering.
  */
 
 export default function SpecialHRInterview() {
   const { toast } = useToast();
   const [status, setStatus] = useState<'LOADING' | 'READY' | 'ERROR'>('LOADING');
   const agentVideoRef = useRef<HTMLVideoElement>(null);
-  const agentManagerRef = useRef<any>(null); // Browser-only reference
+  const agentManagerRef = useRef<any>(null);
 
   // Production Configuration Nodes
   const agentId = "v2_agt_5A5V9r-C";
@@ -38,36 +38,41 @@ export default function SpecialHRInterview() {
     let isMounted = true;
 
     async function initializeDIDAgency() {
-      // 1. Browser-check guard
       if (typeof window === 'undefined') return;
 
       try {
         if (agentManagerRef.current) return;
 
         console.log("[D-ID SDK] Dynamically importing Client SDK...");
-        
-        // 2. Load SDK strictly on client to avoid "window is not defined"
         const { createAgentManager } = await import('@d-id/client-sdk');
         
         const manager = await createAgentManager(agentId, {
           auth: { type: 'key', clientKey },
           callbacks: {
-            onSrcObjectReady: async (stream) => {
+            onSrcObjectReady: (stream) => {
               console.log("[D-ID SDK] Neural stream received.");
-              if (isMounted && agentVideoRef.current) {
-                agentVideoRef.current.srcObject = stream;
-                try {
-                  await agentVideoRef.current.play();
-                  setStatus('READY');
-                } catch (e) {
-                  console.warn("[D-ID SDK] Autoplay protocol interrupted:", e);
-                }
+              if (isMounted) {
+                // Ensure we transition to READY so the video element exists in the DOM
+                setStatus('READY');
+                
+                // We use a small timeout to ensure React has finished rendering the video element
+                setTimeout(() => {
+                  if (agentVideoRef.current) {
+                    agentVideoRef.current.srcObject = stream;
+                    agentVideoRef.current.muted = true;
+                    agentVideoRef.current.autoplay = true;
+                    agentVideoRef.current.playsInline = true;
+                    
+                    agentVideoRef.current.play().catch(err => {
+                      console.warn("[D-ID SDK] Autoplay protocol interrupted:", err);
+                    });
+                  }
+                }, 100);
               }
             },
             onConnectionStateChange: (state) => {
               console.log("[D-ID SDK] Connection state changed:", state);
-              if (state === 'connected') setStatus('READY');
-              if (state === 'fail') setStatus('ERROR');
+              if (state === 'fail' && isMounted) setStatus('ERROR');
             },
             onVideoStateChange: (state) => {
               console.log("[D-ID SDK] Video state changed:", state);
@@ -204,13 +209,15 @@ export default function SpecialHRInterview() {
                     key="ready"
                     initial={{ opacity: 0 }} 
                     animate={{ opacity: 1 }}
-                    className="h-full w-full relative flex items-center justify-center bg-black"
+                    className="relative w-full h-full bg-black overflow-hidden flex items-center justify-center"
                   >
+                    {/* The high-fidelity D-ID Stream element */}
                     <video
                       ref={agentVideoRef}
                       autoPlay
+                      muted
                       playsInline
-                      className="w-full h-full object-cover"
+                      className="absolute inset-0 w-full h-full object-cover z-10"
                     />
 
                     {/* Arena Interface Overlays */}
@@ -228,8 +235,8 @@ export default function SpecialHRInterview() {
                        </div>
                     </div>
                     
-                    {/* Atmospheric Branding */}
-                    <div className="absolute inset-0 pointer-events-none flex items-center justify-center opacity-[0.03]">
+                    {/* Background Visual Identifiers (Submerged below video) */}
+                    <div className="absolute inset-0 pointer-events-none flex items-center justify-center opacity-[0.01] z-0">
                        <Command className="w-96 h-96 text-white" />
                     </div>
                   </motion.div>
