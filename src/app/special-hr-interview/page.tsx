@@ -51,22 +51,27 @@ export default function SpecialHRInterview() {
           position: relative !important;
           bottom: auto !important;
           right: auto !important;
+          left: auto !important;
+          top: auto !important;
           margin: 0 auto !important;
           z-index: 1 !important;
         }
         /* Suppress internal floating artifacts from the D-ID library */
-        #did-agent-launcher {
+        #did-agent-launcher, 
+        #did-agent-close-btn,
+        .did-agent-fab {
           display: none !important;
         }
-        #did-agent-close-btn {
-          display: none !important;
-        }
-        .did-agent-container-style {
+        /* Target the internal container if the script uses it */
+        .did-agent-container-style,
+        #did-agent-container {
           background-color: transparent !important;
           box-shadow: none !important;
           position: relative !important;
           bottom: auto !important;
           right: auto !important;
+          left: auto !important;
+          top: auto !important;
           width: 100% !important;
           height: 100% !important;
         }
@@ -74,6 +79,7 @@ export default function SpecialHRInterview() {
 
       {/* 
         Official D-ID Embed Script v2
+        Credentials maintained exactly as provided.
       */}
       <Script
         id="did-agent-embed-v2"
@@ -111,7 +117,7 @@ export default function SpecialHRInterview() {
               </motion.div>
               <h1 className="text-5xl font-bold tracking-tighter text-premium leading-[1.1]">AI Virtual <br/><span className="text-gradient-purple">HR Arena.</span></h1>
               <p className="text-base text-white/50 font-light leading-relaxed">
-                Experience a high-fidelity simulation with our Virtual HR Agent. The interface is now synchronized with your neural profile.
+                Experience a high-fidelity simulation with our Virtual HR Agent. The interface is now synchronized with your neural profile and displayed in the central arena.
               </p>
             </header>
 
@@ -199,12 +205,12 @@ export default function SpecialHRInterview() {
                       <Badge className="bg-green-500/10 text-green-400 border border-green-500/20 px-3 py-1 text-[8px] font-black uppercase tracking-widest">Encrypted Stream</Badge>
                     </div>
 
-                    {/* Agent Container - This is where the D-ID agent is centered and enlarged */}
-                    <div className="flex-1 relative rounded-[2rem] overflow-hidden bg-black/40 border border-white/5 shadow-inner group p-4 sm:p-8 flex items-center justify-center">
-                      <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                         <div className="text-center opacity-10 group-hover:opacity-20 transition-opacity">
-                            <Zap className="w-24 h-24 text-accent animate-pulse mx-auto" />
-                            <p className="text-xs font-black uppercase tracking-[0.5em] mt-4">Synthesizing Avatar</p>
+                    {/* Agent Container - Centered and Enlarged via global CSS */}
+                    <div className="flex-1 relative rounded-[2rem] overflow-hidden bg-black/40 border border-white/5 shadow-inner group p-2 sm:p-4 flex items-center justify-center">
+                      <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-0">
+                         <div className="text-center opacity-5 group-hover:opacity-10 transition-opacity">
+                            <Zap className="w-32 h-32 text-accent animate-pulse mx-auto" />
+                            <p className="text-xs font-black uppercase tracking-[0.5em] mt-4">Holographic Field Active</p>
                          </div>
                       </div>
                       
