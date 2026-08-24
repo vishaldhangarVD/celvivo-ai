@@ -15,6 +15,7 @@ import {
   Video as VideoIcon,
   Activity,
   Command,
+  Volume2,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
@@ -24,6 +25,7 @@ export default function SpecialHRInterview() {
   const [status, setStatus] = useState<"LOADING" | "READY" | "ERROR">(
     "LOADING"
   );
+  const [isAudioBlocked, setIsAudioBlocked] = useState(false);
 
   const agentVideoRef = useRef<HTMLVideoElement>(null);
   const agentManagerRef = useRef<any>(null);
@@ -34,27 +36,38 @@ export default function SpecialHRInterview() {
   const clientKey = "ck_0T9vL02nSJmsHMLHMYLsB";
 
   // ---------------------------------------------------------
-  // High-Fidelity Video Attachment Protocol
+  // High-Fidelity Audio-Visual Attachment Protocol
   // ---------------------------------------------------------
   const attachStreamToVideo = useCallback(async (stream: MediaStream) => {
     const video = agentVideoRef.current;
     if (!video) return;
 
+    // Inspect and log audio tracks as requested
+    const audioTracks = stream.getAudioTracks();
+    const videoTracks = stream.getVideoTracks();
+
+    console.log("[D-ID] Audio tracks:", audioTracks);
+    console.log("[D-ID] Video tracks:", videoTracks);
+    console.log("[D-ID] Audio track count:", audioTracks.length);
+
+    audioTracks.forEach((track) => {
+      // Ensure audio track is enabled
+      track.enabled = true;
+      console.log("[D-ID] Audio track:", {
+        enabled: track.enabled,
+        muted: track.muted,
+        readyState: track.readyState,
+      });
+    });
+
     console.log("[D-ID] Video attached");
 
-    // Configure hardware properties
+    // Configure hardware properties for UNMUTED playback
     video.srcObject = stream;
-    video.muted = true;
+    video.muted = false;
+    video.volume = 1.0;
     video.autoplay = true;
     video.playsInline = true;
-
-    // Attach lifecycle listeners
-    video.onloadedmetadata = () => console.log("[D-ID] Video metadata loaded");
-    video.oncanplay = () => console.log("[D-ID] Video can play");
-    video.onplaying = () => console.log("[D-ID] Video playing");
-    video.onwaiting = () => console.log("[D-ID] Video waiting");
-    video.onstalled = () => console.log("[D-ID] Video stalled");
-    video.onerror = (e) => console.error("[D-ID] Video error", e);
 
     // Telemetry Diagnostic
     console.log("[D-ID] Video diagnostics", {
@@ -63,22 +76,42 @@ export default function SpecialHRInterview() {
       videoHeight: video.videoHeight,
       paused: video.paused,
       muted: video.muted,
+      volume: video.volume,
       srcObject: !!video.srcObject,
-      tracks: stream.getTracks().map(track => ({
-        kind: track.kind,
-        enabled: track.enabled,
-        readyState: track.readyState
-      }))
     });
 
     try {
       video.load();
       await video.play();
       console.log("[D-ID] Video playback started");
-    } catch (error) {
-      console.error("[D-ID] Video playback failed:", error);
+      setIsAudioBlocked(false);
+    } catch (error: any) {
+      if (error.name === "NotAllowedError") {
+        console.warn("[D-ID] Browser autoplay blocked audio playback");
+        setIsAudioBlocked(true);
+        // Fallback: Play muted so video is still visible while waiting for user interaction
+        video.muted = true;
+        await video.play().catch((e) => console.error("[D-ID] Muted fallback play failed:", e));
+      } else {
+        console.error("[D-ID] Video playback failed:", error);
+      }
     }
   }, []);
+
+  const handleEnableAudio = async () => {
+    const video = agentVideoRef.current;
+    if (video) {
+      video.muted = false;
+      video.volume = 1.0;
+      try {
+        await video.play();
+        setIsAudioBlocked(false);
+        console.log("[D-ID] Audio manually enabled via user interaction");
+      } catch (e) {
+        console.error("[D-ID] Manual audio enable failed:", e);
+      }
+    }
+  };
 
   // ---------------------------------------------------------
   // UI Re-Sync Effect (Ensures attachment if video mounts late)
@@ -121,19 +154,9 @@ export default function SpecialHRInterview() {
           callbacks: {
             onSrcObjectReady: (stream: MediaStream) => {
               console.log("[D-ID] Stream received");
-              console.log(
-                "[D-ID] Stream tracks:",
-                stream.getTracks().map((track) => ({
-                  kind: track.kind,
-                  enabled: track.enabled,
-                  readyState: track.readyState,
-                }))
-              );
-
               pendingStreamRef.current = stream;
               if (isMounted) {
                 setStatus("READY");
-                // Attempt direct attachment if video ref already available
                 if (agentVideoRef.current) {
                   attachStreamToVideo(stream);
                 }
@@ -156,14 +179,12 @@ export default function SpecialHRInterview() {
 
             onVideoStateChange: (state: string) => {
               console.log(`[D-ID] Video state changed: ${state}`);
-              // If we are not in STOP state and have a stream, ensure video is attached
               if (state !== 'STOP' && pendingStreamRef.current && agentVideoRef.current) {
-                 agentVideoRef.current.srcObject = pendingStreamRef.current;
+                 if (agentVideoRef.current.srcObject !== pendingStreamRef.current) {
+                   agentVideoRef.current.srcObject = pendingStreamRef.current;
+                 }
+                 agentVideoRef.current.play().catch(() => {});
               }
-            },
-
-            onNewMessage: (messages: any, type: any) => {
-              // Handle transcript or chat responses
             },
 
             onError: (error: any, errorData: any) => {
@@ -175,9 +196,7 @@ export default function SpecialHRInterview() {
 
         agentManagerRef.current = manager;
         await manager.connect();
-        console.log("[D-ID] Connected");
 
-        // START INITIAL AVATAR RESPONSE TO WAKE UP STREAM
         if (isMounted) {
           console.log("[D-ID] Starting initial avatar response");
           try {
@@ -361,11 +380,30 @@ export default function SpecialHRInterview() {
                     <video
                       ref={agentVideoRef}
                       autoPlay
-                      muted
                       playsInline
                       preload="auto"
                       className="absolute inset-0 w-full h-full object-contain bg-black z-10"
                     />
+
+                    {isAudioBlocked && (
+                      <div className="absolute inset-0 flex items-center justify-center z-40 bg-black/40 backdrop-blur-sm transition-all animate-in fade-in duration-500">
+                        <div className="text-center space-y-6">
+                           <div className="w-20 h-20 rounded-full bg-accent/20 flex items-center justify-center mx-auto border border-accent/40 shadow-[0_0_30px_rgba(34,211,238,0.2)]">
+                             <Volume2 className="w-10 h-10 text-accent animate-pulse" />
+                           </div>
+                           <div className="space-y-2">
+                             <h3 className="text-xl font-bold uppercase tracking-tighter">Audio Stream Blocked</h3>
+                             <p className="text-xs text-white/60 uppercase tracking-widest">Interaction required to sync vocal matrix</p>
+                           </div>
+                           <Button 
+                             onClick={handleEnableAudio}
+                             className="h-14 px-10 btn-premium rounded-xl text-xs font-black uppercase tracking-[0.2em]"
+                           >
+                             Initialize Vocal Link
+                           </Button>
+                        </div>
+                      </div>
+                    )}
 
                     <div className="absolute top-8 left-8 z-30">
                       <Badge className="bg-black/60 backdrop-blur-md border-white/10 text-white/80 py-2 px-5 rounded-full flex items-center gap-3">
