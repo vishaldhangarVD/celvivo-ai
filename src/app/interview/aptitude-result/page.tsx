@@ -49,7 +49,7 @@ export default function AptitudeResultPage() {
       updatedAt: serverTimestamp(),
     });
 
-    router.push(STAGE_ROUTES.CODING);
+    router.push('/interview/coding');
   };
 
   const handleRetry = async () => {
@@ -63,16 +63,16 @@ export default function AptitudeResultPage() {
       updatedAt: serverTimestamp(),
     });
 
-    router.push(STAGE_ROUTES.APTITUDE);
+    router.push('/interview/aptitude');
   };
 
-  if (loading) return <div className="h-screen bg-[#050816] flex items-center justify-center"><Loader2 className="w-12 h-12 text-accent animate-spin" /></div>;
+  if (loading) return <div className="min-h-screen bg-[#050816] flex items-center justify-center"><Loader2 className="w-12 h-12 text-accent animate-spin" /></div>;
 
   const result = journey?.aptitudeReport;
 
   if (!result) {
     return (
-      <div className="h-screen bg-[#050816] flex flex-col items-center justify-center p-12 text-center">
+      <div className="min-h-screen bg-[#050816] flex flex-col items-center justify-center p-12 text-center">
         <AlertCircle className="w-16 h-16 text-red-500 mb-6" />
         <h2 className="text-2xl font-bold">Report Missing</h2>
         <Button onClick={() => router.push('/interview?action=resume')} className="mt-8">Resume Journey</Button>

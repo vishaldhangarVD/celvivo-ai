@@ -257,7 +257,7 @@ function VirtualArenaContent() {
       });
 
       await updateDoc(journeyRef!, {
-        currentStage: INTERVIEW_STAGES.FEEDBACK,
+        currentStage: INTERVIEW_STAGES.COMPLETED,
         step: 9,
         updatedAt: serverTimestamp()
       });

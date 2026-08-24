@@ -270,12 +270,12 @@ export default function AptitudeEnginePage() {
       await updateDoc(journeyRef!, {
         aptitudeReport: finalReport,
         aptitudeStatus: "completed",
-        currentStage: INTERVIEW_STAGES.APTITUDE_RESULT,
+        currentStage: INTERVIEW_STAGES.APTITUDE, // Bucket stage
         step: 5,
         updatedAt: serverTimestamp()
       });
 
-      router.push(STAGE_ROUTES.APTITUDE_RESULT);
+      router.push('/interview/aptitude-result');
     } catch (e) {
       console.error("[APTITUDE SESSION] Submission fault:", e);
       toast({ variant: "destructive", title: "Audit Protocol Fault" });

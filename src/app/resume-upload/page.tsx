@@ -18,7 +18,7 @@ import {
   ArrowRight,
   RotateCcw
 } from 'lucide-react';
-import { useUser, useFirestore, useDoc } from '@/firebase';
+import { useUser, useFirestore } from '@/firebase';
 import { doc, updateDoc, serverTimestamp } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
@@ -69,8 +69,6 @@ export default function ResumeUploadPage() {
     if (!file || !user || !db || !journeyRef) return;
     
     try {
-      // We convert file to base64 only if we need it here, 
-      // but the original flow likely stores it or processes it in the next step.
       const base64 = await new Promise<string>((res) => {
         const reader = new FileReader();
         reader.onload = () => res(reader.result as string);
@@ -78,14 +76,14 @@ export default function ResumeUploadPage() {
       });
 
       await updateDoc(journeyRef, {
-        currentStage: INTERVIEW_STAGES.RESUME_ANALYSIS,
+        currentStage: INTERVIEW_STAGES.RESUME, // Remains in RESUME main bucket
         step: 2,
         resumeName: file.name,
-        resumeBase64: base64, // Temporary storage for analysis
+        resumeBase64: base64,
         updatedAt: serverTimestamp(),
       });
 
-      router.push(STAGE_ROUTES.RESUME_ANALYSIS);
+      router.push('/resume-analysis');
     } catch (e) {
       console.error(e);
       toast({ variant: "destructive", title: "Protocol Fault", description: "Failed to persist identity node." });

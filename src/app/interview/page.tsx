@@ -35,7 +35,7 @@ function InterviewDispatcherContent() {
         
         await setDoc(journeyRef, {
           sessionId,
-          currentStage: INTERVIEW_STAGES.RESUME_UPLOAD,
+          currentStage: INTERVIEW_STAGES.RESUME,
           step: 1,
           role: "Software Engineer", // Default calibration
           experience: "Senior",
@@ -45,7 +45,7 @@ function InterviewDispatcherContent() {
         });
 
         toast({ title: "Protocol Initialized", description: "Beginning resume registration." });
-        router.push(STAGE_ROUTES.RESUME_UPLOAD);
+        router.push(STAGE_ROUTES.RESUME);
       } else {
         // 2. Resume Existing Journey
         const snap = await getDoc(journeyRef);
@@ -53,11 +53,11 @@ function InterviewDispatcherContent() {
         if (snap.exists()) {
           const data = snap.data();
           const stage = data.currentStage as keyof typeof INTERVIEW_STAGES;
-          const route = STAGE_ROUTES[stage] || STAGE_ROUTES.RESUME_UPLOAD;
+          const route = STAGE_ROUTES[stage] || STAGE_ROUTES.RESUME;
 
           toast({ title: "Session Reconnected", description: `Active stage: ${stage.replace('_', ' ')}` });
           
-          if (stage === INTERVIEW_STAGES.HR_INTERVIEW || stage === INTERVIEW_STAGES.FEEDBACK) {
+          if (stage === INTERVIEW_STAGES.HR_INTERVIEW) {
             router.push(`${route}${data.sessionId}`);
           } else {
             router.push(route);
