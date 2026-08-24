@@ -21,9 +21,9 @@ import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 
 /**
- * @fileOverview Special HR Interview Arena v4.3
- * Stabilized for high-fidelity WebRTC streaming.
- * Includes deep diagnostics for MediaStream tracks and hardware video state.
+ * @fileOverview Special HR Interview Arena v4.5
+ * Stabilized for high-fidelity WebRTC streaming and audible playback.
+ * Implements user-gesture audio unlock to satisfy browser autoplay policies.
  */
 
 export default function SpecialHRInterview() {
@@ -54,16 +54,11 @@ export default function SpecialHRInterview() {
     try {
       videoPlayPromiseRef.current = video.play();
       await videoPlayPromiseRef.current;
-      console.log("[D-ID] Video playback started", {
-        muted: video.muted,
-        volume: video.volume,
-        paused: video.paused
-      });
     } catch (error: any) {
       if (error.name === "AbortError") {
-        // Silently ignore interruptions from new play requests
+        // Silently ignore interruptions
       } else if (error.name === "NotAllowedError") {
-        console.warn("[D-ID] Browser autoplay blocked audio playback");
+        console.warn("[D-ID] Browser autoplay blocked unmuted audio playback");
         setIsAudioBlocked(true);
       } else {
         console.error("[D-ID] Video playback failed:", error);
@@ -80,22 +75,25 @@ export default function SpecialHRInterview() {
     const video = agentVideoRef.current;
     if (!video) return;
 
-    // Strict guard against duplicate attachment/reloading
     if (agentStreamRef.current?.id === stream.id && video.srcObject === stream) {
-      console.log("[D-ID] Stream already attached - skipping duplicate");
       return;
     }
 
-    console.log("[D-ID] Stream attached", {
+    console.log("[D-ID] Stream received", { 
       id: stream.id,
-      audioTracks: stream.getAudioTracks().length,
-      videoTracks: stream.getVideoTracks().length
+      tracks: stream.getTracks().length,
+      active: stream.active 
     });
 
     agentStreamRef.current = stream;
     video.srcObject = stream;
     
-    // Diagnostic Log for MediaStream and Video Element State
+    // Autoplay configuration (Start muted for reliable initial playback)
+    video.muted = true; 
+    video.autoplay = true;
+    video.playsInline = true;
+    video.volume = 1;
+
     console.log("[D-ID] VIDEO ELEMENT", {
       muted: video.muted,
       volume: video.volume,
@@ -105,38 +103,42 @@ export default function SpecialHRInterview() {
       audioTracks: stream.getAudioTracks().length
     });
 
-    // Autoplay configuration (Start muted for reliability)
-    video.muted = true; 
-    video.autoplay = true;
-    video.playsInline = true;
-
     ensureVideoPlaying();
   }, [ensureVideoPlaying]);
 
   // ---------------------------------------------------------
-  // Interactive Vocal Unlock
+  // Interactive Vocal Unlock (User Gesture)
   // ---------------------------------------------------------
   const handleEnableAudio = async () => {
     const video = agentVideoRef.current;
     if (video) {
-      console.log("[D-ID] Unmuting vocal matrix");
-      
-      // Hardware state update
+      // Unmute hardware element
       video.muted = false;
       video.volume = 1.0;
+
+      // Sync and enable all audio tracks in the stream
+      const audioTracks = video.srcObject instanceof MediaStream
+        ? video.srcObject.getAudioTracks()
+        : [];
+
+      audioTracks.forEach(track => {
+        track.enabled = true;
+      });
+
       setIsAudioBlocked(false);
 
-      // Diagnostics
-      console.log("[D-ID] Video diagnostics:", {
+      // Trigger playback within user-gesture context
+      await ensureVideoPlaying();
+
+      console.log("[D-ID] AUDIO UNLOCKED", {
         muted: video.muted,
         volume: video.volume,
         paused: video.paused,
-        readyState: video.readyState,
-        hasAudio: (video.srcObject as MediaStream)?.getAudioTracks().length > 0
+        audioTracks: audioTracks.length,
+        audioEnabled: audioTracks.map(track => track.enabled)
       });
 
-      ensureVideoPlaying();
-      toast({ title: "Audio Initialized", description: "Vocal nodes synchronized." });
+      toast({ title: "Vocal Link Active", description: "Avatar audio stream synchronized." });
     }
   };
 
@@ -161,24 +163,6 @@ export default function SpecialHRInterview() {
           },
           callbacks: {
             onSrcObjectReady: (stream: MediaStream) => {
-              console.log("[D-ID] Stream received", { 
-                id: stream.id,
-                tracks: stream.getTracks().length,
-                active: stream.active 
-              });
-              
-              // Deep Diagnostics requested for audio troubleshooting
-              console.log("[D-ID] ALL TRACKS", stream.getTracks().map(track => ({
-                kind: track.kind,
-                enabled: track.enabled,
-                muted: (track as any).muted, // muted property exists on MediaStreamTrack
-                readyState: track.readyState,
-                label: track.label
-              })));
-
-              console.log("[D-ID] AUDIO TRACKS", stream.getAudioTracks());
-              console.log("[D-ID] VIDEO TRACKS", stream.getVideoTracks());
-              
               const videoTrack = stream.getVideoTracks()[0];
               if (stream.active && videoTrack?.readyState === "live") {
                 setStatus("READY");
@@ -188,13 +172,9 @@ export default function SpecialHRInterview() {
 
             onConnectionStateChange: (state: string) => {
               console.log(`[D-ID] Connection state: ${state}`);
-              if (state === "connected") {
-                console.log("[D-ID] Connected");
-              }
             },
 
             onVideoStateChange: (state: string) => {
-              console.log(`[D-ID] Video state changed: ${state}`);
               if (state === "START") {
                 setIsAiSpeaking(true);
                 console.log("[D-ID] Avatar speaking started");
@@ -214,12 +194,12 @@ export default function SpecialHRInterview() {
 
         agentManagerRef.current = manager;
         await manager.connect();
+        console.log("[D-ID] Connected");
 
         // Greeting Trigger - Only once per session
         if (!hasStartedGreetingRef.current) {
           hasStartedGreetingRef.current = true;
           try {
-            console.log("[D-ID] Triggering initial greeting");
             await manager.speak({
               type: "text",
               input: "Hello, welcome to your AI HR interview. Please introduce yourself.",
@@ -333,11 +313,9 @@ export default function SpecialHRInterview() {
             <Card className="premium-card w-full min-w-0 bg-[#0b0e1a]/90 border-accent/10 p-0 h-full flex flex-col relative overflow-hidden shadow-[0_0_80px_rgba(0,0,0,0.5)]">
               <div className="relative w-full h-full min-h-0 bg-black overflow-hidden">
                 
-                {/* PERSISTENT HARDWARE RENDERER */}
                 <video
                   ref={agentVideoRef}
                   autoPlay
-                  muted
                   playsInline
                   preload="auto"
                   className="absolute inset-0 w-full h-full object-contain bg-black z-10"
