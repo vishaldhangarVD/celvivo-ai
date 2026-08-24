@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect, useRef } from 'react';
-import { createAgentManager, type AgentManager } from '@d-id/client-sdk';
 import Navbar from '@/components/layout/Navbar';
 import NavigationControls from '@/components/NavigationControls';
 import { Card } from '@/components/ui/card';
@@ -13,7 +12,7 @@ import {
   ShieldCheck, 
   AlertCircle, 
   Mic, 
-  Video, 
+  Video as VideoIcon, 
   Activity,
   Zap,
   Command
@@ -21,17 +20,17 @@ import {
 import { useToast } from '@/hooks/use-toast';
 
 /**
- * @fileOverview Special HR Interview - D-ID SDK Protocol.
- * Implements high-fidelity WebRTC streaming inside the AI Arena viewport.
+ * @fileOverview Special HR Interview - D-ID SDK Dynamic Loading Protocol.
+ * Resolves "window is not defined" by loading SDK only on the client.
  */
 
 export default function SpecialHRInterview() {
   const { toast } = useToast();
   const [status, setStatus] = useState<'LOADING' | 'READY' | 'ERROR'>('LOADING');
   const agentVideoRef = useRef<HTMLVideoElement>(null);
-  const agentManagerRef = useRef<AgentManager | null>(null);
+  const agentManagerRef = useRef<any>(null); // Browser-only reference
 
-  // Configuration Nodes
+  // Production Configuration Nodes
   const agentId = "v2_agt_5A5V9r-C";
   const clientKey = "ck_0T9vL02nSJmsHMLHMYLsB";
 
@@ -39,17 +38,22 @@ export default function SpecialHRInterview() {
     let isMounted = true;
 
     async function initializeDIDAgency() {
+      // 1. Browser-check guard
+      if (typeof window === 'undefined') return;
+
       try {
-        // Prevent duplicate initialization
         if (agentManagerRef.current) return;
 
-        console.log("[D-ID SDK] Initializing Agent Manager...");
+        console.log("[D-ID SDK] Dynamically importing Client SDK...");
+        
+        // 2. Load SDK strictly on client
+        const { createAgentManager } = await import('@d-id/client-sdk');
         
         const manager = await createAgentManager(agentId, {
           auth: { type: 'key', clientKey },
           callbacks: {
             onSrcObjectReady: async (stream) => {
-              console.log("[D-ID SDK] Neural stream ready.");
+              console.log("[D-ID SDK] Neural stream received.");
               if (isMounted && agentVideoRef.current) {
                 agentVideoRef.current.srcObject = stream;
                 try {
@@ -67,28 +71,27 @@ export default function SpecialHRInterview() {
             },
             onError: (error) => {
               console.error("[D-ID SDK] Neural Error:", error);
-              if (isMounted) setStatus('ERROR');
-            },
-            onVideoStateChange: (state) => {
-              console.log("[D-ID SDK] Video state:", state);
+              if (isMounted) {
+                setStatus('ERROR');
+                toast({
+                  variant: "destructive",
+                  title: "Connection Fault",
+                  description: "Domain authentication or network error."
+                });
+              }
             }
           }
         });
 
         if (isMounted) {
           agentManagerRef.current = manager;
-          console.log("[D-ID SDK] Establishing WebRTC uplink...");
+          console.log("[D-ID SDK] Initializing WebRTC handshake...");
           await manager.connect();
         }
       } catch (error: any) {
-        console.error("[D-ID SDK] Initialization Failed:", error);
+        console.error("[D-ID SDK] Dynamic Initialization Failed:", error);
         if (isMounted) {
           setStatus('ERROR');
-          toast({
-            variant: "destructive",
-            title: "Uplink Failure",
-            description: error.message || "Unable to establish neural connection."
-          });
         }
       }
     }
@@ -98,7 +101,7 @@ export default function SpecialHRInterview() {
     return () => {
       isMounted = false;
       if (agentManagerRef.current) {
-        console.log("[D-ID SDK] Terminating session...");
+        console.log("[D-ID SDK] Closing session...");
         agentManagerRef.current.disconnect();
         agentManagerRef.current = null;
       }
@@ -114,7 +117,7 @@ export default function SpecialHRInterview() {
       <main className="flex-1 w-full h-[calc(100vh-72px)] mt-[72px] px-4 md:px-12 py-4 flex flex-col items-center justify-center overflow-hidden">
         <div className="w-full h-full max-w-none grid lg:grid-cols-12 gap-10 items-stretch">
           
-          {/* Briefing Section */}
+          {/* Executive Briefing Panel */}
           <div className="lg:col-span-3 xl:col-span-2 space-y-10 flex flex-col justify-center">
             <header className="space-y-6">
               <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }}>
@@ -148,14 +151,14 @@ export default function SpecialHRInterview() {
                     <span className="text-[9px] font-black uppercase text-white/40">Vocal Node</span>
                  </Card>
                  <Card className="glass border-white/5 p-4 rounded-2xl flex items-center gap-3">
-                    <Video className="w-4 h-4 text-accent" />
+                    <VideoIcon className="w-4 h-4 text-accent" />
                     <span className="text-[9px] font-black uppercase text-white/40">Visual Node</span>
                  </Card>
               </div>
             </div>
           </div>
 
-          {/* AI Arena Viewport */}
+          {/* Neural Arena Stage */}
           <div className="lg:col-span-9 xl:col-span-10 h-full min-w-0">
             <Card className="premium-card w-full min-w-0 bg-[#0b0e1a]/90 border-accent/10 p-0 h-full flex flex-col relative overflow-hidden shadow-[0_0_80px_rgba(0,0,0,0.5)]">
               <AnimatePresence mode="wait">
@@ -172,8 +175,8 @@ export default function SpecialHRInterview() {
                       <Loader2 className="w-full h-full text-accent animate-spin" />
                     </div>
                     <div className="text-center space-y-2">
-                       <p className="text-[10px] font-black uppercase tracking-[0.5em] text-accent animate-pulse">Establishing Uplink</p>
-                       <p className="text-[8px] font-bold text-white/20 uppercase tracking-widest">Syncing D-ID SDK v2.0</p>
+                       <p className="text-[10px] font-black uppercase tracking-[0.5em] text-accent animate-pulse">Initializing Matrix</p>
+                       <p className="text-[8px] font-bold text-white/20 uppercase tracking-widest">Dynamic Handshake protocol</p>
                     </div>
                   </motion.div>
                 ) : status === 'ERROR' ? (
@@ -186,9 +189,9 @@ export default function SpecialHRInterview() {
                     <AlertCircle className="w-16 h-16 text-red-500" />
                     <div className="space-y-2">
                       <h3 className="text-2xl font-bold text-white uppercase tracking-tighter">Neural Bridge Error</h3>
-                      <p className="text-sm text-white/40 max-w-xs mx-auto">The D-ID Agent failed to initialize. Ensure your domain is allowlisted.</p>
+                      <p className="text-sm text-white/40 max-w-xs mx-auto">The AI Interviewer failed to initialize. Verify network status and domain allowlist.</p>
                     </div>
-                    <Button onClick={() => window.location.reload()} variant="outline" className="h-12 px-10 rounded-xl glass border-white/10 text-[10px] font-bold uppercase tracking-widest">Retry Connection</Button>
+                    <Button onClick={() => window.location.reload()} variant="outline" className="h-12 px-10 rounded-xl glass border-white/10 text-[10px] font-bold uppercase tracking-widest">Retry Protocol</Button>
                   </motion.div>
                 ) : (
                   <motion.div 
@@ -204,7 +207,7 @@ export default function SpecialHRInterview() {
                       className="w-full h-full object-cover"
                     />
 
-                    {/* Arena Overlays */}
+                    {/* Arena Interface Overlays */}
                     <div className="absolute top-8 left-8 flex items-center gap-4 z-20">
                       <Badge className="bg-black/60 backdrop-blur-md border-white/10 text-white/80 py-2 px-5 rounded-full flex items-center gap-3">
                          <div className="w-2 h-2 rounded-full bg-red-500 animate-pulse shadow-[0_0_8px_#ef4444]" />
@@ -219,7 +222,7 @@ export default function SpecialHRInterview() {
                        </div>
                     </div>
                     
-                    {/* Visual Branding */}
+                    {/* Atmospheric Branding */}
                     <div className="absolute inset-0 pointer-events-none flex items-center justify-center opacity-[0.03]">
                        <Command className="w-96 h-96 text-white" />
                     </div>
