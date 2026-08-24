@@ -24,15 +24,6 @@ import {
  * Scales the layout to fill 100vw and 100vh while maintaining structural logic.
  */
 
-// TypeScript declaration for the custom D-ID Web Component
-declare global {
-  namespace JSX {
-    interface IntrinsicElements {
-      'did-agent': React.DetailedHTMLProps<React.HTMLAttributes<HTMLElement>, HTMLElement>;
-    }
-  }
-}
-
 export default function SpecialHRInterview() {
   const [status, setStatus] = useState<'LOADING' | 'READY' | 'ERROR'>('LOADING');
 
@@ -90,11 +81,11 @@ export default function SpecialHRInterview() {
         }}
       />
 
-      <main className="flex-1 w-full h-[calc(100vh-72px)] mt-[72px] px-8 md:px-12 py-8 flex flex-col items-center justify-center overflow-hidden">
+      <main className="flex-1 w-full h-[calc(100vh-72px)] mt-[72px] px-4 md:px-6 py-4 flex flex-col items-center justify-center overflow-hidden">
         <div className="w-full h-full max-w-none grid lg:grid-cols-12 gap-10 items-stretch">
           
           {/* Briefing Section - Proportional Scaling */}
-          <div className="lg:col-span-4 xl:col-span-3 space-y-10 flex flex-col justify-center">
+          <div className="lg:col-span-3 xl:col-span-2 space-y-10 flex flex-col justify-center">
             <header className="space-y-6">
               <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }}>
                 <Badge className="bg-purple-500/20 text-purple-400 border-none px-4 py-1.5 text-[10px] tracking-widest font-black uppercase">Executive HR Protocol</Badge>
@@ -133,8 +124,8 @@ export default function SpecialHRInterview() {
           </div>
 
           {/* AI Arena - Full Expansion */}
-          <div className="lg:col-span-8 xl:col-span-9 h-full">
-            <Card className="premium-card bg-[#0b0e1a]/90 border-accent/10 p-0 h-full flex flex-col relative overflow-hidden shadow-[0_0_80px_rgba(0,0,0,0.5)]">
+          <div className="lg:col-span-9 xl:col-span-10 h-full min-w-0">
+          <Card className="premium-card w-full min-w-0 bg-[#0b0e1a]/90 border-accent/10 p-0 h-full flex flex-col relative overflow-hidden shadow-[0_0_80px_rgba(0,0,0,0.5)]">
               <AnimatePresence mode="wait">
                 {status === 'LOADING' ? (
                   <motion.div 
