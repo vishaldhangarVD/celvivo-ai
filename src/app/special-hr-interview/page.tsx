@@ -46,7 +46,7 @@ export default function SpecialHRInterview() {
 
         console.log("[D-ID SDK] Dynamically importing Client SDK...");
         
-        // 2. Load SDK strictly on client
+        // 2. Load SDK strictly on client to avoid "window is not defined"
         const { createAgentManager } = await import('@d-id/client-sdk');
         
         const manager = await createAgentManager(agentId, {
@@ -68,6 +68,12 @@ export default function SpecialHRInterview() {
               console.log("[D-ID SDK] Connection state changed:", state);
               if (state === 'connected') setStatus('READY');
               if (state === 'fail') setStatus('ERROR');
+            },
+            onVideoStateChange: (state) => {
+              console.log("[D-ID SDK] Video state changed:", state);
+            },
+            onNewMessage: (messages, type) => {
+              console.log("[D-ID SDK] New message received:", messages);
             },
             onError: (error) => {
               console.error("[D-ID SDK] Neural Error:", error);
