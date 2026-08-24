@@ -144,12 +144,6 @@ export default function SpecialHRInterview() {
               console.log(`[D-ID] Connection state changed: ${state}`);
               if (state === "connected") {
                 console.log("[D-ID] Connected");
-                if (isMounted) {
-                  toast({
-                    title: "Neural Link Established",
-                    description: "The Special HR Agent is now online.",
-                  });
-                }
               }
 
               if (state === "disconnected" || state === "closed") {
@@ -162,6 +156,7 @@ export default function SpecialHRInterview() {
 
             onVideoStateChange: (state: string) => {
               console.log(`[D-ID] Video state changed: ${state}`);
+              // If we are not in STOP state and have a stream, ensure video is attached
               if (state !== 'STOP' && pendingStreamRef.current && agentVideoRef.current) {
                  agentVideoRef.current.srcObject = pendingStreamRef.current;
               }
@@ -180,6 +175,26 @@ export default function SpecialHRInterview() {
 
         agentManagerRef.current = manager;
         await manager.connect();
+        console.log("[D-ID] Connected");
+
+        // START INITIAL AVATAR RESPONSE TO WAKE UP STREAM
+        if (isMounted) {
+          console.log("[D-ID] Starting initial avatar response");
+          try {
+            await manager.speak({
+              type: "text",
+              input: "Hello, welcome to your AI HR interview. Please introduce yourself.",
+            });
+            console.log("[D-ID] Avatar response started");
+          } catch (speakError) {
+            console.error("[D-ID] Speak failed:", speakError);
+          }
+
+          toast({
+            title: "Neural Link Established",
+            description: "The Special HR Agent is now online.",
+          });
+        }
 
       } catch (error) {
         console.error("[D-ID] Initialization failed:", error);
