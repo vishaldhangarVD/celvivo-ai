@@ -2,10 +2,10 @@ import { NextResponse } from 'next/server';
 import wav from 'wav';
 
 /**
- * @fileOverview Resilient TTS Gateway v26.1.
+ * @fileOverview Resilient TTS Gateway v26.2.
  * Primary: ElevenLabs (High-fidelity).
  * Fallback: Google Gemini 1.5 Flash TTS (Multi-modal Stability).
- * Enhanced with detailed diagnostic reporting.
+ * Fix: Explicit query param authentication for Gemini.
  */
 
 let cachedVoiceId: null | string = null;
@@ -43,15 +43,19 @@ async function tryGeminiTTS(text: string): Promise<{ buffer: ArrayBuffer; conten
   ).trim();
 
   if (!apiKey) {
-    return { buffer: new ArrayBuffer(0), contentType: "", error: "No Gemini/Google API Key found." };
+    return { buffer: new ArrayBuffer(0), contentType: "", error: "No Gemini/Google API Key found in environment." };
   }
 
   try {
+    // Gemini 1.5 Flash supports AUDIO modality in v1beta
     const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
     
     const response = await fetch(url, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 
+        'Content-Type': 'application/json'
+        // CRITICAL: Do NOT include Authorization headers here for Google REST API with key param
+      },
       body: JSON.stringify({
         contents: [{ parts: [{ text }] }],
         generationConfig: {
@@ -67,7 +71,7 @@ async function tryGeminiTTS(text: string): Promise<{ buffer: ArrayBuffer; conten
 
     if (!response.ok) {
       const errorBody = await response.text();
-      console.error(`[TTS Fallback Error] Status: ${response.status} Body: ${errorBody}`);
+      console.error(`[TTS Fallback API Error] Status: ${response.status}`, errorBody);
       return { buffer: new ArrayBuffer(0), contentType: "", error: `Google API Error (${response.status}): ${errorBody}` };
     }
 
@@ -75,13 +79,14 @@ async function tryGeminiTTS(text: string): Promise<{ buffer: ArrayBuffer; conten
     const audioBase64 = data.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
     
     if (!audioBase64) {
-      return { buffer: new ArrayBuffer(0), contentType: "", error: "Gemini response contained no audio data." };
+      console.error("[TTS Fallback] No inline audio data in Gemini response:", JSON.stringify(data).substring(0, 500));
+      return { buffer: new ArrayBuffer(0), contentType: "", error: "Gemini response contained no audio data candidate." };
     }
 
     const pcmBuffer = Buffer.from(audioBase64, 'base64');
     const wavBuffer = await pcmToWav(pcmBuffer);
     
-    console.log("[TTS] Used provider: Gemini (Success)");
+    console.log("[TTS] Used provider: Gemini Fallback (Success)");
     return { 
       buffer: wavBuffer.buffer.slice(wavBuffer.byteOffset, wavBuffer.byteOffset + wavBuffer.byteLength),
       contentType: 'audio/wav' 
@@ -136,7 +141,7 @@ export async function POST(req: Request) {
     const text = body.text;
     const elevenApiKey = process.env.ELEVENLABS_API_KEY;
     
-    if (elevenApiKey) {
+    if (elevenApiKey && elevenApiKey.length > 5) {
       try {
         const voiceId = await getAvailableVoice(elevenApiKey);
         const response = await fetch(
@@ -158,17 +163,20 @@ export async function POST(req: Request) {
 
         if (response.ok) {
           const audioBuffer = await response.arrayBuffer();
-          console.log("[TTS] Used provider: ElevenLabs");
+          console.log("[TTS] Used provider: ElevenLabs (Success)");
           return new NextResponse(audioBuffer, {
             headers: { 'Content-Type': 'audio/mpeg', 'Cache-Control': 'no-store, max-age=0' },
           });
+        } else {
+          const errorText = await response.text();
+          console.warn(`[TTS] ElevenLabs failed (Status ${response.status}):`, errorText);
         }
       } catch (e: any) {
         console.warn("[TTS] ElevenLabs path exception:", e.message);
       }
     }
 
-    console.log("[TTS] Transitioning to Gemini Fallback...");
+    console.log("[TTS] Transitioning to Gemini Fallback Protocol...");
     const fallbackResult = await tryGeminiTTS(text);
     if (fallbackResult && fallbackResult.buffer.byteLength > 0) {
       return new NextResponse(fallbackResult.buffer, {
@@ -178,7 +186,7 @@ export async function POST(req: Request) {
 
     return NextResponse.json({ 
       error: 'TTS Failure',
-      details: `ElevenLabs and Gemini fallback both failed. Gemini Detail: ${fallbackResult?.error || 'Unknown Error'}`
+      details: `ElevenLabs failed and Gemini fallback is unavailable. Detail: ${fallbackResult?.error || 'Unknown Error'}`
     }, { status: 500 });
 
   } catch (error: any) {

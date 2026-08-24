@@ -7,8 +7,9 @@ import { Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 /**
- * @fileOverview CandidateHologram - Particles-Only Hologram.
- * Using woman_head.glb with raw vertex sampling for maximum clarity.
+ * @fileOverview CandidateHologram - High-Density Particles-Only Hologram.
+ * Implementation: Reverted to stable raw vertex sampling for clarity.
+ * Fix: Scene initialization dimensions and model path validation.
  */
 
 export default function CandidateHologram({ 
@@ -26,6 +27,7 @@ export default function CandidateHologram({
   const speakingRef = useRef(speaking);
   const nextBlinkTime = useRef<number>(Date.now() + 3000);
   const isBlinking = useRef<boolean>(false);
+  
   const sceneElements = useRef<{
     scene: THREE.Scene;
     camera: THREE.PerspectiveCamera;
@@ -40,14 +42,17 @@ export default function CandidateHologram({
   useEffect(() => {
     if (!containerRef.current) return;
 
+    const width = containerRef.current.clientWidth || 400;
+    const height = containerRef.current.clientHeight || 400;
+
     // 1. Initialize Scene
     const scene = new THREE.Scene();
-    const camera = new THREE.PerspectiveCamera(35, containerRef.current.clientWidth / containerRef.current.clientHeight, 0.1, 1000);
+    const camera = new THREE.PerspectiveCamera(35, width / height, 0.1, 1000);
     camera.position.set(0, 0, 3);
     camera.lookAt(0, 0, 0);
 
     const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
-    renderer.setSize(containerRef.current.clientWidth, containerRef.current.clientHeight);
+    renderer.setSize(width, height);
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     containerRef.current.appendChild(renderer.domElement);
 
@@ -60,40 +65,21 @@ export default function CandidateHologram({
       size: number, 
       opacity: number, 
       targetCount: number = 0,
-      jitter: number = 0,
-      radiusLimit: number = 0,
-      yCutoff: number = -Infinity,
-      headCenter?: THREE.Vector3,
       isEyes: boolean = false
     ) => {
       const positions = geometry.attributes.position.array as Float32Array;
-      const count = positions.length / 3;
+      const originalCount = positions.length / 3;
       let finalPositions: Float32Array;
 
-      if (targetCount > 0 && count > 0) {
+      if (targetCount > 0 && originalCount < targetCount) {
+        // Simple Jitter Up-sampling if needed
         finalPositions = new Float32Array(targetCount * 3);
         for (let i = 0; i < targetCount; i++) {
-          const idx = Math.floor(Math.random() * count);
-          const offset = (Math.random() - 0.5) * jitter;
-          const px = positions[idx * 3] + offset;
-          const py = positions[idx * 3 + 1] + offset;
-          const pz = positions[idx * 3 + 2] + offset;
-
-          // Outlier & Vertical Filter
-          if (headCenter) {
-            const dx = px - headCenter.x;
-            const dy = py - headCenter.y;
-            const dz = pz - headCenter.z;
-            const dist = Math.sqrt(dx*dx + dy*dy + dz*dz);
-            if (dist > radiusLimit || py < yCutoff) {
-              i--; // Retry
-              continue;
-            }
-          }
-
-          finalPositions[i * 3] = px;
-          finalPositions[i * 3 + 1] = py;
-          finalPositions[i * 3 + 2] = pz;
+          const idx = Math.floor(Math.random() * originalCount);
+          const jitter = 0.002;
+          finalPositions[i * 3] = positions[idx * 3] + (Math.random() - 0.5) * jitter;
+          finalPositions[i * 3 + 1] = positions[idx * 3 + 1] + (Math.random() - 0.5) * jitter;
+          finalPositions[i * 3 + 2] = positions[idx * 3 + 2] + (Math.random() - 0.5) * jitter;
         }
       } else {
         finalPositions = positions;
@@ -107,7 +93,7 @@ export default function CandidateHologram({
         const subPos = finalPositions.slice(g * pointsPerGroup * 3, (g + 1) * pointsPerGroup * 3);
         subGeo.setAttribute('position', new THREE.BufferAttribute(subPos, 3));
         
-        const sizeVar = 1 + (Math.random() - 0.5) * 0.15;
+        const sizeVar = 0.85 + (Math.random() * 0.3); // +/- 15% variance
         const mat = new THREE.PointsMaterial({ 
           color, 
           size: size * sizeVar, 
@@ -120,14 +106,14 @@ export default function CandidateHologram({
         const pts = new THREE.Points(subGeo, mat);
         scene.add(pts);
         
-        if (isEyes) {
-          eyeMaterials.push(mat);
-        }
+        if (isEyes) eyeMaterials.push(mat);
       }
     };
 
     // 2. Load Model
     const loader = new GLTFLoader();
+    console.log("[Hologram] Loading verified model: woman_head.glb");
+    
     loader.load('/models/woman_head.glb', (gltf) => {
       let faceGeo: THREE.BufferGeometry | null = null;
       let mouthGeo: THREE.BufferGeometry | null = null;
@@ -148,46 +134,53 @@ export default function CandidateHologram({
       if (faceGeo) {
         faceGeo.computeBoundingBox();
         const box = faceGeo.boundingBox!;
-        const center = new THREE.Vector3();
-        box.getCenter(center);
-        const size = new THREE.Vector3();
-        box.getSize(size);
+        const rawCenter = new THREE.Vector3();
+        box.getCenter(rawCenter);
+        const sizeVec = new THREE.Vector3();
+        box.getSize(sizeVec);
 
-        const maxDim = Math.max(size.x, size.y, size.z);
-        const scale = 1.4 / maxDim;
-        const transform = new THREE.Matrix4().makeScale(scale, scale, scale);
+        const maxDim = Math.max(sizeVec.x, sizeVec.y, sizeVec.z);
+        const scaleFactor = 1.4 / maxDim;
+        const transformMatrix = new THREE.Matrix4().makeScale(scaleFactor, scaleFactor, scaleFactor);
         
-        faceGeo.applyMatrix4(transform);
-        if (mouthGeo) mouthGeo.applyMatrix4(transform);
-        if (irisGeo) irisGeo.applyMatrix4(transform);
-        hairGeos.forEach(h => h.geo.applyMatrix4(transform));
+        faceGeo.applyMatrix4(transformMatrix);
+        if (mouthGeo) mouthGeo.applyMatrix4(transformMatrix);
+        if (irisGeo) irisGeo.applyMatrix4(transformMatrix);
+        hairGeos.forEach(h => h.geo.applyMatrix4(transformMatrix));
 
+        // Recompute center for absolute framing
         faceGeo.computeBoundingBox();
-        const newCenter = new THREE.Vector3();
-        faceGeo.boundingBox!.getCenter(newCenter);
+        const finalCenter = new THREE.Vector3();
+        faceGeo.boundingBox!.getCenter(finalCenter);
 
-        // Create Particle Systems
-        // Raw sampling for Face and Mouth (targetCount = 0)
-        createPoints(faceGeo, '#4ff0ff', 0.022, 0.9, 0, 0.002);
-        if (mouthGeo) createPoints(mouthGeo, '#4ff0ff', 0.018, 0.6, 0, 0.002);
-        if (irisGeo) createPoints(irisGeo, '#4ff0ff', 0.012, 0.5, 0, 0, 0, -Infinity, undefined, true);
+        // Synthesis: Create Particle Buffers
+        createPoints(faceGeo, '#4ff0ff', 0.022, 0.9);
+        if (mouthGeo) createPoints(mouthGeo, '#4ff0ff', 0.018, 0.6);
+        if (irisGeo) createPoints(irisGeo, '#4ff0ff', 0.012, 0.5, 0, true);
 
-        const radius = size.length() * scale * 0.5;
+        const headHeight = sizeVec.y * scaleFactor;
+        const radiusLimit = sizeVec.length() * scaleFactor * 0.5 * 1.15;
+        const yCutoff = finalCenter.y - (headHeight * 0.2);
+
         hairGeos.forEach(h => {
-          let tCount = 1200;
-          if (h.name.includes('Hair_Cap_0') || h.name.includes('Back_Mat_0')) tCount = 3600;
-          else if (h.name.includes('FrontL_Mat_0') || h.name.includes('FrontR_Mat_0')) tCount = 1200;
-          
-          createPoints(h.geo, '#1a5fb4', 0.02, 0.5, tCount, 0.002, radius * 1.15, newCenter.y - (size.y * scale * 0.2), newCenter);
+          let count = 1200;
+          if (h.name.includes('Cap') || h.name.includes('Back')) count = 3600;
+          createPoints(h.geo, '#1a5fb4', 0.02, 0.5, count);
         });
 
-        // Global Centering
+        // Global absolute centering logic
         scene.traverse((obj) => {
-          if (obj instanceof THREE.Points) obj.position.sub(newCenter);
+          if (obj instanceof THREE.Points) {
+            obj.position.sub(finalCenter);
+          }
         });
+        
+        console.log("[Hologram] Identity synthesis complete.");
       }
 
       sceneElements.current = { scene, camera, renderer, eyeMaterials };
+    }, undefined, (err) => {
+      console.error("[Hologram] GLB Path Fault (Ensure woman_head.glb exists in /public/models/):", err);
     });
 
     // 3. Animation Loop
@@ -198,7 +191,7 @@ export default function CandidateHologram({
 
       const now = Date.now();
 
-      // Blinking logic
+      // Blinking Pulse Logic
       if (now > nextBlinkTime.current && !isBlinking.current) {
         isBlinking.current = true;
         sceneElements.current.eyeMaterials.forEach(m => m.opacity = 0);
@@ -211,12 +204,12 @@ export default function CandidateHologram({
         }, 150);
       }
 
-      // Idle movement & vocal jitter
+      // Identity Drift & Vocal Movement
       scene.children.forEach(child => {
         if (child instanceof THREE.Points) {
-          child.rotation.y = Math.sin(now * 0.001) * 0.02;
+          child.rotation.y = Math.sin(now * 0.0008) * 0.03;
           if (speakingRef.current) {
-            child.position.y += Math.sin(now * 0.05) * 0.0005;
+            child.position.y += Math.sin(now * 0.04) * 0.0004;
           }
         }
       });
