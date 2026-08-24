@@ -58,7 +58,14 @@ export default function Navbar() {
 
   const { data: profile } = useDoc(profileRef);
 
-  // REAL NOTIFICATION LOGIC
+  // Identity Initial Logic - Strictly 1 character
+  const userInitial = useMemo(() => {
+    if (!user) return 'U';
+    const rawName = user.displayName || user.email?.split('@')[0] || 'User';
+    return rawName.trim().split(/\s+/)[0].charAt(0).toUpperCase() || 'U';
+  }, [user]);
+
+  // Real Notification Intelligence
   const notificationsQuery = useMemo(() => {
     if (!db || !user?.uid) return null;
     return query(
@@ -76,22 +83,13 @@ export default function Navbar() {
 
   const handleMarkAsRead = async (id: string) => {
     if (!db || !user?.uid) return;
-    const ref = doc(db, 'users', user.uid, 'notifications', id);
-    await updateDoc(ref, { read: true });
+    try {
+      const ref = doc(db, 'users', user.uid, 'notifications', id);
+      await updateDoc(ref, { read: true });
+    } catch (e) {
+      console.error("[Notifications] Failed to update node:", e);
+    }
   };
-
-  const formattedName = useMemo(() => {
-    if (!user) return 'Operator';
-    const name = user.displayName || user.email?.split('@')[0] || 'User';
-    return name.charAt(0).toUpperCase() + name.slice(1);
-  }, [user]);
-
-  // A) USER NAME -> FIRST INITIAL ONLY
-  const userInitial = useMemo(() => {
-    if (!user) return 'U';
-    const name = user.displayName || user.email?.split('@')[0] || 'User';
-    return name.trim().split(' ')[0].charAt(0).toUpperCase();
-  }, [user]);
 
   const handleSignOut = async () => {
     if (!auth) return;
@@ -185,17 +183,6 @@ export default function Navbar() {
                 <span className={pillUnderlineClasses} />
               </Link>
 
-              <Link 
-                href="/about" 
-                className={cn(pillClasses, pillHoverClasses, pathname === '/about' && pillActiveClasses)}
-              >
-                <div className={cn(pillIconWrapperClasses, pathname === '/about' && pillActiveIconWrapperClasses)}>
-                  <Info className="w-2.5 h-2.5" />
-                </div>
-                ABOUT
-                <span className={pillUnderlineClasses} />
-              </Link>
-
               {isFounder && (
                 <Link 
                   href="/founder" 
@@ -226,19 +213,19 @@ export default function Navbar() {
             <>
               {user ? (
                 <div className="flex items-center gap-6">
-                  {/* A) USER NAME -> FIRST INITIAL ONLY */}
+                  {/* Neural Identity Initial */}
                   <Link href="/user-dashboard" className="hidden lg:flex flex-col items-end group transition-all duration-300">
-                    <span className="text-white font-bold tracking-[0.2em] text-[10px] md:text-xs leading-none group-hover:text-accent transition-colors">
+                    <span className="text-white font-black tracking-[0.4em] text-xs leading-none group-hover:text-accent transition-colors">
                       {userInitial}
                     </span>
-                    <span className="text-[#22D3EE] font-bold tracking-[0.3em] text-[7px] md:text-[8px] leading-tight uppercase mt-1 group-hover:drop-shadow-[0_0_8px_rgba(34,211,238,0.5)] transition-all">
-                      VERIFIED TRACK
+                    <span className="text-[#22D3EE] font-bold tracking-[0.3em] text-[7px] leading-tight uppercase mt-1 group-hover:drop-shadow-[0_0_8px_rgba(34,211,238,0.5)] transition-all">
+                      IDENTITY
                     </span>
                   </Link>
 
                   <div className="w-px h-6 bg-white/10 hidden lg:block"></div>
 
-                  {/* B) FUNCTIONAL BELL ICON */}
+                  {/* Functional Bell Logic */}
                   <Popover>
                     <PopoverTrigger asChild>
                       <button className="relative p-2 text-white/40 hover:text-accent transition-colors group">
@@ -297,11 +284,6 @@ export default function Navbar() {
                             )}
                          </div>
                       </ScrollArea>
-                      {notifications && notifications.length > 0 && (
-                        <div className="p-3 border-t border-white/5 text-center">
-                           <button className="text-[8px] font-black uppercase tracking-[0.2em] text-white/20 hover:text-accent transition-colors">Clear Simulation Log</button>
-                        </div>
-                      )}
                     </PopoverContent>
                   </Popover>
 
@@ -312,15 +294,15 @@ export default function Navbar() {
                       <button className="outline-none">
                         <Avatar className="w-9 h-9 border border-white/10 hover:border-accent/50 transition-all cursor-pointer shadow-lg hover:shadow-accent/10">
                           <AvatarImage src={user.photoURL || undefined} />
-                          <AvatarFallback className="bg-gradient-to-br from-purple-600 to-blue-600 text-[10px] font-bold text-white">
-                            {formattedName.substring(0, 2).toUpperCase()}
+                          <AvatarFallback className="bg-gradient-to-br from-purple-600 to-blue-600 text-[10px] font-black text-white">
+                            {userInitial}
                           </AvatarFallback>
                         </Avatar>
                       </button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end" className="w-56 glass border-white/10 bg-[#0b0e1a] text-white mt-2 p-2 rounded-2xl">
                       <DropdownMenuLabel className="px-3 py-2">
-                        <p className="text-xs font-bold uppercase tracking-widest">{formattedName}</p>
+                        <p className="text-xs font-black uppercase tracking-widest">Operator {userInitial}</p>
                         <p className="text-[10px] text-white/40 font-light truncate">{user.email}</p>
                       </DropdownMenuLabel>
                       <DropdownMenuSeparator className="bg-white/5" />
@@ -394,11 +376,8 @@ export default function Navbar() {
                 <Link href="/pricing" onClick={() => setIsOpen(false)} className="text-2xl font-bold tracking-tighter uppercase text-white hover:text-accent flex items-center gap-4">
                   <CreditCard className="w-6 h-6" /> Pricing
                 </Link>
-                <Link href="/about" onClick={() => setIsOpen(false)} className="text-2xl font-bold tracking-tighter uppercase text-white hover:text-accent flex items-center gap-4">
-                  <Info className="w-6 h-6" /> About
-                </Link>
                 <Link href="/user-dashboard" onClick={() => setIsOpen(false)} className="text-2xl font-bold tracking-tighter uppercase text-white hover:text-accent flex items-center gap-4">
-                  <ShieldCheck className="w-6 h-6" /> Verified Track
+                  <ShieldCheck className="w-6 h-6" /> Verified Identity: {userInitial}
                 </Link>
                 <div className="h-px bg-white/5 my-4"></div>
               </>
