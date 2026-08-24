@@ -109,12 +109,25 @@ export default function SpecialHRInterview() {
               }
             },
             onVideoStateChange(state) {
-              if (isMounted) setIsDIdSpeaking(state === 'playing');
+              if (isMounted) {
+                setIsDIdSpeaking(state !== 'STOP');
+              }
             },
             onNewMessage(messages, type) {
-              if (type === 'assistant' && isMounted) {
-                const text = Array.isArray(messages) ? messages[messages.length - 1] : messages;
-                setTranscript(prev => [...prev, { role: 'interviewer', text }]);
+              if (!isMounted) return;
+            
+              if (type === 'answer' && Array.isArray(messages)) {
+                const lastMessage = messages[messages.length - 1];
+            
+                if (lastMessage?.role === 'assistant') {
+                  setTranscript(prev => [
+                    ...prev,
+                    {
+                      role: 'interviewer',
+                      text: lastMessage.content,
+                    },
+                  ]);
+                }
               }
             },
             onError(error, errorData) {

@@ -15,11 +15,13 @@ import {
   CreditCard,
   Sparkles,
   Briefcase,
-  Info
+  Info,
+  MessageSquare,
+  Clock
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useState, useMemo } from 'react';
-import { useUser, useAuth, useDoc, useFirestore } from '@/firebase';
+import { useUser, useAuth, useDoc, useFirestore, useCollection } from '@/firebase';
 import { signOut } from 'firebase/auth';
 import { useRouter, usePathname } from 'next/navigation';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -31,8 +33,15 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
-import { doc } from 'firebase/firestore';
+import { doc, collection, query, orderBy, limit, updateDoc } from 'firebase/firestore';
+import { format } from 'date-fns';
 
 export default function Navbar() {
   const [isOpen, setIsOpen] = useState(false);
@@ -49,10 +58,39 @@ export default function Navbar() {
 
   const { data: profile } = useDoc(profileRef);
 
+  // REAL NOTIFICATION LOGIC
+  const notificationsQuery = useMemo(() => {
+    if (!db || !user?.uid) return null;
+    return query(
+      collection(db, 'users', user.uid, 'notifications'),
+      orderBy('createdAt', 'desc'),
+      limit(10)
+    );
+  }, [db, user?.uid]);
+
+  const { data: notifications } = useCollection(notificationsQuery);
+
+  const unreadCount = useMemo(() => 
+    notifications?.filter((n: any) => !n.read).length || 0, 
+  [notifications]);
+
+  const handleMarkAsRead = async (id: string) => {
+    if (!db || !user?.uid) return;
+    const ref = doc(db, 'users', user.uid, 'notifications', id);
+    await updateDoc(ref, { read: true });
+  };
+
   const formattedName = useMemo(() => {
     if (!user) return 'Operator';
     const name = user.displayName || user.email?.split('@')[0] || 'User';
     return name.charAt(0).toUpperCase() + name.slice(1);
+  }, [user]);
+
+  // A) USER NAME -> FIRST INITIAL ONLY
+  const userInitial = useMemo(() => {
+    if (!user) return 'U';
+    const name = user.displayName || user.email?.split('@')[0] || 'User';
+    return name.trim().split(' ')[0].charAt(0).toUpperCase();
   }, [user]);
 
   const handleSignOut = async () => {
@@ -188,9 +226,10 @@ export default function Navbar() {
             <>
               {user ? (
                 <div className="flex items-center gap-6">
+                  {/* A) USER NAME -> FIRST INITIAL ONLY */}
                   <Link href="/user-dashboard" className="hidden lg:flex flex-col items-end group transition-all duration-300">
                     <span className="text-white font-bold tracking-[0.2em] text-[10px] md:text-xs leading-none group-hover:text-accent transition-colors">
-                      {formattedName.toUpperCase()}
+                      {userInitial}
                     </span>
                     <span className="text-[#22D3EE] font-bold tracking-[0.3em] text-[7px] md:text-[8px] leading-tight uppercase mt-1 group-hover:drop-shadow-[0_0_8px_rgba(34,211,238,0.5)] transition-all">
                       VERIFIED TRACK
@@ -199,11 +238,72 @@ export default function Navbar() {
 
                   <div className="w-px h-6 bg-white/10 hidden lg:block"></div>
 
-                  <button className="relative p-2 text-white/40 hover:text-accent transition-colors group">
-                    <Bell className="w-5 h-5" />
-                    <span className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full border-2 border-[#080c19]"></span>
-                    <div className="absolute inset-0 bg-accent/5 rounded-full scale-0 group-hover:scale-100 transition-transform"></div>
-                  </button>
+                  {/* B) FUNCTIONAL BELL ICON */}
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <button className="relative p-2 text-white/40 hover:text-accent transition-colors group">
+                        <Bell className="w-5 h-5" />
+                        {unreadCount > 0 && (
+                          <span className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full border-2 border-[#080c19]"></span>
+                        )}
+                        <div className="absolute inset-0 bg-accent/5 rounded-full scale-0 group-hover:scale-100 transition-transform"></div>
+                      </button>
+                    </PopoverTrigger>
+                    <PopoverContent align="end" className="w-80 glass border-white/10 bg-[#0b0e1a] text-white p-0 rounded-2xl overflow-hidden shadow-2xl">
+                      <div className="p-4 border-b border-white/5 flex items-center justify-between">
+                         <div className="flex items-center gap-2">
+                           <Sparkles className="w-3.5 h-3.5 text-accent" />
+                           <span className="text-[10px] font-black uppercase tracking-widest">Neural Notifications</span>
+                         </div>
+                         {unreadCount > 0 && (
+                           <Badge className="bg-accent/20 text-accent border-none text-[8px] font-black">{unreadCount} UNREAD</Badge>
+                         )}
+                      </div>
+                      <ScrollArea className="h-80">
+                         <div className="p-2 space-y-1">
+                            {notifications && notifications.length > 0 ? (
+                              notifications.map((n: any) => (
+                                <div 
+                                  key={n.id} 
+                                  onClick={() => !n.read && handleMarkAsRead(n.id)}
+                                  className={cn(
+                                    "p-4 rounded-xl transition-all cursor-pointer border border-transparent group/item",
+                                    !n.read ? "bg-accent/5 border-accent/10" : "opacity-60 hover:bg-white/5"
+                                  )}
+                                >
+                                  <div className="flex justify-between items-start gap-2 mb-1">
+                                    <p className="text-xs font-bold text-white group-hover/item:text-accent transition-colors">{n.title}</p>
+                                    {!n.read && <div className="w-1.5 h-1.5 rounded-full bg-accent mt-1" />}
+                                  </div>
+                                  <p className="text-[10px] text-white/60 line-clamp-2 leading-relaxed font-light">{n.message}</p>
+                                  <div className="flex items-center gap-2 mt-3 opacity-30 group-hover/item:opacity-50 transition-opacity">
+                                    <Clock className="w-2.5 h-2.5" />
+                                    <p className="text-[8px] font-bold uppercase tracking-widest">
+                                      {n.createdAt?.seconds ? format(new Date(n.createdAt.seconds * 1000), 'MMM d, HH:mm') : 'Recent'}
+                                    </p>
+                                  </div>
+                                </div>
+                              ))
+                            ) : (
+                              <div className="h-64 flex flex-col items-center justify-center text-center p-6 space-y-4">
+                                 <div className="w-12 h-12 rounded-2xl bg-white/5 flex items-center justify-center text-white/10">
+                                   <MessageSquare className="w-6 h-6" />
+                                 </div>
+                                 <div className="space-y-1">
+                                   <p className="text-sm font-bold text-white/80">No new notifications</p>
+                                   <p className="text-[10px] text-white/30 uppercase tracking-widest font-medium">Your archive is empty.</p>
+                                 </div>
+                              </div>
+                            )}
+                         </div>
+                      </ScrollArea>
+                      {notifications && notifications.length > 0 && (
+                        <div className="p-3 border-t border-white/5 text-center">
+                           <button className="text-[8px] font-black uppercase tracking-[0.2em] text-white/20 hover:text-accent transition-colors">Clear Simulation Log</button>
+                        </div>
+                      )}
+                    </PopoverContent>
+                  </Popover>
 
                   <div className="w-px h-6 bg-white/10"></div>
 
