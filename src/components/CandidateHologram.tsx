@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, memo } from 'react';
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader';
 import { Loader2 } from 'lucide-react';
@@ -9,10 +9,10 @@ import { cn } from '@/lib/utils';
 /**
  * @fileOverview CandidateHologram - High-Density Particles-Only Hologram.
  * Implementation: Reverted to stable raw vertex sampling for clarity.
- * Fix: Scene initialization dimensions and model path validation.
+ * Fix: Memoized to prevent remounts from parent re-renders.
  */
 
-export default function CandidateHologram({ 
+const CandidateHologram = memo(({ 
   className,
   active = true,
   speaking = false,
@@ -22,7 +22,7 @@ export default function CandidateHologram({
   active?: boolean;
   speaking?: boolean;
   isLoader?: boolean;
-}) {
+}) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const speakingRef = useRef(speaking);
   const nextBlinkTime = useRef<number>(Date.now() + 3000);
@@ -72,7 +72,6 @@ export default function CandidateHologram({
       let finalPositions: Float32Array;
 
       if (targetCount > 0 && originalCount < targetCount) {
-        // Simple Jitter Up-sampling if needed
         finalPositions = new Float32Array(targetCount * 3);
         for (let i = 0; i < targetCount; i++) {
           const idx = Math.floor(Math.random() * originalCount);
@@ -93,7 +92,7 @@ export default function CandidateHologram({
         const subPos = finalPositions.slice(g * pointsPerGroup * 3, (g + 1) * pointsPerGroup * 3);
         subGeo.setAttribute('position', new THREE.BufferAttribute(subPos, 3));
         
-        const sizeVar = 0.85 + (Math.random() * 0.3); // +/- 15% variance
+        const sizeVar = 0.85 + (Math.random() * 0.3);
         const mat = new THREE.PointsMaterial({ 
           color, 
           size: size * sizeVar, 
@@ -148,19 +147,13 @@ export default function CandidateHologram({
         if (irisGeo) irisGeo.applyMatrix4(transformMatrix);
         hairGeos.forEach(h => h.geo.applyMatrix4(transformMatrix));
 
-        // Recompute center for absolute framing
         faceGeo.computeBoundingBox();
         const finalCenter = new THREE.Vector3();
         faceGeo.boundingBox!.getCenter(finalCenter);
 
-        // Synthesis: Create Particle Buffers
         createPoints(faceGeo, '#4ff0ff', 0.022, 0.9);
         if (mouthGeo) createPoints(mouthGeo, '#4ff0ff', 0.018, 0.6);
         if (irisGeo) createPoints(irisGeo, '#4ff0ff', 0.012, 0.5, 0, true);
-
-        const headHeight = sizeVec.y * scaleFactor;
-        const radiusLimit = sizeVec.length() * scaleFactor * 0.5 * 1.15;
-        const yCutoff = finalCenter.y - (headHeight * 0.2);
 
         hairGeos.forEach(h => {
           let count = 1200;
@@ -168,7 +161,6 @@ export default function CandidateHologram({
           createPoints(h.geo, '#1a5fb4', 0.02, 0.5, count);
         });
 
-        // Global absolute centering logic
         scene.traverse((obj) => {
           if (obj instanceof THREE.Points) {
             obj.position.sub(finalCenter);
@@ -180,10 +172,9 @@ export default function CandidateHologram({
 
       sceneElements.current = { scene, camera, renderer, eyeMaterials };
     }, undefined, (err) => {
-      console.error("[Hologram] GLB Path Fault (Ensure woman_head.glb exists in /public/models/):", err);
+      console.error("[Hologram] GLB Load Fault:", err);
     });
 
-    // 3. Animation Loop
     let frameId: number;
     const animate = () => {
       frameId = requestAnimationFrame(animate);
@@ -191,7 +182,6 @@ export default function CandidateHologram({
 
       const now = Date.now();
 
-      // Blinking Pulse Logic
       if (now > nextBlinkTime.current && !isBlinking.current) {
         isBlinking.current = true;
         sceneElements.current.eyeMaterials.forEach(m => m.opacity = 0);
@@ -204,7 +194,6 @@ export default function CandidateHologram({
         }, 150);
       }
 
-      // Identity Drift & Vocal Movement
       scene.children.forEach(child => {
         if (child instanceof THREE.Points) {
           child.rotation.y = Math.sin(now * 0.0008) * 0.03;
@@ -244,4 +233,7 @@ export default function CandidateHologram({
       )}
     </div>
   );
-}
+});
+
+CandidateHologram.displayName = 'CandidateHologram';
+export default CandidateHologram;

@@ -42,8 +42,7 @@ export default function HolographicInterviewer({
         });
 
         if (!response.ok) {
-          const err = await response.json().catch(() => ({ details: 'Unknown Error' }));
-          console.error("[TTS API Error Detail]", err);
+          const err = await response.json().catch(() => ({ details: 'Internal gateway error.' }));
           throw new Error(err.details || 'TTS Handshake Failed');
         }
 

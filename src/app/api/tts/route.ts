@@ -42,6 +42,9 @@ async function tryGeminiTTS(text: string): Promise<{ buffer: ArrayBuffer; conten
     ''
   ).trim();
 
+  // Diagnostic: Log key presence only
+  console.log(`[TTS Fallback] GEMINI_API_KEY Present: ${!!apiKey}`);
+
   if (!apiKey) {
     return { buffer: new ArrayBuffer(0), contentType: "", error: "No Gemini/Google API Key found in environment." };
   }
