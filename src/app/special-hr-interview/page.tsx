@@ -21,8 +21,9 @@ import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 
 /**
- * @fileOverview Special HR Interview Arena v4.2
- * Stabilized for high-fidelity WebRTC streaming, audible vocal matrix, and strict lifecycle management.
+ * @fileOverview Special HR Interview Arena v4.3
+ * Stabilized for high-fidelity WebRTC streaming.
+ * Includes deep diagnostics for MediaStream tracks and hardware video state.
  */
 
 export default function SpecialHRInterview() {
@@ -94,6 +95,16 @@ export default function SpecialHRInterview() {
     agentStreamRef.current = stream;
     video.srcObject = stream;
     
+    // Diagnostic Log for MediaStream and Video Element State
+    console.log("[D-ID] VIDEO ELEMENT", {
+      muted: video.muted,
+      volume: video.volume,
+      paused: video.paused,
+      readyState: video.readyState,
+      hasSrcObject: !!video.srcObject,
+      audioTracks: stream.getAudioTracks().length
+    });
+
     // Autoplay configuration (Start muted for reliability)
     video.muted = true; 
     video.autoplay = true;
@@ -156,11 +167,17 @@ export default function SpecialHRInterview() {
                 active: stream.active 
               });
               
-              const audioTracks = stream.getAudioTracks();
-              console.log("[D-ID] Audio tracks:", audioTracks.map(t => ({
-                enabled: t.enabled,
-                readyState: t.readyState
+              // Deep Diagnostics requested for audio troubleshooting
+              console.log("[D-ID] ALL TRACKS", stream.getTracks().map(track => ({
+                kind: track.kind,
+                enabled: track.enabled,
+                muted: (track as any).muted, // muted property exists on MediaStreamTrack
+                readyState: track.readyState,
+                label: track.label
               })));
+
+              console.log("[D-ID] AUDIO TRACKS", stream.getAudioTracks());
+              console.log("[D-ID] VIDEO TRACKS", stream.getVideoTracks());
               
               const videoTrack = stream.getVideoTracks()[0];
               if (stream.active && videoTrack?.readyState === "live") {
@@ -173,10 +190,6 @@ export default function SpecialHRInterview() {
               console.log(`[D-ID] Connection state: ${state}`);
               if (state === "connected") {
                 console.log("[D-ID] Connected");
-              }
-              if (state === "disconnected") {
-                console.log("[D-ID] Disconnected");
-                // Don't set error on normal STOP events, only on real disconnects
               }
             },
 
