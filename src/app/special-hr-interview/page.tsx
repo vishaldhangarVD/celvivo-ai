@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from 'react';
-import Script from 'next/script';
+import { useState, useEffect, useRef } from 'react';
+import { createAgentManager, type AgentManager } from '@d-id/client-sdk';
 import Navbar from '@/components/layout/Navbar';
 import NavigationControls from '@/components/NavigationControls';
 import { Card } from '@/components/ui/card';
@@ -18,14 +18,92 @@ import {
   Zap,
   Command
 } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
 
 /**
- * @fileOverview Special HR Interview - Full-Screen Viewport Protocol.
- * Scales the layout to fill 100vw and 100vh while maintaining structural logic.
+ * @fileOverview Special HR Interview - D-ID SDK Protocol.
+ * Implements high-fidelity WebRTC streaming inside the AI Arena viewport.
  */
 
 export default function SpecialHRInterview() {
+  const { toast } = useToast();
   const [status, setStatus] = useState<'LOADING' | 'READY' | 'ERROR'>('LOADING');
+  const agentVideoRef = useRef<HTMLVideoElement>(null);
+  const agentManagerRef = useRef<AgentManager | null>(null);
+
+  // Configuration Nodes
+  const agentId = "v2_agt_5A5V9r-C";
+  const clientKey = "ck_0T9vL02nSJmsHMLHMYLsB";
+
+  useEffect(() => {
+    let isMounted = true;
+
+    async function initializeDIDAgency() {
+      try {
+        // Prevent duplicate initialization
+        if (agentManagerRef.current) return;
+
+        console.log("[D-ID SDK] Initializing Agent Manager...");
+        
+        const manager = await createAgentManager(agentId, {
+          auth: { type: 'key', clientKey },
+          callbacks: {
+            onSrcObjectReady: async (stream) => {
+              console.log("[D-ID SDK] Neural stream ready.");
+              if (isMounted && agentVideoRef.current) {
+                agentVideoRef.current.srcObject = stream;
+                try {
+                  await agentVideoRef.current.play();
+                  setStatus('READY');
+                } catch (e) {
+                  console.warn("[D-ID SDK] Autoplay protocol interrupted:", e);
+                }
+              }
+            },
+            onConnectionStateChange: (state) => {
+              console.log("[D-ID SDK] Connection state changed:", state);
+              if (state === 'connected') setStatus('READY');
+              if (state === 'fail') setStatus('ERROR');
+            },
+            onError: (error) => {
+              console.error("[D-ID SDK] Neural Error:", error);
+              if (isMounted) setStatus('ERROR');
+            },
+            onVideoStateChange: (state) => {
+              console.log("[D-ID SDK] Video state:", state);
+            }
+          }
+        });
+
+        if (isMounted) {
+          agentManagerRef.current = manager;
+          console.log("[D-ID SDK] Establishing WebRTC uplink...");
+          await manager.connect();
+        }
+      } catch (error: any) {
+        console.error("[D-ID SDK] Initialization Failed:", error);
+        if (isMounted) {
+          setStatus('ERROR');
+          toast({
+            variant: "destructive",
+            title: "Uplink Failure",
+            description: error.message || "Unable to establish neural connection."
+          });
+        }
+      }
+    }
+
+    initializeDIDAgency();
+
+    return () => {
+      isMounted = false;
+      if (agentManagerRef.current) {
+        console.log("[D-ID SDK] Terminating session...");
+        agentManagerRef.current.disconnect();
+        agentManagerRef.current = null;
+      }
+    };
+  }, [toast, agentId, clientKey]);
 
   return (
     <div className="h-screen w-full bg-[#050816] flex flex-col relative overflow-hidden">
@@ -33,58 +111,10 @@ export default function SpecialHRInterview() {
       <Navbar />
       <NavigationControls />
 
-      {/* Global CSS for the D-ID Agent to fill its expanded container */}
-      <style jsx global>{`
-        did-agent {
-          display: block !important;
-          width: 100% !important;
-          height: 100% !important;
-          position: relative !important;
-          z-index: 10 !important;
-          margin: 0 !important;
-          padding: 0 !important;
-          background-color: transparent !important;
-        }
-        /* Target the internal container to ensure full expansion */
-        #did-agent-container, 
-        .did-agent-container-style {
-          width: 100% !important;
-          height: 100% !important;
-        }
-        /* Suppress default floating artifacts */
-        #did-agent-launcher, 
-        .did-agent-fab {
-          display: none !important;
-        }
-      `}</style>
-
-      {/* Official D-ID Embed Script v2 */}
-      <Script
-        id="did-agent-embed-v2"
-        src="https://agent.d-id.com/v2/index.js"
-        type="module"
-        data-mode="fabio"
-        data-client-key="ck_0T9vL02nSJmsHMLHMYLsB"
-        data-agent-id="v2_agt_5A5V9r-C"
-        data-name="did-agent"
-        data-monitor="true"
-        data-orientation="horizontal"
-        data-position="right"
-        data-open-mode="expanded"
-        onLoad={() => {
-          console.log("D-ID Full-screen layout logic initialized.");
-          setStatus('READY');
-        }}
-        onError={(e) => {
-          console.error("D-ID script failed:", e);
-          setStatus('ERROR');
-        }}
-      />
-
-      <main className="flex-1 w-full h-[calc(100vh-72px)] mt-[72px] px-4 md:px-6 py-4 flex flex-col items-center justify-center overflow-hidden">
+      <main className="flex-1 w-full h-[calc(100vh-72px)] mt-[72px] px-4 md:px-12 py-4 flex flex-col items-center justify-center overflow-hidden">
         <div className="w-full h-full max-w-none grid lg:grid-cols-12 gap-10 items-stretch">
           
-          {/* Briefing Section - Proportional Scaling */}
+          {/* Briefing Section */}
           <div className="lg:col-span-3 xl:col-span-2 space-y-10 flex flex-col justify-center">
             <header className="space-y-6">
               <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }}>
@@ -93,7 +123,7 @@ export default function SpecialHRInterview() {
               <div className="space-y-4">
                 <h1 className="text-5xl xl:text-6xl font-bold tracking-tighter text-premium leading-[1.05]">AI Virtual <br/><span className="text-gradient-purple">HR Arena.</span></h1>
                 <p className="text-lg text-white/50 font-light leading-relaxed max-w-md">
-                  Engaging in a high-fidelity behavioral simulation. Ensure your vocal and visual nodes are clear.
+                  High-fidelity behavioral simulation. Ensure your vocal and visual nodes are calibrated.
                 </p>
               </div>
             </header>
@@ -106,7 +136,9 @@ export default function SpecialHRInterview() {
                  </div>
                  <div className="flex items-center justify-between">
                    <span className="text-[9px] font-bold text-white/30 uppercase tracking-widest">System Status</span>
-                   <span className="text-[9px] font-bold text-green-400 uppercase tracking-widest">Optimal</span>
+                   <span className={`text-[9px] font-bold uppercase tracking-widest ${status === 'READY' ? 'text-green-400' : 'text-orange-400'}`}>
+                     {status === 'READY' ? 'OPTIMAL' : status}
+                   </span>
                  </div>
               </div>
 
@@ -123,9 +155,9 @@ export default function SpecialHRInterview() {
             </div>
           </div>
 
-          {/* AI Arena - Full Expansion */}
+          {/* AI Arena Viewport */}
           <div className="lg:col-span-9 xl:col-span-10 h-full min-w-0">
-          <Card className="premium-card w-full min-w-0 bg-[#0b0e1a]/90 border-accent/10 p-0 h-full flex flex-col relative overflow-hidden shadow-[0_0_80px_rgba(0,0,0,0.5)]">
+            <Card className="premium-card w-full min-w-0 bg-[#0b0e1a]/90 border-accent/10 p-0 h-full flex flex-col relative overflow-hidden shadow-[0_0_80px_rgba(0,0,0,0.5)]">
               <AnimatePresence mode="wait">
                 {status === 'LOADING' ? (
                   <motion.div 
@@ -141,7 +173,7 @@ export default function SpecialHRInterview() {
                     </div>
                     <div className="text-center space-y-2">
                        <p className="text-[10px] font-black uppercase tracking-[0.5em] text-accent animate-pulse">Establishing Uplink</p>
-                       <p className="text-[8px] font-bold text-white/20 uppercase tracking-widest">Syncing Matrix Protocol v5.0.2</p>
+                       <p className="text-[8px] font-bold text-white/20 uppercase tracking-widest">Syncing D-ID SDK v2.0</p>
                     </div>
                   </motion.div>
                 ) : status === 'ERROR' ? (
@@ -153,19 +185,26 @@ export default function SpecialHRInterview() {
                   >
                     <AlertCircle className="w-16 h-16 text-red-500" />
                     <div className="space-y-2">
-                      <h3 className="text-2xl font-bold text-white uppercase tracking-tighter">Protocol Fault</h3>
-                      <p className="text-sm text-white/40 max-w-xs mx-auto">Unable to verify connection with the HR Agent.</p>
+                      <h3 className="text-2xl font-bold text-white uppercase tracking-tighter">Neural Bridge Error</h3>
+                      <p className="text-sm text-white/40 max-w-xs mx-auto">The D-ID Agent failed to initialize. Ensure your domain is allowlisted.</p>
                     </div>
-                    <Button onClick={() => window.location.reload()} variant="outline" className="h-12 px-10 rounded-xl glass border-white/10 text-[10px] font-bold uppercase tracking-widest">Restart Session</Button>
+                    <Button onClick={() => window.location.reload()} variant="outline" className="h-12 px-10 rounded-xl glass border-white/10 text-[10px] font-bold uppercase tracking-widest">Retry Connection</Button>
                   </motion.div>
                 ) : (
                   <motion.div 
                     key="ready"
                     initial={{ opacity: 0 }} 
                     animate={{ opacity: 1 }}
-                    className="h-full w-full relative flex items-center justify-center"
+                    className="h-full w-full relative flex items-center justify-center bg-black"
                   >
-                    {/* Visual Indicators Overlay */}
+                    <video
+                      ref={agentVideoRef}
+                      autoPlay
+                      playsInline
+                      className="w-full h-full object-cover"
+                    />
+
+                    {/* Arena Overlays */}
                     <div className="absolute top-8 left-8 flex items-center gap-4 z-20">
                       <Badge className="bg-black/60 backdrop-blur-md border-white/10 text-white/80 py-2 px-5 rounded-full flex items-center gap-3">
                          <div className="w-2 h-2 rounded-full bg-red-500 animate-pulse shadow-[0_0_8px_#ef4444]" />
@@ -173,20 +212,15 @@ export default function SpecialHRInterview() {
                       </Badge>
                     </div>
 
-                    <div className="absolute top-8 right-8 z-20">
-                       <div className="flex items-center gap-2 px-4 py-2 glass rounded-2xl border-white/10">
-                          <Activity className="w-3.5 h-3.5 text-accent" />
-                          <span className="text-[9px] font-black uppercase text-accent tracking-widest">Neural Link Active</span>
+                    <div className="absolute bottom-8 right-8 z-20">
+                       <div className="flex items-center gap-3 px-6 py-3 glass rounded-2xl border-white/10 shadow-2xl">
+                          <Activity className="w-4 h-4 text-accent" />
+                          <span className="text-[10px] font-black uppercase text-accent tracking-widest">Neural Link Verified</span>
                        </div>
                     </div>
-
-                    {/* D-ID Agent Component fills the expanded card */}
-                    <div className="w-full h-full flex items-center justify-center bg-black/40">
-                      <did-agent />
-                    </div>
-
-                    {/* Arena Backdrop Branding */}
-                    <div className="absolute inset-0 pointer-events-none flex items-center justify-center opacity-[0.02]">
+                    
+                    {/* Visual Branding */}
+                    <div className="absolute inset-0 pointer-events-none flex items-center justify-center opacity-[0.03]">
                        <Command className="w-96 h-96 text-white" />
                     </div>
                   </motion.div>
