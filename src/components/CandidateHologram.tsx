@@ -7,9 +7,9 @@ import { Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 /**
- * @fileOverview CandidateHologram - High-Density Particles-Only Hologram.
- * Implementation: Reverted to stable raw vertex sampling for clarity.
- * Fix: Canvas-ref pattern for visibility and parent height-cascade fixes.
+ * @fileOverview CandidateHologram - High-Density Surface-Aware Hologram.
+ * Implementation: Triangle surface sampling for uniform face density.
+ * Occlusion: Z-Depth filtering to keep only the front-facing "mask".
  */
 
 const CandidateHologram = memo(({ 
@@ -47,7 +47,6 @@ const CandidateHologram = memo(({
     const height = parent?.clientHeight || 400;
     console.log("[Hologram] Container dimensions:", width, height);
 
-    // 1. Initialize Scene
     const scene = new THREE.Scene();
     const camera = new THREE.PerspectiveCamera(35, width / height, 0.1, 1000);
     camera.position.set(0, 0, 3);
@@ -61,31 +60,73 @@ const CandidateHologram = memo(({
     renderer.setSize(width, height);
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 
-    // Helper: Create Point Cloud from Geometry
+    /**
+     * Surface Sampler: Generates points on the actual triangles of the mesh
+     * rather than just at the vertices, ensuring uniform density.
+     */
     const createPoints = (
       geometry: THREE.BufferGeometry, 
       color: string, 
       size: number, 
       opacity: number, 
       targetCount: number = 0,
-      isEyes: boolean = false
+      isEyes: boolean = false,
+      zFilterRange: number = 1.0 // 1.0 = keep all, 0.4 = keep front 40%
     ) => {
       const positions = geometry.attributes.position.array as Float32Array;
-      const originalCount = positions.length / 3;
+      const index = geometry.index ? (geometry.index.array as Uint16Array | Uint32Array) : null;
+      const vertexCount = positions.length / 3;
+      
       let finalPositions: Float32Array;
 
-      if (targetCount > 0 && originalCount < targetCount) {
+      if (targetCount > 0 && index) {
+        // High-Fidelity Surface Sampling
         finalPositions = new Float32Array(targetCount * 3);
+        const triangleCount = index.length / 3;
+
         for (let i = 0; i < targetCount; i++) {
-          const idx = Math.floor(Math.random() * originalCount);
-          const jitter = 0.002;
-          finalPositions[i * 3] = positions[idx * 3] + (Math.random() - 0.5) * jitter;
-          finalPositions[i * 3 + 1] = positions[idx * 3 + 1] + (Math.random() - 0.5) * jitter;
-          finalPositions[i * 3 + 2] = positions[idx * 3 + 2] + (Math.random() - 0.5) * jitter;
+          const triIdx = Math.floor(Math.random() * triangleCount) * 3;
+          const a = index[triIdx];
+          const b = index[triIdx + 1];
+          const c = index[triIdx + 2];
+
+          // Barycentric Coordinates for uniform distribution
+          let r1 = Math.random();
+          let r2 = Math.random();
+          if (r1 + r2 > 1) {
+            r1 = 1 - r1;
+            r2 = 1 - r2;
+          }
+          const r3 = 1 - r1 - r2;
+
+          finalPositions[i * 3] = r1 * positions[a * 3] + r2 * positions[b * 3] + r3 * positions[c * 3];
+          finalPositions[i * 3 + 1] = r1 * positions[a * 3 + 1] + r2 * positions[b * 3 + 1] + r3 * positions[c * 3 + 1];
+          finalPositions[i * 3 + 2] = r1 * positions[a * 3 + 2] + r2 * positions[b * 3 + 2] + r3 * positions[c * 3 + 2];
         }
       } else {
         finalPositions = positions;
       }
+
+      // Apply Z-Depth Occlusion Filtering if requested
+      if (zFilterRange < 1.0) {
+        geometry.computeBoundingBox();
+        const minZ = geometry.boundingBox!.min.z;
+        const maxZ = geometry.boundingBox!.max.z;
+        const range = maxZ - minZ;
+        const threshold = minZ + (range * zFilterRange);
+        
+        console.log(`[Hologram] Z-Audit | Range: ${minZ.toFixed(3)} to ${maxZ.toFixed(3)} | Threshold: ${threshold.toFixed(3)}`);
+
+        const filtered = [];
+        for (let i = 0; i < finalPositions.length / 3; i++) {
+          if (finalPositions[i * 3 + 2] <= threshold) { // Note: z is often negative coming from loader
+            filtered.push(finalPositions[i * 3], finalPositions[i * 3 + 1], finalPositions[i * 3 + 2]);
+          }
+        }
+        finalPositions = new Float32Array(filtered);
+      }
+
+      console.log(`[Hologram] ${isEyes ? 'Eyes' : 'Face/Hair'} particles active:`, finalPositions.length / 3);
 
       const groups = 3;
       const pointsPerGroup = Math.floor(finalPositions.length / 3 / groups);
@@ -112,10 +153,8 @@ const CandidateHologram = memo(({
       }
     };
 
-    // 2. Load Model
     const loader = new GLTFLoader();
     loader.load('/models/woman_head.glb', (gltf) => {
-      console.log("[Hologram] Loading verified model");
       let faceGeo: THREE.BufferGeometry | null = null;
       let mouthGeo: THREE.BufferGeometry | null = null;
       let irisGeo: THREE.BufferGeometry | null = null;
@@ -134,11 +173,8 @@ const CandidateHologram = memo(({
 
       if (faceGeo) {
         faceGeo.computeBoundingBox();
-        const box = faceGeo.boundingBox!;
-        const rawCenter = new THREE.Vector3();
-        box.getCenter(rawCenter);
         const sizeVec = new THREE.Vector3();
-        box.getSize(sizeVec);
+        faceGeo.boundingBox!.getSize(sizeVec);
 
         const maxDim = Math.max(sizeVec.x, sizeVec.y, sizeVec.z);
         const scaleFactor = 1.4 / maxDim;
@@ -153,15 +189,13 @@ const CandidateHologram = memo(({
         const finalCenter = new THREE.Vector3();
         faceGeo.boundingBox!.getCenter(finalCenter);
 
-        // Face Boost: 5000 nodes at 0.95 opacity for solid recognition
-        const faceVertexCount = faceGeo.attributes.position.count;
-        console.log("[Hologram] Raw face vertex count:", faceVertexCount);
-        createPoints(faceGeo, '#4ff0ff', 0.022, 0.95, 5000);
+        // Face Synthesis: Use 5000 surface-sampled nodes with front-face occlusion
+        createPoints(faceGeo, '#4ff0ff', 0.022, 0.95, 5000, false, 0.4);
         
-        if (mouthGeo) createPoints(mouthGeo, '#4ff0ff', 0.018, 0.6);
+        if (mouthGeo) createPoints(mouthGeo, '#4ff0ff', 0.018, 0.6, 1000);
         if (irisGeo) createPoints(irisGeo, '#4ff0ff', 0.012, 0.5, 0, true);
 
-        // Hair: 6000 nodes total
+        // Volumetric Hair Logic
         hairGeos.forEach(h => {
           let count = 1200;
           if (h.name.includes('Cap') || h.name.includes('Back')) count = 3600;
@@ -173,13 +207,9 @@ const CandidateHologram = memo(({
             obj.position.sub(finalCenter);
           }
         });
-        
-        console.log("[Hologram] Identity synthesis complete");
       }
 
       sceneElements.current = { scene, camera, renderer };
-    }, undefined, (err) => {
-      console.error("[Hologram] GLB Load Fault:", err);
     });
 
     let frameId: number;
@@ -189,10 +219,9 @@ const CandidateHologram = memo(({
 
       const now = Date.now();
 
-      // Blinking Logic
+      // Blinking Protocol
       if (now > nextBlinkTime.current && !isBlinking.current) {
         isBlinking.current = true;
-        console.log("[Hologram] Blink");
         eyeMaterialsRef.current.forEach(m => m.opacity = 0);
         setTimeout(() => {
           eyeMaterialsRef.current.forEach(m => m.opacity = 0.5);
