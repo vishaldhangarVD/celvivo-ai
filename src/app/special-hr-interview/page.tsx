@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import Navbar from "@/components/layout/Navbar";
 import NavigationControls from "@/components/NavigationControls";
 import { Card } from "@/components/ui/card";
@@ -34,31 +34,65 @@ export default function SpecialHRInterview() {
   const clientKey = "ck_0T9vL02nSJmsHMLHMYLsB";
 
   // ---------------------------------------------------------
-  // Attach D-ID stream whenever the video element is available
+  // High-Fidelity Video Attachment Protocol
+  // ---------------------------------------------------------
+  const attachStreamToVideo = useCallback(async (stream: MediaStream) => {
+    const video = agentVideoRef.current;
+    if (!video) return;
+
+    console.log("[D-ID] Video attached");
+
+    // Configure hardware properties
+    video.srcObject = stream;
+    video.muted = true;
+    video.autoplay = true;
+    video.playsInline = true;
+
+    // Attach lifecycle listeners
+    video.onloadedmetadata = () => console.log("[D-ID] Video metadata loaded");
+    video.oncanplay = () => console.log("[D-ID] Video can play");
+    video.onplaying = () => console.log("[D-ID] Video playing");
+    video.onwaiting = () => console.log("[D-ID] Video waiting");
+    video.onstalled = () => console.log("[D-ID] Video stalled");
+    video.onerror = (e) => console.error("[D-ID] Video error", e);
+
+    // Telemetry Diagnostic
+    console.log("[D-ID] Video diagnostics", {
+      readyState: video.readyState,
+      videoWidth: video.videoWidth,
+      videoHeight: video.videoHeight,
+      paused: video.paused,
+      muted: video.muted,
+      srcObject: !!video.srcObject,
+      tracks: stream.getTracks().map(track => ({
+        kind: track.kind,
+        enabled: track.enabled,
+        readyState: track.readyState
+      }))
+    });
+
+    try {
+      video.load();
+      await video.play();
+      console.log("[D-ID] Video playback started");
+    } catch (error) {
+      console.error("[D-ID] Video playback failed:", error);
+    }
+  }, []);
+
+  // ---------------------------------------------------------
+  // UI Re-Sync Effect (Ensures attachment if video mounts late)
   // ---------------------------------------------------------
   useEffect(() => {
-    const video = agentVideoRef.current;
-    const stream = pendingStreamRef.current;
-
-    if (!video || !stream || status !== "READY") {
-      return;
+    if (status === "READY" && pendingStreamRef.current && agentVideoRef.current) {
+      if (agentVideoRef.current.srcObject !== pendingStreamRef.current) {
+        attachStreamToVideo(pendingStreamRef.current);
+      }
     }
-
-    if (video.srcObject !== stream) {
-      console.log("[D-ID] Video attached");
-      video.srcObject = stream;
-      video.muted = true;
-      video.autoplay = true;
-      video.playsInline = true;
-
-      video.play()
-        .then(() => console.log("[D-ID] Video playback started"))
-        .catch((error) => console.warn("[D-ID] Video play failed:", error));
-    }
-  }, [status]);
+  }, [status, attachStreamToVideo]);
 
   // ---------------------------------------------------------
-  // Initialize D-ID Agent Protocol
+  // Initialize D-ID Agent Protocol (Strict Singleton)
   // ---------------------------------------------------------
   useEffect(() => {
     if (initializationStartedRef.current) return;
@@ -80,6 +114,10 @@ export default function SpecialHRInterview() {
             type: "key",
             clientKey,
           },
+          streamOptions: {
+            compatibilityMode: "on",
+            streamWarmup: true
+          },
           callbacks: {
             onSrcObjectReady: (stream: MediaStream) => {
               console.log("[D-ID] Stream received");
@@ -93,10 +131,17 @@ export default function SpecialHRInterview() {
               );
 
               pendingStreamRef.current = stream;
-              if (isMounted) setStatus("READY");
+              if (isMounted) {
+                setStatus("READY");
+                // Attempt direct attachment if video ref already available
+                if (agentVideoRef.current) {
+                  attachStreamToVideo(stream);
+                }
+              }
             },
 
             onConnectionStateChange: (state: string) => {
+              console.log(`[D-ID] Connection state changed: ${state}`);
               if (state === "connected") {
                 console.log("[D-ID] Connected");
                 if (isMounted) {
@@ -110,14 +155,16 @@ export default function SpecialHRInterview() {
               if (state === "disconnected" || state === "closed") {
                 console.log("[D-ID] Disconnected");
                 if (isMounted && state === "disconnected") {
-                  // Requirement #14: Show error on unexpected disconnect
                   setStatus("ERROR");
                 }
               }
             },
 
             onVideoStateChange: (state: string) => {
-              // Internal video state management if needed
+              console.log(`[D-ID] Video state changed: ${state}`);
+              if (state !== 'STOP' && pendingStreamRef.current && agentVideoRef.current) {
+                 agentVideoRef.current.srcObject = pendingStreamRef.current;
+              }
             },
 
             onNewMessage: (messages: any, type: any) => {
@@ -149,7 +196,7 @@ export default function SpecialHRInterview() {
         agentManagerRef.current = null;
       }
     };
-  }, []); // Stable effect only runs once
+  }, [attachStreamToVideo, toast]);
 
   return (
     <div className="h-screen w-full bg-[#050816] flex flex-col relative overflow-hidden">
@@ -301,6 +348,7 @@ export default function SpecialHRInterview() {
                       autoPlay
                       muted
                       playsInline
+                      preload="auto"
                       className="absolute inset-0 w-full h-full object-contain bg-black z-10"
                     />
 
