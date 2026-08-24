@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import Navbar from '@/components/layout/Navbar';
@@ -21,12 +21,15 @@ import {
   Sparkles,
   GraduationCap,
   CheckCircle2,
-  Target
+  Target,
+  History,
+  RotateCcw,
+  ShieldCheck
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
-import { useUser, useFirestore } from '@/firebase';
-import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
+import { useUser, useFirestore, useDoc } from '@/firebase';
+import { doc, setDoc, serverTimestamp, deleteDoc } from 'firebase/firestore';
 import { analyzeResume } from '@/ai/flows/ai-resume-analysis';
 
 const IT_ROLES = [
@@ -58,6 +61,14 @@ export default function InterviewSetup() {
   const [selectedRole, setSelectedRole] = useState("");
   const [selectedExp, setSelectedExp] = useState("Senior");
 
+  // Check for active journey to allow resumption
+  const activeJourneyRef = useMemo(() => {
+    if (!db || !user?.uid) return null;
+    return doc(db, 'users', user.uid, 'journey', 'active');
+  }, [db, user?.uid]);
+
+  const { data: journey, loading: journeyLoading } = useDoc(activeJourneyRef);
+
   const filteredRoles = useMemo(() => 
     IT_ROLES.filter(r => r.toLowerCase().includes(searchQuery.toLowerCase())),
     [searchQuery]
@@ -76,7 +87,7 @@ export default function InterviewSetup() {
       }
       setFile(selected);
       setStep(2);
-      toast({ title: "Identity Logged", description: "Select your target deployment track." });
+      toast({ title: "Blueprint Logged", description: "Select your target deployment track." });
     }
   };
 
@@ -114,7 +125,7 @@ export default function InterviewSetup() {
         aptitudeStatus: "not_started"
       });
 
-      toast({ title: "Simulation Calibrated", description: "Aptitude round unlocked." });
+      toast({ title: "Simulation Calibrated", description: "Proceeding to Aptitude round." });
       router.push('/interview/aptitude');
     } catch (e) {
       console.error(e);
@@ -123,6 +134,31 @@ export default function InterviewSetup() {
       setIsAnalyzing(false);
     }
   };
+
+  const handleResumeActiveSession = () => {
+    if (!journey) return;
+    
+    toast({ title: "Resuming Session", description: `Reconnecting to ${journey.currentStage}...` });
+    
+    if (journey.currentStage === "Aptitude Assessment") router.push('/interview/aptitude');
+    else if (journey.currentStage === "Coding Assessment") router.push('/interview/coding');
+    else if (journey.currentStage === "HR Interview") router.push(`/interview/${journey.sessionId}`);
+    else router.push('/interview/aptitude');
+  };
+
+  const handleAbortSession = async () => {
+    if (!activeJourneyRef) return;
+    await deleteDoc(activeJourneyRef);
+    setStep(1);
+    setFile(null);
+    toast({ title: "Session Aborted", description: "Previous simulation data purged." });
+  };
+
+  if (journeyLoading) return (
+    <div className="min-h-screen bg-[#050816] flex items-center justify-center">
+      <Loader2 className="w-12 h-12 text-accent animate-spin" />
+    </div>
+  );
 
   return (
     <div className="min-h-screen bg-[#050816] flex flex-col relative overflow-hidden">
@@ -133,8 +169,37 @@ export default function InterviewSetup() {
       <div className="flex-1 container mx-auto px-6 py-32 flex items-center justify-center">
         <div className="max-w-4xl w-full">
           
+          {/* Active Session Prompt */}
+          {journey && step === 1 && (
+            <motion.div 
+              initial={{ opacity: 0, y: -20 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="mb-12"
+            >
+              <Card className="glass border-accent/20 bg-accent/5 p-8 rounded-[2rem] flex flex-col md:flex-row items-center justify-between gap-8">
+                <div className="flex items-center gap-6">
+                  <div className="w-16 h-16 rounded-2xl bg-accent/10 flex items-center justify-center text-accent">
+                    <History className="w-8 h-8" />
+                  </div>
+                  <div className="space-y-1">
+                    <h3 className="text-xl font-bold">Active Simulation Detected</h3>
+                    <p className="text-xs text-white/50 uppercase tracking-widest font-black">{journey.role} • {journey.currentStage}</p>
+                  </div>
+                </div>
+                <div className="flex gap-4">
+                  <Button onClick={handleResumeActiveSession} className="h-12 px-8 btn-premium text-[10px] font-black tracking-widest">
+                    RESUME MISSION
+                  </Button>
+                  <Button onClick={handleAbortSession} variant="ghost" className="h-12 px-6 rounded-xl border border-white/10 text-[10px] font-black text-red-400 hover:bg-red-500/10">
+                    ABORT
+                  </Button>
+                </div>
+              </Card>
+            </motion.div>
+          )}
+
           <header className="text-center mb-16 space-y-4">
-            <Badge className="bg-accent/20 text-accent border-none px-6 py-1.5 font-bold tracking-[0.4em] text-[10px] uppercase">Simulation Onboarding v6.2</Badge>
+            <Badge className="bg-accent/20 text-accent border-none px-6 py-1.5 font-bold tracking-[0.4em] text-[10px] uppercase">Simulation Onboarding v6.5</Badge>
             <h1 className="text-5xl font-bold tracking-tighter text-premium">
               Arena <span className="text-gradient-purple">Registration.</span>
             </h1>
@@ -154,7 +219,7 @@ export default function InterviewSetup() {
                   </div>
                   <div className="space-y-2">
                     <h2 className="text-3xl font-bold">Resume Blueprint Required</h2>
-                    <p className="text-muted-foreground font-light max-w-sm mx-auto italic">Upload your latest professional blueprint to calibrate the neural auditor.</p>
+                    <p className="text-muted-foreground font-light max-w-sm mx-auto italic">Upload your latest professional blueprint to calibrate the neural simulation engine.</p>
                   </div>
 
                   <div 
@@ -181,7 +246,7 @@ export default function InterviewSetup() {
                       <h2 className="text-2xl font-bold flex items-center gap-3">
                         <Target className="w-6 h-6 text-accent" /> Deployment Track
                       </h2>
-                      <p className="text-sm text-muted-foreground font-light">Specify your target job role for role-aware questioning.</p>
+                      <p className="text-sm text-muted-foreground font-light">Specify your target job role for role-aware simulation parameters.</p>
                     </div>
                     <div className="relative w-full md:w-72 group">
                       <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-white/20 group-focus-within:text-accent transition-colors" />
@@ -229,7 +294,7 @@ export default function InterviewSetup() {
                   <div className="space-y-4">
                     <h2 className="text-4xl font-bold tracking-tighter">Calibration Ready</h2>
                     <div className="flex flex-col items-center gap-2">
-                       <p className="text-white/60 font-light">Role Profile: <span className="text-accent font-bold uppercase tracking-widest">{selectedRole}</span></p>
+                       <p className="text-white/60 font-light">Target Role: <span className="text-accent font-bold uppercase tracking-widest">{selectedRole}</span></p>
                        <div className="flex items-center gap-4 mt-4">
                          {EXPERIENCE_LEVELS.map(l => (
                            <button 
@@ -247,13 +312,18 @@ export default function InterviewSetup() {
                     </div>
                   </div>
 
-                  <Button 
-                    onClick={handleStartJourney}
-                    disabled={isAnalyzing}
-                    className="w-full h-20 btn-premium rounded-[2.5rem] text-lg font-black uppercase tracking-[0.3em] shadow-2xl group"
-                  >
-                    Initialize Simulation <ArrowRight className="ml-4 w-6 h-6 transition-transform group-hover:translate-x-2" />
-                  </Button>
+                  <div className="space-y-4 pt-4">
+                    <Button 
+                      onClick={handleStartJourney}
+                      disabled={isAnalyzing}
+                      className="w-full h-20 btn-premium rounded-[2.5rem] text-lg font-black uppercase tracking-[0.3em] shadow-2xl group"
+                    >
+                      Enter Assessment Arena <ArrowRight className="ml-4 w-6 h-6 transition-transform group-hover:translate-x-2" />
+                    </Button>
+                    <Button onClick={() => setStep(1)} variant="ghost" className="text-[10px] font-bold uppercase tracking-widest text-white/20 hover:text-white">
+                      <RotateCcw className="w-4 h-4 mr-2" /> Recalibrate Settings
+                    </Button>
+                  </div>
                 </Card>
               </motion.div>
             )}

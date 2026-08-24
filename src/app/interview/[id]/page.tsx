@@ -44,9 +44,8 @@ import { Card } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 import HolographicInterviewer from "@/components/HolographicInterviewer";
-import CandidateHologram from "@/components/CandidateHologram";
 
-const HologramStage = dynamic(() => import("@/components/CandidateHologram"), { 
+const CandidateHologram = dynamic(() => import("@/components/CandidateHologram"), { 
   ssr: false,
   loading: () => (
     <div className="w-full h-full flex flex-col items-center justify-center bg-[#050816]">
@@ -103,18 +102,6 @@ function VirtualArenaContent() {
     return name.charAt(0).toUpperCase() + name.slice(1);
   }, [user, journey]);
 
-  const executeSpeechTrigger = (text: string) => {
-    if (!text) return;
-    setIsAiSpeaking(true);
-  };
-
-  useEffect(() => {
-    const lastMsg = [...transcript].reverse().find(t => t.role === 'interviewer');
-    if (lastMsg && !isInitializing && !isSimulationComplete) {
-      executeSpeechTrigger(lastMsg.text);
-    }
-  }, [transcript, isInitializing, isSimulationComplete]);
-
   useEffect(() => {
     if (isInitializing || isSimulationComplete || isGeneratingReport) return;
     const interval = setInterval(() => {
@@ -167,28 +154,39 @@ function VirtualArenaContent() {
       if (!user || !db || !role || !company) return;
       const docRef = doc(db, 'users', user.uid, 'journey', 'active');
       const snap = await getDoc(docRef);
+      
       if (snap.exists()) {
         const data = snap.data();
         if (transcript.length === 0) {
-          const response = await aiMockInterview({
-            role, experienceLevel: exp, roundType: round, currentMainQuestionIndex: 1, 
-            history: [], targetCompany: company,
-            candidateName: data.resumeAnalysis?.personalInfo?.fullName || user.displayName || undefined,
-            resumeSkills: data.resumeAnalysis?.analysis?.skillAnalysis?.map((s: any) => s.skill) || data.resumeAnalysis?.skillAnalysis?.map((s: any) => s.skill) || [],
-            resumeProjects: data.resumeAnalysis?.analysis?.sections?.projects || data.resumeAnalysis?.sections?.projects || [],
-            resumeSummary: data.resumeAnalysis?.summary || "",
-            aptitudeScore: data.aptitudeReport?.overallScore || 0,
-            codingScore: data.codingReport?.score || 0,
-            askedQuestions: [],
-            currentStage: "INTRODUCTION",
-            currentDifficulty: "MEDIUM",
-            hintUsed: false
-          });
-          setTranscript([{ role: 'interviewer', text: response.nextQuestion }]);
-          setAskedQuestions([response.nextQuestion]);
-          setCurrentSimStage(response.stage);
+          try {
+            const response = await aiMockInterview({
+              role, 
+              experienceLevel: exp, 
+              roundType: round, 
+              currentMainQuestionIndex: 1, 
+              history: [], 
+              targetCompany: company,
+              candidateName: data.resumeAnalysis?.personalInfo?.fullName || user.displayName || undefined,
+              resumeSkills: data.resumeAnalysis?.analysis?.technicalSkills?.map((s: any) => s.skill) || data.resumeAnalysis?.missingSkills || [],
+              resumeProjects: data.resumeAnalysis?.analysis?.sections?.projects || [],
+              resumeSummary: data.resumeAnalysis?.summary || "",
+              aptitudeScore: data.aptitudeReport?.overallScore || 0,
+              codingScore: data.codingReport?.score || 0,
+              askedQuestions: [],
+              currentStage: "INTRODUCTION",
+              currentDifficulty: "MEDIUM",
+              hintUsed: false
+            });
+            
+            setTranscript([{ role: 'interviewer', text: response.nextQuestion }]);
+            setAskedQuestions([response.nextQuestion]);
+            setCurrentSimStage(response.stage);
+          } catch (e) {
+            console.error("AI Init Error:", e);
+            setTranscript([{ role: 'interviewer', text: "Hello. Welcome to today's interview. Could you please introduce yourself?" }]);
+          }
         }
-        setTimeout(() => setIsInitializing(false), 3000);
+        setTimeout(() => setIsInitializing(false), 2000);
       } else {
         router.push('/interview');
       }
@@ -211,11 +209,16 @@ function VirtualArenaContent() {
       });
 
       const response = await aiMockInterview({
-        role, experienceLevel: exp, roundType: round, currentMainQuestionIndex: currentIdx,
-        history: chatHistory, userAnswer: currentAns, targetCompany: company,
+        role, 
+        experienceLevel: exp, 
+        roundType: round, 
+        currentMainQuestionIndex: currentIdx + 1,
+        history: chatHistory, 
+        userAnswer: currentAns, 
+        targetCompany: company,
         candidateName: formattedName,
-        resumeSkills: journey?.resumeAnalysis?.analysis?.skillAnalysis?.map((s: any) => s.skill) || journey?.resumeAnalysis?.skillAnalysis?.map((s: any) => s.skill) || [],
-        resumeProjects: journey?.resumeAnalysis?.analysis?.sections?.projects || journey?.resumeAnalysis?.sections?.projects || [],
+        resumeSkills: journey?.resumeAnalysis?.analysis?.technicalSkills?.map((s: any) => s.skill) || [],
+        resumeProjects: journey?.resumeAnalysis?.analysis?.sections?.projects || [],
         resumeSummary: journey?.resumeAnalysis?.summary || "",
         aptitudeScore: journey?.aptitudeReport?.overallScore || 0,
         codingScore: journey?.codingReport?.score || 0,
@@ -236,6 +239,7 @@ function VirtualArenaContent() {
         setCurrentIdx(prev => prev + 1);
       }
     } catch (error) {
+      console.error("AI Turn Error:", error);
       toast({ variant: "destructive", title: "Neural Link Sync Fault" });
     } finally {
       setIsProcessing(false);
@@ -247,13 +251,15 @@ function VirtualArenaContent() {
     setIsGeneratingReport(true);
     try {
       const finalAudit = await generateInterviewFeedback({
-        role, company, experienceLevel: exp, 
+        role, 
+        company, 
+        experienceLevel: exp, 
         interviewTranscript: currentTranscript.map(t => `${t.role}: ${t.text}`).join('\n\n'),
         resumeContext: {
           atsScore: journey?.resumeAnalysis?.atsScore || 0,
-          strengths: journey?.resumeAnalysis?.analysis?.strengths || journey?.resumeAnalysis?.strengths || [],
-          weaknesses: journey?.resumeAnalysis?.analysis?.weaknesses || journey?.resumeAnalysis?.weaknesses || [],
-          missingSkills: journey?.resumeAnalysis?.analysis?.missingSkills || journey?.resumeAnalysis?.missingSkills || [],
+          strengths: journey?.resumeAnalysis?.analysis?.strengths || [],
+          weaknesses: journey?.resumeAnalysis?.analysis?.weaknesses || [],
+          missingSkills: journey?.resumeAnalysis?.analysis?.missingSkills || [],
         },
         aptitudeContext: journey?.aptitudeReport ? {
           overallScore: journey.aptitudeReport.overallScore,
@@ -264,10 +270,17 @@ function VirtualArenaContent() {
           status: journey.codingReport.status
         } : undefined
       });
+
       const docRef = await addDoc(collection(db, 'users', user!.uid, 'interviews'), {
-        role, company, experienceLevel: exp, history: currentTranscript, 
-        overallScore: finalAudit.overallScore, feedback: finalAudit, createdAt: serverTimestamp(),
+        role, 
+        company, 
+        experienceLevel: exp, 
+        history: currentTranscript, 
+        overallScore: finalAudit.overallScore, 
+        feedback: finalAudit, 
+        createdAt: serverTimestamp(),
       });
+
       await deleteDoc(journeyRef!);
       router.push(`/feedback/${docRef.id}`);
     } catch (e) {
@@ -281,7 +294,7 @@ function VirtualArenaContent() {
     return (
       <div className="h-screen w-full bg-[#050816] flex items-center justify-center relative overflow-hidden">
         <div className="absolute inset-0 z-0 h-full w-full">
-           <HologramStage isLoader={true} className="w-full h-full" />
+           <CandidateHologram isLoader={true} className="w-full h-full" />
         </div>
       </div>
     );
@@ -310,7 +323,7 @@ function VirtualArenaContent() {
 
         <div className="flex-1 flex flex-col p-3 space-y-1.5 overflow-hidden h-full">
           <div className="flex-1 min-0 relative rounded-[2rem] overflow-hidden bg-black border border-white/5 shadow-2xl h-full">
-            <HologramStage 
+            <CandidateHologram 
               active={true}
               speaking={isAiSpeaking}
               className="w-full h-full"

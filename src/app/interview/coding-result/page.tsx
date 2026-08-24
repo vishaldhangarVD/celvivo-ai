@@ -25,7 +25,8 @@ import {
   FastForward,
   ChevronDown,
   Terminal,
-  Activity
+  Activity,
+  History
 } from 'lucide-react';
 import { useUser, useFirestore, useDoc, useCollection } from '@/firebase';
 import { doc, collection, query, where, orderBy } from 'firebase/firestore';
@@ -122,7 +123,7 @@ function CodingResultContent() {
     const sessionCompany = attemptDoc?.company || journey?.company || "Standard Tech";
     const sessionExp = attemptDoc?.experience || journey?.experience || "Senior";
 
-    // Navigate to existing Interview flow
+    // Navigate to existing Interview flow (HR Round)
     router.push(`/interview/${activeId}?role=${encodeURIComponent(sessionRole)}&company=${encodeURIComponent(sessionCompany)}&exp=${encodeURIComponent(sessionExp)}&round=HR%20Round`);
   };
 
@@ -312,6 +313,7 @@ function CodingResultContent() {
                   })
                 ) : (
                   <div className="py-12 text-center glass rounded-2xl border-white/5 border-dashed">
+                    <History className="w-10 h-10 text-white/5 mx-auto mb-4" />
                     <p className="text-xs font-light text-white/20 uppercase tracking-widest">No implementation archives found.</p>
                   </div>
                 )}
