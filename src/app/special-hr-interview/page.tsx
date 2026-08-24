@@ -6,7 +6,7 @@ import NavigationControls from "@/components/NavigationControls";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { motion, AnimatePresence } from "framer-motion";
+import { AnimatePresence, motion } from "framer-motion";
 import {
   Loader2,
   ShieldCheck,
@@ -18,11 +18,11 @@ import {
   Volume2,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { cn } from "@/lib/utils";
 
 /**
- * @fileOverview Special HR Interview Arena v3.0
- * Stabilized for high-fidelity WebRTC streaming.
- * Logic: Single-session manager with play-promise guards and persistent stream attachment.
+ * @fileOverview Special HR Interview Arena v4.0
+ * Stabilized for high-fidelity WebRTC streaming and persistent rendering.
  */
 
 export default function SpecialHRInterview() {
@@ -32,11 +32,11 @@ export default function SpecialHRInterview() {
   const [isAudioBlocked, setIsAudioBlocked] = useState(false);
   const [isAiSpeaking, setIsAiSpeaking] = useState(false);
 
-  // Core Refs for SDK and Hardware Lifecycle
+  // Core Lifecycle Refs
   const agentVideoRef = useRef<HTMLVideoElement>(null);
   const agentManagerRef = useRef<any>(null);
   const agentStreamRef = useRef<MediaStream | null>(null);
-  const initializingRef = useRef(false);
+  const initializationStartedRef = useRef(false);
   const hasStartedGreetingRef = useRef(false);
   const videoPlayPromiseRef = useRef<Promise<void> | null>(null);
 
@@ -44,19 +44,19 @@ export default function SpecialHRInterview() {
   const clientKey = "ck_0T9vL02nSJmsHMLHMYLsB";
 
   // ---------------------------------------------------------
-  // Safe Playback Helper
+  // Helper: Safely trigger video.play() without interruptions
   // ---------------------------------------------------------
-  const playVideoSafely = useCallback(async () => {
+  const ensureVideoPlaying = useCallback(async () => {
     const video = agentVideoRef.current;
     if (!video || !video.srcObject || videoPlayPromiseRef.current) return;
 
     try {
       videoPlayPromiseRef.current = video.play();
       await videoPlayPromiseRef.current;
-      console.log("[D-ID] Video playing");
+      console.log("[D-ID] Video playback started");
     } catch (error: any) {
       if (error.name === "AbortError") {
-        // Safe to ignore: request was interrupted by another play/pause
+        // Silently ignore interruptions from new play requests
       } else if (error.name === "NotAllowedError") {
         console.warn("[D-ID] Browser autoplay blocked audio playback");
         setIsAudioBlocked(true);
@@ -69,37 +69,38 @@ export default function SpecialHRInterview() {
   }, []);
 
   // ---------------------------------------------------------
-  // High-Fidelity Video Attachment Protocol
+  // Helper: Attach stream to hardware node exactly once
   // ---------------------------------------------------------
   const attachStreamToVideo = useCallback((stream: MediaStream) => {
     const video = agentVideoRef.current;
     if (!video) return;
 
-    // Prevent redundant assignments that cause AbortError
+    // Strict guard against duplicate attachment/reloading
     if (agentStreamRef.current?.id === stream.id && video.srcObject === stream) {
+      console.log("[D-ID] Stream already attached - skipping duplicate");
       return;
     }
 
-    console.log("[D-ID] Attaching new stream", stream.id);
+    console.log("[D-ID] Stream attached");
     agentStreamRef.current = stream;
     video.srcObject = stream;
     
-    // Core hardware settings - Never use video.load() with srcObject
+    // Autoplay configuration (Start muted for reliability)
     video.muted = true; 
     video.autoplay = true;
     video.playsInline = true;
 
-    playVideoSafely();
-  }, [playVideoSafely]);
+    ensureVideoPlaying();
+  }, [ensureVideoPlaying]);
 
   const handleEnableAudio = async () => {
     const video = agentVideoRef.current;
     if (video) {
-      console.log("[D-ID] Unmuting vocal matrix via interaction");
+      console.log("[D-ID] Unmuting vocal matrix");
       video.muted = false;
       video.volume = 1.0;
       setIsAudioBlocked(false);
-      playVideoSafely();
+      ensureVideoPlaying();
       toast({ title: "Audio Initialized", description: "Vocal nodes synchronized." });
     }
   };
@@ -108,8 +109,8 @@ export default function SpecialHRInterview() {
   // D-ID Agent Manager Lifecycle
   // ---------------------------------------------------------
   useEffect(() => {
-    if (initializingRef.current) return;
-    initializingRef.current = true;
+    if (initializationStartedRef.current) return;
+    initializationStartedRef.current = true;
 
     console.log("[D-ID] Initialization started");
 
@@ -118,30 +119,34 @@ export default function SpecialHRInterview() {
         const { createAgentManager } = await import("@d-id/client-sdk");
         
         const manager = await createAgentManager(agentId, {
-          auth: {
-            type: "key",
-            clientKey,
-          },
+          auth: { type: "key", clientKey },
           streamOptions: {
             compatibilityMode: "on",
             streamWarmup: true
           },
           callbacks: {
             onSrcObjectReady: (stream: MediaStream) => {
-              console.log("[D-ID] Stream received", { tracks: stream.getTracks().length });
-              setStatus("READY");
-              attachStreamToVideo(stream);
+              console.log("[D-ID] Stream received", { 
+                id: stream.id,
+                tracks: stream.getTracks().length,
+                active: stream.active 
+              });
+              
+              const videoTrack = stream.getVideoTracks()[0];
+              if (stream.active && videoTrack?.readyState === "live") {
+                setStatus("READY");
+                attachStreamToVideo(stream);
+              }
             },
 
             onConnectionStateChange: (state: string) => {
-              console.log(`[D-ID] Connection state changed: ${state}`);
+              console.log(`[D-ID] Connection state: ${state}`);
               if (state === "connected") {
                 console.log("[D-ID] Connected");
               }
-              if (state === "disconnected") {
+              if (state === "disconnected" && status === "READY") {
                 console.log("[D-ID] Disconnected");
-                // Only error if it happens after being ready
-                if (status === "READY") setStatus("ERROR");
+                setStatus("ERROR");
               }
             },
 
@@ -150,11 +155,11 @@ export default function SpecialHRInterview() {
               if (state === "START") {
                 setIsAiSpeaking(true);
                 console.log("[D-ID] Avatar speaking started");
-                playVideoSafely();
+                ensureVideoPlaying();
               } else if (state === "STOP") {
                 setIsAiSpeaking(false);
                 console.log("[D-ID] Avatar speaking stopped");
-                // IMPORTANT: Do not clear srcObject here to prevent black flashes
+                // IMPORTANT: srcObject is maintained to prevent black screen
               }
             },
 
@@ -168,21 +173,21 @@ export default function SpecialHRInterview() {
         agentManagerRef.current = manager;
         await manager.connect();
 
-        // Greeting happens only after connection is stable
+        // Greeting Trigger
         if (!hasStartedGreetingRef.current) {
           hasStartedGreetingRef.current = true;
-          console.log("[D-ID] Initializing greeting sequence");
           try {
             await manager.speak({
               type: "text",
               input: "Hello, welcome to your AI HR interview. Please introduce yourself.",
             });
           } catch (speakError) {
-            console.error("[D-ID] Greeting speak failed:", speakError);
+            console.error("[D-ID] Initial greeting failed:", speakError);
           }
         }
+
       } catch (error) {
-        console.error("[D-ID] Initialization protocol failure:", error);
+        console.error("[D-ID] Initialization failed:", error);
         setStatus("ERROR");
       }
     };
@@ -194,21 +199,19 @@ export default function SpecialHRInterview() {
         console.log("[D-ID] Terminating session");
         agentManagerRef.current.disconnect();
         agentManagerRef.current = null;
-        initializingRef.current = false;
+        initializationStartedRef.current = false;
       }
     };
-  }, [attachStreamToVideo, playVideoSafely, toast, status]);
+  }, [attachStreamToVideo, ensureVideoPlaying, toast, status]);
 
   return (
     <div className="h-screen w-full bg-[#050816] flex flex-col relative overflow-hidden">
       <div className="particles-bg" />
-
       <Navbar />
-
       <NavigationControls />
 
-      <main className="flex-1 w-full h-[calc(100vh-72px)] mt-[72px] px-4 md:px-12 py-4 flex flex-col items-center justify-center overflow-hidden">
-        <div className="w-full h-full max-w-none grid lg:grid-cols-12 gap-10 items-stretch">
+      <main className="flex-1 w-full h-[calc(100vh-64px)] mt-[64px] px-8 md:px-12 py-6 flex flex-col items-center justify-center overflow-hidden">
+        <div className="w-full h-full grid lg:grid-cols-12 gap-10 items-stretch">
 
           {/* SYSTEM OVERVIEW */}
           <div className="lg:col-span-3 xl:col-span-2 space-y-10 flex flex-col justify-center">
@@ -231,10 +234,9 @@ export default function SpecialHRInterview() {
                   </span>
                 </h1>
 
-                <p className="text-lg text-white/50 font-light leading-relaxed max-w-md">
+                <p className="text-lg text-white/50 font-light leading-relaxed">
                   High-fidelity behavioral simulation.
-                  Ensure your vocal and visual nodes are
-                  calibrated.
+                  Verify your vocal nodes for active participation.
                 </p>
               </div>
             </header>
@@ -253,13 +255,10 @@ export default function SpecialHRInterview() {
                     System Status
                   </span>
                   <span
-                    className={`text-[9px] font-bold uppercase tracking-widest ${
-                      status === "READY"
-                        ? "text-green-400"
-                        : status === "ERROR"
-                        ? "text-red-400"
-                        : "text-orange-400"
-                    }`}
+                    className={cn(
+                      "text-[9px] font-bold uppercase tracking-widest",
+                      status === "READY" ? "text-green-400" : status === "ERROR" ? "text-red-400" : "text-orange-400"
+                    )}
                   >
                     {status === "READY" ? "OPTIMAL" : status}
                   </span>
@@ -289,7 +288,7 @@ export default function SpecialHRInterview() {
             <Card className="premium-card w-full min-w-0 bg-[#0b0e1a]/90 border-accent/10 p-0 h-full flex flex-col relative overflow-hidden shadow-[0_0_80px_rgba(0,0,0,0.5)]">
               <div className="relative w-full h-full min-h-0 bg-black overflow-hidden">
                 
-                {/* Persistent Hardware Video Ref */}
+                {/* PERSISTENT HARDWARE RENDERER */}
                 <video
                   ref={agentVideoRef}
                   autoPlay
@@ -336,7 +335,7 @@ export default function SpecialHRInterview() {
                           Neural Bridge Error
                         </h3>
                         <p className="text-sm text-white/40 max-w-xs mx-auto">
-                          The AI Interviewer failed to initialize or disconnected unexpectedly.
+                          The simulation session failed to synchronize. Verify your network protocol.
                         </p>
                       </div>
                       <Button
@@ -350,15 +349,15 @@ export default function SpecialHRInterview() {
                   )}
                 </AnimatePresence>
 
-                {/* Audio Authorization Layer */}
-                {isAudioBlocked && (
+                {/* AUDIO AUTHORIZATION LAYER */}
+                {isAudioBlocked && status === "READY" && (
                   <div className="absolute inset-0 flex items-center justify-center z-40 bg-black/40 backdrop-blur-sm transition-all animate-in fade-in duration-500">
                     <div className="text-center space-y-6">
                        <div className="w-20 h-20 rounded-full bg-accent/20 flex items-center justify-center mx-auto border border-accent/40 shadow-[0_0_30px_rgba(34,211,238,0.2)]">
                          <Volume2 className="w-10 h-10 text-accent animate-pulse" />
                        </div>
                        <div className="space-y-2">
-                         <h3 className="text-xl font-bold uppercase tracking-tighter">Vocal Matrix Silent</h3>
+                         <h3 className="text-xl font-bold uppercase tracking-tighter">Vocal Matrix Locked</h3>
                          <p className="text-xs text-white/60 uppercase tracking-widest">Interaction required to synchronize audio stream</p>
                        </div>
                        <Button 
@@ -371,7 +370,7 @@ export default function SpecialHRInterview() {
                   </div>
                 )}
 
-                {/* Environmental Overlays */}
+                {/* SYSTEM BADGES */}
                 <div className="absolute top-8 left-8 z-30">
                   <Badge className="bg-black/60 backdrop-blur-md border-white/10 text-white/80 py-2 px-5 rounded-full flex items-center gap-3">
                     <div className="w-2 h-2 rounded-full bg-red-500 animate-pulse shadow-[0_0_8px_#ef4444]" />
@@ -390,7 +389,7 @@ export default function SpecialHRInterview() {
                   </div>
                 </div>
 
-                {/* Local Manual Unmute */}
+                {/* MANUAL VOLUME TOGGLE */}
                 {status === "READY" && !isAudioBlocked && (
                    <div className="absolute bottom-8 right-8 z-30">
                      <Button 
