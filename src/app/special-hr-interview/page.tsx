@@ -29,7 +29,11 @@ export default function SpecialHRInterview() {
 
   const agentVideoRef = useRef<HTMLVideoElement>(null);
   const agentManagerRef = useRef<any>(null);
-  const initializationStartedRef = useRef(false);
+  
+  // Persistent Lifecycle Guards
+  const initializingRef = useRef(false);
+  const attachedStreamRef = useRef<MediaStream | null>(null);
+  const hasStartedGreetingRef = useRef(false);
   const pendingStreamRef = useRef<MediaStream | null>(null);
 
   const agentId = "v2_agt_5A5V9r-C";
@@ -42,7 +46,16 @@ export default function SpecialHRInterview() {
     const video = agentVideoRef.current;
     if (!video) return;
 
-    // Inspect and log audio tracks as requested
+    // 1. Duplicate Stream Guard
+    if (attachedStreamRef.current === stream) {
+      console.log("[D-ID] Stream already attached - skipping duplicate");
+      return;
+    }
+
+    console.log("[D-ID] Attaching new stream");
+    attachedStreamRef.current = stream;
+
+    // Inspect and log audio tracks
     const audioTracks = stream.getAudioTracks();
     const videoTracks = stream.getVideoTracks();
 
@@ -53,14 +66,9 @@ export default function SpecialHRInterview() {
     audioTracks.forEach((track) => {
       // Ensure audio track is enabled
       track.enabled = true;
-      console.log("[D-ID] Audio track:", {
-        enabled: track.enabled,
-        muted: track.muted,
-        readyState: track.readyState,
-      });
+      console.log("[D-ID] Audio track enabled: true");
+      console.log("[D-ID] Audio track readyState:", track.readyState);
     });
-
-    console.log("[D-ID] Video attached");
 
     // Configure hardware properties for UNMUTED playback
     video.srcObject = stream;
@@ -70,15 +78,8 @@ export default function SpecialHRInterview() {
     video.playsInline = true;
 
     // Telemetry Diagnostic
-    console.log("[D-ID] Video diagnostics", {
-      readyState: video.readyState,
-      videoWidth: video.videoWidth,
-      videoHeight: video.videoHeight,
-      paused: video.paused,
-      muted: video.muted,
-      volume: video.volume,
-      srcObject: !!video.srcObject,
-    });
+    console.log("[D-ID] Video muted:", video.muted);
+    console.log("[D-ID] Video volume:", video.volume);
 
     try {
       video.load();
@@ -89,7 +90,7 @@ export default function SpecialHRInterview() {
       if (error.name === "NotAllowedError") {
         console.warn("[D-ID] Browser autoplay blocked audio playback");
         setIsAudioBlocked(true);
-        // Fallback: Play muted so video is still visible while waiting for user interaction
+        // Fallback: Play muted so video is still visible
         video.muted = true;
         await video.play().catch((e) => console.error("[D-ID] Muted fallback play failed:", e));
       } else {
@@ -118,7 +119,7 @@ export default function SpecialHRInterview() {
   // ---------------------------------------------------------
   useEffect(() => {
     if (status === "READY" && pendingStreamRef.current && agentVideoRef.current) {
-      if (agentVideoRef.current.srcObject !== pendingStreamRef.current) {
+      if (attachedStreamRef.current !== pendingStreamRef.current) {
         attachStreamToVideo(pendingStreamRef.current);
       }
     }
@@ -128,8 +129,9 @@ export default function SpecialHRInterview() {
   // Initialize D-ID Agent Protocol (Strict Singleton)
   // ---------------------------------------------------------
   useEffect(() => {
-    if (initializationStartedRef.current) return;
-    initializationStartedRef.current = true;
+    // 2. Initialization Singleton Guard
+    if (initializingRef.current) return;
+    initializingRef.current = true;
 
     let isMounted = true;
     console.log("[D-ID] Initialization started");
@@ -171,6 +173,8 @@ export default function SpecialHRInterview() {
 
               if (state === "disconnected" || state === "closed") {
                 console.log("[D-ID] Disconnected");
+                // Stop rendering stream on disconnect
+                attachedStreamRef.current = null;
                 if (isMounted && state === "disconnected") {
                   setStatus("ERROR");
                 }
@@ -179,12 +183,7 @@ export default function SpecialHRInterview() {
 
             onVideoStateChange: (state: string) => {
               console.log(`[D-ID] Video state changed: ${state}`);
-              if (state !== 'STOP' && pendingStreamRef.current && agentVideoRef.current) {
-                 if (agentVideoRef.current.srcObject !== pendingStreamRef.current) {
-                   agentVideoRef.current.srcObject = pendingStreamRef.current;
-                 }
-                 agentVideoRef.current.play().catch(() => {});
-              }
+              // Log state strictly without triggering hardware updates
             },
 
             onError: (error: any, errorData: any) => {
@@ -198,15 +197,21 @@ export default function SpecialHRInterview() {
         await manager.connect();
 
         if (isMounted) {
-          console.log("[D-ID] Starting initial avatar response");
-          try {
-            await manager.speak({
-              type: "text",
-              input: "Hello, welcome to your AI HR interview. Please introduce yourself.",
-            });
-            console.log("[D-ID] Avatar response started");
-          } catch (speakError) {
-            console.error("[D-ID] Speak failed:", speakError);
+          // 3. Initial Greeting Singleton Guard
+          if (!hasStartedGreetingRef.current) {
+            console.log("[D-ID] Initial greeting started");
+            hasStartedGreetingRef.current = true;
+            try {
+              await manager.speak({
+                type: "text",
+                input: "Hello, welcome to your AI HR interview. Please introduce yourself.",
+              });
+              console.log("[D-ID] Avatar response started");
+            } catch (speakError) {
+              console.error("[D-ID] Speak failed:", speakError);
+            }
+          } else {
+            console.log("[D-ID] Initial greeting already started - skipping duplicate");
           }
 
           toast({
@@ -224,8 +229,10 @@ export default function SpecialHRInterview() {
     initializeDIDAgency();
 
     return () => {
+      // 4. Genuine Unmount Cleanup
       isMounted = false;
       if (agentManagerRef.current) {
+        console.log("[D-ID] Component unmounting - disconnecting session");
         agentManagerRef.current.disconnect();
         agentManagerRef.current = null;
       }
