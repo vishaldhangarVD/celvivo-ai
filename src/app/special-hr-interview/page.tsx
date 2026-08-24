@@ -20,65 +20,77 @@ import {
 import { useToast } from "@/hooks/use-toast";
 
 /**
- * @fileOverview Special HR Interview Arena v2.0
- * Optimized for D-ID Client SDK stream stability and high-fidelity rendering.
+ * @fileOverview Special HR Interview Arena v3.0
+ * Stabilized for high-fidelity WebRTC streaming.
+ * Logic: Single-session manager with play-promise guards and persistent stream attachment.
  */
 
 export default function SpecialHRInterview() {
   const { toast } = useToast();
 
-  const [status, setStatus] = useState<"LOADING" | "READY" | "ERROR">(
-    "LOADING"
-  );
+  const [status, setStatus] = useState<"LOADING" | "READY" | "ERROR">("LOADING");
   const [isAudioBlocked, setIsAudioBlocked] = useState(false);
+  const [isAiSpeaking, setIsAiSpeaking] = useState(false);
 
-  // Core Refs for SDK Lifecycle
+  // Core Refs for SDK and Hardware Lifecycle
   const agentVideoRef = useRef<HTMLVideoElement>(null);
   const agentManagerRef = useRef<any>(null);
-  const initializingRef = useRef(false);
   const agentStreamRef = useRef<MediaStream | null>(null);
+  const initializingRef = useRef(false);
   const hasStartedGreetingRef = useRef(false);
+  const videoPlayPromiseRef = useRef<Promise<void> | null>(null);
 
   const agentId = "v2_agt_5A5V9r-C";
   const clientKey = "ck_0T9vL02nSJmsHMLHMYLsB";
 
   // ---------------------------------------------------------
+  // Safe Playback Helper
+  // ---------------------------------------------------------
+  const playVideoSafely = useCallback(async () => {
+    const video = agentVideoRef.current;
+    if (!video || !video.srcObject || videoPlayPromiseRef.current) return;
+
+    try {
+      videoPlayPromiseRef.current = video.play();
+      await videoPlayPromiseRef.current;
+      console.log("[D-ID] Video playing");
+    } catch (error: any) {
+      if (error.name === "AbortError") {
+        // Safe to ignore: request was interrupted by another play/pause
+      } else if (error.name === "NotAllowedError") {
+        console.warn("[D-ID] Browser autoplay blocked audio playback");
+        setIsAudioBlocked(true);
+      } else {
+        console.error("[D-ID] Video playback failed:", error);
+      }
+    } finally {
+      videoPlayPromiseRef.current = null;
+    }
+  }, []);
+
+  // ---------------------------------------------------------
   // High-Fidelity Video Attachment Protocol
   // ---------------------------------------------------------
-  const attachStreamToVideo = useCallback(async (stream: MediaStream) => {
+  const attachStreamToVideo = useCallback((stream: MediaStream) => {
     const video = agentVideoRef.current;
-    if (!video) {
-      console.warn("[D-ID] Video ref unavailable during attachment");
+    if (!video) return;
+
+    // Prevent redundant assignments that cause AbortError
+    if (agentStreamRef.current?.id === stream.id && video.srcObject === stream) {
       return;
     }
 
-    console.log("[D-ID] Attaching stream to video node", {
-      streamId: stream.id,
-      active: stream.active,
-      readyState: video.readyState,
-    });
-
+    console.log("[D-ID] Attaching new stream", stream.id);
     agentStreamRef.current = stream;
     video.srcObject = stream;
-    video.muted = true; // Required for reliable un-interrupted autoplay
+    
+    // Core hardware settings - Never use video.load() with srcObject
+    video.muted = true; 
     video.autoplay = true;
     video.playsInline = true;
 
-    try {
-      video.load();
-      await video.play();
-      console.log("[D-ID] Video playback initialized", {
-        paused: video.paused,
-        currentTime: video.currentTime,
-        srcObject: !!video.srcObject,
-      });
-    } catch (error: any) {
-      console.error("[D-ID] Video playback failed:", error);
-      if (error.name === "NotAllowedError") {
-        setIsAudioBlocked(true);
-      }
-    }
-  }, []);
+    playVideoSafely();
+  }, [playVideoSafely]);
 
   const handleEnableAudio = async () => {
     const video = agentVideoRef.current;
@@ -86,18 +98,14 @@ export default function SpecialHRInterview() {
       console.log("[D-ID] Unmuting vocal matrix via interaction");
       video.muted = false;
       video.volume = 1.0;
-      try {
-        await video.play();
-        setIsAudioBlocked(false);
-        toast({ title: "Audio Initialized", description: "Vocal nodes synchronized." });
-      } catch (e) {
-        console.error("[D-ID] Failed to unmute audio:", e);
-      }
+      setIsAudioBlocked(false);
+      playVideoSafely();
+      toast({ title: "Audio Initialized", description: "Vocal nodes synchronized." });
     }
   };
 
   // ---------------------------------------------------------
-  // D-ID Agent Manager Lifecycle (Strict Singleton)
+  // D-ID Agent Manager Lifecycle
   // ---------------------------------------------------------
   useEffect(() => {
     if (initializingRef.current) return;
@@ -120,11 +128,7 @@ export default function SpecialHRInterview() {
           },
           callbacks: {
             onSrcObjectReady: (stream: MediaStream) => {
-              console.log("[D-ID] Stream received", {
-                id: stream.id,
-                active: stream.active,
-                tracks: stream.getTracks().map(t => ({ kind: t.kind, state: t.readyState }))
-              });
+              console.log("[D-ID] Stream received", { tracks: stream.getTracks().length });
               setStatus("READY");
               attachStreamToVideo(stream);
             },
@@ -136,36 +140,26 @@ export default function SpecialHRInterview() {
               }
               if (state === "disconnected") {
                 console.log("[D-ID] Disconnected");
-                setStatus("ERROR");
+                // Only error if it happens after being ready
+                if (status === "READY") setStatus("ERROR");
               }
             },
 
             onVideoStateChange: (state: string) => {
               console.log(`[D-ID] Video state changed: ${state}`);
-              const video = agentVideoRef.current;
-              if (!video || !agentStreamRef.current) return;
-
               if (state === "START") {
-                console.log("[D-ID] Restoring stream on START signal");
-                video.srcObject = agentStreamRef.current;
-                video.play().catch(e => console.error("[D-ID] Play failed during START transition:", e));
+                setIsAiSpeaking(true);
+                console.log("[D-ID] Avatar speaking started");
+                playVideoSafely();
               } else if (state === "STOP") {
-                console.log("[D-ID] Maintaining frame reference on STOP signal");
-                // IMPORTANT: We do not clear srcObject here to prevent black flashes
+                setIsAiSpeaking(false);
+                console.log("[D-ID] Avatar speaking stopped");
+                // IMPORTANT: Do not clear srcObject here to prevent black flashes
               }
-              
-              // Performance Telemetry
-              console.log("[D-ID] Hardware Telemetry", {
-                readyState: video.readyState,
-                paused: video.paused,
-                srcObject: !!video.srcObject,
-                streamActive: agentStreamRef.current.active,
-                tracks: agentStreamRef.current.getTracks().map(t => ({ kind: t.kind, state: t.readyState }))
-              });
             },
 
-            onError: (error: any, errorData: any) => {
-              console.error("[D-ID] Critical Neural Fault:", error, errorData);
+            onError: (error: any) => {
+              console.error("[D-ID] Critical Neural Fault:", error);
               setStatus("ERROR");
             },
           },
@@ -174,15 +168,15 @@ export default function SpecialHRInterview() {
         agentManagerRef.current = manager;
         await manager.connect();
 
+        // Greeting happens only after connection is stable
         if (!hasStartedGreetingRef.current) {
           hasStartedGreetingRef.current = true;
-          console.log("[D-ID] Starting initial avatar response trigger");
+          console.log("[D-ID] Initializing greeting sequence");
           try {
             await manager.speak({
               type: "text",
               input: "Hello, welcome to your AI HR interview. Please introduce yourself.",
             });
-            console.log("[D-ID] Avatar response sequence initialized");
           } catch (speakError) {
             console.error("[D-ID] Greeting speak failed:", speakError);
           }
@@ -197,22 +191,13 @@ export default function SpecialHRInterview() {
 
     return () => {
       if (agentManagerRef.current) {
-        console.log("[D-ID] Component unmounting - disconnecting session");
+        console.log("[D-ID] Terminating session");
         agentManagerRef.current.disconnect();
         agentManagerRef.current = null;
+        initializingRef.current = false;
       }
     };
-  }, [attachStreamToVideo, toast]);
-
-  // Secondary attachment guard for late-renders
-  useEffect(() => {
-    if (status === "READY" && agentStreamRef.current && agentVideoRef.current) {
-      if (agentVideoRef.current.srcObject !== agentStreamRef.current) {
-        console.log("[D-ID] Late-bound stream attachment triggered");
-        attachStreamToVideo(agentStreamRef.current);
-      }
-    }
-  }, [status, attachStreamToVideo]);
+  }, [attachStreamToVideo, playVideoSafely, toast, status]);
 
   return (
     <div className="h-screen w-full bg-[#050816] flex flex-col relative overflow-hidden">
