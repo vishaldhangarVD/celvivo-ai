@@ -153,7 +153,14 @@ const CandidateHologram = memo(({
       }
     };
 
-    const loader = new GLTFLoader();
+    // Configure a LoadingManager to suppress harmless texture blob errors
+    const manager = new THREE.LoadingManager();
+    manager.onError = (url) => {
+      if (url.includes('blob:')) return; // silently ignore texture blob errors
+      console.error('[Hologram] Load error:', url);
+    };
+
+    const loader = new GLTFLoader(manager);
     loader.load('/models/woman_head.glb', (gltf) => {
       let faceGeo: THREE.BufferGeometry | null = null;
       let mouthGeo: THREE.BufferGeometry | null = null;
