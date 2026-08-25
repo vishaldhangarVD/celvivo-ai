@@ -26,7 +26,7 @@ export const STAGE_ROUTES: Record<InterviewStage, string> = {
   APTITUDE_RESULT: '/interview/aptitude-result',
   CODING: '/interview/coding',
   CODING_RESULT: '/interview/coding-result',
-  HR_INTERVIEW: '/interview/', // Appends sessionId
-  FEEDBACK: '/feedback/', // Appends sessionId
+  HR_INTERVIEW: '/interview/', // Expects sessionId suffix
+  FEEDBACK: '/feedback/', // Expects sessionId suffix
   COMPLETED: '/dashboard',
 };

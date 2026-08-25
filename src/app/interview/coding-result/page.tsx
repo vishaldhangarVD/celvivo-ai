@@ -102,7 +102,10 @@ function CodingResultContent() {
   const isPassed = (result?.score || 0) >= 60;
 
   const handleContinueToInterview = async () => {
-    if (!journeyRef || !activeId) return;
+    if (!journeyRef || !activeId) {
+      toast({ variant: "destructive", title: "Session Sync Fault", description: "Identity node lost." });
+      return;
+    }
 
     await updateDoc(journeyRef, {
       currentStage: INTERVIEW_STAGES.HR_INTERVIEW,

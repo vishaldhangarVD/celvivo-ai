@@ -10,8 +10,8 @@ import { useToast } from '@/hooks/use-toast';
 
 /**
  * @fileOverview Interview Route Dispatcher.
- * Handles the logic for starting or resuming the multi-stage interview journey.
- * Strictly redirects to dedicated standalone pages. No UI logic here.
+ * Acts as the brain for the interview journey.
+ * Determines whether to start fresh or resume an existing session.
  */
 
 function InterviewDispatcherContent() {
@@ -30,7 +30,7 @@ function InterviewDispatcherContent() {
       const journeyRef = doc(db, 'users', user!.uid, 'journey', 'active');
 
       if (action === 'start') {
-        // 1. Initialize Fresh Journey
+        // 1. Initialize Fresh Journey Node
         await deleteDoc(journeyRef);
         const sessionId = Math.random().toString(36).substring(7);
         
@@ -45,10 +45,10 @@ function InterviewDispatcherContent() {
           updatedAt: serverTimestamp(),
         });
 
-        toast({ title: "Protocol Initialized", description: "Beginning resume registration." });
+        toast({ title: "Simulation Initialized", description: "Beginning identity calibration." });
         router.push(STAGE_ROUTES.RESUME_UPLOAD);
       } else {
-        // 2. Resume Existing Journey
+        // 2. Resume Existing Neural Session
         const snap = await getDoc(journeyRef);
         
         if (snap.exists()) {
@@ -60,13 +60,11 @@ function InterviewDispatcherContent() {
           
           if (stage === INTERVIEW_STAGES.HR_INTERVIEW) {
             router.push(`${route}${data.sessionId}`);
-          } else if (stage === INTERVIEW_STAGES.FEEDBACK) {
-             router.push(`${route}${data.sessionId || 'history'}`);
           } else {
             router.push(route);
           }
         } else {
-          // No active journey, start fresh
+          // No active journey detected, starting fallback initialization
           router.replace('/interview?action=start');
         }
       }
