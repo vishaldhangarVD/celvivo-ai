@@ -91,6 +91,7 @@ const CandidateHologram = memo(({
         
         const groups = {
           face: [] as { mesh: THREE.Mesh, weight: number }[],
+          neck: [] as { mesh: THREE.Mesh, weight: number }[],
           hair: [] as { mesh: THREE.Mesh, weight: number }[],
           details: [] as { mesh: THREE.Mesh, weight: number }[]
         };
@@ -107,28 +108,46 @@ const CandidateHologram = memo(({
             const geometry = node.geometry.clone();
             geometry.applyMatrix4(node.matrixWorld);
             const bakedMesh = new THREE.Mesh(geometry);
+            bakedMesh.name = node.name; 
             
-            // Weight as proxy for surface area/importance
+            // Calculate surface area weight
             let area = 0;
-            if (geometry.index) area = geometry.index.count;
-            else area = geometry.attributes.position.count;
+            const posAttr = geometry.attributes.position;
+            const idx = geometry.index;
+            const vA = new THREE.Vector3(), vB = new THREE.Vector3(), vC = new THREE.Vector3();
+            const triCount = idx ? idx.count / 3 : posAttr.count / 3;
+
+            for (let t = 0; t < triCount; t++) {
+              const a = idx ? idx.getX(t * 3) : t * 3;
+              const b = idx ? idx.getX(t * 3 + 1) : t * 3 + 1;
+              const c = idx ? idx.getX(t * 3 + 2) : t * 3 + 2;
+              vA.fromBufferAttribute(posAttr, a);
+              vB.fromBufferAttribute(posAttr, b);
+              vC.fromBufferAttribute(posAttr, c);
+              const ab = vB.clone().sub(vA);
+              const ac = vC.clone().sub(vA);
+              area += ab.cross(ac).length() * 0.5;
+            }
 
             if (/hair|scalp|fringe|bang|ponytail|braid|wolf3d_hair/i.test(lowerName)) {
               groups.hair.push({ mesh: bakedMesh, weight: area });
             } else if (/eyebrow|brow|eyelash|lash|eyelid/i.test(lowerName)) {
               groups.details.push({ mesh: bakedMesh, weight: area });
-            } else if (/face|head|facial|skin|body|neck|character|base|geo/i.test(lowerName)) {
+            } else if (/torso|neck|shoulder/i.test(lowerName)) {
+              groups.neck.push({ mesh: bakedMesh, weight: area });
+            } else if (/face|head|facial|skin|body|character|base|geo/i.test(lowerName)) {
               groups.face.push({ mesh: bakedMesh, weight: area });
             }
           }
         });
 
-        // 35% Hair, 55% Face, 10% Details distribution
-        const faceCount = Math.floor(TOTAL_PARTICLE_COUNT * 0.55);
+        // 45% Face, 10% Neck/Torso, 35% Hair, 10% Details distribution
+        const faceCount = Math.floor(TOTAL_PARTICLE_COUNT * 0.45);
+        const neckCount = Math.floor(TOTAL_PARTICLE_COUNT * 0.10);
         const hairCount = Math.floor(TOTAL_PARTICLE_COUNT * 0.35);
         const detailsCount = Math.floor(TOTAL_PARTICLE_COUNT * 0.10);
 
-        console.log('[Hologram] Face particles:', faceCount, 'Hair particles:', hairCount, 'Details particles:', detailsCount);
+        console.log('[Hologram] Face:', faceCount, 'Neck:', neckCount, 'Hair:', hairCount, 'Details:', detailsCount);
 
         const targetPositions = new Float32Array(TOTAL_PARTICLE_COUNT * 3);
         const startPositions = new Float32Array(TOTAL_PARTICLE_COUNT * 3);
@@ -153,11 +172,9 @@ const CandidateHologram = memo(({
               if (sampledCount >= TOTAL_PARTICLE_COUNT) break;
               sampler.sample(tempVec, tempNormal);
               
-              // Apply volume jitter to hair to prevent flat shell look
-              if (isHair) {
-                const volumeJitter = (Math.random() - 0.5) * 0.015;
-                tempVec.addScaledVector(tempNormal, volumeJitter);
-              }
+              // Apply volume jitter; hair gets more for thickness, face gets subtle depth
+              const volumeJitter = isHair ? (Math.random() - 0.5) * 0.015 : (Math.random() - 0.5) * 0.006;
+              tempVec.addScaledVector(tempNormal, volumeJitter);
 
               const idx = sampledCount * 3;
               targetPositions[idx] = tempVec.x;
@@ -174,19 +191,21 @@ const CandidateHologram = memo(({
         };
 
         processGroup(groups.face, faceCount, false);
+        processGroup(groups.neck, neckCount, false);
         processGroup(groups.hair, hairCount, true);
         processGroup(groups.details, detailsCount, false);
 
-        // Fill any remaining buffer with duplicates to ensure 85k
+        // Fill any remaining buffer with jittered duplicates to ensure 85k
         while (sampledCount < TOTAL_PARTICLE_COUNT) {
           const sIdx = Math.floor(Math.random() * Math.max(1, sampledCount)) * 3;
           const idx = sampledCount * 3;
-          targetPositions[idx] = targetPositions[sIdx] || 0;
-          targetPositions[idx+1] = targetPositions[sIdx+1] || 0;
-          targetPositions[idx+2] = targetPositions[sIdx+2] || 0;
-          startPositions[idx] = targetPositions[idx];
-          startPositions[idx+1] = targetPositions[idx+1];
-          startPositions[idx+2] = targetPositions[idx+2];
+          const jitter = 0.008;
+          targetPositions[idx] = (targetPositions[sIdx] || 0) + (Math.random() - 0.5) * jitter;
+          targetPositions[idx+1] = (targetPositions[sIdx+1] || 0) + (Math.random() - 0.5) * jitter;
+          targetPositions[idx+2] = (targetPositions[sIdx+2] || 0) + (Math.random() - 0.5) * jitter;
+          startPositions[idx] = targetPositions[idx] + (Math.random() - 0.5) * 8;
+          startPositions[idx+1] = targetPositions[idx+1] + (Math.random() - 0.5) * 8;
+          startPositions[idx+2] = targetPositions[idx+2] + (Math.random() - 0.5) * 6;
           sampledCount++;
         }
 
