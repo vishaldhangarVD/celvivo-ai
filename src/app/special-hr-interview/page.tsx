@@ -85,13 +85,16 @@ export default function SpecialHRInterview() {
   const agentManagerRef = useRef<any>(null);
   const agentStreamRef = useRef<MediaStream | null>(null);
   const initializationStartedRef = useRef(false);
-  const hasStartedGreetingRef = useRef(false);
   const videoPlayPromiseRef = useRef<Promise<void> | null>(null);
   
   // --- Voice Refs ---
   const recognitionRef = useRef<SpeechRecognition | null>(null);
   const isProcessingRef = useRef(false);
   const isAiSpeakingRef = useRef(false);
+
+  // --- Stability Refs ---
+  const interviewStartedRef = useRef(false);
+  const isCompleteRef = useRef(false);
 
   const agentId = "v2_agt_5A5V9r-C";
   const clientKey = "ck_0T9vL02nSJmsHMLHMYLsB";
@@ -120,28 +123,6 @@ export default function SpecialHRInterview() {
   }, []);
 
   // ---------------------------------------------------------
-  // Helper: Attach stream to hardware node
-  // ---------------------------------------------------------
-  const attachStreamToVideo = useCallback((stream: MediaStream) => {
-    const video = agentVideoRef.current;
-    if (!video) return;
-
-    if (agentStreamRef.current?.id === stream.id && video.srcObject === stream) {
-      return;
-    }
-
-    console.log("[D-ID] Stream attached", { id: stream.id });
-    agentStreamRef.current = stream;
-    video.srcObject = stream;
-    video.autoplay = true;
-    video.playsInline = true;
-    video.volume = 1;
-    video.muted = true; // Start muted for autoplay reliability
-
-    ensureVideoPlaying();
-  }, [ensureVideoPlaying]);
-
-  // ---------------------------------------------------------
   // Interactive Vocal Unlock
   // ---------------------------------------------------------
   const handleEnableAudio = async () => {
@@ -159,7 +140,7 @@ export default function SpecialHRInterview() {
         track.enabled = true;
       });
 
-      await video.play();
+      await video.play().catch(() => {});
       console.log("[D-ID] AUDIO UNLOCKED");
     }
   };
@@ -168,7 +149,7 @@ export default function SpecialHRInterview() {
   // Voice Logic: Speech Recognition
   // ---------------------------------------------------------
   const startListening = useCallback(() => {
-    if (isComplete || isProcessingRef.current || isAiSpeakingRef.current) return;
+    if (isCompleteRef.current || isProcessingRef.current || isAiSpeakingRef.current) return;
 
     try {
       const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
@@ -206,7 +187,6 @@ export default function SpecialHRInterview() {
         console.error("[Speech] Error:", event.error);
         if (event.error === "not-allowed") {
           toast({ variant: "destructive", title: "Mic Access Denied", description: "Please enable microphone permissions." });
-          stopInterview();
         }
       };
 
@@ -221,7 +201,7 @@ export default function SpecialHRInterview() {
     } catch (err) {
       console.error("[Speech] Start error:", err);
     }
-  }, [isComplete, toast]);
+  }, [toast]);
 
   const stopListening = useCallback(() => {
     if (recognitionRef.current) {
@@ -234,8 +214,8 @@ export default function SpecialHRInterview() {
   // ---------------------------------------------------------
   // Turn Logic: Process Turn
   // ---------------------------------------------------------
-  const processNextTurn = async (userAnswer: string) => {
-    if (isProcessingRef.current || !interviewStarted) return;
+  const processNextTurn = async (userAnswer: string, forceStart = false) => {
+    if (isProcessingRef.current || (!interviewStartedRef.current && !forceStart)) return;
     
     setIsProcessing(true);
     isProcessingRef.current = true;
@@ -277,6 +257,7 @@ export default function SpecialHRInterview() {
 
       if (result.isInterviewComplete) {
         setIsComplete(true);
+        isCompleteRef.current = true;
       }
 
       // Speak the response via D-ID
@@ -304,20 +285,24 @@ export default function SpecialHRInterview() {
     if (status !== "READY") return;
     
     await handleEnableAudio();
+    interviewStartedRef.current = true;
     setInterviewStarted(true);
     setConversationHistory([]);
     setAskedQuestions([]);
     setQuestionIndex(0);
+    isCompleteRef.current = false;
     setIsComplete(false);
     
-    // Initial Turn (Empty Answer)
-    await processNextTurn("");
+    // Initial Turn (Empty Answer) with forceStart=true to bypass state check
+    await processNextTurn("", true);
   };
 
   const stopInterview = () => {
     setInterviewStarted(false);
+    interviewStartedRef.current = false;
     stopListening();
     setIsComplete(true);
+    isCompleteRef.current = true;
   };
 
   const submitAnswerManual = () => {
@@ -346,11 +331,23 @@ export default function SpecialHRInterview() {
           callbacks: {
             onSrcObjectReady: (stream: MediaStream) => {
               console.log("[D-ID] Stream received", { id: stream.id, active: stream.active });
-              const videoTrack = stream.getVideoTracks()[0];
-              if (stream.active && videoTrack?.readyState === "live") {
-                setStatus("READY");
-                attachStreamToVideo(stream);
-              }
+              const video = agentVideoRef.current;
+              if (!video) return;
+
+              agentStreamRef.current = stream;
+              video.srcObject = stream;
+              video.autoplay = true;
+              video.playsInline = true;
+              video.muted = true;
+              video.volume = 1;
+
+              setStatus("READY");
+              
+              requestAnimationFrame(() => {
+                video.play().catch(err => {
+                  console.warn("[D-ID] Video playback prevented:", err);
+                });
+              });
             },
             onConnectionStateChange: (state: string) => {
               console.log(`[D-ID] Connection state: ${state}`);
@@ -365,8 +362,9 @@ export default function SpecialHRInterview() {
               } else if (state === "STOP") {
                 setIsAiSpeaking(false);
                 isAiSpeakingRef.current = false;
-                // If interview is active and we're not processing, start listening
-                if (interviewStarted && !isProcessingRef.current && !isComplete) {
+                
+                // Start listening if interview is active and not complete
+                if (interviewStartedRef.current && !isProcessingRef.current && !isCompleteRef.current) {
                   startListening();
                 }
               }
@@ -391,14 +389,14 @@ export default function SpecialHRInterview() {
 
     return () => {
       if (agentManagerRef.current) {
-        agentManagerRef.current.disconnect();
+        agentManagerRef.current.disconnect().catch(() => {});
         agentManagerRef.current = null;
       }
       if (recognitionRef.current) {
         recognitionRef.current.stop();
       }
     };
-  }, [attachStreamToVideo, ensureVideoPlaying, interviewStarted, isComplete, startListening, stopListening, toast]);
+  }, [ensureVideoPlaying, startListening, stopListening, toast]);
 
   return (
     <div className="h-screen w-full bg-[#050816] flex flex-col relative overflow-hidden">
@@ -505,6 +503,7 @@ export default function SpecialHRInterview() {
                   ref={agentVideoRef}
                   autoPlay
                   playsInline
+                  muted
                   preload="auto"
                   className="absolute inset-0 w-full h-full object-contain bg-black z-10"
                 />
