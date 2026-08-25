@@ -5,11 +5,11 @@ import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader';
 import { MeshSurfaceSampler } from 'three/examples/jsm/math/MeshSurfaceSampler';
 import { Loader2 } from 'lucide-react';
-import { cn } from '@/lib/utils';
 
 /**
  * @fileOverview CandidateHologram - High-Fidelity 3D Particle Face
- * Optimized for woman_head.glb with realistic distribution and neural animations.
+ * Optimized for woman_head.glb.
+ * Renders a realistic human face using thousands of tiny cyan particles.
  */
 
 interface CandidateHologramProps {
@@ -18,8 +18,8 @@ interface CandidateHologramProps {
   className?: string;
 }
 
-const PARTICLE_COUNT = 18500;
-const ATMOSPHERE_COUNT = 200;
+const PARTICLE_COUNT = 18000;
+const ATMOSPHERE_COUNT = 300;
 
 const CandidateHologram = memo(({ 
   active = true, 
@@ -31,14 +31,12 @@ const CandidateHologram = memo(({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   
-  // Three.js Core Refs
   const rendererRef = useRef<THREE.WebGLRenderer | null>(null);
   const sceneRef = useRef<THREE.Scene | null>(null);
   const cameraRef = useRef<THREE.PerspectiveCamera | null>(null);
   const pointsRef = useRef<THREE.Points | null>(null);
   const frameIdRef = useRef<number>(0);
   
-  // Animation State Refs
   const speakingRef = useRef(speaking);
   const formationProgress = useRef(0);
   const mouthMovementValue = useRef(0);
@@ -59,7 +57,6 @@ const CandidateHologram = memo(({
       const width = containerRef.current.clientWidth || 400;
       const height = containerRef.current.clientHeight || 400;
 
-      // 1. Scene Setup
       const scene = new THREE.Scene();
       sceneRef.current = scene;
 
@@ -82,7 +79,6 @@ const CandidateHologram = memo(({
         return;
       }
 
-      // 2. Data Loading & Multi-Mesh Sampling
       const loader = new GLTFLoader();
       
       loader.load(
@@ -90,37 +86,54 @@ const CandidateHologram = memo(({
         (gltf) => {
           if (!isMounted) return;
 
-          const meshes: THREE.Mesh[] = [];
+          const faceMeshes: THREE.Mesh[] = [];
+          const hairMeshes: THREE.Mesh[] = [];
+          const otherMeshes: THREE.Mesh[] = [];
+
+          // 1. COLLECT & CATEGORIZE MESHES
           gltf.scene.traverse((child) => {
             if ((child as THREE.Mesh).isMesh) {
-              meshes.push(child as THREE.Mesh);
+              const mesh = child as THREE.Mesh;
+              const name = mesh.name.toLowerCase();
+              
+              // Skip eyeball-specific meshes to avoid bright circular eyes
+              if (name.includes('eye') || name.includes('iris') || name.includes('pupil') || name.includes('cornea') || name.includes('lens')) {
+                return;
+              }
+
+              if (name.includes('face') || name.includes('head') || name.includes('skin')) {
+                faceMeshes.push(mesh);
+              } else if (name.includes('hair')) {
+                hairMeshes.push(mesh);
+              } else {
+                otherMeshes.push(mesh);
+              }
             }
           });
 
-          if (meshes.length === 0) {
+          // Fallback if categorization failed
+          if (faceMeshes.length === 0 && hairMeshes.length === 0 && otherMeshes.length === 0) {
+            gltf.scene.traverse((child) => {
+              if ((child as THREE.Mesh).isMesh) faceMeshes.push(child as THREE.Mesh);
+            });
+          }
+
+          if (faceMeshes.length === 0 && otherMeshes.length === 0) {
             setError("GEOMETRY_MISSING");
             return;
           }
 
-          // Calculate global bounding box for all meshes
-          const globalBox = new THREE.Box3();
-          meshes.forEach(m => {
-            m.geometry.computeBoundingBox();
-            if (m.geometry.boundingBox) {
-              const box = m.geometry.boundingBox.clone();
-              box.applyMatrix4(m.matrixWorld);
-              globalBox.union(box);
-            }
-          });
-
+          // 2. CALCULATE GLOBAL BOUNDING BOX FOR NORMALIZATION
+          const globalBox = new THREE.Box3().setFromObject(gltf.scene);
           const center = new THREE.Vector3();
           globalBox.getCenter(center);
           const size = new THREE.Vector3();
           globalBox.getSize(size);
           const maxDim = Math.max(size.x, size.y, size.z);
-          const normalizationScale = 3.0 / maxDim;
+          const normalizationScale = 3.5 / maxDim;
 
-          // Prepare Particle Arrays
+          // 3. SAMPLE PARTICLES WITH WEIGHTS
+          // We want the face to be highly detailed
           const positions = new Float32Array(PARTICLE_COUNT * 3);
           const initialPositions = new Float32Array(PARTICLE_COUNT * 3);
           const targetPositions = new Float32Array(PARTICLE_COUNT * 3);
@@ -128,45 +141,62 @@ const CandidateHologram = memo(({
           const eyeWeights = new Float32Array(PARTICLE_COUNT);
 
           const tempPos = new THREE.Vector3();
-          const particlesPerMesh = Math.floor(PARTICLE_COUNT / meshes.length);
 
-          meshes.forEach((mesh, mIdx) => {
-            const sampler = new MeshSurfaceSampler(mesh).build();
-            const startIdx = mIdx * particlesPerMesh;
-            const endIdx = mIdx === meshes.length - 1 ? PARTICLE_COUNT : startIdx + particlesPerMesh;
+          // Distribution: 70% Face, 20% Hair, 10% Other
+          const faceTarget = Math.floor(PARTICLE_COUNT * 0.75);
+          const hairTarget = Math.floor(PARTICLE_COUNT * 0.15);
+          const otherTarget = PARTICLE_COUNT - faceTarget - hairTarget;
 
-            for (let i = startIdx; i < endIdx; i++) {
-              sampler.sample(tempPos);
-              
-              // Apply world transform
-              tempPos.applyMatrix4(mesh.matrixWorld);
-              
-              // Normalize: Center and Scale
-              tempPos.sub(center).multiplyScalar(normalizationScale);
+          const sampleGroup = (meshes: THREE.Mesh[], count: number, startIdx: number) => {
+            if (meshes.length === 0) return startIdx;
+            
+            // Simplified: equal share per mesh in group
+            const perMesh = Math.floor(count / meshes.length);
+            let currentIdx = startIdx;
 
-              // Store target structure
-              targetPositions[i * 3] = tempPos.x;
-              targetPositions[i * 3 + 1] = tempPos.y;
-              targetPositions[i * 3 + 2] = tempPos.z;
+            meshes.forEach((mesh) => {
+              const sampler = new MeshSurfaceSampler(mesh).build();
+              for (let i = 0; i < perMesh; i++) {
+                if (currentIdx >= PARTICLE_COUNT) break;
+                
+                sampler.sample(tempPos);
+                tempPos.applyMatrix4(mesh.matrixWorld);
+                
+                // Normalize & Center
+                tempPos.sub(center).multiplyScalar(normalizationScale);
 
-              // Scattered initial cloud
-              initialPositions[i * 3] = (Math.random() - 0.5) * 10;
-              initialPositions[i * 3 + 1] = (Math.random() - 0.5) * 10;
-              initialPositions[i * 3 + 2] = (Math.random() - 0.5) * 10;
+                const ix = currentIdx * 3;
+                targetPositions[ix] = tempPos.x;
+                targetPositions[ix + 1] = tempPos.y;
+                targetPositions[ix + 2] = tempPos.z;
 
-              // Mouth region heuristic: bottom-center region of face
-              const isMouthY = tempPos.y < -0.15 && tempPos.y > -0.45;
-              const isMouthX = Math.abs(tempPos.x) < 0.25;
-              const isMouthZ = tempPos.z > 0.1;
-              mouthWeights[i] = (isMouthY && isMouthX && isMouthZ) ? 1.0 : 0.0;
+                // Scatter initially
+                initialPositions[ix] = (Math.random() - 0.5) * 10;
+                initialPositions[ix + 1] = (Math.random() - 0.5) * 10;
+                initialPositions[ix + 2] = (Math.random() - 0.5) * 10;
 
-              // Eye region heuristic for blinking
-              const isEyeY = tempPos.y > 0.15 && tempPos.y < 0.35;
-              const isEyeX = Math.abs(tempPos.x) > 0.15 && Math.abs(tempPos.x) < 0.45;
-              const isEyeZ = tempPos.z > 0.1;
-              eyeWeights[i] = (isEyeY && isEyeX && isEyeZ) ? 1.0 : 0.0;
-            }
-          });
+                // Mouth region logic (heuristic based on normalized coords)
+                const isMouthY = tempPos.y < -0.15 && tempPos.y > -0.55;
+                const isMouthX = Math.abs(tempPos.x) < 0.35;
+                const isMouthZ = tempPos.z > 0.1;
+                mouthWeights[currentIdx] = (isMouthY && isMouthX && isMouthZ) ? 1.0 : 0.0;
+
+                // Eye region logic for blinking
+                const isEyeY = tempPos.y > 0.2 && tempPos.y < 0.45;
+                const isEyeX = Math.abs(tempPos.x) > 0.15 && Math.abs(tempPos.x) < 0.5;
+                const isEyeZ = tempPos.z > 0.15;
+                eyeWeights[currentIdx] = (isEyeY && isEyeX && isEyeZ) ? 1.0 : 0.0;
+
+                currentIdx++;
+              }
+            });
+            return currentIdx;
+          };
+
+          let nextIdx = 0;
+          nextIdx = sampleGroup(faceMeshes, faceTarget, nextIdx);
+          nextIdx = sampleGroup(hairMeshes, hairTarget, nextIdx);
+          sampleGroup(otherMeshes, otherTarget, nextIdx);
 
           const pointGeometry = new THREE.BufferGeometry();
           pointGeometry.setAttribute('position', new THREE.BufferAttribute(initialPositions, 3));
@@ -176,9 +206,9 @@ const CandidateHologram = memo(({
 
           const material = new THREE.PointsMaterial({
             color: 0x22d3ee,
-            size: 0.015,
+            size: 0.01,
             transparent: true,
-            opacity: 0.75,
+            opacity: 0.7,
             blending: THREE.AdditiveBlending,
             depthWrite: false
           });
@@ -187,24 +217,23 @@ const CandidateHologram = memo(({
           scene.add(points);
           pointsRef.current = points;
 
-          // Camera Alignment
-          camera.position.set(0, 0, 8);
+          camera.position.set(0, 0, 7.5);
           camera.lookAt(0, 0, 0);
 
-          // Atmosphere
+          // Atmosphere Particles
           const atmosGeo = new THREE.BufferGeometry();
           const atmosPos = new Float32Array(ATMOSPHERE_COUNT * 3);
           for(let i=0; i<ATMOSPHERE_COUNT; i++) {
-            atmosPos[i*3] = (Math.random()-0.5)*12;
-            atmosPos[i*3+1] = (Math.random()-0.5)*12;
-            atmosPos[i*3+2] = (Math.random()-0.5)*12;
+            atmosPos[i*3] = (Math.random()-0.5)*15;
+            atmosPos[i*3+1] = (Math.random()-0.5)*15;
+            atmosPos[i*3+2] = (Math.random()-0.5)*15;
           }
           atmosGeo.setAttribute('position', new THREE.BufferAttribute(atmosPos, 3));
           const atmos = new THREE.Points(atmosGeo, new THREE.PointsMaterial({ 
             color: 0x4ff0ff, 
-            size: 0.012, 
+            size: 0.008, 
             transparent: true, 
-            opacity: 0.2,
+            opacity: 0.15,
             blending: THREE.AdditiveBlending
           }));
           scene.add(atmos);
@@ -216,7 +245,7 @@ const CandidateHologram = memo(({
         (err) => {
           if (!isMounted) return;
           console.error('[Hologram] Load failed:', err);
-          setError("Visual Node Failure: Identity archive inaccessible.");
+          setError("Visual Node Failure: Archive inaccessible.");
         }
       );
     };
@@ -236,17 +265,16 @@ const CandidateHologram = memo(({
           const eWeights = points.geometry.attributes.eyeWeight.array as Float32Array;
 
           if (formationProgress.current < 1.0) {
-            formationProgress.current += 0.008;
+            formationProgress.current += 0.01;
           }
 
-          // Neural Blinking Logic
-          const blinkCycle = time % 4;
-          const isBlinking = blinkCycle > 3.8;
-          const blinkValue = isBlinking ? 0.1 : 1.0;
+          // Blinking Logic
+          const blinkCycle = time % 5;
+          const isBlinking = blinkCycle > 4.8;
 
           // Speaking Logic
-          const targetMouthMove = speakingRef.current ? Math.sin(time * 18) * 0.04 : 0;
-          mouthMovementValue.current += (targetMouthMove - mouthMovementValue.current) * 0.15;
+          const targetMouthMove = speakingRef.current ? Math.sin(time * 20) * 0.03 : 0;
+          mouthMovementValue.current += (targetMouthMove - mouthMovementValue.current) * 0.2;
 
           for (let i = 0; i < PARTICLE_COUNT; i++) {
             const ix = i * 3, iy = i * 3 + 1, iz = i * 3 + 2;
@@ -254,15 +282,10 @@ const CandidateHologram = memo(({
             let ty = targets[iy];
             const tz = targets[iz];
 
-            // Apply Speaking displacement
             if (mWeights[i] > 0) ty += mouthMovementValue.current;
+            if (eWeights[i] > 0 && isBlinking) ty -= 0.05;
 
-            // Apply Blinking displacement
-            if (eWeights[i] > 0 && isBlinking) {
-               ty = ty * 0.95 + 0.25 * 0.05; // Compress towards eye center
-            }
-
-            const speed = 0.08 * formationProgress.current;
+            const speed = 0.07 * formationProgress.current;
             positions[ix] += (tx - positions[ix]) * speed;
             positions[iy] += (ty - positions[iy]) * speed;
             positions[iz] += (tz - positions[iz]) * speed;
@@ -271,16 +294,16 @@ const CandidateHologram = memo(({
           points.geometry.attributes.position.needsUpdate = true;
           
           // Subtle horizontal head sway
-          points.rotation.y = Math.sin(time * 0.4) * 0.035;
+          points.rotation.y = Math.sin(time * 0.5) * 0.04;
           
           // Subtle vertical float
-          points.position.y = Math.sin(time * 0.6) * 0.05;
+          points.position.y = Math.sin(time * 0.7) * 0.03;
           
           // Neural Flicker
-          if (Math.random() > 0.98) {
-            (points.material as THREE.PointsMaterial).opacity = 0.4 + Math.random() * 0.3;
+          if (Math.random() > 0.99) {
+            (points.material as THREE.PointsMaterial).opacity = 0.3 + Math.random() * 0.4;
           } else {
-            (points.material as THREE.PointsMaterial).opacity += (0.75 - (points.material as THREE.PointsMaterial).opacity) * 0.1;
+            (points.material as THREE.PointsMaterial).opacity += (0.7 - (points.material as THREE.PointsMaterial).opacity) * 0.1;
           }
         }
 
@@ -321,12 +344,13 @@ const CandidateHologram = memo(({
     <div 
       ref={containerRef} 
       className={cn(
-        "relative w-full h-full bg-[#02040a] rounded-[2rem] overflow-hidden border border-white/5",
+        "relative w-full h-full bg-[#02040a] rounded-[2rem] overflow-hidden border border-white/5 shadow-2xl",
         className
       )}
     >
       <canvas ref={canvasRef} className="w-full h-full block" />
       
+      {/* Background radial glow */}
       <div className="absolute inset-0 pointer-events-none bg-[radial-gradient(circle_at_50%_50%,_rgba(34,211,238,0.03)_0%,_transparent_70%)]" />
 
       {loading && !error && (
@@ -343,6 +367,7 @@ const CandidateHologram = memo(({
         </div>
       )}
       
+      {/* Subtle CRT / Hologram scanlines effect */}
       <div className="absolute inset-0 pointer-events-none opacity-[0.03] bg-[linear-gradient(rgba(18,16,16,0)_50%,rgba(0,0,0,0.25)_50%),linear-gradient(90deg,rgba(255,0,0,0.06),rgba(0,255,0,0.02),rgba(0,0,255,0.06))] bg-[length:100%_4px,3px_100%]" />
     </div>
   );
