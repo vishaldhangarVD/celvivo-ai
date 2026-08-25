@@ -67,7 +67,6 @@ function InterviewSetupContent() {
   const action = searchParams.get('action') || 'resume';
   const [isDispatching, setIsDispatching] = useState(true);
   
-  // Setup State
   const [setupStep, setSetupStep] = useState(1);
   const [role, setRole] = useState("");
   const [customRole, setCustomRole] = useState("");
@@ -173,7 +172,7 @@ function InterviewSetupContent() {
           
           <div className="flex items-center justify-center gap-4 mt-8">
             {[1, 2, 3].map(s => (
-              <div key={s} className={`h-1.5 w-20 rounded-full transition-all duration-700 ${setupStep >= s ? 'bg-accent shadow-[0_0_15px_rgba(34,211,238,0.5)]' : 'bg-white/10'}`} />
+              <div key={s} className={`h-1.5 w-20 rounded-full transition-all duration-500 ${setupStep >= s ? 'bg-accent shadow-[0_0_15px_rgba(34,211,238,0.5)]' : 'bg-white/10'}`} />
             ))}
           </div>
         </header>
