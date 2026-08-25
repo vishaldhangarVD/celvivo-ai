@@ -81,15 +81,16 @@ export default function ResumeUploadPage() {
         reader.readAsDataURL(file);
       });
 
+      // Navigate directly to Aptitude stage after successful upload
       await updateDoc(journeyRef, {
-        currentStage: INTERVIEW_STAGES.RESUME_ANALYSIS,
-        step: 2,
+        currentStage: INTERVIEW_STAGES.APTITUDE,
+        step: 4,
         resumeName: file.name,
         resumeBase64: base64,
         updatedAt: serverTimestamp(),
       });
 
-      router.push(STAGE_ROUTES.RESUME_ANALYSIS);
+      router.push(STAGE_ROUTES.APTITUDE);
     } catch (e) {
       console.error(e);
       toast({ variant: "destructive", title: "Protocol Fault", description: "Failed to persist identity node." });
