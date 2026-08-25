@@ -7,9 +7,9 @@ import { Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 /**
- * @fileOverview CandidateHologram - High-Density Surface-Aware Hologram.
- * Implementation: Triangle surface sampling for uniform face density.
- * Occlusion: Z-Depth filtering to keep only the front-facing "mask".
+ * @fileOverview CandidateHologram - High-Fidelity Neural Face Hologram.
+ * Reverted to high-density vertex sampling with jitter-duplication for maximum coverage.
+ * Removed complex filtering that caused sparse rendering.
  */
 
 const CandidateHologram = memo(({ 
@@ -45,7 +45,6 @@ const CandidateHologram = memo(({
     const parent = canvasRef.current.parentElement;
     const width = parent?.clientWidth || 400;
     const height = parent?.clientHeight || 400;
-    console.log("[Hologram] Container dimensions:", width, height);
 
     const scene = new THREE.Scene();
     const camera = new THREE.PerspectiveCamera(35, width / height, 0.1, 1000);
@@ -61,8 +60,8 @@ const CandidateHologram = memo(({
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 
     /**
-     * Surface Sampler: Generates points on the actual triangles of the mesh
-     * rather than just at the vertices, ensuring uniform density.
+     * createPoints:
+     * Uses raw mesh vertices and augments with jittered duplicates to reach target density.
      */
     const createPoints = (
       geometry: THREE.BufferGeometry, 
@@ -70,96 +69,53 @@ const CandidateHologram = memo(({
       size: number, 
       opacity: number, 
       targetCount: number = 0,
-      isEyes: boolean = false,
-      zFilterRange: number = 1.0 // 1.0 = keep all, 0.4 = keep front 40%
+      isEyes: boolean = false
     ) => {
       const positions = geometry.attributes.position.array as Float32Array;
-      const index = geometry.index ? (geometry.index.array as Uint16Array | Uint32Array) : null;
       const vertexCount = positions.length / 3;
       
       let finalPositions: Float32Array;
 
-      if (targetCount > 0 && index) {
-        // High-Fidelity Surface Sampling
+      if (targetCount > vertexCount) {
+        // High-Density Jitter Synthesis
         finalPositions = new Float32Array(targetCount * 3);
-        const triangleCount = index.length / 3;
-
-        for (let i = 0; i < targetCount; i++) {
-          const triIdx = Math.floor(Math.random() * triangleCount) * 3;
-          const a = index[triIdx];
-          const b = index[triIdx + 1];
-          const c = index[triIdx + 2];
-
-          // Barycentric Coordinates for uniform distribution
-          let r1 = Math.random();
-          let r2 = Math.random();
-          if (r1 + r2 > 1) {
-            r1 = 1 - r1;
-            r2 = 1 - r2;
-          }
-          const r3 = 1 - r1 - r2;
-
-          finalPositions[i * 3] = r1 * positions[a * 3] + r2 * positions[b * 3] + r3 * positions[c * 3];
-          finalPositions[i * 3 + 1] = r1 * positions[a * 3 + 1] + r2 * positions[b * 3 + 1] + r3 * positions[c * 3 + 1];
-          finalPositions[i * 3 + 2] = r1 * positions[a * 3 + 2] + r2 * positions[b * 3 + 2] + r3 * positions[c * 3 + 2];
+        // Copy original vertices
+        for (let i = 0; i < positions.length; i++) {
+          finalPositions[i] = positions[i];
+        }
+        // Fill remainder with jittered clones of original vertices
+        for (let i = vertexCount; i < targetCount; i++) {
+          const sourceIdx = Math.floor(Math.random() * vertexCount) * 3;
+          const jitter = 0.006; // Fine-tuned jitter for cloud coverage
+          finalPositions[i * 3] = positions[sourceIdx] + (Math.random() - 0.5) * jitter;
+          finalPositions[i * 3 + 1] = positions[sourceIdx + 1] + (Math.random() - 0.5) * jitter;
+          finalPositions[i * 3 + 2] = positions[sourceIdx + 2] + (Math.random() - 0.5) * jitter;
         }
       } else {
         finalPositions = positions;
       }
 
-      // Apply Z-Depth Occlusion Filtering if requested
-      if (zFilterRange < 1.0) {
-        geometry.computeBoundingBox();
-        const minZ = geometry.boundingBox!.min.z;
-        const maxZ = geometry.boundingBox!.max.z;
-        const range = maxZ - minZ;
-        const threshold = minZ + (range * zFilterRange);
-        
-        console.log(`[Hologram] Z-Audit | Range: ${minZ.toFixed(3)} to ${maxZ.toFixed(3)} | Threshold: ${threshold.toFixed(3)}`);
-
-        const filtered = [];
-        for (let i = 0; i < finalPositions.length / 3; i++) {
-          if (finalPositions[i * 3 + 2] <= threshold) { // Note: z is often negative coming from loader
-            filtered.push(finalPositions[i * 3], finalPositions[i * 3 + 1], finalPositions[i * 3 + 2]);
-          }
-        }
-        finalPositions = new Float32Array(filtered);
-      }
-
-      console.log(`[Hologram] ${isEyes ? 'Eyes' : 'Face/Hair'} particles active:`, finalPositions.length / 3);
-
-      const groups = 3;
-      const pointsPerGroup = Math.floor(finalPositions.length / 3 / groups);
-
-      for (let g = 0; g < groups; g++) {
-        const subGeo = new THREE.BufferGeometry();
-        const subPos = finalPositions.slice(g * pointsPerGroup * 3, (g + 1) * pointsPerGroup * 3);
-        subGeo.setAttribute('position', new THREE.BufferAttribute(subPos, 3));
-        
-        const sizeVar = 0.85 + (Math.random() * 0.3);
-        const mat = new THREE.PointsMaterial({ 
-          color, 
-          size: size * sizeVar, 
-          transparent: true, 
-          opacity, 
-          blending: THREE.AdditiveBlending, 
-          depthWrite: false 
-        });
-        
-        const pts = new THREE.Points(subGeo, mat);
-        scene.add(pts);
-        
-        if (isEyes) eyeMaterialsRef.current.push(mat);
-      }
+      const subGeo = new THREE.BufferGeometry();
+      subGeo.setAttribute('position', new THREE.BufferAttribute(finalPositions, 3));
+      
+      const mat = new THREE.PointsMaterial({ 
+        color, 
+        size: size, 
+        transparent: true, 
+        opacity, 
+        blending: THREE.AdditiveBlending, 
+        depthWrite: false 
+      });
+      
+      const pts = new THREE.Points(subGeo, mat);
+      scene.add(pts);
+      
+      if (isEyes) eyeMaterialsRef.current.push(mat);
     };
 
-    // Configure a LoadingManager to suppress harmless texture blob errors
     const manager = new THREE.LoadingManager();
     manager.onError = (url) => {
-      // Silently ignore texture blob load failures - we don't use textures
-      if (!url.includes('blob:')) {
-        console.error('[Hologram] Load error:', url);
-      }
+      if (!url.includes('blob:')) console.error('[Hologram] Load error:', url);
     };
 
     const loader = new GLTFLoader(manager);
@@ -198,17 +154,17 @@ const CandidateHologram = memo(({
         const finalCenter = new THREE.Vector3();
         faceGeo.boundingBox!.getCenter(finalCenter);
 
-        // Face Synthesis: Use 5000 surface-sampled nodes with front-face occlusion
-        createPoints(faceGeo, '#4ff0ff', 0.022, 0.95, 5000, false, 0.4);
+        // Face Synthesis: Use 5000 jitter-synthesized nodes
+        createPoints(faceGeo, '#4ff0ff', 0.02, 0.85, 5000);
         
-        if (mouthGeo) createPoints(mouthGeo, '#4ff0ff', 0.018, 0.6, 1000);
-        if (irisGeo) createPoints(irisGeo, '#4ff0ff', 0.012, 0.5, 0, true);
+        if (mouthGeo) createPoints(mouthGeo, '#4ff0ff', 0.015, 0.5, 1000);
+        if (irisGeo) createPoints(irisGeo, '#4ff0ff', 0.01, 0.6, 500, true);
 
         // Volumetric Hair Logic
         hairGeos.forEach(h => {
-          let count = 1200;
-          if (h.name.includes('Cap') || h.name.includes('Back')) count = 3600;
-          createPoints(h.geo, '#1a5fb4', 0.02, 0.5, count);
+          let count = 1500;
+          if (h.name.includes('Cap') || h.name.includes('Back')) count = 3000;
+          createPoints(h.geo, '#1a5fb4', 0.018, 0.4, count);
         });
 
         scene.traverse((obj) => {
@@ -233,7 +189,7 @@ const CandidateHologram = memo(({
         isBlinking.current = true;
         eyeMaterialsRef.current.forEach(m => m.opacity = 0);
         setTimeout(() => {
-          eyeMaterialsRef.current.forEach(m => m.opacity = 0.5);
+          eyeMaterialsRef.current.forEach(m => m.opacity = 0.6);
           isBlinking.current = false;
           nextBlinkTime.current = Date.now() + 3000 + Math.random() * 3000;
         }, 150);
