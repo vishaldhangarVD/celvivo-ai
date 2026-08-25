@@ -9,13 +9,7 @@ import { cn } from '@/lib/utils';
 
 /**
  * @fileOverview CandidateHologram - High-Fidelity 3D Particle Face
- * 
- * CONSTRUCTION: 
- * 1. Loads /models/woman_head.glb
- * 2. Collects all sub-meshes for complete head representation
- * 3. Samples 18,000 particles from the combined mesh surfaces
- * 4. Animates particles from a scattered cloud into a structured head
- * 5. Animates mouth region based on 'speaking' prop via refs
+ * Optimized for woman_head.glb with realistic distribution and neural animations.
  */
 
 interface CandidateHologramProps {
@@ -24,8 +18,8 @@ interface CandidateHologramProps {
   className?: string;
 }
 
-const PARTICLE_COUNT = 18000;
-const ATMOSPHERE_COUNT = 250;
+const PARTICLE_COUNT = 18500;
+const ATMOSPHERE_COUNT = 200;
 
 const CandidateHologram = memo(({ 
   active = true, 
@@ -131,6 +125,7 @@ const CandidateHologram = memo(({
           const initialPositions = new Float32Array(PARTICLE_COUNT * 3);
           const targetPositions = new Float32Array(PARTICLE_COUNT * 3);
           const mouthWeights = new Float32Array(PARTICLE_COUNT);
+          const eyeWeights = new Float32Array(PARTICLE_COUNT);
 
           const tempPos = new THREE.Vector3();
           const particlesPerMesh = Math.floor(PARTICLE_COUNT / meshes.length);
@@ -160,10 +155,16 @@ const CandidateHologram = memo(({
               initialPositions[i * 3 + 2] = (Math.random() - 0.5) * 10;
 
               // Mouth region heuristic: bottom-center region of face
-              const isMouthY = tempPos.y < -0.1 && tempPos.y > -0.5;
-              const isMouthX = Math.abs(tempPos.x) < 0.2;
-              const isMouthZ = tempPos.z > 0.05;
+              const isMouthY = tempPos.y < -0.15 && tempPos.y > -0.45;
+              const isMouthX = Math.abs(tempPos.x) < 0.25;
+              const isMouthZ = tempPos.z > 0.1;
               mouthWeights[i] = (isMouthY && isMouthX && isMouthZ) ? 1.0 : 0.0;
+
+              // Eye region heuristic for blinking
+              const isEyeY = tempPos.y > 0.15 && tempPos.y < 0.35;
+              const isEyeX = Math.abs(tempPos.x) > 0.15 && Math.abs(tempPos.x) < 0.45;
+              const isEyeZ = tempPos.z > 0.1;
+              eyeWeights[i] = (isEyeY && isEyeX && isEyeZ) ? 1.0 : 0.0;
             }
           });
 
@@ -171,12 +172,13 @@ const CandidateHologram = memo(({
           pointGeometry.setAttribute('position', new THREE.BufferAttribute(initialPositions, 3));
           pointGeometry.setAttribute('targetPos', new THREE.BufferAttribute(targetPositions, 3));
           pointGeometry.setAttribute('mouthWeight', new THREE.BufferAttribute(mouthWeights, 1));
+          pointGeometry.setAttribute('eyeWeight', new THREE.BufferAttribute(eyeWeights, 1));
 
           const material = new THREE.PointsMaterial({
             color: 0x22d3ee,
-            size: 0.022,
+            size: 0.015,
             transparent: true,
-            opacity: 0.85,
+            opacity: 0.75,
             blending: THREE.AdditiveBlending,
             depthWrite: false
           });
@@ -200,7 +202,7 @@ const CandidateHologram = memo(({
           atmosGeo.setAttribute('position', new THREE.BufferAttribute(atmosPos, 3));
           const atmos = new THREE.Points(atmosGeo, new THREE.PointsMaterial({ 
             color: 0x4ff0ff, 
-            size: 0.015, 
+            size: 0.012, 
             transparent: true, 
             opacity: 0.2,
             blending: THREE.AdditiveBlending
@@ -230,14 +232,21 @@ const CandidateHologram = memo(({
         if (points) {
           const positions = points.geometry.attributes.position.array as Float32Array;
           const targets = points.geometry.attributes.targetPos.array as Float32Array;
-          const weights = points.geometry.attributes.mouthWeight.array as Float32Array;
+          const mWeights = points.geometry.attributes.mouthWeight.array as Float32Array;
+          const eWeights = points.geometry.attributes.eyeWeight.array as Float32Array;
 
           if (formationProgress.current < 1.0) {
             formationProgress.current += 0.008;
           }
 
-          const targetMouthMove = speakingRef.current ? Math.sin(time * 15) * 0.035 : 0;
-          mouthMovementValue.current += (targetMouthMove - mouthMovementValue.current) * 0.1;
+          // Neural Blinking Logic
+          const blinkCycle = time % 4;
+          const isBlinking = blinkCycle > 3.8;
+          const blinkValue = isBlinking ? 0.1 : 1.0;
+
+          // Speaking Logic
+          const targetMouthMove = speakingRef.current ? Math.sin(time * 18) * 0.04 : 0;
+          mouthMovementValue.current += (targetMouthMove - mouthMovementValue.current) * 0.15;
 
           for (let i = 0; i < PARTICLE_COUNT; i++) {
             const ix = i * 3, iy = i * 3 + 1, iz = i * 3 + 2;
@@ -245,7 +254,13 @@ const CandidateHologram = memo(({
             let ty = targets[iy];
             const tz = targets[iz];
 
-            if (weights[i] > 0) ty += mouthMovementValue.current;
+            // Apply Speaking displacement
+            if (mWeights[i] > 0) ty += mouthMovementValue.current;
+
+            // Apply Blinking displacement
+            if (eWeights[i] > 0 && isBlinking) {
+               ty = ty * 0.95 + 0.25 * 0.05; // Compress towards eye center
+            }
 
             const speed = 0.08 * formationProgress.current;
             positions[ix] += (tx - positions[ix]) * speed;
@@ -255,17 +270,17 @@ const CandidateHologram = memo(({
 
           points.geometry.attributes.position.needsUpdate = true;
           
-          // Subtle horizontal head sway (Requested)
-          points.rotation.y = Math.sin(time * 0.5) * 0.04;
+          // Subtle horizontal head sway
+          points.rotation.y = Math.sin(time * 0.4) * 0.035;
           
           // Subtle vertical float
-          points.position.y = Math.sin(time * 0.7) * 0.06;
+          points.position.y = Math.sin(time * 0.6) * 0.05;
           
           // Neural Flicker
-          if (Math.random() > 0.97) {
-            (points.material as THREE.PointsMaterial).opacity = 0.5 + Math.random() * 0.4;
+          if (Math.random() > 0.98) {
+            (points.material as THREE.PointsMaterial).opacity = 0.4 + Math.random() * 0.3;
           } else {
-            (points.material as THREE.PointsMaterial).opacity += (0.85 - (points.material as THREE.PointsMaterial).opacity) * 0.1;
+            (points.material as THREE.PointsMaterial).opacity += (0.75 - (points.material as THREE.PointsMaterial).opacity) * 0.1;
           }
         }
 
