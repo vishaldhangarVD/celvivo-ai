@@ -24,8 +24,8 @@ import { cn } from "@/lib/utils";
 import { aiMockInterview, type AiMockInterviewOutput } from "@/ai/flows/ai-mock-interview-v2";
 
 /**
- * @fileOverview Special HR Interview Arena v7.0 - Precision Viewport Layout
- * Optimized for single-screen immersion with zero scrolling.
+ * @fileOverview Special HR Interview Arena v7.5 - Connection Synchronized
+ * Fixed: "Please connect to the agent first" error by implementing readiness verification.
  */
 
 // --- TypeScript Definitions for Web Speech API ---
@@ -78,6 +78,7 @@ export default function SpecialHRInterview() {
   const agentStreamRef = useRef<MediaStream | null>(null);
   const initializationStartedRef = useRef(false);
   const videoPlayPromiseRef = useRef<Promise<void> | null>(null);
+  const connectionReadyRef = useRef(false);
   
   // --- Voice Refs ---
   const recognitionRef = useRef<SpeechRecognition | null>(null);
@@ -167,6 +168,13 @@ export default function SpecialHRInterview() {
       };
 
       recognition.onerror = (event: SpeechRecognitionErrorEvent) => {
+        if (event.error === "no-speech") {
+          // Gracefully handle silence - do not toast or crash
+          console.warn("[Speech] No speech detected.");
+          setIsListening(false);
+          return;
+        }
+        
         console.error("[Speech] Error:", event.error);
         if (event.error === "not-allowed") {
           toast({ variant: "destructive", title: "Mic Access Denied", description: "Please enable microphone permissions." });
@@ -192,6 +200,21 @@ export default function SpecialHRInterview() {
     }
   }, []);
 
+  /**
+   * Helper to wait for the D-ID agent to be signaling-ready.
+   * Prevents "Please connect to the agent first" errors.
+   */
+  const waitForDIdConnection = async (maxWaitMs = 15000) => {
+    const start = Date.now();
+    while (Date.now() - start < maxWaitMs) {
+      if (agentManagerRef.current && connectionReadyRef.current) {
+        return true;
+      }
+      await new Promise(r => setTimeout(r, 500));
+    }
+    return false;
+  };
+
   const processNextTurn = async (userAnswer: string, forceStart = false) => {
     if (isProcessingRef.current || (!interviewStartedRef.current && !forceStart)) return;
     
@@ -200,6 +223,12 @@ export default function SpecialHRInterview() {
     stopListening();
 
     try {
+      // Ensure we are connected before proceeding
+      const isConnected = await waitForDIdConnection();
+      if (!isConnected) {
+        throw new Error("D-ID Connection Timeout: System could not reach the signaling server.");
+      }
+
       const nextIndex = questionIndex + 1;
       const history = userAnswer 
         ? [...conversationHistory, { question: currentQuestion, answer: userAnswer }]
@@ -244,9 +273,15 @@ export default function SpecialHRInterview() {
         });
       }
 
-    } catch (error) {
+    } catch (error: any) {
       console.error("[Interview] Turn error:", error);
-      toast({ variant: "destructive", title: "Neural Link Error", description: "Failed to fetch response from Gemini." });
+      toast({ 
+        variant: "destructive", 
+        title: "Neural Link Error", 
+        description: error.message || "Failed to fetch response from Gemini." 
+      });
+      setIsProcessing(false);
+      isProcessingRef.current = false;
     } finally {
       setIsProcessing(false);
       isProcessingRef.current = false;
@@ -310,6 +345,14 @@ export default function SpecialHRInterview() {
                 });
               });
             },
+            onConnectionStateChange: (state: string) => {
+              console.log("[D-ID] Connection state:", state);
+              if (state === "connected") {
+                connectionReadyRef.current = true;
+              } else if (state === "disconnected" || state === "fail") {
+                connectionReadyRef.current = false;
+              }
+            },
             onVideoStateChange: (state: string) => {
               if (state === "START") {
                 setIsAiSpeaking(true);
@@ -358,10 +401,6 @@ export default function SpecialHRInterview() {
     <div className="h-screen w-screen bg-[#050816] overflow-hidden flex flex-col">
       <Navbar />
       
-      {/* 
-        MAIN CONTENT AREA 
-        Calculated to fit exactly below Navbar (72px) without scrolling.
-      */}
       <main className="flex-1 relative w-full h-[calc(100vh-72px)] overflow-hidden">
         <NavigationControls className="top-24" />
 
@@ -375,7 +414,6 @@ export default function SpecialHRInterview() {
             preload="auto"
             className="w-full h-full object-cover"
           />
-          {/* Subtle Overlay to make HUD elements pop */}
           <div className="absolute inset-0 bg-gradient-to-b from-black/20 via-transparent to-black/60 pointer-events-none" />
         </div>
 
@@ -415,7 +453,6 @@ export default function SpecialHRInterview() {
           <div className="max-w-4xl mx-auto w-full space-y-6">
             <AnimatePresence mode="wait">
               {!interviewStarted ? (
-                // START / INITIALIZATION OVERLAY
                 <motion.div
                   key="init-overlay"
                   initial={{ opacity: 0, scale: 0.9 }}
@@ -462,7 +499,6 @@ export default function SpecialHRInterview() {
                   )}
                 </motion.div>
               ) : (
-                // ACTIVE INTERVIEW HUD
                 <motion.div 
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
