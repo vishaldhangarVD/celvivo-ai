@@ -20,7 +20,8 @@ import {
   Layers,
   Sparkles,
   Command,
-  X
+  X,
+  ShieldCheck
 } from 'lucide-react';
 import { useUser, useFirestore } from '@/firebase';
 import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
@@ -116,7 +117,7 @@ export default function InterviewSetupPage() {
         <div className="max-w-7xl mx-auto space-y-12">
           
           <header className="text-center space-y-4 mb-16">
-            <Badge className="bg-accent/20 text-accent border-none px-6 py-1.5 font-bold tracking-[0.4em] text-[10px] uppercase">
+            <Badge className="bg-accent/20 text-accent border-none px-4 py-1 text-[10px] tracking-[0.4em] text-[10px] uppercase">
               Simulation Calibration Node
             </Badge>
             <h1 className="text-6xl font-bold tracking-tighter text-premium">
@@ -189,7 +190,7 @@ export default function InterviewSetupPage() {
                     ))
                   ) : (
                     <div className="h-full flex flex-col items-center justify-center text-center p-8 opacity-20">
-                      <X className="w-8 h-8 mb-2" />
+                      <X className="w-4 h-4 text-white/40" />
                       <p className="text-[10px] font-black uppercase tracking-widest">No matching companies</p>
                     </div>
                   )}
@@ -239,7 +240,7 @@ export default function InterviewSetupPage() {
                     ))
                   ) : (
                     <div className="h-full flex flex-col items-center justify-center text-center p-8 opacity-20">
-                      <X className="w-8 h-8 mb-2" />
+                      <X className="w-4 h-4 text-white/40" />
                       <p className="text-[10px] font-black uppercase tracking-widest">No matching roles</p>
                     </div>
                   )}
@@ -289,7 +290,7 @@ export default function InterviewSetupPage() {
                     ))
                   ) : (
                     <div className="h-full flex flex-col items-center justify-center text-center p-8 opacity-20">
-                      <X className="w-8 h-8 mb-2" />
+                      <X className="w-4 h-4 text-white/40" />
                       <p className="text-[10px] font-black uppercase tracking-widest">No matching grade</p>
                     </div>
                   )}
