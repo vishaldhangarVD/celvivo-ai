@@ -8,8 +8,8 @@ import { cn } from '@/lib/utils';
 
 /**
  * @fileOverview CandidateHologram - High-Fidelity Neural Face Hologram.
- * Reverted to high-density vertex sampling with jitter-duplication for maximum coverage.
- * Removed complex filtering that caused sparse rendering.
+ * Uses high-density vertex sampling with jitter-duplication for maximum coverage.
+ * Calibrated for optimal facial glow on cheeks, forehead, and jaw.
  */
 
 const CandidateHologram = memo(({ 
@@ -69,7 +69,8 @@ const CandidateHologram = memo(({
       size: number, 
       opacity: number, 
       targetCount: number = 0,
-      isEyes: boolean = false
+      isEyes: boolean = false,
+      jitterAmount: number = 0.004
     ) => {
       const positions = geometry.attributes.position.array as Float32Array;
       const vertexCount = positions.length / 3;
@@ -86,10 +87,9 @@ const CandidateHologram = memo(({
         // Fill remainder with jittered clones of original vertices
         for (let i = vertexCount; i < targetCount; i++) {
           const sourceIdx = Math.floor(Math.random() * vertexCount) * 3;
-          const jitter = 0.006; // Fine-tuned jitter for cloud coverage
-          finalPositions[i * 3] = positions[sourceIdx] + (Math.random() - 0.5) * jitter;
-          finalPositions[i * 3 + 1] = positions[sourceIdx + 1] + (Math.random() - 0.5) * jitter;
-          finalPositions[i * 3 + 2] = positions[sourceIdx + 2] + (Math.random() - 0.5) * jitter;
+          finalPositions[i * 3] = positions[sourceIdx] + (Math.random() - 0.5) * jitterAmount;
+          finalPositions[i * 3 + 1] = positions[sourceIdx + 1] + (Math.random() - 0.5) * jitterAmount;
+          finalPositions[i * 3 + 2] = positions[sourceIdx + 2] + (Math.random() - 0.5) * jitterAmount;
         }
       } else {
         finalPositions = positions;
@@ -115,7 +115,9 @@ const CandidateHologram = memo(({
 
     const manager = new THREE.LoadingManager();
     manager.onError = (url) => {
-      if (!url.includes('blob:')) console.error('[Hologram] Load error:', url);
+      if (!url.includes('blob:')) {
+        console.error('[Hologram] Load error:', url);
+      }
     };
 
     const loader = new GLTFLoader(manager);
@@ -154,17 +156,17 @@ const CandidateHologram = memo(({
         const finalCenter = new THREE.Vector3();
         faceGeo.boundingBox!.getCenter(finalCenter);
 
-        // Face Synthesis: Use 5000 jitter-synthesized nodes
-        createPoints(faceGeo, '#4ff0ff', 0.02, 0.85, 5000);
+        // Face Synthesis: Calibrated for 8,000 nodes at 0.026 size
+        createPoints(faceGeo, '#4ff0ff', 0.026, 0.85, 8000, false, 0.004);
         
-        if (mouthGeo) createPoints(mouthGeo, '#4ff0ff', 0.015, 0.5, 1000);
-        if (irisGeo) createPoints(irisGeo, '#4ff0ff', 0.01, 0.6, 500, true);
+        if (mouthGeo) createPoints(mouthGeo, '#4ff0ff', 0.015, 0.5, 1000, false, 0.004);
+        if (irisGeo) createPoints(irisGeo, '#4ff0ff', 0.01, 0.6, 500, true, 0.004);
 
-        // Volumetric Hair Logic
+        // Volumetric Hair Logic: Keep original density for stability
         hairGeos.forEach(h => {
           let count = 1500;
           if (h.name.includes('Cap') || h.name.includes('Back')) count = 3000;
-          createPoints(h.geo, '#1a5fb4', 0.018, 0.4, count);
+          createPoints(h.geo, '#1a5fb4', 0.018, 0.4, count, false, 0.006);
         });
 
         scene.traverse((obj) => {
