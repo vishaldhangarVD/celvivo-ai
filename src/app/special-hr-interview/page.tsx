@@ -15,15 +15,17 @@ import {
   Play,
   Square,
   Brain,
-  MessageSquare
+  MessageSquare,
+  MicOff,
+  AlertCircle
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import { aiMockInterview, type AiMockInterviewOutput } from "@/ai/flows/ai-mock-interview-v2";
 
 /**
- * @fileOverview Special HR Interview Arena v6.0 - Full Screen Immersion
- * Features a live voice-to-voice interview flow integrated with D-ID and Gemini.
+ * @fileOverview Special HR Interview Arena v7.0 - Precision Viewport Layout
+ * Optimized for single-screen immersion with zero scrolling.
  */
 
 // --- TypeScript Definitions for Web Speech API ---
@@ -353,149 +355,152 @@ export default function SpecialHRInterview() {
   }, [ensureVideoPlaying, startListening, stopListening, toast]);
 
   return (
-    <div className="h-screen w-screen bg-black overflow-hidden relative">
+    <div className="h-screen w-screen bg-[#050816] overflow-hidden flex flex-col">
       <Navbar />
-      <NavigationControls />
+      
+      {/* 
+        MAIN CONTENT AREA 
+        Calculated to fit exactly below Navbar (72px) without scrolling.
+      */}
+      <main className="flex-1 relative w-full h-[calc(100vh-72px)] overflow-hidden">
+        <NavigationControls className="top-24" />
 
-      {/* FULL SCREEN VIDEO LAYER */}
-      <div className="absolute inset-0 z-0">
-        <video
-          ref={agentVideoRef}
-          autoPlay
-          playsInline
-          muted
-          preload="auto"
-          className="w-full h-full object-cover"
-        />
-        {/* Subtle Overlay to make HUD elements pop */}
-        <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-transparent to-black/60 pointer-events-none" />
-      </div>
+        {/* FULL SCREEN VIDEO LAYER */}
+        <div className="absolute inset-0 bg-black">
+          <video
+            ref={agentVideoRef}
+            autoPlay
+            playsInline
+            muted
+            preload="auto"
+            className="w-full h-full object-cover"
+          />
+          {/* Subtle Overlay to make HUD elements pop */}
+          <div className="absolute inset-0 bg-gradient-to-b from-black/20 via-transparent to-black/60 pointer-events-none" />
+        </div>
 
-      {/* INTERACTIVE HUD OVERLAYS */}
-      <div className="absolute inset-0 z-10 pointer-events-none flex flex-col justify-between p-8 md:p-12">
-        
-        {/* TOP STATUS BAR */}
-        <div className="flex justify-between items-start w-full">
+        {/* HUD: TOP MICROPHONE CONTROL */}
+        <div className="absolute top-8 left-1/2 -translate-x-1/2 z-50 pointer-events-none">
           <AnimatePresence>
             {interviewStarted && (
-              <motion.div 
+              <motion.div
                 initial={{ opacity: 0, y: -20 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="flex items-center gap-4"
+                className="flex flex-col items-center gap-3"
               >
-                <Badge className="bg-black/60 backdrop-blur-md border-accent/30 text-accent py-2 px-5 rounded-full flex items-center gap-3">
-                  <div className="w-2 h-2 rounded-full bg-red-500 animate-pulse shadow-[0_0_8px_#ef4444]" />
-                  <span className="text-[10px] font-black uppercase tracking-widest">Live Arena</span>
-                </Badge>
-                <Badge variant="outline" className="bg-black/40 backdrop-blur-md border-white/10 text-white/40 text-[9px] uppercase py-2 px-4 rounded-full">
-                  {interviewStage} • {interviewDifficulty}
+                <div className={cn(
+                  "w-16 h-16 rounded-full flex items-center justify-center transition-all duration-500 glass border-white/10",
+                  isListening ? "bg-green-500/20 border-green-500/50 shadow-[0_0_30px_rgba(34,197,94,0.4)]" : 
+                  isProcessing ? "bg-accent/20 border-accent/50 shadow-[0_0_30px_rgba(34,211,238,0.4)]" :
+                  "bg-white/5"
+                )}>
+                  {isListening ? (
+                    <Mic className="w-6 h-6 text-green-400 animate-pulse" />
+                  ) : isProcessing ? (
+                    <Activity className="w-6 h-6 text-accent animate-spin" />
+                  ) : (
+                    <MicOff className="w-6 h-6 text-white/30" />
+                  )}
+                </div>
+                <Badge variant="outline" className="bg-black/40 backdrop-blur-md border-white/10 text-white/60 py-1 px-4 rounded-full text-[9px] uppercase tracking-widest font-black">
+                  {isListening ? "LISTENING" : isProcessing ? "THINKING" : "IDLE"}
                 </Badge>
               </motion.div>
             )}
           </AnimatePresence>
-
-          <div className="pointer-events-auto">
-            {interviewStarted && (
-              <Button 
-                onClick={stopInterview}
-                variant="ghost"
-                className="h-10 px-4 glass border-red-500/20 text-red-400 hover:bg-red-500/10 rounded-full text-[9px] font-black uppercase tracking-widest"
-              >
-                Terminate
-              </Button>
-            )}
-          </div>
         </div>
 
-        {/* CENTER ACTION OVERLAY (Starts & Loads) */}
-        <div className="flex flex-col items-center justify-center flex-1 w-full pointer-events-auto">
-          <AnimatePresence mode="wait">
-            {status === "LOADING" && (
-              <motion.div
-                key="loading"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                className="flex flex-col items-center gap-6"
-              >
-                <div className="relative w-24 h-24">
-                  <div className="absolute inset-0 border-2 border-accent/20 rounded-full animate-ping" />
-                  <Loader2 className="w-full h-full text-accent animate-spin" />
-                </div>
-                <p className="text-[10px] font-black uppercase tracking-[0.5em] text-accent animate-pulse">Initializing Matrix</p>
-              </motion.div>
-            )}
-
-            {status === "READY" && !interviewStarted && (
-              <motion.div
-                key="start-ui"
-                initial={{ opacity: 0, scale: 0.9 }}
-                animate={{ opacity: 1, scale: 1 }}
-                className="flex flex-col items-center gap-8 text-center max-w-sm"
-              >
-                {isAudioBlocked ? (
-                  <div className="glass p-10 rounded-[3rem] border-accent/20 bg-black/40 backdrop-blur-xl space-y-6">
-                    <div className="w-16 h-16 rounded-full bg-accent/20 flex items-center justify-center mx-auto border border-accent/40">
-                      <Volume2 className="w-8 h-8 text-accent animate-pulse" />
+        {/* HUD: BOTTOM CONTENT */}
+        <div className="absolute inset-x-0 bottom-0 z-40 pointer-events-none p-8 md:p-12">
+          <div className="max-w-4xl mx-auto w-full space-y-6">
+            <AnimatePresence mode="wait">
+              {!interviewStarted ? (
+                // START / INITIALIZATION OVERLAY
+                <motion.div
+                  key="init-overlay"
+                  initial={{ opacity: 0, scale: 0.9 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 1.1 }}
+                  className="pointer-events-auto flex flex-col items-center gap-8 text-center"
+                >
+                  {status === "LOADING" ? (
+                    <div className="flex flex-col items-center gap-6">
+                      <div className="relative w-24 h-24">
+                        <div className="absolute inset-0 border-2 border-accent/20 rounded-full animate-ping" />
+                        <Loader2 className="w-full h-full text-accent animate-spin" />
+                      </div>
+                      <p className="text-[10px] font-black uppercase tracking-[0.5em] text-accent animate-pulse">Initializing Matrix</p>
                     </div>
-                    <div className="space-y-2">
-                      <h3 className="text-xl font-bold uppercase tracking-tighter text-white">Vocal Matrix Locked</h3>
-                      <p className="text-[10px] text-white/50 uppercase tracking-widest leading-relaxed">System requires vocal synchronization permission.</p>
+                  ) : status === "READY" ? (
+                    isAudioBlocked ? (
+                      <div className="glass p-10 rounded-[3rem] border-accent/20 bg-black/60 backdrop-blur-xl space-y-6">
+                        <div className="w-16 h-16 rounded-full bg-accent/20 flex items-center justify-center mx-auto border border-accent/40">
+                          <Volume2 className="w-8 h-8 text-accent animate-pulse" />
+                        </div>
+                        <div className="space-y-2">
+                          <h3 className="text-xl font-bold uppercase tracking-tighter text-white">Vocal Matrix Locked</h3>
+                          <p className="text-[10px] text-white/50 uppercase tracking-widest">Enable session synchronization.</p>
+                        </div>
+                        <Button onClick={handleEnableAudio} className="w-full h-14 btn-premium rounded-2xl text-xs font-black uppercase tracking-[0.2em]">
+                          Unlock Vocal Link
+                        </Button>
+                      </div>
+                    ) : (
+                      <Button 
+                        onClick={startInterview}
+                        className="w-48 h-48 rounded-full btn-premium flex flex-col gap-3 shadow-[0_0_50px_rgba(34,211,238,0.3)] hover:scale-105 transition-transform"
+                      >
+                        <Play className="w-12 h-12 fill-current" />
+                        <span className="text-[10px] font-black uppercase tracking-[0.3em]">Start Mission</span>
+                      </Button>
+                    )
+                  ) : (
+                    <div className="flex flex-col items-center gap-4 text-red-400">
+                      <AlertCircle className="w-12 h-12" />
+                      <p className="text-xs font-black uppercase tracking-widest">Protocol Fault: Link Lost</p>
                     </div>
-                    <Button onClick={handleEnableAudio} className="w-full h-14 btn-premium rounded-2xl text-xs font-black uppercase tracking-[0.2em]">
-                      Unlock Vocal Link
+                  )}
+                </motion.div>
+              ) : (
+                // ACTIVE INTERVIEW HUD
+                <motion.div 
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="w-full space-y-4"
+                >
+                  <div className="flex justify-between items-end px-4">
+                    <Badge variant="outline" className="bg-black/40 backdrop-blur-md border-white/10 text-white/40 text-[9px] uppercase py-2 px-4 rounded-full">
+                      {interviewStage} • {interviewDifficulty}
+                    </Badge>
+                    <Button 
+                      onClick={stopInterview}
+                      variant="ghost"
+                      className="h-10 px-4 glass border-red-500/20 text-red-400 hover:bg-red-500/10 rounded-full text-[9px] font-black uppercase tracking-widest pointer-events-auto"
+                    >
+                      Terminate
                     </Button>
                   </div>
-                ) : (
-                  <Button 
-                    onClick={startInterview}
-                    className="w-48 h-48 rounded-full btn-premium flex flex-col gap-3 shadow-[0_0_50px_rgba(34,211,238,0.3)] hover:scale-105 transition-transform"
-                  >
-                    <Play className="w-12 h-12 fill-current" />
-                    <span className="text-[10px] font-black uppercase tracking-[0.3em]">Start Mission</span>
-                  </Button>
-                )}
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </div>
 
-        {/* BOTTOM HUD (Subtitles & Status) */}
-        <div className="w-full flex flex-col items-center gap-6 max-w-4xl mx-auto">
-          <AnimatePresence>
-            {interviewStarted && (
-              <motion.div 
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="w-full space-y-4"
-              >
-                {/* STATUS CHIPS */}
-                <div className="flex justify-center gap-4">
-                  {isListening && (
-                    <Badge className="bg-green-500/20 text-green-400 border-green-500/30 py-1.5 px-4 rounded-full flex items-center gap-2 animate-pulse">
-                      <Mic className="w-3 h-3" />
-                      <span className="text-[9px] font-black uppercase tracking-widest">Listening</span>
-                    </Badge>
-                  )}
-                  {isProcessing && (
-                    <Badge className="bg-accent/20 text-accent border-accent/30 py-1.5 px-4 rounded-full flex items-center gap-2">
-                      <Activity className="w-3 h-3 animate-spin" />
-                      <span className="text-[9px] font-black uppercase tracking-widest">Thinking</span>
-                    </Badge>
-                  )}
-                </div>
-
-                {/* TRANSCRIPT BOX */}
-                <div className="glass p-6 rounded-3xl border-white/10 bg-black/40 backdrop-blur-xl w-full text-center">
-                  <p className="text-lg md:text-xl font-light text-white leading-relaxed line-clamp-3">
-                    {isListening ? (transcript || "...") : (currentQuestion || "Initializing...")}
-                  </p>
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
+                  <div className="glass p-8 rounded-[2.5rem] border-white/10 bg-black/40 backdrop-blur-xl w-full text-center">
+                    <p className="text-xl md:text-2xl font-light text-white leading-relaxed line-clamp-3">
+                      {isListening ? (transcript || "...") : (currentQuestion || "Initializing...")}
+                    </p>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
         </div>
-      </div>
+      </main>
+
+      <style jsx global>{`
+        html, body {
+          margin: 0;
+          padding: 0;
+          height: 100%;
+          overflow: hidden !important;
+        }
+      `}</style>
     </div>
   );
 }
