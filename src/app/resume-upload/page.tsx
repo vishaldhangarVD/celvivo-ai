@@ -117,7 +117,7 @@ export default function ResumeUploadPage() {
                 { label: "Organization", val: journey.company, icon: Building2 },
                 { label: "Protocol", val: journey.roundType, icon: Layers }
               ].map((item, i) => (
-                <div key={i} className="p-4 glass rounded-2xl border-white/5 flex items-center gap-3">
+                <div key={item.label} className="p-4 glass rounded-2xl border-white/5 flex items-center gap-3">
                   <div className="w-8 h-8 rounded-lg bg-accent/10 flex items-center justify-center text-accent shrink-0">
                     <item.icon className="w-4 h-4" />
                   </div>
