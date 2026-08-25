@@ -8,8 +8,8 @@ import { cn } from '@/lib/utils';
 
 /**
  * @fileOverview CandidateHologram - High-Fidelity Neural Face Hologram.
- * Uses high-density vertex sampling with jitter-duplication for maximum coverage.
- * Calibrated for optimal facial glow on cheeks, forehead, and jaw.
+ * Uses bi-directional vertex sampling to ensure balanced visual density.
+ * Calibrated for optimal facial glow while preventing hair over-density.
  */
 
 const CandidateHologram = memo(({ 
@@ -61,7 +61,8 @@ const CandidateHologram = memo(({
 
     /**
      * createPoints:
-     * Uses raw mesh vertices and augments with jittered duplicates to reach target density.
+     * Normalizes vertex counts. Boosts low-density meshes via jitter-duplication.
+     * Caps high-density meshes via subsampling.
      */
     const createPoints = (
       geometry: THREE.BufferGeometry, 
@@ -79,19 +80,29 @@ const CandidateHologram = memo(({
       
       let finalPositions: Float32Array;
 
-      if (targetCount > vertexCount) {
-        // High-Density Jitter Synthesis
+      if (targetCount > 0 && targetCount > vertexCount) {
+        // Low-Density Boost: High-Density Jitter Synthesis
         finalPositions = new Float32Array(targetCount * 3);
         // Copy original vertices
         for (let i = 0; i < positions.length; i++) {
           finalPositions[i] = positions[i];
         }
-        // Fill remainder with jittered clones of original vertices
+        // Fill remainder with jittered clones
         for (let i = vertexCount; i < targetCount; i++) {
           const sourceIdx = Math.floor(Math.random() * vertexCount) * 3;
           finalPositions[i * 3] = positions[sourceIdx] + (Math.random() - 0.5) * jitterAmount;
           finalPositions[i * 3 + 1] = positions[sourceIdx + 1] + (Math.random() - 0.5) * jitterAmount;
           finalPositions[i * 3 + 2] = positions[sourceIdx + 2] + (Math.random() - 0.5) * jitterAmount;
+        }
+      } else if (targetCount > 0 && vertexCount > targetCount) {
+        // High-Density Cap: Subsampling to prevent occlusion
+        finalPositions = new Float32Array(targetCount * 3);
+        for (let i = 0; i < targetCount; i++) {
+          // Use linear sampling across the vertex buffer for even distribution
+          const sourceIdx = Math.floor(i * (vertexCount / targetCount)) * 3;
+          finalPositions[i * 3] = positions[sourceIdx];
+          finalPositions[i * 3 + 1] = positions[sourceIdx + 1];
+          finalPositions[i * 3 + 2] = positions[sourceIdx + 2];
         }
       } else {
         finalPositions = positions;
@@ -161,14 +172,14 @@ const CandidateHologram = memo(({
         const finalCenter = new THREE.Vector3();
         faceGeo.boundingBox!.getCenter(finalCenter);
 
-        // Face Synthesis: Calibrated for 8,000 nodes at 0.026 size
+        // Face Synthesis: Boosted to 8,000 nodes for high-quality features
         console.log("[Diag] Face raw vertex count:", (faceGeo as THREE.BufferGeometry).attributes.position.array.length / 3);
         createPoints(faceGeo, '#4ff0ff', 0.026, 0.85, 8000, false, 0.004);
         
         if (mouthGeo) createPoints(mouthGeo, '#4ff0ff', 0.015, 0.5, 1000, false, 0.004);
         if (irisGeo) createPoints(irisGeo, '#4ff0ff', 0.01, 0.6, 500, true, 0.004);
 
-        // Volumetric Hair Logic: Keep original density for stability
+        // Volumetric Hair Logic: Capped to prevent overwhelming the face
         hairGeos.forEach(h => {
           let count = 1500;
           if (h.name.includes('Cap') || h.name.includes('Back')) count = 3000;
