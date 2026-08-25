@@ -24,8 +24,8 @@ import { cn } from "@/lib/utils";
 import { aiMockInterview, type AiMockInterviewOutput } from "@/ai/flows/ai-mock-interview-v2";
 
 /**
- * @fileOverview Special HR Interview Arena v7.5 - Connection Synchronized
- * Fixed: "Please connect to the agent first" error by implementing readiness verification.
+ * @fileOverview Special HR Interview Arena v8.0 - Immersive Full-Screen Protocol
+ * Fixed: Viewport overflow and UI clutter during active simulations.
  */
 
 // --- TypeScript Definitions for Web Speech API ---
@@ -169,7 +169,6 @@ export default function SpecialHRInterview() {
 
       recognition.onerror = (event: SpeechRecognitionErrorEvent) => {
         if (event.error === "no-speech") {
-          // Gracefully handle silence - do not toast or crash
           console.warn("[Speech] No speech detected.");
           setIsListening(false);
           return;
@@ -200,10 +199,6 @@ export default function SpecialHRInterview() {
     }
   }, []);
 
-  /**
-   * Helper to wait for the D-ID agent to be signaling-ready.
-   * Prevents "Please connect to the agent first" errors.
-   */
   const waitForDIdConnection = async (maxWaitMs = 15000) => {
     const start = Date.now();
     while (Date.now() - start < maxWaitMs) {
@@ -223,7 +218,6 @@ export default function SpecialHRInterview() {
     stopListening();
 
     try {
-      // Ensure we are connected before proceeding
       const isConnected = await waitForDIdConnection();
       if (!isConnected) {
         throw new Error("D-ID Connection Timeout: System could not reach the signaling server.");
@@ -398,34 +392,46 @@ export default function SpecialHRInterview() {
   }, [ensureVideoPlaying, startListening, stopListening, toast]);
 
   return (
-    <div className="h-screen w-screen bg-[#050816] overflow-hidden flex flex-col">
-      <Navbar />
+    <div className={cn(
+      "min-h-screen bg-[#050816] flex flex-col relative selection:bg-accent/30",
+      interviewStarted ? "h-screen w-screen overflow-hidden" : "overflow-x-hidden"
+    )}>
+      <div className="particles-bg" />
       
-      <main className="flex-1 relative w-full h-[calc(100vh-72px)] overflow-hidden">
-        <NavigationControls className="top-24" />
+      {/* Conditionally hide Navbar during active simulation */}
+      {!interviewStarted && <Navbar />}
+      
+      <main className={cn(
+        "flex-1 relative flex flex-col items-center",
+        interviewStarted ? "h-screen w-screen p-0 m-0" : "container mx-auto px-6 pt-32 pb-16"
+      )}>
+        {!interviewStarted && <NavigationControls className="top-40" />}
 
-        {/* FULL SCREEN VIDEO LAYER */}
-        <div className="absolute inset-0 bg-black">
-          <video
-            ref={agentVideoRef}
-            autoPlay
-            playsInline
-            muted
-            preload="auto"
-            className="w-full h-full object-cover"
-          />
-          <div className="absolute inset-0 bg-gradient-to-b from-black/20 via-transparent to-black/60 pointer-events-none" />
-        </div>
+        <AnimatePresence mode="wait">
+          {interviewStarted ? (
+            /* FULL SCREEN INTERVIEW ARENA */
+            <motion.div 
+              key="active-arena"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 z-[100] bg-black flex flex-col overflow-hidden"
+            >
+              {/* VIDEO BACKGROUND */}
+              <div className="absolute inset-0 z-0">
+                <video
+                  ref={agentVideoRef}
+                  autoPlay
+                  playsInline
+                  muted
+                  preload="auto"
+                  className="w-full h-full object-cover"
+                />
+                <div className="absolute inset-0 bg-gradient-to-b from-black/20 via-transparent to-black/60 pointer-events-none" />
+              </div>
 
-        {/* HUD: TOP MICROPHONE CONTROL */}
-        <div className="absolute top-8 left-1/2 -translate-x-1/2 z-50 pointer-events-none">
-          <AnimatePresence>
-            {interviewStarted && (
-              <motion.div
-                initial={{ opacity: 0, y: -20 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="flex flex-col items-center gap-3"
-              >
+              {/* HUD: TOP MICROPHONE CONTROL */}
+              <div className="absolute top-8 left-1/2 -translate-x-1/2 z-50 flex flex-col items-center gap-3">
                 <div className={cn(
                   "w-16 h-16 rounded-full flex items-center justify-center transition-all duration-500 glass border-white/10",
                   isListening ? "bg-green-500/20 border-green-500/50 shadow-[0_0_30px_rgba(34,197,94,0.4)]" : 
@@ -443,98 +449,164 @@ export default function SpecialHRInterview() {
                 <Badge variant="outline" className="bg-black/40 backdrop-blur-md border-white/10 text-white/60 py-1 px-4 rounded-full text-[9px] uppercase tracking-widest font-black">
                   {isListening ? "LISTENING" : isProcessing ? "THINKING" : "IDLE"}
                 </Badge>
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </div>
+              </div>
 
-        {/* HUD: BOTTOM CONTENT */}
-        <div className="absolute inset-x-0 bottom-0 z-40 pointer-events-none p-8 md:p-12">
-          <div className="max-w-4xl mx-auto w-full space-y-6">
-            <AnimatePresence mode="wait">
-              {!interviewStarted ? (
-                <motion.div
-                  key="init-overlay"
-                  initial={{ opacity: 0, scale: 0.9 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  exit={{ opacity: 0, scale: 1.1 }}
-                  className="pointer-events-auto flex flex-col items-center gap-8 text-center"
+              {/* HUD: TOP RIGHT TERMINATE BUTTON */}
+              <div className="absolute top-8 right-8 z-50">
+                <Button 
+                  onClick={stopInterview}
+                  variant="ghost"
+                  className="h-10 px-4 glass border-red-500/20 text-red-400 hover:bg-red-500/10 rounded-full text-[9px] font-black uppercase tracking-widest transition-all"
                 >
-                  {status === "LOADING" ? (
-                    <div className="flex flex-col items-center gap-6">
-                      <div className="relative w-24 h-24">
-                        <div className="absolute inset-0 border-2 border-accent/20 rounded-full animate-ping" />
-                        <Loader2 className="w-full h-full text-accent animate-spin" />
-                      </div>
-                      <p className="text-[10px] font-black uppercase tracking-[0.5em] text-accent animate-pulse">Initializing Matrix</p>
-                    </div>
-                  ) : status === "READY" ? (
-                    isAudioBlocked ? (
-                      <div className="glass p-10 rounded-[3rem] border-accent/20 bg-black/60 backdrop-blur-xl space-y-6">
-                        <div className="w-16 h-16 rounded-full bg-accent/20 flex items-center justify-center mx-auto border border-accent/40">
-                          <Volume2 className="w-8 h-8 text-accent animate-pulse" />
-                        </div>
-                        <div className="space-y-2">
-                          <h3 className="text-xl font-bold uppercase tracking-tighter text-white">Vocal Matrix Locked</h3>
-                          <p className="text-[10px] text-white/50 uppercase tracking-widest">Enable session synchronization.</p>
-                        </div>
-                        <Button onClick={handleEnableAudio} className="w-full h-14 btn-premium rounded-2xl text-xs font-black uppercase tracking-[0.2em]">
-                          Unlock Vocal Link
-                        </Button>
-                      </div>
-                    ) : (
-                      <Button 
-                        onClick={startInterview}
-                        className="w-48 h-48 rounded-full btn-premium flex flex-col gap-3 shadow-[0_0_50px_rgba(34,211,238,0.3)] hover:scale-105 transition-transform"
-                      >
-                        <Play className="w-12 h-12 fill-current" />
-                        <span className="text-[10px] font-black uppercase tracking-[0.3em]">Start Mission</span>
-                      </Button>
-                    )
-                  ) : (
-                    <div className="flex flex-col items-center gap-4 text-red-400">
-                      <AlertCircle className="w-12 h-12" />
-                      <p className="text-xs font-black uppercase tracking-widest">Protocol Fault: Link Lost</p>
-                    </div>
-                  )}
-                </motion.div>
-              ) : (
+                  <Square className="w-3 h-3 mr-2 fill-current" /> Terminate Session
+                </Button>
+              </div>
+
+              {/* HUD: BOTTOM QUESTION OVERLAY */}
+              <div className="absolute bottom-12 left-1/2 -translate-x-1/2 z-50 w-full max-w-4xl px-8">
                 <motion.div 
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  className="w-full space-y-4"
+                  initial={{ y: 20, opacity: 0 }}
+                  animate={{ y: 0, opacity: 1 }}
+                  className="glass p-8 rounded-[2.5rem] border-white/10 bg-black/40 backdrop-blur-xl w-full text-center shadow-2xl"
                 >
-                  <div className="flex justify-between items-end px-4">
-                    <Badge variant="outline" className="bg-black/40 backdrop-blur-md border-white/10 text-white/40 text-[9px] uppercase py-2 px-4 rounded-full">
-                      {interviewStage} • {interviewDifficulty}
+                  <div className="flex justify-center mb-4">
+                    <Badge variant="outline" className="border-white/10 text-white/30 text-[8px] uppercase px-3 py-1">
+                      {interviewStage} Node • Step {questionIndex}
                     </Badge>
-                    <Button 
-                      onClick={stopInterview}
-                      variant="ghost"
-                      className="h-10 px-4 glass border-red-500/20 text-red-400 hover:bg-red-500/10 rounded-full text-[9px] font-black uppercase tracking-widest pointer-events-auto"
-                    >
-                      Terminate
-                    </Button>
                   </div>
-
-                  <div className="glass p-8 rounded-[2.5rem] border-white/10 bg-black/40 backdrop-blur-xl w-full text-center">
-                    <p className="text-xl md:text-2xl font-light text-white leading-relaxed line-clamp-3">
-                      {isListening ? (transcript || "...") : (currentQuestion || "Initializing...")}
-                    </p>
-                  </div>
+                  <p className="text-xl md:text-2xl font-light text-white leading-relaxed line-clamp-3">
+                    {isListening ? (transcript || "...") : (currentQuestion || "Initializing...")}
+                  </p>
                 </motion.div>
-              )}
-            </AnimatePresence>
-          </div>
-        </div>
+              </div>
+            </motion.div>
+          ) : (
+            /* STANDARD DASHBOARD-STYLE LANDING MODE */
+            <motion.div 
+              key="landing-mode"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="max-w-6xl w-full grid lg:grid-cols-12 gap-12 items-center"
+            >
+              {/* LEFT: INTEL BRIEFING */}
+              <div className="lg:col-span-5 space-y-12">
+                <header className="space-y-6">
+                  <Badge className="bg-purple-500/20 text-purple-400 border-none px-4 py-1.5 text-[10px] tracking-[0.4em] font-black uppercase">Vocal Simulation Protocol</Badge>
+                  <h1 className="text-6xl md:text-7xl font-bold tracking-tighter text-premium leading-[0.95]">Live Voice <br /><span className="text-gradient-purple">AI Assessment.</span></h1>
+                  <p className="text-xl text-muted-foreground font-light leading-relaxed max-w-md">
+                    Initialize a real-time, hands-free technical simulation powered by Gemini 2.5 Flash and D-ID Neural Avatars.
+                  </p>
+                </header>
+
+                <div className="grid gap-4">
+                   {[
+                     { icon: Brain, label: "Neural Audio Logic", val: "ACTIVE" },
+                     { icon: Mic, label: "STT Transcription", val: "SYNCHRONIZED" },
+                     { icon: Activity, label: "Conversation Buffer", val: "STREAMING" }
+                   ].map((item, i) => (
+                     <div key={i} className="flex items-center justify-between p-5 glass rounded-2xl border-white/5 bg-white/[0.01]">
+                        <div className="flex items-center gap-4">
+                          <div className="w-10 h-10 rounded-xl bg-accent/10 flex items-center justify-center text-accent border border-accent/20">
+                            <item.icon className="w-5 h-5" />
+                          </div>
+                          <span className="text-[10px] font-bold uppercase tracking-widest text-white/40">{item.label}</span>
+                        </div>
+                        <span className="text-[10px] font-black uppercase text-accent tracking-tighter">{item.val}</span>
+                     </div>
+                   ))}
+                </div>
+              </div>
+
+              {/* RIGHT: AI ARENA CONTAINER */}
+              <div className="lg:col-span-7">
+                <div className="relative aspect-[16/10] rounded-[3rem] overflow-hidden bg-black border border-white/5 shadow-2xl group">
+                  {/* VIDEO ELEMENT FOR NON-INTERVIEW PREVIEW */}
+                  <video
+                    ref={agentVideoRef}
+                    autoPlay
+                    playsInline
+                    muted
+                    preload="auto"
+                    className="w-full h-full object-cover opacity-80"
+                  />
+                  
+                  {/* OVERLAY INITIALIZATION LAYER */}
+                  <div className="absolute inset-0 z-20 flex flex-col items-center justify-center p-12 text-center bg-gradient-to-b from-transparent via-[#050816]/40 to-[#050816]">
+                    <AnimatePresence mode="wait">
+                      {status === "LOADING" ? (
+                        <motion.div key="loading" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-6">
+                           <div className="relative w-24 h-24 mx-auto">
+                              <div className="absolute inset-0 border-2 border-accent/20 rounded-full animate-ping" />
+                              <Loader2 className="w-full h-full text-accent animate-spin" />
+                           </div>
+                           <p className="text-[10px] font-black uppercase tracking-[0.5em] text-accent animate-pulse">Initializing Matrix</p>
+                        </motion.div>
+                      ) : status === "READY" ? (
+                        <motion.div key="ready" initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} className="space-y-10">
+                           <div className="w-20 h-20 rounded-[2.5rem] bg-accent/20 flex items-center justify-center mx-auto border border-accent/40 shadow-[0_0_50px_rgba(34,211,238,0.2)]">
+                              <ShieldCheck className="w-10 h-10 text-accent" />
+                           </div>
+                           <div className="space-y-4">
+                             <h3 className="text-3xl font-bold tracking-tighter">Neural Link Established</h3>
+                             <p className="text-muted-foreground font-light max-w-xs mx-auto">Secure WebRTC channel established with D-ID node.</p>
+                           </div>
+
+                           {isAudioBlocked ? (
+                              <Button onClick={handleEnableAudio} className="h-16 px-10 btn-premium rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] shadow-2xl">
+                                <Volume2 className="w-4 h-4 mr-2 animate-pulse" /> Initialize Vocal Link
+                              </Button>
+                           ) : (
+                              <Button onClick={startInterview} className="h-20 px-12 btn-premium rounded-3xl text-xs font-black uppercase tracking-[0.3em] shadow-2xl hover:scale-105 transition-transform group">
+                                Start Simulation <Play className="ml-3 w-5 h-5 fill-current transition-transform group-hover:scale-110" />
+                              </Button>
+                           )}
+                        </motion.div>
+                      ) : (
+                        <motion.div key="error" className="space-y-4 text-red-400">
+                           <AlertCircle className="w-16 h-16 mx-auto" />
+                           <p className="text-xs font-bold uppercase tracking-widest">Protocol Fault: Connection Lost</p>
+                           <Button variant="ghost" onClick={() => window.location.reload()} className="text-[9px] uppercase tracking-widest text-white/40 hover:text-white">Retry Handshake</Button>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+                  </div>
+                </div>
+
+                {/* BOTTOM METRICS PANEL */}
+                <div className="mt-8 grid grid-cols-3 gap-4">
+                   <div className="p-4 glass rounded-2xl border-white/5 flex flex-col gap-1">
+                      <span className="text-[8px] font-black uppercase text-white/20 tracking-widest">Connection</span>
+                      <span className="text-xs font-bold text-green-400 flex items-center gap-2">
+                        <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" /> OPTIMIZED
+                      </span>
+                   </div>
+                   <div className="p-4 glass rounded-2xl border-white/5 flex flex-col gap-1">
+                      <span className="text-[8px] font-black uppercase text-white/20 tracking-widest">Encryption</span>
+                      <span className="text-xs font-bold text-white/80">AES-256 BIT</span>
+                   </div>
+                   <div className="p-4 glass rounded-2xl border-white/5 flex flex-col gap-1">
+                      <span className="text-[8px] font-black uppercase text-white/20 tracking-widest">Version</span>
+                      <span className="text-xs font-bold text-accent">NEX-V2.5-PRO</span>
+                   </div>
+                </div>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </main>
 
       <style jsx global>{`
+        @keyframes scan-line {
+          0% { top: 0%; opacity: 0; }
+          50% { opacity: 0.5; }
+          100% { top: 100%; opacity: 0; }
+        }
+        .animate-scan {
+          animation: scan-line 4s linear infinite;
+        }
         html, body {
-          margin: 0;
-          padding: 0;
           height: 100%;
-          overflow: hidden !important;
+          ${interviewStarted ? 'overflow: hidden !important;' : ''}
         }
       `}</style>
     </div>
