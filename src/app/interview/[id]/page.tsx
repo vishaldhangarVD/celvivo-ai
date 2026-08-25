@@ -138,7 +138,7 @@ function VirtualArenaContent() {
           const response = await aiMockInterview({
             role: journey.role, 
             experienceLevel: journey.experience, 
-            roundType: "Final HR Round", 
+            roundType: journey.roundType || "Final HR Round", 
             currentMainQuestionIndex: 1, 
             history: [], 
             targetCompany: journey.company,
@@ -186,7 +186,7 @@ function VirtualArenaContent() {
       const response = await aiMockInterview({
         role: journey!.role, 
         experienceLevel: journey!.experience, 
-        roundType: "Final HR Round", 
+        roundType: journey!.roundType || "Final HR Round", 
         currentMainQuestionIndex: currentIdx + 1,
         history: chatHistory, 
         userAnswer: currentAns, 

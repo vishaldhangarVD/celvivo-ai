@@ -16,9 +16,13 @@ import {
   ShieldCheck,
   Check,
   ArrowRight,
-  RotateCcw
+  RotateCcw,
+  Briefcase,
+  GraduationCap,
+  Building2,
+  Layers
 } from 'lucide-react';
-import { useUser, useFirestore } from '@/firebase';
+import { useUser, useFirestore, useDoc } from '@/firebase';
 import { doc, updateDoc, serverTimestamp } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
@@ -38,6 +42,8 @@ export default function ResumeUploadPage() {
     if (!db || !user?.uid) return null;
     return doc(db, 'users', user.uid, 'journey', 'active');
   }, [db, user?.uid]);
+
+  const { data: journey } = useDoc(journeyRef);
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
@@ -91,13 +97,39 @@ export default function ResumeUploadPage() {
   };
 
   return (
-    <div className="h-screen bg-[#050816] flex flex-col overflow-hidden relative">
+    <div className="min-h-screen bg-[#050816] flex flex-col overflow-hidden relative">
       <div className="particles-bg" />
       <Navbar />
       <NavigationControls onHome={() => router.push('/')} />
 
-      <main className="flex-1 container mx-auto px-6 flex items-center justify-center pt-16">
-        <div className="max-w-3xl w-full">
+      <main className="flex-1 container mx-auto px-6 flex flex-col items-center justify-center pt-16">
+        <div className="max-w-4xl w-full">
+          {/* Simulation Context Header */}
+          {journey && (
+            <motion.div 
+              initial={{ opacity: 0, y: -20 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-16"
+            >
+              {[
+                { label: "Target Role", val: journey.role, icon: Briefcase },
+                { label: "Experience", val: journey.experience, icon: GraduationCap },
+                { label: "Organization", val: journey.company, icon: Building2 },
+                { label: "Protocol", val: journey.roundType, icon: Layers }
+              ].map((item, i) => (
+                <div key={i} className="p-4 glass rounded-2xl border-white/5 flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-lg bg-accent/10 flex items-center justify-center text-accent shrink-0">
+                    <item.icon className="w-4 h-4" />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-[8px] font-black uppercase text-white/30 tracking-widest">{item.label}</p>
+                    <p className="text-[10px] font-bold text-white truncate">{item.val}</p>
+                  </div>
+                </div>
+              ))}
+            </motion.div>
+          )}
+
           <header className="text-center mb-16 space-y-4">
             <Badge className="bg-accent/20 text-accent border-none px-4 py-1 text-[10px] tracking-[0.4em] font-black uppercase">Stage 01: Registration</Badge>
             <h1 className="text-6xl font-bold tracking-tighter text-premium">Identity <span className="text-gradient-purple">Upload.</span></h1>
