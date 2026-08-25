@@ -12,9 +12,9 @@ interface CandidateHologramProps {
   isLoader?: boolean;
 }
 
-const TOTAL_PARTICLE_COUNT = 55000;
-const ATMOS_PARTICLE_COUNT = 1500;
-const FORMATION_DURATION = 2000; // ms
+const TOTAL_PARTICLE_COUNT = 70000;
+const ATMOS_PARTICLE_COUNT = 1800;
+const FORMATION_DURATION = 2200; // ms
 const NEXVORO_CYAN = 0x22d3ee;
 
 // Easing for professional convergence
@@ -76,7 +76,6 @@ const CandidateHologram = memo(({
       renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
       rendererRef.current = renderer;
 
-      // Loading Manager to handle texture errors without aborting geometry extraction
       const manager = new THREE.LoadingManager();
       manager.onError = (url) => console.warn('[Hologram] Resource load suppressed, geometry still extracted:', url);
       const loader = new GLTFLoader(manager);
@@ -90,39 +89,40 @@ const CandidateHologram = memo(({
 
         gltf.scene.updateMatrixWorld(true);
         
-        const validMeshes: { mesh: THREE.Mesh, weight: number }[] = [];
+        const validMeshes: { mesh: THREE.Mesh, weight: number, group: string }[] = [];
         const combinedGeometries: THREE.BufferGeometry[] = [];
 
         gltf.scene.traverse((node: any) => {
           if (node.isMesh && node.geometry) {
             const lowerName = (node.name || '').toLowerCase();
             
-            // 1. Filter out internal nodes or over-bright artifacts
             if (/eyeball|cornea|iris|pupil|sclera|teeth|tongue|inner|mouth_interior/.test(lowerName)) return;
 
-            // 2. Classify meshes to ensure hair rendering and face density
-            let group: 'face' | 'hair' | 'details' | null = null;
+            let group: 'face' | 'hair' | 'details' | 'body' | null = null;
             
             if (/hair|scalp|fringe|bang|ponytail|braid|wolf3d_hair/.test(lowerName)) {
               group = 'hair';
             } else if (/eyebrow|brow|eyelash|lash/.test(lowerName)) {
               group = 'details';
-            } else if (/face|head|skin|body|neck|facial|character|base|geo/.test(lowerName)) {
+            } else if (/face|head|facial/.test(lowerName)) {
               group = 'face';
+            } else if (/skin|body|neck|character|base|geo/.test(lowerName)) {
+              group = 'body';
             }
 
             if (group) {
-              // 3. Bake world transforms into local geometry for accurate cross-mesh alignment
               const geometry = node.geometry.clone();
               geometry.applyMatrix4(node.matrixWorld);
               const bakedMesh = new THREE.Mesh(geometry);
               
+              // Budget weights: Prioritize face and high-detail regions
               let weight = 1.0;
-              if (group === 'face') weight = 2.0;
-              if (group === 'hair') weight = 1.5;
-              if (group === 'details') weight = 0.5;
+              if (group === 'face') weight = 5.0; // Core face density boost
+              if (group === 'hair') weight = 1.5; 
+              if (group === 'details') weight = 2.5; // Eyelids, Brows, Lips
+              if (group === 'body') weight = 1.0; // Neck and shoulders lower density
 
-              validMeshes.push({ mesh: bakedMesh, weight });
+              validMeshes.push({ mesh: bakedMesh, weight, group });
               combinedGeometries.push(geometry);
             }
           }
@@ -136,54 +136,99 @@ const CandidateHologram = memo(({
         const mouthMask = new Uint8Array(TOTAL_PARTICLE_COUNT);
         const tempVec = new THREE.Vector3();
         
+        // Bounding calculation for normalization
+        const box = new THREE.Box3();
+        combinedGeometries.forEach(g => {
+          g.computeBoundingBox();
+          if (g.boundingBox) box.union(g.boundingBox);
+        });
+        const center = new THREE.Vector3();
+        box.getCenter(center);
+        const heightVal = box.max.y - box.min.y;
+        const visibleHeight = 2 * Math.tan((camera.fov * Math.PI) / 360) * 5;
+        const scale = (visibleHeight * 0.8) / heightVal;
+
         let sampledCount = 0;
-        validMeshes.forEach(({ mesh, weight }) => {
+        validMeshes.forEach(({ mesh, weight, group }) => {
           const sampler = new MeshSurfaceSampler(mesh).build();
-          const count = Math.floor((weight / totalWeight) * TOTAL_PARTICLE_COUNT);
+          const baseCount = Math.floor((weight / totalWeight) * TOTAL_PARTICLE_COUNT);
           
-          for (let i = 0; i < count; i++) {
+          for (let i = 0; i < baseCount; i++) {
             if (sampledCount >= TOTAL_PARTICLE_COUNT) break;
             sampler.sample(tempVec);
+            
+            // Apply normalization immediately
+            tempVec.sub(center).multiplyScalar(scale);
+
+            // 1. Feature Zone Density Boost (Nose, Lips, Eye sockets)
+            // Centered face coordinates: X:[-0.2, 0.2], Y:[-0.1, 0.3], Z:[0.2, 0.5]
+            const inFeatureZone = (group === 'face' || group === 'details') && 
+                                Math.abs(tempVec.x) < 0.22 && 
+                                tempVec.y > -0.3 && tempVec.y < 0.3 &&
+                                tempVec.z > 0.15;
+
+            // If in feature zone, we might duplicate or bias (simulated here by accepting more)
+            // But Area-Weighted sampling is fixed. We instead just fill the buffer.
             
             const idx = sampledCount * 3;
             targetPositions[idx] = tempVec.x;
             targetPositions[idx+1] = tempVec.y;
             targetPositions[idx+2] = tempVec.z;
             
-            // Random start dispersion for formation effect
-            startPositions[idx] = (Math.random() - 0.5) * 8;
-            startPositions[idx+1] = (Math.random() - 0.5) * 8;
-            startPositions[idx+2] = (Math.random() - 0.5) * 4;
+            // Start scattered
+            startPositions[idx] = tempVec.x + (Math.random() - 0.5) * 6;
+            startPositions[idx+1] = tempVec.y + (Math.random() - 0.5) * 6;
+            startPositions[idx+2] = tempVec.z + (Math.random() - 0.5) * 4;
+            
+            // Mouth region detection for speaking animation (heuristic)
+            if (Math.abs(tempVec.x) < 0.2 && tempVec.y < -0.15 && tempVec.y > -0.5 && tempVec.z > 0.2) {
+              mouthMask[sampledCount] = 1;
+            }
             
             sampledCount++;
           }
         });
 
-        // 4. Volumetric Normalization
-        const box = new THREE.Box3();
-        combinedGeometries.forEach(g => {
-          g.computeBoundingBox();
-          if (g.boundingBox) box.union(g.boundingBox);
-        });
-
-        const center = new THREE.Vector3();
-        box.getCenter(center);
-        const heightVal = box.max.y - box.min.y;
-        
-        // Calculate target scale relative to FOV
-        const visibleHeight = 2 * Math.tan((camera.fov * Math.PI) / 360) * 5;
-        const scale = (visibleHeight * 0.78) / heightVal;
-
-        for (let i = 0; i < sampledCount; i++) {
-          targetPositions[i*3] = (targetPositions[i*3] - center.x) * scale;
-          targetPositions[i*3+1] = (targetPositions[i*3+1] - center.y) * scale;
-          targetPositions[i*3+2] = (targetPositions[i*3+2] - center.z) * scale;
+        // Fill remaining buffer with feature-boost points if necessary
+        while (sampledCount < TOTAL_PARTICLE_COUNT) {
+          const randomIdx = Math.floor(Math.random() * sampledCount);
+          const px = targetPositions[randomIdx * 3];
+          const py = targetPositions[randomIdx * 3 + 1];
+          const pz = targetPositions[randomIdx * 3 + 2];
           
-          // Heuristic lip-region masking for vocal displacement
-          const nx = targetPositions[i*3];
-          const ny = targetPositions[i*3+1];
-          if (Math.abs(nx) < 0.25 && ny < -0.2 && ny > -0.6) {
-            mouthMask[i] = 1;
+          // Only duplicate points near central features to increase apparent density
+          if (Math.abs(px) < 0.25 && py > -0.4 && py < 0.35 && pz > 0.15) {
+             const idx = sampledCount * 3;
+             targetPositions[idx] = px + (Math.random() - 0.5) * 0.002;
+             targetPositions[idx+1] = py + (Math.random() - 0.5) * 0.002;
+             targetPositions[idx+2] = pz + (Math.random() - 0.5) * 0.002;
+             
+             startPositions[idx] = px + (Math.random() - 0.5) * 4;
+             startPositions[idx+1] = py + (Math.random() - 0.5) * 4;
+             startPositions[idx+2] = pz + (Math.random() - 0.5) * 3;
+             
+             sampledCount++;
+          } else if (Math.random() > 0.8) { // Safety filler
+             const idx = sampledCount * 3;
+             const sIdx = Math.floor(Math.random() * sampledCount) * 3;
+             targetPositions[idx] = targetPositions[sIdx];
+             targetPositions[idx+1] = targetPositions[sIdx+1];
+             targetPositions[idx+2] = targetPositions[sIdx+2];
+             startPositions[idx] = targetPositions[idx] + (Math.random() - 0.5) * 2;
+             startPositions[idx+1] = targetPositions[idx+1] + (Math.random() - 0.5) * 2;
+             startPositions[idx+2] = targetPositions[idx+2] + (Math.random() - 0.5) * 2;
+             sampledCount++;
+          } else {
+             // Just duplicate any
+             const sIdx = Math.floor(Math.random() * sampledCount) * 3;
+             const idx = sampledCount * 3;
+             targetPositions[idx] = targetPositions[sIdx];
+             targetPositions[idx+1] = targetPositions[sIdx+1];
+             targetPositions[idx+2] = targetPositions[sIdx+2];
+             startPositions[idx] = targetPositions[idx];
+             startPositions[idx+1] = targetPositions[idx+1];
+             startPositions[idx+2] = targetPositions[idx+2];
+             sampledCount++;
           }
         }
 
@@ -197,7 +242,7 @@ const CandidateHologram = memo(({
           color: NEXVORO_CYAN,
           size: 0.006,
           transparent: true,
-          opacity: 0.75,
+          opacity: 0.8,
           blending: THREE.AdditiveBlending,
           depthWrite: false
         });
@@ -206,7 +251,6 @@ const CandidateHologram = memo(({
         scene.add(points);
         pointsRef.current = points;
 
-        // Atmosphere drift nodes
         const atmosGeo = new THREE.BufferGeometry();
         const atmosPos = new Float32Array(ATMOS_PARTICLE_COUNT * 3);
         for (let i = 0; i < ATMOS_PARTICLE_COUNT; i++) {
@@ -217,9 +261,9 @@ const CandidateHologram = memo(({
         atmosGeo.setAttribute('position', new THREE.BufferAttribute(atmosPos, 3));
         const atmosMat = new THREE.PointsMaterial({
           color: NEXVORO_CYAN,
-          size: 0.003,
+          size: 0.004,
           transparent: true,
-          opacity: 0.15,
+          opacity: 0.2,
           blending: THREE.AdditiveBlending
         });
         const atmos = new THREE.Points(atmosGeo, atmosMat);
@@ -249,19 +293,18 @@ const CandidateHologram = memo(({
               const ix = i * 3, iy = i * 3 + 1, iz = i * 3 + 2;
 
               if (formationProgress < 1) {
-                // Initial Convergence
                 posArray[ix] = starts[ix] + (targets[ix] - starts[ix]) * easedProgress;
                 posArray[iy] = starts[iy] + (targets[iy] - starts[iy]) * easedProgress;
                 posArray[iz] = starts[iz] + (targets[iz] - starts[iz]) * easedProgress;
               } else {
                 // Stabilized Idle Jitter
-                posArray[ix] = targets[ix] + Math.sin(timeSec * 0.6 + i) * 0.0006;
-                posArray[iy] = targets[iy] + Math.cos(timeSec * 0.4 + i) * 0.0006;
+                posArray[ix] = targets[ix] + Math.sin(timeSec * 0.4 + i * 0.1) * 0.0005;
+                posArray[iy] = targets[iy] + Math.cos(timeSec * 0.3 + i * 0.1) * 0.0005;
                 posArray[iz] = targets[iz];
 
                 // Vocal Matrix Response
                 if (isSpeaking && masks[i]) {
-                  posArray[iy] += Math.sin(timeSec * 16 + i) * 0.0045;
+                  posArray[iy] += Math.sin(timeSec * 14 + i) * 0.004;
                 }
               }
             }
@@ -271,7 +314,7 @@ const CandidateHologram = memo(({
           if (atmosRef.current) {
             const atmosArray = atmosRef.current.geometry.attributes.position.array as Float32Array;
             for (let i = 0; i < ATMOS_PARTICLE_COUNT; i++) {
-              atmosArray[i*3 + 1] += 0.002; 
+              atmosArray[i*3 + 1] += 0.0015; 
               if (atmosArray[i*3 + 1] > 5) atmosArray[i*3 + 1] = -5;
             }
             atmosRef.current.geometry.attributes.position.needsUpdate = true;
@@ -332,7 +375,7 @@ const CandidateHologram = memo(({
               <div className="w-2 h-2 bg-accent rounded-full animate-pulse" />
             </div>
           </div>
-          <p className="text-[10px] font-black uppercase tracking-[0.5em] text-accent animate-pulse">Synchronizing Visual Identity...</p>
+          <p className="text-[10px] font-black uppercase tracking-[0.5em] text-accent animate-pulse">Synchronizing Neural Persona...</p>
         </div>
       )}
 
@@ -351,7 +394,7 @@ const CandidateHologram = memo(({
       )}
 
       <div className="absolute inset-0 pointer-events-none opacity-[0.03] bg-[linear-gradient(rgba(18,16,16,0)_50%,rgba(0,0,0,0.25)_50%),linear-gradient(90deg,rgba(255,0,0,0.06),rgba(0,255,0,0.02),rgba(0,0,255,0.06))] bg-[length:100%_4px,3px_100%]" />
-      <div className="absolute inset-0 pointer-events-none bg-[radial-gradient(circle_at_50%_50%,_rgba(34,211,238,0.05)_0%,_transparent_70%)]" />
+      <div className="absolute inset-0 pointer-events-none bg-[radial-gradient(circle_at_50%_50%,_rgba(34,211,238,0.08)_0%,_transparent_75%)]" />
     </div>
   );
 });
