@@ -1,8 +1,9 @@
 'use server';
 /**
- * @fileOverview Nexvoro AI Coding Challenge Architect v2.0.
+ * @fileOverview Nexvoro AI Coding Challenge Architect v3.0.
  * Dynamically synthesizes batches of high-fidelity algorithmic challenges using Google Gemini.
  * Implements persistent history awareness and semantic duplicate prevention.
+ * Now generates FULL RUNNABLE BOILERPLATES for 13 languages.
  */
 
 import { ai, runWithResilience } from '@/ai/genkit';
@@ -19,14 +20,19 @@ const CodingProblemSchema = z.object({
   sampleOutput: z.string(),
   explanation: z.string(),
   starterCode: z.object({
-    java: z.string(),
-    python: z.string(),
-    javascript: z.string(),
-    cpp: z.string(),
-    c: z.string(),
-    csharp: z.string(),
-    go: z.string(),
-    rust: z.string(),
+    java: z.string().describe("Full Main.java boilerplate with imports and Scanner."),
+    python: z.string().describe("Full script with sys.stdin.read()."),
+    javascript: z.string().describe("Node.js script with fs.readFileSync(0)."),
+    typescript: z.string().describe("TypeScript script with imports and fs."),
+    cpp: z.string().describe("C++ boilerplate with #include <iostream> and main."),
+    c: z.string().describe("C boilerplate with #include <stdio.h> and main."),
+    csharp: z.string().describe("C# boilerplate with using System and static void Main."),
+    go: z.string().describe("Go boilerplate with package main and fmt."),
+    rust: z.string().describe("Rust boilerplate with use std::io and fn main."),
+    kotlin: z.string().describe("Kotlin boilerplate with java.util.Scanner."),
+    php: z.string().describe("PHP boilerplate with file_get_contents('php://stdin')."),
+    swift: z.string().describe("Swift boilerplate with import Foundation and readLine()."),
+    ruby: z.string().describe("Ruby boilerplate with STDIN.read."),
   }),
   hiddenTestCases: z.array(z.object({
     input: z.string(),
@@ -52,9 +58,6 @@ export async function generateCodingQuestions(input: z.infer<typeof CodingGenera
   return codingGenerationFlow(input);
 }
 
-/**
- * Normalizes title text for programmatic duplicate detection.
- */
 function normalizeTitle(text: string): string {
   return text
     .toLowerCase()
@@ -75,10 +78,14 @@ Your objective is to architect a set of {{{count}}} UNIQUE, high-fidelity algori
 - Ensure every question uses a unique algorithmic pattern.
 - Distribution Required: 3 Easy, 3 Medium, 2 Hard.
 
-### CHALLENGE CALIBRATION:
-1. FIRM PERSONA: Calibrate the problem style to {{{company}}}.
-2. STARTER CODE: Provide idiomatic starter templates for ALL 8 languages (Java, Python, JavaScript, C++, C, C#, Go, Rust).
-3. HIDDEN VERIFICATION: Provide exactly 5 hidden test cases with expected outputs. Ensure the outputs are string-comparable.
+### CHALLENGE CALIBRATION (CRITICAL):
+1. STARTER CODE: Provide FULL IDIOMATIC BOILERPLATES for ALL 13 languages.
+2. EXECUTION ENGINE REQUIREMENTS: 
+   - Every template MUST be a COMPLETE, RUNNABLE SCRIPT that reads from STDIN and writes to STDOUT.
+   - It must include necessary imports, a primary logic function, and a main driver block.
+   - The logic function should be empty except for a default return value and a comment "// Write your logic here".
+   - DO NOT include the solution logic.
+3. HIDDEN VERIFICATION: Provide exactly 5 hidden test cases with expected outputs.
 
 Return a strictly structured JSON matching the output schema. No conversational text.`,
 });
