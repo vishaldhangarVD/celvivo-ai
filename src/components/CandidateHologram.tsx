@@ -6,8 +6,8 @@ import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { MeshSurfaceSampler } from 'three/examples/jsm/math/MeshSurfaceSampler.js';
 
 /**
- * @fileOverview CandidateHologram - Realistic 3D Human Particle Hologram.
- * Focused strictly on high-fidelity facial representation from /models/woman_head.glb.
+ * @fileOverview CandidateHologram - High-Fidelity 3D Human Particle Reconstruction.
+ * Synthesizes FACE + HAIR from /models/woman_head.glb.
  */
 
 interface CandidateHologramProps {
@@ -16,7 +16,7 @@ interface CandidateHologramProps {
   className?: string;
 }
 
-const PARTICLE_COUNT = 18000;
+const PARTICLE_COUNT = 20000;
 const ATMOSPHERE_COUNT = 150;
 const NEXVORO_CYAN = 0x22d3ee;
 const FORMATION_SPEED = 0.04;
@@ -31,7 +31,6 @@ const CandidateHologram = memo(({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
   
-  // Three.js Core Refs
   const rendererRef = useRef<THREE.WebGLRenderer | null>(null);
   const sceneRef = useRef<THREE.Scene | null>(null);
   const cameraRef = useRef<THREE.PerspectiveCamera | null>(null);
@@ -39,10 +38,8 @@ const CandidateHologram = memo(({
   const atmosphereRef = useRef<THREE.Points | null>(null);
   const frameIdRef = useRef<number>(0);
   
-  // Data Refs for Animation
   const speakingRef = useRef(speaking);
   const targetPositionsRef = useRef<Float32Array | null>(null);
-  const formationProgressRef = useRef(0);
 
   useEffect(() => {
     speakingRef.current = speaking;
@@ -59,7 +56,6 @@ const CandidateHologram = memo(({
       const width = containerRef.current.clientWidth;
       const height = containerRef.current.clientHeight;
 
-      // 1. SCENE SETUP
       const scene = new THREE.Scene();
       sceneRef.current = scene;
 
@@ -77,107 +73,97 @@ const CandidateHologram = memo(({
       renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
       rendererRef.current = renderer;
 
-      // 2. MODEL LOADING (GEOMETRY ONLY)
+      // 1. Texture-Safe Loading Protocol
       const loadingManager = new THREE.LoadingManager();
-      // Suppress texture errors as we only need geometry
-      loadingManager.onError = (url) => {
-        if (url.startsWith('blob:') || url.includes('texture')) return;
-        console.warn('[Hologram] Load warning:', url);
-      };
+      loadingManager.onError = () => {}; // Suppress texture blob errors as we only need geometry
 
       const loader = new GLTFLoader(loadingManager);
 
       try {
         const gltf = await new Promise<any>((resolve, reject) => {
-          loader.load(
-            '/models/woman_head.glb',
-            (data) => resolve(data),
-            undefined,
-            (err) => reject(err)
-          );
+          loader.load('/models/woman_head.glb', resolve, undefined, reject);
         });
 
         if (!isMounted) return;
 
-        // 3. TARGETED MESH SELECTION (Prioritize Face/Skin)
-        const facialMeshes: THREE.Mesh[] = [];
-        gltf.scene.traverse((child: any) => {
-          if (child.isMesh) {
-            const name = (child.name || '').toLowerCase();
+        // 2. Mesh Classification: Face vs. Hair/Silhouette
+        const skinMeshes: THREE.Mesh[] = [];
+        const hairMeshes: THREE.Mesh[] = [];
+        const totalBox = new THREE.Box3();
+
+        gltf.scene.traverse((node: any) => {
+          if (node.isMesh) {
+            const name = (node.name || '').toLowerCase();
             const isHair = name.includes('hair') || name.includes('brow') || name.includes('lash');
-            const isInside = name.includes('teeth') || name.includes('tongue') || name.includes('eye');
-            const isFace = name.includes('face') || name.includes('head') || name.includes('skin') || name.includes('facial');
+            const isMouthInterior = name.includes('teeth') || name.includes('tongue');
             
-            // If the model is a single mesh, we use it, but if split, we prefer the skin surface
-            if (isFace && !isHair && !isInside) {
-              facialMeshes.push(child);
+            if (isMouthInterior) return;
+
+            // Compute world-space bounds for normalization
+            node.updateMatrixWorld();
+            const box = new THREE.Box3().setFromObject(node);
+            totalBox.union(box);
+
+            if (isHair) {
+              hairMeshes.push(node);
+            } else {
+              skinMeshes.push(node);
             }
           }
         });
 
-        // Fallback: If no specifically named face mesh, use the largest one
-        if (facialMeshes.length === 0) {
-          let maxVerts = 0;
-          let mainMesh: THREE.Mesh | null = null;
-          gltf.scene.traverse((child: any) => {
-            if (child.isMesh && child.geometry.attributes.position.count > maxVerts) {
-              maxVerts = child.geometry.attributes.position.count;
-              mainMesh = child;
-            }
-          });
-          if (mainMesh) facialMeshes.push(mainMesh);
-        }
+        if (skinMeshes.length === 0 && hairMeshes.length === 0) throw new Error("No geometry nodes");
 
-        if (facialMeshes.length === 0) throw new Error("No usable geometry nodes");
-
-        // 4. GEOMETRY NORMALIZATION
-        const group = new THREE.Group();
-        facialMeshes.forEach(m => {
-          const clone = m.clone();
-          m.updateMatrixWorld();
-          clone.applyMatrix4(m.matrixWorld);
-          group.add(clone);
-        });
-
-        const box = new THREE.Box3().setFromObject(group);
+        // 3. Volumetric Normalization
         const center = new THREE.Vector3();
-        box.getCenter(center);
+        totalBox.getCenter(center);
         const size = new THREE.Vector3();
-        box.getSize(size);
-        
+        totalBox.getSize(size);
         const maxDim = Math.max(size.x, size.y, size.z);
-        const scale = 2.2 / maxDim; // Fit nicely in frame
+        const scale = 2.2 / maxDim;
 
-        // Sample surface across all identified face meshes
+        // 4. Weighted Particle Sampling (Face Priority)
         const targetPositions = new Float32Array(PARTICLE_COUNT * 3);
         const currentPositions = new Float32Array(PARTICLE_COUNT * 3);
         const tempPosition = new THREE.Vector3();
 
-        // Sample proportional to area
-        facialMeshes.forEach((mesh, meshIdx) => {
-          const sampler = new MeshSurfaceSampler(mesh).build();
-          const countForThisMesh = meshIdx === 0 ? PARTICLE_COUNT : 0; // Simple implementation for single source
-          // In real multi-mesh we'd calculate area ratios, but woman_head.glb is typically one main mesh
+        // Distribution: 75% Face (15k), 25% Hair (5k)
+        const faceTarget = Math.floor(PARTICLE_COUNT * 0.75);
+        const hairTarget = PARTICLE_COUNT - faceTarget;
+
+        let sampledCount = 0;
+
+        const sampleGroup = (meshes: THREE.Mesh[], target: number) => {
+          if (meshes.length === 0) return;
+          const countPerMesh = Math.floor(target / meshes.length);
           
-          if (meshIdx === 0) {
-            for (let i = 0; i < PARTICLE_COUNT; i++) {
+          meshes.forEach((mesh) => {
+            const sampler = new MeshSurfaceSampler(mesh).build();
+            for (let i = 0; i < countPerMesh; i++) {
+              if (sampledCount >= PARTICLE_COUNT) break;
+              
               sampler.sample(tempPosition);
-              // Apply world transform and normalization
               tempPosition.applyMatrix4(mesh.matrixWorld);
               tempPosition.sub(center);
               tempPosition.multiplyScalar(scale);
 
-              targetPositions[i * 3] = tempPosition.x;
-              targetPositions[i * 3 + 1] = tempPosition.y;
-              targetPositions[i * 3 + 2] = tempPosition.z;
+              const idx = sampledCount * 3;
+              targetPositions[idx] = tempPosition.x;
+              targetPositions[idx + 1] = tempPosition.y;
+              targetPositions[idx + 2] = tempPosition.z;
 
-              // Scatter initial cloud
-              currentPositions[i * 3] = (Math.random() - 0.5) * 6;
-              currentPositions[i * 3 + 1] = (Math.random() - 0.5) * 6;
-              currentPositions[i * 3 + 2] = (Math.random() - 0.5) * 6;
+              // Scatter atmospheric cloud
+              currentPositions[idx] = (Math.random() - 0.5) * 6;
+              currentPositions[idx + 1] = (Math.random() - 0.5) * 6;
+              currentPositions[idx + 2] = (Math.random() - 0.5) * 6;
+              
+              sampledCount++;
             }
-          }
-        });
+          });
+        };
+
+        sampleGroup(skinMeshes, faceTarget);
+        sampleGroup(hairMeshes, hairTarget);
 
         targetPositionsRef.current = targetPositions;
 
@@ -186,7 +172,7 @@ const CandidateHologram = memo(({
 
         const pointsMat = new THREE.PointsMaterial({
           color: NEXVORO_CYAN,
-          size: 0.015,
+          size: 0.014,
           transparent: true,
           opacity: 0.85,
           blending: THREE.AdditiveBlending,
@@ -197,20 +183,20 @@ const CandidateHologram = memo(({
         scene.add(points);
         pointsRef.current = points;
 
-        // 5. ATMOSPHERE
+        // 5. Ambient Atmosphere
         const atmosGeo = new THREE.BufferGeometry();
         const atmosPos = new Float32Array(ATMOSPHERE_COUNT * 3);
         for (let i = 0; i < ATMOSPHERE_COUNT; i++) {
           atmosPos[i * 3] = (Math.random() - 0.5) * 6;
           atmosPos[i * 3 + 1] = (Math.random() - 0.5) * 6;
-          atmosPos[i * 3 + 2] = (Math.random() - 0.5) * 3;
+          atmosPos[i * 3 + 2] = (Math.random() - 0.5) * 4;
         }
         atmosGeo.setAttribute('position', new THREE.BufferAttribute(atmosPos, 3));
         const atmosMat = new THREE.PointsMaterial({
           color: NEXVORO_CYAN,
           size: 0.006,
           transparent: true,
-          opacity: 0.15,
+          opacity: 0.2,
           blending: THREE.AdditiveBlending
         });
         const atmos = new THREE.Points(atmosGeo, atmosMat);
@@ -219,7 +205,7 @@ const CandidateHologram = memo(({
 
         setLoading(false);
 
-        // 6. ANIMATION LOOP
+        // 6. Neural Animation Loop
         const animate = () => {
           if (!rendererRef.current || !sceneRef.current || !cameraRef.current || !isMounted) return;
           const time = performance.now() * 0.001;
@@ -232,30 +218,31 @@ const CandidateHologram = memo(({
             for (let i = 0; i < PARTICLE_COUNT; i++) {
               const ix = i * 3, iy = i * 3 + 1, iz = i * 3 + 2;
 
-              // Smooth Formation convergence
+              // Smooth Formation Convergence
               posArray[ix] += (targetArray[ix] - posArray[ix]) * FORMATION_SPEED;
               posArray[iy] += (targetArray[iy] - posArray[iy]) * FORMATION_SPEED;
               posArray[iz] += (targetArray[iz] - posArray[iz]) * FORMATION_SPEED;
 
-              // Subtle Speaking Jitter (Heuristic mouth region)
+              // Vocal Matrix: Mouth region displacement
               if (speakingRef.current) {
+                // Heuristic for mouth region in normalized coordinates
                 if (targetArray[iy] < -0.2 && targetArray[iy] > -0.5 && Math.abs(targetArray[ix]) < 0.25) {
-                   posArray[iy] += Math.sin(time * 25 + i) * 0.0012;
+                   posArray[iy] += Math.sin(time * 20 + i) * 0.0015;
                 }
               }
 
-              // Constant Neural Flicker
-              posArray[ix] += (Math.random() - 0.5) * 0.0004;
-              posArray[iy] += (Math.random() - 0.5) * 0.0004;
+              // Subtle Neural Flicker
+              posArray[ix] += (Math.random() - 0.5) * 0.0005;
+              posArray[iy] += (Math.random() - 0.5) * 0.0005;
             }
             posAttr.needsUpdate = true;
 
-            // Stable Float (No rotation)
-            pointsRef.current.position.y = Math.sin(time * 0.6) * 0.012;
+            // Cinematic Vertical Float
+            pointsRef.current.position.y = Math.sin(time * 0.6) * 0.015;
             
-            // Random Hologram Static/Flicker
+            // Random Hologram Static
             if (Math.random() > 0.98) {
-              (pointsRef.current.material as THREE.PointsMaterial).opacity = 0.6 + Math.random() * 0.3;
+              (pointsRef.current.material as THREE.PointsMaterial).opacity = 0.5 + Math.random() * 0.4;
             } else {
               (pointsRef.current.material as THREE.PointsMaterial).opacity = 0.85;
             }
@@ -263,7 +250,7 @@ const CandidateHologram = memo(({
 
           if (atmosphereRef.current) {
             atmosphereRef.current.rotation.y = time * 0.04;
-            atmosphereRef.current.position.y = Math.sin(time * 0.2) * 0.05;
+            atmosphereRef.current.position.y = Math.sin(time * 0.3) * 0.05;
           }
 
           rendererRef.current.render(sceneRef.current, cameraRef.current);
@@ -319,19 +306,19 @@ const CandidateHologram = memo(({
       {loading && !error && (
         <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 bg-[#050816]/60 backdrop-blur-xl z-50">
           <div className="w-12 h-12 border-2 border-accent/20 border-t-accent rounded-full animate-spin" />
-          <p className="text-[10px] font-black uppercase tracking-[0.5em] text-accent animate-pulse">Syncing Identity...</p>
+          <p className="text-[10px] font-black uppercase tracking-[0.5em] text-accent animate-pulse">Syncing Identity Matrix...</p>
         </div>
       )}
 
       {error && (
         <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-[#050816]/90 z-50 p-6 text-center">
            <div className="w-10 h-10 rounded-xl bg-red-500/10 flex items-center justify-center text-red-500 border border-red-500/20 mb-2">!</div>
-           <p className="text-[11px] font-bold text-white/90 uppercase tracking-widest leading-tight">Visual Identity Failure</p>
-           <p className="text-[9px] text-white/30 uppercase tracking-widest">Model load aborted</p>
+           <p className="text-[11px] font-bold text-white/90 uppercase tracking-widest leading-tight">Visual Protocol Failure</p>
+           <p className="text-[9px] text-white/30 uppercase tracking-widest">Unable to synthesize head geometry</p>
         </div>
       )}
 
-      {/* Futuristic Scanline Overlays */}
+      {/* Holographic Overlay FX */}
       <div className="absolute inset-0 pointer-events-none opacity-[0.03] bg-[linear-gradient(rgba(18,16,16,0)_50%,rgba(0,0,0,0.25)_50%),linear-gradient(90deg,rgba(255,0,0,0.06),rgba(0,255,0,0.02),rgba(0,0,255,0.06))] bg-[length:100%_4px,3px_100%]" />
       <div className="absolute inset-0 pointer-events-none bg-[radial-gradient(circle_at_50%_50%,_rgba(34,211,238,0.05)_0%,_transparent_70%)]" />
     </div>
