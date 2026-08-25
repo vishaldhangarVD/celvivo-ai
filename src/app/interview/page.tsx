@@ -9,26 +9,25 @@ import {
   Briefcase, 
   GraduationCap, 
   Building2, 
-  Layers, 
   Command,
   ArrowRight,
-  ChevronRight,
-  ShieldCheck
+  ShieldCheck,
+  Zap
 } from 'lucide-react';
-import { useUser, useFirestore, useDoc } from '@/firebase';
+import { useUser, useFirestore } from '@/firebase';
 import { doc, getDoc, setDoc, deleteDoc, serverTimestamp } from 'firebase/firestore';
 import { INTERVIEW_STAGES, STAGE_ROUTES, type InterviewStage } from '@/lib/interview-stages';
 import { useToast } from '@/hooks/use-toast';
 import Navbar from '@/components/layout/Navbar';
 import NavigationControls from '@/components/NavigationControls';
 import { Button } from '@/components/ui/button';
-import { Card, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
 
 const ROLES = [
-  "Frontend Developer", "Backend Developer", "Full Stack Developer", "Software Engineer",
+  "Software Engineer", "Frontend Developer", "Backend Developer", "Full Stack Developer",
   "Data Scientist", "DevOps Engineer", "Cloud Engineer", "Cyber Security Analyst", "UI/UX Designer",
   ".NET Developer", "Python Developer", "Java Developer", "Other"
 ];
@@ -38,13 +37,6 @@ const EXPERIENCE_LEVELS = ["Fresher", "0–1 Years", "1–3 Years", "3–5 Years
 const COMPANIES = [
   "Google", "Microsoft", "Amazon", "Meta", "Apple", "TCS", "Infosys", "Wipro", 
   "Accenture", "Deloitte", "Cognizant", "Capgemini", "Other"
-];
-
-const ROUNDS = [
-  { id: 'Technical Round', label: 'Technical Round' },
-  { id: 'HR Round', label: 'HR Round' },
-  { id: 'Technical + HR', label: 'Technical + HR' },
-  { id: 'Final HR Round', label: 'Final HR Round' }
 ];
 
 function InterviewSetupContent() {
@@ -57,13 +49,11 @@ function InterviewSetupContent() {
   const action = searchParams.get('action') || 'resume';
   const [isDispatching, setIsDispatching] = useState(true);
   
-  // State
   const [role, setRole] = useState("");
   const [customRole, setCustomRole] = useState("");
   const [experience, setExperience] = useState("");
   const [company, setCompany] = useState("");
   const [customCompany, setCustomCompany] = useState("");
-  const [roundType, setRoundType] = useState("Technical + HR");
   const [isInitializing, setIsInitializing] = useState(false);
 
   useEffect(() => {
@@ -102,8 +92,8 @@ function InterviewSetupContent() {
     const finalRole = role === "Other" ? customRole : role;
     const finalCompany = company === "Other" ? customCompany : company;
 
-    if (!finalRole || !experience || !finalCompany || !roundType) {
-      toast({ variant: "destructive", title: "Config Incomplete", description: "Please complete all selections." });
+    if (!finalRole || !experience || !finalCompany) {
+      toast({ variant: "destructive", title: "Selection Required", description: "Please complete the simulation parameters." });
       return;
     }
 
@@ -117,7 +107,7 @@ function InterviewSetupContent() {
         role: finalRole,
         experience,
         company: finalCompany,
-        roundType,
+        roundType: "Technical + HR",
         currentStage: INTERVIEW_STAGES.RESUME_UPLOAD,
         step: 1,
         createdAt: serverTimestamp(),
@@ -132,7 +122,7 @@ function InterviewSetupContent() {
     }
   };
 
-  const isFormValid = (role && (role !== "Other" || customRole)) && experience && (company && (company !== "Other" || customCompany)) && roundType;
+  const isFormValid = (role && (role !== "Other" || customRole)) && experience && (company && (company !== "Other" || customCompany));
 
   if (authLoading || isDispatching) {
     return (
@@ -158,16 +148,19 @@ function InterviewSetupContent() {
         <div className="max-w-7xl mx-auto space-y-12">
           
           <header className="text-center space-y-4 mb-16">
-            <Badge className="bg-accent/20 text-accent border-none px-6 py-1.5 font-bold tracking-[0.4em] text-[10px] uppercase">Simulation Calibration v4.2</Badge>
-            <h1 className="text-6xl font-bold tracking-tighter text-premium">Interview <span className="text-gradient-purple">Configuration.</span></h1>
-            <p className="text-lg text-muted-foreground font-light max-w-xl mx-auto">Configure your neural simulation parameters before deployment.</p>
+            <Badge className="bg-accent/20 text-accent border-none px-6 py-1.5 font-bold tracking-[0.4em] text-[10px] uppercase">Simulation Calibration</Badge>
+            <h1 className="text-6xl font-bold tracking-tighter text-premium">Interview <span className="text-gradient-purple">Setup.</span></h1>
+            <p className="text-lg text-muted-foreground font-light max-w-xl mx-auto">Configure your professional nodes for simulation deployment.</p>
           </header>
 
           <div className="grid lg:grid-cols-12 gap-8">
             <div className="lg:col-span-8 space-y-8">
-              {/* Step 1: Company */}
-              <Card className="premium-card bg-white/[0.01] border-white/5 p-8">
-                <CardHeader className="p-0 mb-8"><CardTitle className="text-xl font-bold flex items-center gap-3"><Building2 className="w-6 h-6 text-accent" /> Target Organization</CardTitle></CardHeader>
+              {/* Company Section */}
+              <Card className="premium-card bg-white/[0.01] border-white/5 p-8 shadow-2xl">
+                <div className="flex items-center gap-3 mb-8">
+                  <Building2 className="w-6 h-6 text-accent" />
+                  <h2 className="text-xl font-bold uppercase tracking-tight">Target Organization</h2>
+                </div>
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                   {COMPANIES.map(c => (
                     <button
@@ -194,9 +187,12 @@ function InterviewSetupContent() {
                 )}
               </Card>
 
-              {/* Step 2: Role */}
-              <Card className="premium-card bg-white/[0.01] border-white/5 p-8">
-                <CardHeader className="p-0 mb-8"><CardTitle className="text-xl font-bold flex items-center gap-3"><Briefcase className="w-6 h-6 text-accent" /> Professional Track</CardTitle></CardHeader>
+              {/* Role Section */}
+              <Card className="premium-card bg-white/[0.01] border-white/5 p-8 shadow-2xl">
+                <div className="flex items-center gap-3 mb-8">
+                  <Briefcase className="w-6 h-6 text-accent" />
+                  <h2 className="text-xl font-bold uppercase tracking-tight">Job Role</h2>
+                </div>
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                   {ROLES.map(r => (
                     <button
@@ -225,9 +221,12 @@ function InterviewSetupContent() {
             </div>
 
             <div className="lg:col-span-4 space-y-8">
-              {/* Step 3: Experience */}
-              <Card className="premium-card bg-white/[0.01] border-white/5 p-8">
-                <CardHeader className="p-0 mb-8"><CardTitle className="text-xl font-bold flex items-center gap-3"><GraduationCap className="w-6 h-6 text-accent" /> Seniority</CardTitle></CardHeader>
+              {/* Experience Section */}
+              <Card className="premium-card bg-white/[0.01] border-white/5 p-8 shadow-2xl">
+                <div className="flex items-center gap-3 mb-8">
+                  <GraduationCap className="w-6 h-6 text-accent" />
+                  <h2 className="text-xl font-bold uppercase tracking-tight">Experience</h2>
+                </div>
                 <div className="flex flex-col gap-3">
                   {EXPERIENCE_LEVELS.map(l => (
                     <button
@@ -244,26 +243,7 @@ function InterviewSetupContent() {
                 </div>
               </Card>
 
-              {/* Step 4: Round */}
-              <Card className="premium-card bg-white/[0.01] border-white/5 p-8">
-                <CardHeader className="p-0 mb-8"><CardTitle className="text-xl font-bold flex items-center gap-3"><Layers className="w-6 h-6 text-accent" /> Simulation Round</CardTitle></CardHeader>
-                <div className="flex flex-col gap-3">
-                  {ROUNDS.map(r => (
-                    <button
-                      key={r.id}
-                      onClick={() => setRoundType(r.id)}
-                      className={cn(
-                        "w-full py-4 rounded-xl border text-[10px] font-black uppercase tracking-widest transition-all",
-                        roundType === r.id ? "bg-accent/20 border-accent text-accent shadow-[0_0_15px_rgba(34,211,238,0.2)]" : "glass border-white/5 text-white/30 hover:bg-white/5"
-                      )}
-                    >
-                      {r.label}
-                    </button>
-                  ))}
-                </div>
-              </Card>
-
-              {/* Final Action */}
+              {/* Action Button */}
               <div className="pt-4">
                 <Button 
                   onClick={handleStartJourney}
@@ -272,7 +252,10 @@ function InterviewSetupContent() {
                 >
                   {isInitializing ? <Loader2 className="w-6 h-6 animate-spin" /> : <>Continue to Upload <ArrowRight className="ml-3 w-5 h-5" /></>}
                 </Button>
-                <p className="text-[9px] text-white/20 text-center uppercase font-bold tracking-[0.4em] mt-6">Next: Resume Registration</p>
+                <div className="mt-8 flex items-center justify-center gap-4 opacity-20">
+                  <ShieldCheck className="w-4 h-4" />
+                  <span className="text-[8px] font-black uppercase tracking-[0.4em]">Protocol Verified</span>
+                </div>
               </div>
             </div>
           </div>
