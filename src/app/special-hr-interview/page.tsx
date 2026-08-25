@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
@@ -30,12 +29,6 @@ import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import { aiMockInterview, type AiMockInterviewOutput } from "@/ai/flows/ai-mock-interview-v2";
 
-/**
- * @fileOverview Special HR Interview Arena v13.0 - Lifecycle & Cleanup Stability
- * Features: Persistent WebRTC sessions, safe cleanup handling, and connection synchronization.
- */
-
-// --- TypeScript Definitions for Web Speech API ---
 interface SpeechRecognitionEvent extends Event {
   results: SpeechRecognitionResultList;
   resultIndex: number;
@@ -61,12 +54,10 @@ interface SpeechRecognition extends EventTarget {
 export default function SpecialHRInterview() {
   const { toast } = useToast();
 
-  // --- D-ID State ---
   const [status, setStatus] = useState<"LOADING" | "READY" | "ERROR">("LOADING");
   const [isAudioBlocked, setIsAudioBlocked] = useState(false);
   const [isAiSpeaking, setIsAiSpeaking] = useState(false);
 
-  // --- Interview State ---
   const [interviewStarted, setInterviewStarted] = useState(false);
   const [isListening, setIsListening] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -79,20 +70,16 @@ export default function SpecialHRInterview() {
   const [interviewDifficulty, setInterviewDifficulty] = useState<any>("MEDIUM");
   const [isComplete, setIsComplete] = useState(false);
   
-  // --- Hybrid Input State ---
   const [isTypeMode, setIsTypeMode] = useState(false);
   const [typedAnswer, setTypedAnswer] = useState("");
 
-  // --- Core Lifecycle Refs ---
   const agentVideoRef = useRef<HTMLVideoElement>(null);
   const agentManagerRef = useRef<any>(null);
   const agentStreamRef = useRef<MediaStream | null>(null);
   const initializationStartedRef = useRef(false);
-  const videoPlayPromiseRef = useRef<Promise<void> | null>(null);
   const connectionReadyRef = useRef(false);
   const didConnectionStateRef = useRef<string>("disconnected");
   
-  // --- Voice & Logic Refs ---
   const recognitionRef = useRef<SpeechRecognition | null>(null);
   const silenceTimerRef = useRef<NodeJS.Timeout | null>(null);
   const transcriptRef = useRef("");
@@ -107,21 +94,21 @@ export default function SpecialHRInterview() {
   const agentId = "v2_agt_5A5V9r-C";
   const clientKey = "ck_0T9vL02nSJmsHMLHMYLsB";
 
+  // Use refs for callbacks to avoid re-initializing D-ID when state changes
+  const startListeningRef = useRef<() => void>(() => {});
+  const stopListeningRef = useRef<() => void>(() => {});
+
   const ensureVideoPlaying = useCallback(async () => {
     const video = agentVideoRef.current;
-    if (!video || videoPlayPromiseRef.current) return;
-
+    if (!video) return;
     try {
       if (video.srcObject || video.src) {
-        videoPlayPromiseRef.current = video.play();
-        await videoPlayPromiseRef.current;
+        await video.play();
       }
     } catch (error: any) {
       if (error.name === "NotAllowedError") {
         setIsAudioBlocked(true);
       }
-    } finally {
-      videoPlayPromiseRef.current = null;
     }
   }, []);
 
@@ -132,14 +119,11 @@ export default function SpecialHRInterview() {
       video.volume = 1.0;
       setIsAudioBlocked(false);
 
-      const audioTracks = video.srcObject instanceof MediaStream
-        ? video.srcObject.getAudioTracks()
-        : [];
-
-      audioTracks.forEach(track => { track.enabled = true; });
+      if (video.srcObject instanceof MediaStream) {
+        video.srcObject.getAudioTracks().forEach(track => { track.enabled = true; });
+      }
 
       await video.play().catch(() => {});
-      console.log("[D-ID] AUDIO UNLOCKED");
     }
   };
 
@@ -182,13 +166,11 @@ export default function SpecialHRInterview() {
         const combined = (transcriptRef.current + " " + finalTranscript + interimTranscript).trim();
         setTranscript(combined);
 
-        // Silence Detection Logic (VAD)
         if (combined.length > 5 && !isTypeModeRef.current) {
           if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
           
           silenceTimerRef.current = setTimeout(() => {
             if (!isProcessingRef.current && !isAiSpeakingRef.current && interviewStartedRef.current) {
-              console.log("[Speech] Silence detected, submitting answer...");
               handleSubmitAnswer(combined);
             }
           }, 1800);
@@ -198,9 +180,6 @@ export default function SpecialHRInterview() {
       recognition.onerror = (event: SpeechRecognitionErrorEvent) => {
         if (event.error === "no-speech") return;
         console.error("[Speech] Error:", event.error);
-        if (event.error === "not-allowed") {
-          toast({ variant: "destructive", title: "Mic Access Denied", description: "Microphone permission is required." });
-        }
       };
 
       recognition.onend = () => {
@@ -230,7 +209,14 @@ export default function SpecialHRInterview() {
     }
   }, []);
 
+  // Update refs
+  useEffect(() => {
+    startListeningRef.current = startListening;
+    stopListeningRef.current = stopListening;
+  }, [startListening, stopListening]);
+
   const waitForDIdConnection = async (maxWaitMs = 15000) => {
+    if (agentManagerRef.current && didConnectionStateRef.current === "connected") return true;
     const start = Date.now();
     while (Date.now() - start < maxWaitMs) {
       if (agentManagerRef.current && didConnectionStateRef.current === "connected") {
@@ -301,12 +287,11 @@ export default function SpecialHRInterview() {
         let isConnected = await waitForDIdConnection();
         
         if (!isConnected && agentManagerRef.current) {
-          console.warn("[D-ID] Session not connected. Attempting reconnection...");
           await agentManagerRef.current.connect();
           isConnected = await waitForDIdConnection(10000);
         }
 
-        if (!isConnected) throw new Error("Neural interface timed out. Check connection.");
+        if (!isConnected) throw new Error("Neural interface timed out.");
 
         await agentManagerRef.current.speak({
           type: "text",
@@ -315,7 +300,6 @@ export default function SpecialHRInterview() {
       } catch (speakError: any) {
         console.error("[D-ID] Speak failure:", speakError);
         if (speakError.message?.includes("session_id") || speakError.status === 400) {
-          console.log("[D-ID] Node fault. Attempting recovery...");
           await agentManagerRef.current.connect();
           if (await waitForDIdConnection(10000)) {
             await agentManagerRef.current.speak({ type: "text", input: result.nextQuestion });
@@ -327,7 +311,7 @@ export default function SpecialHRInterview() {
 
     } catch (error: any) {
       console.error("[Interview] Turn error:", error);
-      toast({ variant: "destructive", title: "Intelligence Fault", description: error.message || "Neural link interrupted." });
+      toast({ variant: "destructive", title: "Intelligence Fault", description: "Neural link interrupted." });
     } finally {
       setIsProcessing(false);
       isProcessingRef.current = false;
@@ -348,7 +332,6 @@ export default function SpecialHRInterview() {
   };
 
   const stopInterview = async () => {
-    console.log("[Interview] Terminating simulation...");
     setInterviewStarted(false);
     interviewStartedRef.current = false;
     stopListening();
@@ -358,12 +341,10 @@ export default function SpecialHRInterview() {
     if (agentManagerRef.current) {
       try {
         await agentManagerRef.current.disconnect();
-        agentManagerRef.current = null;
-        didConnectionStateRef.current = "disconnected";
-        setStatus("LOADING");
-      } catch (e: any) {
-        console.warn("[D-ID] Cleanup ignored:", e.message);
-      }
+      } catch (e: any) {}
+      agentManagerRef.current = null;
+      didConnectionStateRef.current = "disconnected";
+      setStatus("LOADING");
     }
   };
 
@@ -383,15 +364,6 @@ export default function SpecialHRInterview() {
     else if (interviewStartedRef.current && !isAiSpeakingRef.current) startListening();
   };
 
-  // Stable refs for callbacks used in D-ID effect to prevent re-creation
-  const ensureVideoPlayingRef = useRef(ensureVideoPlaying);
-  const startListeningRef = useRef(startListening);
-  const stopListeningRef = useRef(stopListening);
-
-  useEffect(() => { ensureVideoPlayingRef.current = ensureVideoPlaying; }, [ensureVideoPlaying]);
-  useEffect(() => { startListeningRef.current = startListening; }, [startListening]);
-  useEffect(() => { stopListeningRef.current = stopListening; }, [stopListening]);
-
   useEffect(() => {
     if (initializationStartedRef.current) return;
     initializationStartedRef.current = true;
@@ -406,7 +378,6 @@ export default function SpecialHRInterview() {
           streamOptions: { compatibilityMode: "on", streamWarmup: true },
           callbacks: {
             onSrcObjectReady: (stream: MediaStream) => {
-              console.log("[D-ID] Stream received", stream.id);
               const video = agentVideoRef.current;
               if (!video) return;
               agentStreamRef.current = stream;
@@ -419,31 +390,24 @@ export default function SpecialHRInterview() {
               requestAnimationFrame(() => video.play().catch(() => {}));
             },
             onConnectionStateChange: (state: string) => {
-              console.log("[D-ID] Connection state:", state);
               didConnectionStateRef.current = state;
               if (state === "connected") connectionReadyRef.current = true;
-              else if (state === "disconnected" || state === "closed" || state === "fail") {
-                connectionReadyRef.current = false;
-              }
+              else connectionReadyRef.current = false;
             },
             onVideoStateChange: (state: string) => {
-              console.log("[D-ID] Video state:", state);
               if (state === "START") {
                 setIsAiSpeaking(true);
                 isAiSpeakingRef.current = true;
                 stopListeningRef.current();
-                ensureVideoPlayingRef.current();
               } else if (state === "STOP") {
                 setIsAiSpeaking(false);
                 isAiSpeakingRef.current = false;
-                ensureVideoPlayingRef.current();
                 if (interviewStartedRef.current && !isProcessingRef.current && !isCompleteRef.current && !isTypeModeRef.current) {
                   startListeningRef.current();
                 }
               }
             },
             onError: (error: any) => { 
-              console.error("[D-ID] SDK Error:", error);
               if (!error.message?.includes("session_id")) setStatus("ERROR"); 
             },
           },
@@ -451,7 +415,6 @@ export default function SpecialHRInterview() {
         agentManagerRef.current = manager;
         await manager.connect();
       } catch (error) { 
-        console.error("[D-ID] Init failure:", error);
         setStatus("ERROR"); 
       }
     };
@@ -460,9 +423,7 @@ export default function SpecialHRInterview() {
 
     return () => {
       if (manager) {
-        manager.disconnect().catch((err: any) => {
-          console.warn("[D-ID] Safe unmount cleanup:", err.message);
-        });
+        manager.disconnect().catch(() => {});
       }
       if (recognitionRef.current) {
         try { recognitionRef.current.stop(); } catch(e) {}
@@ -477,21 +438,19 @@ export default function SpecialHRInterview() {
     )}>
       <div className="particles-bg" />
       
-      <div className={cn("transition-opacity duration-500", interviewStarted ? "opacity-0 pointer-events-none" : "opacity-100")}>
-        <Navbar />
-      </div>
+      {!interviewStarted && <Navbar />}
       
       <main className={cn(
         "flex-1 relative flex flex-col items-center justify-center",
         interviewStarted ? "h-screen w-screen p-0 m-0" : "container mx-auto px-6 pt-32 pb-16"
       )}>
-        {!interviewStarted && <NavigationControls className="top-40" />}
+        {!interviewStarted && <NavigationControls />}
 
         <div className={cn(
-          "transition-all duration-1000 ease-in-out bg-black overflow-hidden",
+          "bg-black overflow-hidden relative",
           interviewStarted 
             ? "fixed inset-0 z-0 w-screen h-screen" 
-            : "relative w-full max-w-4xl aspect-[16/10] rounded-[3rem] border border-white/5 shadow-2xl z-10"
+            : "w-full max-w-4xl aspect-[16/10] rounded-[3rem] border border-white/5 shadow-2xl z-10"
         )}>
           <video
             ref={agentVideoRef}
@@ -499,7 +458,7 @@ export default function SpecialHRInterview() {
             playsInline
             muted
             preload="auto"
-            className="w-full h-full object-contain"
+            className="w-full h-full object-contain bg-black z-10"
           />
           
           {!interviewStarted && (
@@ -547,7 +506,6 @@ export default function SpecialHRInterview() {
 
         {interviewStarted && (
           <div className="fixed inset-0 z-50 flex flex-col pointer-events-none p-8 overflow-hidden h-screen w-screen">
-            
             <div className="flex-1 flex pointer-events-none gap-8 min-h-0 overflow-hidden">
               <div className="flex-1 flex flex-col justify-between h-full overflow-hidden">
                 <div className="flex justify-center pointer-events-auto">
