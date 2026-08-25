@@ -1,13 +1,15 @@
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useEffect, useRef } from 'react';
 import CandidateHologram from './CandidateHologram';
-import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 
 /**
- * @fileOverview HolographicInterviewer - Audio and Visual Synchronization Hub.
- * Manages TTS triggers and communicates state to the Hologram.
+ * @fileOverview HolographicInterviewer - Visual Synchronization Hub.
+ * Manages holographic states for the interviewer avatar.
+ * 
+ * NOTE: Automated TTS vocalization is disabled to prevent unauthenticated API errors.
+ * Questions are handled silently without making external API requests.
  */
 
 export default function HolographicInterviewer({ 
@@ -23,62 +25,29 @@ export default function HolographicInterviewer({
   currentQuestion?: string;
   onSpeechEnd?: () => void;
 }) {
-  const { toast } = useToast();
-  const [internalSpeaking, setInternalSpeaking] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const lastProcessedQuestion = useRef<string | null>(null);
 
   useEffect(() => {
+    // Skip if no question, if initializing, or if question already processed
     if (!currentQuestion || isGenerating || currentQuestion === lastProcessedQuestion.current) return;
 
-    const playSpeech = async () => {
-      try {
-        lastProcessedQuestion.current = currentQuestion;
-        setInternalSpeaking(true);
-        
-        const response = await fetch('/api/tts', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ text: currentQuestion }),
-        });
-
-        if (!response.ok) {
-          const err = await response.json().catch(() => ({ details: 'Internal gateway error.' }));
-          throw new Error(err.details || 'TTS Handshake Failed');
-        }
-
-        const audioBlob = await response.blob();
-        const url = URL.createObjectURL(audioBlob);
-        
-        if (audioRef.current) {
-          audioRef.current.src = url;
-          audioRef.current.play();
-          audioRef.current.onended = () => {
-            setInternalSpeaking(false);
-            if (onSpeechEnd) onSpeechEnd();
-            URL.revokeObjectURL(url);
-          };
-        }
-      } catch (error: any) {
-        console.error("[TTS Error]", error);
-        setInternalSpeaking(false);
-        toast({
-          variant: "destructive",
-          title: "Vocal Matrix Offline",
-          description: error.message
-        });
-      }
-    };
-
-    playSpeech();
-  }, [currentQuestion, isGenerating, onSpeechEnd, toast]);
+    // Mark current question as processed to avoid re-triggering logic
+    lastProcessedQuestion.current = currentQuestion;
+    
+    // Silent mode: skip TTS API requests entirely to prevent 401 unauthenticated errors.
+    // Trigger the speech completion callback immediately so the parent state remains synchronized.
+    if (onSpeechEnd) {
+      onSpeechEnd();
+    }
+  }, [currentQuestion, isGenerating, onSpeechEnd]);
 
   return (
     <div className={cn("h-full w-full", className)}>
       <audio ref={audioRef} className="hidden" />
       <CandidateHologram 
         active={true}
-        speaking={internalSpeaking || isSpeakingProp}
+        speaking={isSpeakingProp}
         isLoader={isGenerating}
         className="w-full h-full"
       />
