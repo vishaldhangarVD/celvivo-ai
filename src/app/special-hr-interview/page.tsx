@@ -17,15 +17,16 @@ import {
   Brain,
   MessageSquare,
   MicOff,
-  AlertCircle
+  AlertCircle,
+  ChevronRight
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import { aiMockInterview, type AiMockInterviewOutput } from "@/ai/flows/ai-mock-interview-v2";
 
 /**
- * @fileOverview Special HR Interview Arena v9.0 - Stable Viewport Protocol
- * Fixed: Persistent video node to prevent black-screen on mode transition.
+ * @fileOverview Special HR Interview Arena v11.0 - Real-Time Voice Conversation
+ * Features: Automatic Silence Detection, Signaling-Sync, and Immersive Fullscreen HUD.
  */
 
 // --- TypeScript Definitions for Web Speech API ---
@@ -80,14 +81,15 @@ export default function SpecialHRInterview() {
   const videoPlayPromiseRef = useRef<Promise<void> | null>(null);
   const connectionReadyRef = useRef(false);
   
-  // --- Voice Refs ---
+  // --- Voice & Logic Refs ---
   const recognitionRef = useRef<SpeechRecognition | null>(null);
+  const silenceTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const transcriptRef = useRef("");
   const isProcessingRef = useRef(false);
   const isAiSpeakingRef = useRef(false);
-
-  // --- Stability Refs ---
   const interviewStartedRef = useRef(false);
   const isCompleteRef = useRef(false);
+  const answerSubmissionPendingRef = useRef(false);
 
   const agentId = "v2_agt_5A5V9r-C";
   const clientKey = "ck_0T9vL02nSJmsHMLHMYLsB";
@@ -101,11 +103,9 @@ export default function SpecialHRInterview() {
       await videoPlayPromiseRef.current;
     } catch (error: any) {
       if (error.name === "AbortError") {
-        // Silently ignore interruptions
+        // Silently ignore
       } else if (error.name === "NotAllowedError") {
         setIsAudioBlocked(true);
-      } else {
-        console.error("[D-ID] Video playback failed:", error);
       }
     } finally {
       videoPlayPromiseRef.current = null;
@@ -123,22 +123,15 @@ export default function SpecialHRInterview() {
         ? video.srcObject.getAudioTracks()
         : [];
 
-      audioTracks.forEach(track => {
-        track.enabled = true;
-      });
+      audioTracks.forEach(track => { track.enabled = true; });
 
       await video.play().catch(() => {});
-      console.log("[D-ID] AUDIO UNLOCKED", {
-        muted: video.muted,
-        volume: video.volume,
-        paused: video.paused,
-        audioTracks: audioTracks.length
-      });
+      console.log("[D-ID] AUDIO UNLOCKED");
     }
   };
 
   const startListening = useCallback(() => {
-    if (isCompleteRef.current || isProcessingRef.current || isAiSpeakingRef.current) return;
+    if (isCompleteRef.current || isProcessingRef.current || isAiSpeakingRef.current || !interviewStartedRef.current) return;
 
     try {
       const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
@@ -146,7 +139,7 @@ export default function SpecialHRInterview() {
         toast({ 
           variant: "destructive", 
           title: "Unsupported Browser", 
-          description: "Speech recognition is not supported. Please use Chrome." 
+          description: "Please use Google Chrome for voice features." 
         });
         return;
       }
@@ -161,42 +154,60 @@ export default function SpecialHRInterview() {
       recognition.lang = "en-US";
 
       recognition.onresult = (event: SpeechRecognitionEvent) => {
+        let interimTranscript = "";
         let finalTranscript = "";
+
         for (let i = event.resultIndex; i < event.results.length; ++i) {
+          const transcriptChunk = event.results[i][0].transcript;
           if (event.results[i].isFinal) {
-            finalTranscript += event.results[i][0].transcript;
+            finalTranscript += transcriptChunk;
+          } else {
+            interimTranscript += transcriptChunk;
           }
         }
-        if (finalTranscript) {
-          setTranscript(prev => prev + " " + finalTranscript);
+
+        const combined = (transcriptRef.current + " " + finalTranscript + interimTranscript).trim();
+        setTranscript(combined);
+
+        // Silence Detection Logic (VAD)
+        if (combined.length > 5) {
+          if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
+          
+          silenceTimerRef.current = setTimeout(() => {
+            if (!isProcessingRef.current && !isAiSpeakingRef.current && interviewStartedRef.current) {
+              console.log("[Speech] Silence detected, submitting answer...");
+              handleSubmitAnswer(combined);
+            }
+          }, 1800); // 1.8 second threshold
         }
       };
 
       recognition.onerror = (event: SpeechRecognitionErrorEvent) => {
-        if (event.error === "no-speech") {
-          setIsListening(false);
-          return;
-        }
-        
+        if (event.error === "no-speech") return;
         console.error("[Speech] Error:", event.error);
         if (event.error === "not-allowed") {
-          toast({ variant: "destructive", title: "Mic Access Denied", description: "Please enable microphone permissions." });
+          toast({ variant: "destructive", title: "Mic Access Denied", description: "Microphone permission is required." });
         }
       };
 
       recognition.onend = () => {
         setIsListening(false);
+        // Safety restart if still in turn
+        if (interviewStartedRef.current && !isProcessingRef.current && !isAiSpeakingRef.current && !isCompleteRef.current) {
+          setTimeout(() => recognition.start(), 300);
+        }
       };
 
       recognitionRef.current = recognition;
       recognition.start();
       setIsListening(true);
     } catch (err) {
-      console.error("[Speech] Start error:", err);
+      console.error("[Speech] Init error:", err);
     }
   }, [toast]);
 
   const stopListening = useCallback(() => {
+    if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
     if (recognitionRef.current) {
       recognitionRef.current.stop();
       setIsListening(false);
@@ -206,25 +217,30 @@ export default function SpecialHRInterview() {
   const waitForDIdConnection = async (maxWaitMs = 15000) => {
     const start = Date.now();
     while (Date.now() - start < maxWaitMs) {
-      if (agentManagerRef.current && connectionReadyRef.current) {
-        return true;
-      }
+      if (agentManagerRef.current && connectionReadyRef.current) return true;
       await new Promise(r => setTimeout(r, 500));
     }
     return false;
   };
 
+  const handleSubmitAnswer = (answer: string) => {
+    if (answerSubmissionPendingRef.current) return;
+    answerSubmissionPendingRef.current = true;
+    stopListening();
+    processNextTurn(answer);
+  };
+
   const processNextTurn = async (userAnswer: string, forceStart = false) => {
-    if (isProcessingRef.current || (!interviewStartedRef.current && !forceStart)) return;
+    if (isProcessingRef.current) return;
     
     setIsProcessing(true);
     isProcessingRef.current = true;
-    stopListening();
+    answerSubmissionPendingRef.current = false;
 
     try {
       const isConnected = await waitForDIdConnection();
       if (!isConnected) {
-        throw new Error("D-ID Connection Timeout: System could not reach the signaling server.");
+        throw new Error("System node timed out. Please refresh.");
       }
 
       const nextIndex = questionIndex + 1;
@@ -258,6 +274,7 @@ export default function SpecialHRInterview() {
       setInterviewDifficulty(result.difficulty);
       setAskedQuestions(prev => [...prev, result.nextQuestion]);
       setTranscript("");
+      transcriptRef.current = "";
 
       if (result.isInterviewComplete) {
         setIsComplete(true);
@@ -275,8 +292,8 @@ export default function SpecialHRInterview() {
       console.error("[Interview] Turn error:", error);
       toast({ 
         variant: "destructive", 
-        title: "Neural Link Error", 
-        description: error.message || "Failed to fetch response from Gemini." 
+        title: "Communication Node Error", 
+        description: error.message || "Neural link interrupted." 
       });
       setIsProcessing(false);
       isProcessingRef.current = false;
@@ -307,6 +324,7 @@ export default function SpecialHRInterview() {
     stopListening();
     setIsComplete(true);
     isCompleteRef.current = true;
+    if (agentManagerRef.current) agentManagerRef.current.disconnect();
   };
 
   useEffect(() => {
@@ -319,37 +337,22 @@ export default function SpecialHRInterview() {
         
         const manager = await createAgentManager(agentId, {
           auth: { type: "key", clientKey },
-          streamOptions: {
-            compatibilityMode: "on",
-            streamWarmup: true
-          },
+          streamOptions: { compatibilityMode: "on", streamWarmup: true },
           callbacks: {
             onSrcObjectReady: (stream: MediaStream) => {
               const video = agentVideoRef.current;
               if (!video) return;
-
               agentStreamRef.current = stream;
               video.srcObject = stream;
               video.autoplay = true;
               video.playsInline = true;
               video.muted = true;
-              video.volume = 1;
-
               setStatus("READY");
-              
-              requestAnimationFrame(() => {
-                video.play().catch(err => {
-                  console.warn("[D-ID] Video playback prevented:", err);
-                });
-              });
+              requestAnimationFrame(() => video.play().catch(() => {}));
             },
             onConnectionStateChange: (state: string) => {
-              console.log("[D-ID] Connection state:", state);
-              if (state === "connected") {
-                connectionReadyRef.current = true;
-              } else if (state === "disconnected" || state === "fail") {
-                connectionReadyRef.current = false;
-              }
+              if (state === "connected") connectionReadyRef.current = true;
+              else if (state === "disconnected" || state === "fail") connectionReadyRef.current = false;
             },
             onVideoStateChange: (state: string) => {
               if (state === "START") {
@@ -360,14 +363,13 @@ export default function SpecialHRInterview() {
               } else if (state === "STOP") {
                 setIsAiSpeaking(false);
                 isAiSpeakingRef.current = false;
-                
                 if (interviewStartedRef.current && !isProcessingRef.current && !isCompleteRef.current) {
                   startListening();
                 }
               }
             },
             onError: (error: any) => {
-              console.error("[D-ID] Critical Neural Fault:", error);
+              console.error("[D-ID] Fault:", error);
               setStatus("ERROR");
             },
           },
@@ -377,7 +379,7 @@ export default function SpecialHRInterview() {
         await manager.connect();
 
       } catch (error) {
-        console.error("[D-ID] Initialization failed:", error);
+        console.error("[D-ID] Init failed:", error);
         setStatus("ERROR");
       }
     };
@@ -385,13 +387,8 @@ export default function SpecialHRInterview() {
     initializeDIDAgency();
 
     return () => {
-      if (agentManagerRef.current) {
-        agentManagerRef.current.disconnect().catch(() => {});
-        agentManagerRef.current = null;
-      }
-      if (recognitionRef.current) {
-        recognitionRef.current.stop();
-      }
+      if (agentManagerRef.current) agentManagerRef.current.disconnect().catch(() => {});
+      if (recognitionRef.current) recognitionRef.current.stop();
     };
   }, [ensureVideoPlaying, startListening, stopListening, toast]);
 
@@ -410,7 +407,7 @@ export default function SpecialHRInterview() {
       )}>
         {!interviewStarted && <NavigationControls className="top-40" />}
 
-        {/* PERSISTENT VIDEO CONTAINER: Prevents WebRTC stream remounting */}
+        {/* --- PERSISTENT D-ID ARENA --- */}
         <div className={cn(
           "transition-all duration-700 ease-in-out bg-black overflow-hidden",
           interviewStarted 
@@ -426,7 +423,7 @@ export default function SpecialHRInterview() {
             className="w-full h-full object-contain"
           />
           
-          {/* Overlay Initialization Layer (Only in Landing Mode) */}
+          {/* Landing State Overlays */}
           {!interviewStarted && (
             <div className="absolute inset-0 z-20 flex flex-col items-center justify-center p-12 text-center bg-gradient-to-b from-transparent via-[#050816]/40 to-[#050816]">
               <AnimatePresence mode="wait">
@@ -461,7 +458,7 @@ export default function SpecialHRInterview() {
                 ) : (
                   <motion.div key="error" className="space-y-4 text-red-400">
                      <AlertCircle className="w-16 h-16 mx-auto" />
-                     <p className="text-xs font-bold uppercase tracking-widest">Protocol Fault: Connection Lost</p>
+                     <p className="text-xs font-bold uppercase tracking-widest">Protocol Fault</p>
                      <Button variant="ghost" onClick={() => window.location.reload()} className="text-[9px] uppercase tracking-widest text-white/40 hover:text-white">Retry Handshake</Button>
                   </motion.div>
                 )}
@@ -470,23 +467,23 @@ export default function SpecialHRInterview() {
           )}
         </div>
 
-        {/* Landing Mode UI Grid */}
+        {/* --- LANDING MODE CONTENT --- */}
         {!interviewStarted && (
           <div className="max-w-6xl w-full grid lg:grid-cols-12 gap-12 items-center min-h-[500px]">
             <div className="lg:col-span-5 space-y-12">
               <header className="space-y-6">
-                <Badge className="bg-purple-500/20 text-purple-400 border-none px-4 py-1.5 text-[10px] tracking-[0.4em] font-black uppercase">Vocal Simulation Protocol</Badge>
+                <Badge className="bg-purple-500/20 text-purple-400 border-none px-4 py-1.5 text-[10px] tracking-[0.4em] font-black uppercase">Simulation Protocol</Badge>
                 <h1 className="text-6xl md:text-7xl font-bold tracking-tighter text-premium leading-[0.95]">Live Voice <br /><span className="text-gradient-purple">AI Assessment.</span></h1>
                 <p className="text-xl text-muted-foreground font-light leading-relaxed max-w-md">
-                  Initialize a real-time, hands-free technical simulation powered by Gemini 2.5 Flash and D-ID Neural Avatars.
+                  Real-time, hands-free technical simulation powered by Gemini 2.5 Flash and D-ID Neural Avatars.
                 </p>
               </header>
 
               <div className="grid gap-4">
                  {[
                    { icon: Brain, label: "Neural Audio Logic", val: "ACTIVE" },
-                   { icon: Mic, label: "STT Transcription", val: "SYNCHRONIZED" },
-                   { icon: Activity, label: "Conversation Buffer", val: "STREAMING" }
+                   { icon: Mic, label: "Vocal Recognition", val: "STT NODES" },
+                   { icon: Activity, label: "Session Integrity", val: "VERIFIED" }
                  ].map((item, i) => (
                    <div key={i} className="flex items-center justify-between p-5 glass rounded-2xl border-white/5 bg-white/[0.01]">
                       <div className="flex items-center gap-4">
@@ -500,16 +497,15 @@ export default function SpecialHRInterview() {
                  ))}
               </div>
             </div>
-            
-            {/* The right side (lg:col-span-7) is empty here because the video element is positioned over it absolute-ly */}
             <div className="lg:col-span-7 h-[400px] lg:h-full" />
           </div>
         )}
 
-        {/* FULL SCREEN HUD: Visible only when interview starts */}
+        {/* --- FULL SCREEN INTERVIEW HUD --- */}
         {interviewStarted && (
           <div className="fixed inset-0 z-50 pointer-events-none">
-            {/* HUD: TOP MICROPHONE CONTROL */}
+            
+            {/* HUD: TOP STATUS NODE */}
             <div className="absolute top-8 left-1/2 -translate-x-1/2 flex flex-col items-center gap-3 pointer-events-auto">
               <div className={cn(
                 "w-16 h-16 rounded-full flex items-center justify-center transition-all duration-500 glass border-white/10",
@@ -530,7 +526,7 @@ export default function SpecialHRInterview() {
               </Badge>
             </div>
 
-            {/* HUD: TOP RIGHT TERMINATE BUTTON */}
+            {/* HUD: TOP RIGHT CONTROLS */}
             <div className="absolute top-8 right-8 pointer-events-auto">
               <Button 
                 onClick={stopInterview}
@@ -541,21 +537,34 @@ export default function SpecialHRInterview() {
               </Button>
             </div>
 
-            {/* HUD: BOTTOM QUESTION OVERLAY */}
+            {/* HUD: BOTTOM CONTEXT OVERLAY */}
             <div className="absolute bottom-12 left-1/2 -translate-x-1/2 w-full max-w-4xl px-8 pointer-events-auto">
               <motion.div 
                 initial={{ y: 20, opacity: 0 }}
                 animate={{ y: 0, opacity: 1 }}
                 className="glass p-8 rounded-[2.5rem] border-white/10 bg-black/40 backdrop-blur-xl w-full text-center shadow-2xl"
               >
-                <div className="flex justify-center mb-4">
+                <div className="flex justify-center gap-4 mb-4">
                   <Badge variant="outline" className="border-white/10 text-white/30 text-[8px] uppercase px-3 py-1">
-                    {interviewStage} Node • Step {questionIndex}
+                    {interviewStage} Node
+                  </Badge>
+                  <Badge variant="outline" className="border-accent/30 text-accent text-[8px] uppercase px-3 py-1">
+                    Step {questionIndex}
                   </Badge>
                 </div>
-                <p className="text-xl md:text-2xl font-light text-white leading-relaxed line-clamp-3">
-                  {isListening ? (transcript || "...") : (currentQuestion || "Initializing...")}
+                
+                <p className="text-xl md:text-2xl font-light text-white leading-relaxed line-clamp-3 mb-6">
+                  {isAiSpeaking ? (currentQuestion || "Initializing...") : (transcript || "Awaiting your response...")}
                 </p>
+
+                {/* Progress Visualizer */}
+                <div className="w-48 h-1 bg-white/5 rounded-full mx-auto overflow-hidden">
+                   <motion.div 
+                    animate={{ width: isListening ? ["0%", "100%"] : "0%" }}
+                    transition={{ duration: 1.8, repeat: Infinity, ease: "linear" }}
+                    className="h-full bg-accent shadow-[0_0_10px_#22d3ee]"
+                   />
+                </div>
               </motion.div>
             </div>
           </div>
@@ -567,9 +576,6 @@ export default function SpecialHRInterview() {
           0% { top: 0%; opacity: 0; }
           50% { opacity: 0.5; }
           100% { top: 100%; opacity: 0; }
-        }
-        .animate-scan {
-          animation: scan-line 4s linear infinite;
         }
         html, body {
           height: 100%;
