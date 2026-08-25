@@ -75,6 +75,8 @@ const CandidateHologram = memo(({
       const positions = geometry.attributes.position.array as Float32Array;
       const vertexCount = positions.length / 3;
       
+      console.log("[Diag] originalCount:", vertexCount, "targetCount:", targetCount, "will boost:", targetCount > 0 && vertexCount < targetCount);
+      
       let finalPositions: Float32Array;
 
       if (targetCount > vertexCount) {
@@ -94,6 +96,8 @@ const CandidateHologram = memo(({
       } else {
         finalPositions = positions;
       }
+
+      console.log("[Diag] finalPositions particle count:", finalPositions.length / 3);
 
       const subGeo = new THREE.BufferGeometry();
       subGeo.setAttribute('position', new THREE.BufferAttribute(finalPositions, 3));
@@ -115,9 +119,10 @@ const CandidateHologram = memo(({
 
     const manager = new THREE.LoadingManager();
     manager.onError = (url) => {
-      if (!url.includes('blob:')) {
-        console.error('[Hologram] Load error:', url);
+      if (url.includes('blob:')) {
+        return;
       }
+      console.error('[Hologram] Load error:', url);
     };
 
     const loader = new GLTFLoader(manager);
@@ -157,6 +162,7 @@ const CandidateHologram = memo(({
         faceGeo.boundingBox!.getCenter(finalCenter);
 
         // Face Synthesis: Calibrated for 8,000 nodes at 0.026 size
+        console.log("[Diag] Face raw vertex count:", (faceGeo as THREE.BufferGeometry).attributes.position.array.length / 3);
         createPoints(faceGeo, '#4ff0ff', 0.026, 0.85, 8000, false, 0.004);
         
         if (mouthGeo) createPoints(mouthGeo, '#4ff0ff', 0.015, 0.5, 1000, false, 0.004);
