@@ -167,8 +167,8 @@ function InterviewSetupContent() {
       
       <main className="container mx-auto px-6 pt-40 flex flex-col items-center">
         <header className="max-w-4xl w-full text-center mb-16 space-y-4">
-          <Badge className="bg-accent/20 text-accent border-none px-6 py-1.5 font-bold tracking-[0.4em] text-[10px] uppercase">Simulation Calibration v6.0</Badge>
-          <h1 className="text-6xl font-bold tracking-tighter text-premium">Arena <span className="text-gradient-purple">Setup.</span></h1>
+          <Badge className="bg-accent/20 text-accent border-none px-6 py-1.5 font-bold tracking-[0.4em] text-[10px] uppercase">Calibration Protocol</Badge>
+          <h1 className="text-6xl font-bold tracking-tighter text-premium">Simulation <span className="text-gradient-purple">Setup.</span></h1>
           
           <div className="flex items-center justify-center gap-4 mt-8">
             {[1, 2, 3].map(s => (
@@ -181,17 +181,65 @@ function InterviewSetupContent() {
           <AnimatePresence mode="wait">
             {setupStep === 1 && (
               <motion.div 
-                key="step1" 
+                key="step-company" 
                 initial={{ opacity: 0, x: 20 }} 
                 animate={{ opacity: 1, x: 0 }} 
                 exit={{ opacity: 0, x: -20 }}
                 className="space-y-8"
               >
                 <div className="text-center mb-8">
-                  <h2 className="text-3xl font-bold tracking-tight">Select Your Professional Track</h2>
-                  <p className="text-muted-foreground font-light mt-2">Choose the role for which you want to simulate the interview.</p>
+                  <h2 className="text-3xl font-bold tracking-tight text-white">Select Your Company</h2>
+                  <p className="text-muted-foreground font-light mt-2">Choose the target organization you are preparing for.</p>
                 </div>
-                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  {COMPANIES.map(c => (
+                    <button
+                      key={c}
+                      onClick={() => setCompany(c)}
+                      className={`p-6 rounded-2xl border transition-all text-center group flex flex-col gap-3 h-full items-center justify-center ${
+                        company === c ? 'bg-accent/20 border-accent text-accent' : 'glass border-white/5 hover:bg-white/5 text-white/40'
+                      }`}
+                    >
+                      <Building2 className={`w-6 h-6 mb-2 ${company === c ? 'text-accent' : 'text-white/10 group-hover:text-accent'} transition-colors`} />
+                      <span className="text-[10px] font-black uppercase tracking-[0.2em] leading-tight">{c}</span>
+                    </button>
+                  ))}
+                </div>
+                {company === "Other" && (
+                  <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="max-w-md mx-auto">
+                    <Input 
+                      placeholder="Enter Custom Company Name..." 
+                      className="h-16 rounded-2xl glass border-accent/30 text-lg"
+                      value={customCompany}
+                      onChange={e => setCustomCompany(e.target.value)}
+                    />
+                  </motion.div>
+                )}
+                <div className="flex justify-center pt-8">
+                  <Button 
+                    onClick={nextStep} 
+                    disabled={!company || (company === "Other" && !customCompany)}
+                    className="h-18 px-12 btn-premium text-xs font-black uppercase tracking-[0.3em]"
+                  >
+                    Select Role <ChevronRight className="ml-2 w-4 h-4" />
+                  </Button>
+                </div>
+              </motion.div>
+            )}
+
+            {setupStep === 2 && (
+              <motion.div 
+                key="step-role" 
+                initial={{ opacity: 0, x: 20 }} 
+                animate={{ opacity: 1, x: 0 }} 
+                exit={{ opacity: 0, x: -20 }}
+                className="space-y-8"
+              >
+                <div className="text-center mb-8">
+                  <h2 className="text-3xl font-bold tracking-tight text-white">Select Your Role</h2>
+                  <p className="text-muted-foreground font-light mt-2">Choose your professional track for calibration.</p>
+                </div>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                   {ROLES.map(r => (
                     <button
                       key={r}
@@ -215,60 +263,14 @@ function InterviewSetupContent() {
                     />
                   </motion.div>
                 )}
-                <div className="flex justify-center pt-8">
+                <div className="flex justify-center gap-6 pt-8">
+                  <Button variant="ghost" onClick={prevStep} className="h-18 px-8 glass border-white/10 text-xs font-black uppercase tracking-widest">Back</Button>
                   <Button 
                     onClick={nextStep} 
                     disabled={!role || (role === "Other" && !customRole)}
                     className="h-18 px-12 btn-premium text-xs font-black uppercase tracking-[0.3em]"
                   >
-                    Next Protocol <ChevronRight className="ml-2 w-4 h-4" />
-                  </Button>
-                </div>
-              </motion.div>
-            )}
-
-            {setupStep === 2 && (
-              <motion.div 
-                key="step2" 
-                initial={{ opacity: 0, x: 20 }} 
-                animate={{ opacity: 1, x: 0 }} 
-                exit={{ opacity: 0, x: -20 }}
-                className="space-y-8"
-              >
-                <div className="text-center mb-8">
-                  <h2 className="text-3xl font-bold tracking-tight">Specify Your Seniority Grade</h2>
-                  <p className="text-muted-foreground font-light mt-2">The simulation difficulty will be calibrated based on your experience.</p>
-                </div>
-                <div className="max-w-2xl mx-auto space-y-4">
-                  {EXPERIENCE_LEVELS.map(exp => (
-                    <button
-                      key={exp.id}
-                      onClick={() => setExperience(exp.id)}
-                      className={`w-full p-6 rounded-2xl border transition-all text-left flex items-center justify-between group ${
-                        experience === exp.id ? 'bg-accent/20 border-accent text-accent' : 'glass border-white/5 hover:bg-white/5 text-white/60'
-                      }`}
-                    >
-                      <div className="flex items-center gap-6">
-                        <div className={`w-12 h-12 rounded-xl flex items-center justify-center border ${experience === exp.id ? 'bg-accent/20 border-accent' : 'bg-white/5 border-white/5 group-hover:border-accent/30'}`}>
-                          <GraduationCap className="w-6 h-6" />
-                        </div>
-                        <div>
-                          <p className="text-sm font-black uppercase tracking-widest">{exp.label}</p>
-                          <p className="text-[10px] text-white/40 font-light mt-0.5">{exp.desc}</p>
-                        </div>
-                      </div>
-                      {experience === exp.id && <CheckCircle2 className="w-6 h-6 text-accent" />}
-                    </button>
-                  ))}
-                </div>
-                <div className="flex justify-center gap-6 pt-8">
-                  <Button variant="ghost" onClick={prevStep} className="h-18 px-8 glass border-white/10 text-xs font-black uppercase tracking-widest">Back</Button>
-                  <Button 
-                    onClick={nextStep} 
-                    disabled={!experience}
-                    className="h-18 px-12 btn-premium text-xs font-black uppercase tracking-[0.3em]"
-                  >
-                    Configure Environment <ChevronRight className="ml-2 w-4 h-4" />
+                    Select Seniority <ChevronRight className="ml-2 w-4 h-4" />
                   </Button>
                 </div>
               </motion.div>
@@ -276,47 +278,43 @@ function InterviewSetupContent() {
 
             {setupStep === 3 && (
               <motion.div 
-                key="step3" 
+                key="step-exp" 
                 initial={{ opacity: 0, x: 20 }} 
                 animate={{ opacity: 1, x: 0 }} 
                 exit={{ opacity: 0, x: -20 }}
                 className="space-y-12"
               >
                 <div className="text-center mb-8">
-                  <h2 className="text-3xl font-bold tracking-tight">Final Calibration</h2>
-                  <p className="text-muted-foreground font-light mt-2">Target organization and interview round protocol.</p>
+                  <h2 className="text-3xl font-bold tracking-tight text-white">Select Your Seniority</h2>
+                  <p className="text-muted-foreground font-light mt-2">Adjust simulation difficulty based on your grade.</p>
                 </div>
 
                 <div className="grid md:grid-cols-2 gap-12">
-                  <div className="space-y-6">
-                    <label className="text-[10px] font-black uppercase tracking-[0.4em] text-white/30 ml-2">Target Organization</label>
-                    <div className="grid grid-cols-2 gap-3">
-                      {COMPANIES.map(c => (
-                        <button
-                          key={c}
-                          onClick={() => setCompany(c)}
-                          className={`p-4 rounded-xl border text-[10px] font-black uppercase tracking-widest transition-all ${
-                            company === c ? 'bg-accent/20 border-accent text-accent' : 'glass border-white/5 hover:bg-white/5 text-white/40'
-                          }`}
-                        >
-                          {c}
-                        </button>
-                      ))}
-                    </div>
-                    {company === "Other" && (
-                      <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}>
-                        <Input 
-                          placeholder="Enter Company Name..." 
-                          className="h-14 rounded-xl glass border-accent/30"
-                          value={customCompany}
-                          onChange={e => setCustomCompany(e.target.value)}
-                        />
-                      </motion.div>
-                    )}
+                  <div className="space-y-4">
+                    {EXPERIENCE_LEVELS.map(exp => (
+                      <button
+                        key={exp.id}
+                        onClick={() => setExperience(exp.id)}
+                        className={`w-full p-6 rounded-2xl border transition-all text-left flex items-center justify-between group ${
+                          experience === exp.id ? 'bg-accent/20 border-accent text-accent' : 'glass border-white/5 hover:bg-white/5 text-white/60'
+                        }`}
+                      >
+                        <div className="flex items-center gap-6">
+                          <div className={`w-12 h-12 rounded-xl flex items-center justify-center border ${experience === exp.id ? 'bg-accent/20 border-accent' : 'bg-white/5 border-white/5 group-hover:border-accent/30'}`}>
+                            <GraduationCap className="w-6 h-6" />
+                          </div>
+                          <div>
+                            <p className="text-sm font-black uppercase tracking-widest">{exp.label}</p>
+                            <p className="text-[10px] text-white/40 font-light mt-0.5">{exp.desc}</p>
+                          </div>
+                        </div>
+                        {experience === exp.id && <CheckCircle2 className="w-6 h-6 text-accent" />}
+                      </button>
+                    ))}
                   </div>
 
                   <div className="space-y-6">
-                    <label className="text-[10px] font-black uppercase tracking-[0.4em] text-white/30 ml-2">Interview Protocol</label>
+                    <label className="text-[10px] font-black uppercase tracking-[0.4em] text-white/30 ml-2">Assessment Protocol</label>
                     <div className="space-y-3">
                       {ROUNDS.map(round => (
                         <button
@@ -338,10 +336,10 @@ function InterviewSetupContent() {
                   <Button variant="ghost" onClick={prevStep} className="h-18 px-8 glass border-white/10 text-xs font-black uppercase tracking-widest">Back</Button>
                   <Button 
                     onClick={handleStartJourney}
-                    disabled={!company || (company === "Other" && !customCompany) || isInitializing}
+                    disabled={!experience || isInitializing}
                     className="h-20 px-16 btn-premium rounded-[2.5rem] text-sm font-black uppercase tracking-[0.4em] shadow-[0_20px_80px_rgba(34,211,238,0.2)]"
                   >
-                    {isInitializing ? <Loader2 className="w-6 h-6 animate-spin" /> : <>Launch Neural Arena <ArrowRight className="ml-3 w-5 h-5" /></>}
+                    {isInitializing ? <Loader2 className="w-6 h-6 animate-spin" /> : <>Enter Simulation Room <ArrowRight className="ml-3 w-5 h-5" /></>}
                   </Button>
                 </div>
               </motion.div>
