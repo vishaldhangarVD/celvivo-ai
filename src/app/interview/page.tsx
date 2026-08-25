@@ -14,36 +14,26 @@ import {
   ChevronLeft,
   Command,
   CheckCircle2,
-  Sparkles,
-  ShieldCheck,
-  Target,
   ArrowRight
 } from 'lucide-react';
-import { useUser, useFirestore, useDoc } from '@/firebase';
+import { useUser, useFirestore } from '@/firebase';
 import { doc, getDoc, setDoc, deleteDoc, serverTimestamp } from 'firebase/firestore';
 import { INTERVIEW_STAGES, STAGE_ROUTES, type InterviewStage } from '@/lib/interview-stages';
 import { useToast } from '@/hooks/use-toast';
 import Navbar from '@/components/layout/Navbar';
 import NavigationControls from '@/components/NavigationControls';
 import { Button } from '@/components/ui/button';
-import { Card } from '@/components/ui/card';
+import { Card, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 
 const ROLES = [
-  "Software Engineer", "Frontend Developer", "Backend Developer", "Full Stack Developer",
-  "Data Scientist", "Data Analyst", "Machine Learning Engineer", "DevOps Engineer",
-  "Cloud Engineer", "Cybersecurity Analyst", "UI/UX Designer", "Product Manager",
+  "Frontend Developer", "Backend Developer", "Full Stack Developer", "Software Engineer",
+  "Data Scientist", "DevOps Engineer", "Cloud Engineer", "Cyber Security Analyst", "UI/UX Designer",
   ".NET Developer", "Python Developer", "Java Developer", "Other"
 ];
 
-const EXPERIENCE_LEVELS = [
-  { id: "Fresher", label: "Fresher Grade", desc: "0 years experience" },
-  { id: "0–1 Years", label: "Junior Grade", desc: "Entry level exposure" },
-  { id: "1–3 Years", label: "Associate Grade", desc: "Developing professional" },
-  { id: "3–5 Years", label: "Mid-Senior Grade", desc: "Independent contributor" },
-  { id: "5+ Years", label: "Expert Grade", desc: "Strategic leadership" }
-];
+const EXPERIENCE_LEVELS = ["Junior", "Mid", "Senior"];
 
 const COMPANIES = [
   "Google", "Microsoft", "Amazon", "Meta", "Apple", "TCS", "Infosys", "Wipro", 
@@ -51,10 +41,10 @@ const COMPANIES = [
 ];
 
 const ROUNDS = [
-  { id: 'Technical Round', label: 'Technical Round', desc: 'Focus on core logic & implementation' },
-  { id: 'HR Round', label: 'HR Round', desc: 'Behavioral & culture fit assessment' },
-  { id: 'Technical + HR', label: 'Hybrid Protocol', desc: 'Full-spectrum simulation' },
-  { id: 'Final HR Round', label: 'Executive Board', desc: 'High-stakes senior evaluation' }
+  { id: 'Technical Round', label: 'Technical Round', desc: 'Focus on core logic' },
+  { id: 'HR Round', label: 'HR Round', desc: 'Behavioral assessment' },
+  { id: 'Technical + HR', label: 'Hybrid Protocol', desc: 'Full simulation' },
+  { id: 'Final HR Round', label: 'Executive Board', desc: 'Senior evaluation' }
 ];
 
 function InterviewSetupContent() {
@@ -165,174 +155,127 @@ function InterviewSetupContent() {
       <Navbar />
       <NavigationControls />
       
-      <main className="container mx-auto px-6 pt-40 flex flex-col items-center">
-        <header className="max-w-4xl w-full text-center mb-16 space-y-4">
-          <Badge className="bg-accent/20 text-accent border-none px-6 py-1.5 font-bold tracking-[0.4em] text-[10px] uppercase">Calibration Protocol</Badge>
-          <h1 className="text-6xl font-bold tracking-tighter text-premium">Simulation <span className="text-gradient-purple">Setup.</span></h1>
+      <div className="container mx-auto px-4 py-32">
+        <div className="max-w-4xl mx-auto">
           
-          <div className="flex items-center justify-center gap-4 mt-8">
-            {[1, 2, 3].map(s => (
-              <div key={s} className={`h-1.5 w-20 rounded-full transition-all duration-500 ${setupStep >= s ? 'bg-accent shadow-[0_0_15px_rgba(34,211,238,0.5)]' : 'bg-white/10'}`} />
-            ))}
-          </div>
-        </header>
+          <header className="text-center mb-16 space-y-4">
+            <Badge className="bg-accent/20 text-accent border-none px-6 py-1.5 font-bold tracking-[0.4em] text-[10px] uppercase">Simulation Calibration v4.0</Badge>
+            <h1 className="text-5xl font-bold tracking-tighter text-premium">Arena <span className="text-gradient-purple">Onboarding.</span></h1>
+            <div className="flex items-center justify-center gap-4 mt-6">
+              {[1, 2, 3].map(i => (
+                <div key={i} className={`h-1.5 w-24 rounded-full transition-all duration-500 ${setupStep >= i ? 'bg-accent shadow-[0_0_15px_rgba(34,211,238,0.5)]' : 'bg-white/10'}`} />
+              ))}
+            </div>
+          </header>
 
-        <div className="max-w-4xl w-full relative">
           <AnimatePresence mode="wait">
             {setupStep === 1 && (
-              <motion.div 
-                key="step-company" 
-                initial={{ opacity: 0, x: 20 }} 
-                animate={{ opacity: 1, x: 0 }} 
-                exit={{ opacity: 0, x: -20 }}
-                className="space-y-8"
-              >
-                <div className="text-center mb-8">
-                  <h2 className="text-3xl font-bold tracking-tight text-white">Select Your Company</h2>
-                  <p className="text-muted-foreground font-light mt-2">Choose the target organization you are preparing for.</p>
-                </div>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                  {COMPANIES.map(c => (
-                    <button
-                      key={c}
-                      onClick={() => setCompany(c)}
-                      className={`p-6 rounded-2xl border transition-all text-center group flex flex-col gap-3 h-full items-center justify-center ${
-                        company === c ? 'bg-accent/20 border-accent text-accent' : 'glass border-white/5 hover:bg-white/5 text-white/40'
-                      }`}
-                    >
-                      <Building2 className={`w-6 h-6 mb-2 ${company === c ? 'text-accent' : 'text-white/10 group-hover:text-accent'} transition-colors`} />
-                      <span className="text-[10px] font-black uppercase tracking-[0.2em] leading-tight">{c}</span>
-                    </button>
-                  ))}
-                </div>
-                {company === "Other" && (
-                  <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="max-w-md mx-auto">
-                    <Input 
-                      placeholder="Enter Custom Company Name..." 
-                      className="h-16 rounded-2xl glass border-accent/30 text-lg"
-                      value={customCompany}
-                      onChange={e => setCustomCompany(e.target.value)}
-                    />
-                  </motion.div>
-                )}
-                <div className="flex justify-center pt-8">
-                  <Button 
-                    onClick={nextStep} 
-                    disabled={!company || (company === "Other" && !customCompany)}
-                    className="h-18 px-12 btn-premium text-xs font-black uppercase tracking-[0.3em]"
-                  >
-                    Select Role <ChevronRight className="ml-2 w-4 h-4" />
-                  </Button>
+              <motion.div key="step-company" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="space-y-8">
+                <Card className="premium-card bg-white/[0.01] border-white/5 p-8">
+                  <CardHeader className="p-0 mb-8"><CardTitle className="text-xl font-bold flex items-center gap-3"><Building2 className="w-6 h-6 text-accent" /> Target Organization</CardTitle></CardHeader>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    {COMPANIES.map(c => (
+                      <button
+                        key={c}
+                        onClick={() => setCompany(c)}
+                        className={`p-6 rounded-2xl border transition-all text-center group flex flex-col gap-3 h-full items-center justify-center ${
+                          company === c ? 'bg-accent/20 border-accent text-accent' : 'glass border-white/5 hover:bg-white/5 text-white/40'
+                        }`}
+                      >
+                        <span className="text-[10px] font-black uppercase tracking-[0.2em] leading-tight">{c}</span>
+                      </button>
+                    ))}
+                  </div>
+                  {company === "Other" && (
+                    <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="max-w-md mx-auto mt-8">
+                      <Input 
+                        placeholder="Enter Custom Company Name..." 
+                        className="h-16 rounded-2xl glass border-accent/30 text-lg"
+                        value={customCompany}
+                        onChange={e => setCustomCompany(e.target.value)}
+                      />
+                    </motion.div>
+                  )}
+                </Card>
+                <div className="flex justify-center">
+                  <Button onClick={nextStep} disabled={!company || (company === "Other" && !customCompany)} className="h-18 px-12 btn-premium text-xs font-black uppercase tracking-[0.3em]">Select Role <ChevronRight className="ml-2 w-4 h-4" /></Button>
                 </div>
               </motion.div>
             )}
 
             {setupStep === 2 && (
-              <motion.div 
-                key="step-role" 
-                initial={{ opacity: 0, x: 20 }} 
-                animate={{ opacity: 1, x: 0 }} 
-                exit={{ opacity: 0, x: -20 }}
-                className="space-y-8"
-              >
-                <div className="text-center mb-8">
-                  <h2 className="text-3xl font-bold tracking-tight text-white">Select Your Role</h2>
-                  <p className="text-muted-foreground font-light mt-2">Choose your professional track for calibration.</p>
-                </div>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                  {ROLES.map(r => (
-                    <button
-                      key={r}
-                      onClick={() => setRole(r)}
-                      className={`p-6 rounded-2xl border transition-all text-left group flex flex-col gap-3 h-full ${
-                        role === r ? 'bg-accent/20 border-accent text-accent' : 'glass border-white/5 hover:bg-white/5 text-white/60'
-                      }`}
-                    >
-                      <Briefcase className={`w-5 h-5 ${role === r ? 'text-accent' : 'text-white/20 group-hover:text-accent'} transition-colors`} />
-                      <span className="text-xs font-black uppercase tracking-widest leading-tight">{r}</span>
-                    </button>
-                  ))}
-                </div>
-                {role === "Other" && (
-                  <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="max-w-md mx-auto">
-                    <Input 
-                      placeholder="Specify Custom Role..." 
-                      className="h-16 rounded-2xl glass border-accent/30 text-lg"
-                      value={customRole}
-                      onChange={e => setCustomRole(e.target.value)}
-                    />
-                  </motion.div>
-                )}
-                <div className="flex justify-center gap-6 pt-8">
+              <motion.div key="step-role" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="space-y-8">
+                <Card className="premium-card bg-white/[0.01] border-white/5 p-8">
+                  <CardHeader className="p-0 mb-8"><CardTitle className="text-xl font-bold flex items-center gap-3"><Briefcase className="w-6 h-6 text-accent" /> Deployment Track</CardTitle></CardHeader>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    {ROLES.map(r => (
+                      <button
+                        key={r}
+                        onClick={() => setRole(r)}
+                        className={`text-left p-5 rounded-2xl border transition-all text-xs font-bold ${
+                          role === r ? 'bg-accent/20 border-accent text-accent' : 'glass border-white/5 hover:bg-white/5 text-muted-foreground'
+                        }`}
+                      >
+                        {r}
+                      </button>
+                    ))}
+                  </div>
+                  {role === "Other" && (
+                    <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="max-w-md mx-auto mt-8">
+                      <Input 
+                        placeholder="Specify Custom Role..." 
+                        className="h-16 rounded-2xl glass border-accent/30 text-lg"
+                        value={customRole}
+                        onChange={e => setCustomRole(e.target.value)}
+                      />
+                    </motion.div>
+                  )}
+                </Card>
+                <div className="flex justify-center gap-6">
                   <Button variant="ghost" onClick={prevStep} className="h-18 px-8 glass border-white/10 text-xs font-black uppercase tracking-widest">Back</Button>
-                  <Button 
-                    onClick={nextStep} 
-                    disabled={!role || (role === "Other" && !customRole)}
-                    className="h-18 px-12 btn-premium text-xs font-black uppercase tracking-[0.3em]"
-                  >
-                    Select Seniority <ChevronRight className="ml-2 w-4 h-4" />
-                  </Button>
+                  <Button onClick={nextStep} disabled={!role || (role === "Other" && !customRole)} className="h-18 px-12 btn-premium text-xs font-black uppercase tracking-[0.3em]">Select Seniority <ChevronRight className="ml-2 w-4 h-4" /></Button>
                 </div>
               </motion.div>
             )}
 
             {setupStep === 3 && (
-              <motion.div 
-                key="step-exp" 
-                initial={{ opacity: 0, x: 20 }} 
-                animate={{ opacity: 1, x: 0 }} 
-                exit={{ opacity: 0, x: -20 }}
-                className="space-y-12"
-              >
-                <div className="text-center mb-8">
-                  <h2 className="text-3xl font-bold tracking-tight text-white">Select Your Seniority</h2>
-                  <p className="text-muted-foreground font-light mt-2">Adjust simulation difficulty based on your grade.</p>
-                </div>
-
-                <div className="grid md:grid-cols-2 gap-12">
-                  <div className="space-y-4">
-                    {EXPERIENCE_LEVELS.map(exp => (
-                      <button
-                        key={exp.id}
-                        onClick={() => setExperience(exp.id)}
-                        className={`w-full p-6 rounded-2xl border transition-all text-left flex items-center justify-between group ${
-                          experience === exp.id ? 'bg-accent/20 border-accent text-accent' : 'glass border-white/5 hover:bg-white/5 text-white/60'
-                        }`}
-                      >
-                        <div className="flex items-center gap-6">
-                          <div className={`w-12 h-12 rounded-xl flex items-center justify-center border ${experience === exp.id ? 'bg-accent/20 border-accent' : 'bg-white/5 border-white/5 group-hover:border-accent/30'}`}>
-                            <GraduationCap className="w-6 h-6" />
-                          </div>
-                          <div>
-                            <p className="text-sm font-black uppercase tracking-widest">{exp.label}</p>
-                            <p className="text-[10px] text-white/40 font-light mt-0.5">{exp.desc}</p>
-                          </div>
-                        </div>
-                        {experience === exp.id && <CheckCircle2 className="w-6 h-6 text-accent" />}
-                      </button>
-                    ))}
-                  </div>
-
-                  <div className="space-y-6">
-                    <label className="text-[10px] font-black uppercase tracking-[0.4em] text-white/30 ml-2">Assessment Protocol</label>
-                    <div className="space-y-3">
-                      {ROUNDS.map(round => (
+              <motion.div key="step-exp" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="space-y-12">
+                <div className="grid md:grid-cols-2 gap-8">
+                  <Card className="premium-card bg-white/[0.01] border-white/5 p-8">
+                    <CardHeader className="p-0 mb-8"><CardTitle className="text-xl font-bold flex items-center gap-3"><GraduationCap className="w-6 h-6 text-accent" /> Seniority</CardTitle></CardHeader>
+                    <div className="flex flex-col gap-4">
+                      {EXPERIENCE_LEVELS.map(l => (
                         <button
-                          key={round.id}
-                          onClick={() => setRoundType(round.id)}
-                          className={`w-full p-5 rounded-xl border text-left transition-all group ${
-                            roundType === round.id ? 'bg-accent/20 border-accent text-accent' : 'glass border-white/5 hover:bg-white/5 text-white/60'
+                          key={l}
+                          onClick={() => setExperience(l)}
+                          className={`py-5 rounded-2xl border transition-all font-bold uppercase text-[10px] tracking-widest ${
+                            experience === l ? 'bg-accent/20 border-accent text-accent' : 'glass border-white/5 text-muted-foreground'
                           }`}
                         >
-                          <p className="text-xs font-black uppercase tracking-widest">{round.label}</p>
-                          <p className="text-[9px] text-white/30 font-light mt-1 uppercase tracking-tighter">{round.desc}</p>
+                          {l} Grade
                         </button>
                       ))}
                     </div>
-                  </div>
+                  </Card>
+                  <Card className="premium-card bg-white/[0.01] border-white/5 p-8">
+                    <CardHeader className="p-0 mb-8"><CardTitle className="text-xl font-bold flex items-center gap-3"><Layers className="w-6 h-6 text-accent" /> Logic Round</CardTitle></CardHeader>
+                    <div className="flex flex-col gap-4">
+                      {ROUNDS.map(r => (
+                        <button
+                          key={r.id}
+                          onClick={() => setRoundType(r.id)}
+                          className={`py-5 px-6 rounded-2xl border transition-all font-bold flex items-center gap-4 text-xs ${
+                            roundType === r.id ? 'bg-accent/20 border-accent text-accent' : 'glass border-white/5 text-muted-foreground'
+                          }`}
+                        >
+                          {r.label}
+                        </button>
+                      ))}
+                    </div>
+                  </Card>
                 </div>
 
-                <div className="flex justify-center gap-6 pt-8">
+                <div className="flex justify-center gap-6">
                   <Button variant="ghost" onClick={prevStep} className="h-18 px-8 glass border-white/10 text-xs font-black uppercase tracking-widest">Back</Button>
                   <Button 
                     onClick={handleStartJourney}
@@ -346,7 +289,7 @@ function InterviewSetupContent() {
             )}
           </AnimatePresence>
         </div>
-      </main>
+      </div>
     </div>
   );
 }
