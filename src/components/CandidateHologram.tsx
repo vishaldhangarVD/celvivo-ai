@@ -10,11 +10,11 @@ import { MeshSurfaceSampler } from 'three/examples/jsm/math/MeshSurfaceSampler.j
  * 
  * IMPLEMENTATION PROTOCOL:
  * 1. Loads /models/woman_head.glb strictly.
- * 2. Samples 16,000 particles from the actual mesh surface.
- * 3. Normalizes and centers the model to fit the viewport perfectly.
- * 4. Implements smooth formation and vocal-synced mouth movement.
- * 5. Suppresses GLB texture blob errors via custom LoadingManager.
- * 6. Zero dependencies on undefined helpers like cn() or AnimatePresence.
+ * 2. Suppresses texture blob errors as only geometry is required.
+ * 3. Samples 18,000 particles from the mesh surface.
+ * 4. Normalizes and centers the model to fit the viewport perfectly.
+ * 5. Implements smooth formation and vocal-synced mouth movement.
+ * 6. ZERO dependencies on undefined helpers like cn() or AnimatePresence.
  */
 
 interface CandidateHologramProps {
@@ -23,10 +23,10 @@ interface CandidateHologramProps {
   className?: string;
 }
 
-const PARTICLE_COUNT = 16000;
+const PARTICLE_COUNT = 18000;
 const ATMOSPHERE_COUNT = 150;
 const NEXVORO_CYAN = 0x22d3ee;
-const FORMATION_SPEED = 0.04;
+const FORMATION_SPEED = 0.05;
 
 const CandidateHologram = memo(({ 
   active = true, 
@@ -49,7 +49,6 @@ const CandidateHologram = memo(({
   // Data Refs
   const speakingRef = useRef(speaking);
   const targetPositionsRef = useRef<Float32Array | null>(null);
-  const formationProgressRef = useRef(0);
 
   useEffect(() => {
     speakingRef.current = speaking;
@@ -85,11 +84,11 @@ const CandidateHologram = memo(({
       rendererRef.current = renderer;
 
       // 2. MODEL ACQUISITION & ERROR SUPPRESSION
+      // Using LoadingManager to ignore texture errors since we only need geometry
       const loadingManager = new THREE.LoadingManager();
       loadingManager.onError = (url) => {
-        // Suppress texture blob errors as we only need geometry
-        if (url.startsWith('blob:')) return;
-        console.error('[Hologram] Load failed:', url);
+        if (url.startsWith('blob:')) return; 
+        console.warn('[Hologram] Load failed (expected for non-geometric nodes):', url);
       };
 
       const loader = new GLTFLoader(loadingManager);
@@ -116,69 +115,74 @@ const CandidateHologram = memo(({
 
         if (meshes.length === 0) throw new Error("No mesh nodes detected");
 
-        // Use the main head mesh (usually the largest or named specifically)
-        // For woman_head.glb, we find the one with the most vertices
+        // Identify main face mesh by vertex volume
         const faceMesh = meshes.reduce((prev, current) => {
           const prevCount = prev.geometry.attributes.position.count;
           const currentCount = current.geometry.attributes.position.count;
           return currentCount > prevCount ? current : prev;
         });
 
-        const sampler = new MeshSurfaceSampler(faceMesh).build();
-        const targetPositions = new Float32Array(PARTICLE_COUNT * 3);
-        const currentPositions = new Float32Array(PARTICLE_COUNT * 3);
-        const tempPosition = new THREE.Vector3();
-
-        // Sample surface and normalize
+        // Apply world transform and normalize coordinates
         faceMesh.updateMatrixWorld();
-        const box = new THREE.Box3().setFromObject(faceMesh);
+        const geometry = faceMesh.geometry.clone();
+        geometry.applyMatrix4(faceMesh.matrixWorld);
+        
+        geometry.computeBoundingBox();
+        const box = geometry.boundingBox!;
         const center = new THREE.Vector3();
         box.getCenter(center);
         const size = new THREE.Vector3();
         box.getSize(size);
+        
         const maxDim = Math.max(size.x, size.y, size.z);
-        const scale = 2.0 / maxDim;
+        const scale = 2.0 / maxDim; // Calibrate for 75% height fill
+        
+        geometry.translate(-center.x, -center.y, -center.z);
+        geometry.scale(scale, scale, scale);
+
+        // 4. PARTICLE SAMPLING
+        const sampler = new MeshSurfaceSampler(new THREE.Mesh(geometry)).build();
+        const targetPositions = new Float32Array(PARTICLE_COUNT * 3);
+        const currentPositions = new Float32Array(PARTICLE_COUNT * 3);
+        const tempPosition = new THREE.Vector3();
 
         for (let i = 0; i < PARTICLE_COUNT; i++) {
           sampler.sample(tempPosition);
-          // Transform to local centered space
-          tempPosition.sub(center).multiplyScalar(scale);
-          
           targetPositions[i * 3] = tempPosition.x;
           targetPositions[i * 3 + 1] = tempPosition.y;
           targetPositions[i * 3 + 2] = tempPosition.z;
 
-          // Initial Scattered Cloud
-          currentPositions[i * 3] = (Math.random() - 0.5) * 6;
-          currentPositions[i * 3 + 1] = (Math.random() - 0.5) * 6;
-          currentPositions[i * 3 + 2] = (Math.random() - 0.5) * 6;
+          // Start from atmospheric scattered cloud
+          currentPositions[i * 3] = (Math.random() - 0.5) * 8;
+          currentPositions[i * 3 + 1] = (Math.random() - 0.5) * 8;
+          currentPositions[i * 3 + 2] = (Math.random() - 0.5) * 8;
         }
 
         targetPositionsRef.current = targetPositions;
 
-        const geometry = new THREE.BufferGeometry();
-        geometry.setAttribute('position', new THREE.BufferAttribute(currentPositions, 3));
+        const pointsGeo = new THREE.BufferGeometry();
+        pointsGeo.setAttribute('position', new THREE.BufferAttribute(currentPositions, 3));
 
-        const material = new THREE.PointsMaterial({
+        const pointsMat = new THREE.PointsMaterial({
           color: NEXVORO_CYAN,
-          size: 0.012,
+          size: 0.018,
           transparent: true,
-          opacity: 0.75,
+          opacity: 0.8,
           blending: THREE.AdditiveBlending,
           depthWrite: false
         });
 
-        const points = new THREE.Points(geometry, material);
+        const points = new THREE.Points(pointsGeo, pointsMat);
         scene.add(points);
         pointsRef.current = points;
 
-        // 4. ATMOSPHERIC NODES
+        // 5. ATMOSPHERIC NODES
         const atmosGeo = new THREE.BufferGeometry();
         const atmosPos = new Float32Array(ATMOSPHERE_COUNT * 3);
         for (let i = 0; i < ATMOSPHERE_COUNT; i++) {
-          atmosPos[i * 3] = (Math.random() - 0.5) * 5;
-          atmosPos[i * 3 + 1] = (Math.random() - 0.5) * 5;
-          atmosPos[i * 3 + 2] = (Math.random() - 0.5) * 5;
+          atmosPos[i * 3] = (Math.random() - 0.5) * 6;
+          atmosPos[i * 3 + 1] = (Math.random() - 0.5) * 6;
+          atmosPos[i * 3 + 2] = (Math.random() - 0.5) * 4;
         }
         atmosGeo.setAttribute('position', new THREE.BufferAttribute(atmosPos, 3));
         const atmosMat = new THREE.PointsMaterial({
@@ -194,7 +198,7 @@ const CandidateHologram = memo(({
 
         setLoading(false);
 
-        // 5. ANIMATION ENGINE
+        // 6. ANIMATION ENGINE
         const animate = () => {
           if (!rendererRef.current || !sceneRef.current || !cameraRef.current || !isMounted) return;
           const time = performance.now() * 0.001;
@@ -207,30 +211,31 @@ const CandidateHologram = memo(({
             for (let i = 0; i < PARTICLE_COUNT; i++) {
               const ix = i * 3, iy = i * 3 + 1, iz = i * 3 + 2;
 
-              // Smooth Formation & Stability
+              // Smooth Formation (Convergence)
               posArray[ix] += (targetArray[ix] - posArray[ix]) * FORMATION_SPEED;
               posArray[iy] += (targetArray[iy] - posArray[iy]) * FORMATION_SPEED;
               posArray[iz] += (targetArray[iz] - posArray[iz]) * FORMATION_SPEED;
 
-              // Speaking Animation: Subtle Mouth Pulse
-              // Mouth is roughly bottom-center of the normalized face
+              // Neural Shimmer (Individual particle vibration)
+              posArray[ix] += (Math.random() - 0.5) * 0.0006;
+              posArray[iy] += (Math.random() - 0.5) * 0.0006;
+
+              // Speaking Animation: Subtle localized mouth warp
+              // Mouth region roughly Y: -0.2 to -0.6 for normalized models
               if (speakingRef.current) {
-                if (targetArray[iy] < -0.2 && Math.abs(targetArray[ix]) < 0.25) {
+                if (targetArray[iy] < -0.25 && targetArray[iy] > -0.55 && Math.abs(targetArray[ix]) < 0.2) {
                    posArray[iy] += Math.sin(time * 20 + i) * 0.0015;
                 }
               }
-              
-              // Neural Shimmer
-              posArray[ix] += Math.sin(time * 2 + i) * 0.0001;
             }
             posAttr.needsUpdate = true;
 
-            // Subtle Vertical Float
-            pointsRef.current.position.y = Math.sin(time * 0.5) * 0.02;
+            // Stable Vertical Float
+            pointsRef.current.position.y = Math.sin(time * 0.7) * 0.02;
             
-            // Flicker Effect
+            // Random Hologram Flicker
             if (Math.random() > 0.98) {
-              (pointsRef.current.material as THREE.PointsMaterial).opacity = 0.4 + Math.random() * 0.4;
+              (pointsRef.current.material as THREE.PointsMaterial).opacity = 0.5 + Math.random() * 0.3;
             }
           }
 
@@ -255,10 +260,23 @@ const CandidateHologram = memo(({
 
     init();
 
-    // 6. RESOURCE DISPOSAL
+    // Resize Resilience
+    const handleResize = () => {
+      if (!containerRef.current || !rendererRef.current || !cameraRef.current) return;
+      const w = containerRef.current.clientWidth;
+      const h = containerRef.current.clientHeight;
+      rendererRef.current.setSize(w, h);
+      cameraRef.current.aspect = w / h;
+      cameraRef.current.updateProjectionMatrix();
+    };
+    window.addEventListener('resize', handleResize);
+
+    // 7. RESOURCE DISPOSAL
     return () => {
       isMounted = false;
+      window.removeEventListener('resize', handleResize);
       cancelAnimationFrame(frameIdRef.current);
+      
       if (rendererRef.current) {
         rendererRef.current.dispose();
       }
