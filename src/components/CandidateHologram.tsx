@@ -156,8 +156,10 @@ const CandidateHologram = memo(({
     // Configure a LoadingManager to suppress harmless texture blob errors
     const manager = new THREE.LoadingManager();
     manager.onError = (url) => {
-      if (url.includes('blob:')) return; // silently ignore texture blob errors
-      console.error('[Hologram] Load error:', url);
+      // Silently ignore texture blob load failures - we don't use textures
+      if (!url.includes('blob:')) {
+        console.error('[Hologram] Load error:', url);
+      }
     };
 
     const loader = new GLTFLoader(manager);
