@@ -97,9 +97,9 @@ const CandidateHologram = memo(({
       } else if (targetCount > 0 && vertexCount > targetCount) {
         // High-Density Cap: Subsampling to prevent occlusion
         finalPositions = new Float32Array(targetCount * 3);
+        const step = vertexCount / targetCount;
         for (let i = 0; i < targetCount; i++) {
-          // Use linear sampling across the vertex buffer for even distribution
-          const sourceIdx = Math.floor(i * (vertexCount / targetCount)) * 3;
+          const sourceIdx = Math.floor(i * step) * 3;
           finalPositions[i * 3] = positions[sourceIdx];
           finalPositions[i * 3 + 1] = positions[sourceIdx + 1];
           finalPositions[i * 3 + 2] = positions[sourceIdx + 2];
@@ -181,7 +181,7 @@ const CandidateHologram = memo(({
 
         // Volumetric Hair Logic: Capped to prevent overwhelming the face
         hairGeos.forEach(h => {
-          let count = 1500;
+          let count = 800;
           if (h.name.includes('Cap') || h.name.includes('Back')) count = 3000;
           createPoints(h.geo, '#1a5fb4', 0.018, 0.4, count, false, 0.006);
         });
