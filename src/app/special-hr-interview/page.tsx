@@ -31,8 +31,8 @@ import { cn } from "@/lib/utils";
 import { aiMockInterview, type AiMockInterviewOutput } from "@/ai/flows/ai-mock-interview-v2";
 
 /**
- * @fileOverview Special HR Interview Arena v12.0 - Immersive Full-Screen with HUD
- * Features: Autonomous Voice VAD, Integrated Right-Side Panel, Hybrid Text/Voice Input.
+ * @fileOverview Special HR Interview Arena v12.5 - Immersion & Session Stability Fix
+ * Features: High-fidelity WebRTC persistence, session wait logic, and turn-taking sync.
  */
 
 // --- TypeScript Definitions for Web Speech API ---
@@ -90,6 +90,7 @@ export default function SpecialHRInterview() {
   const initializationStartedRef = useRef(false);
   const videoPlayPromiseRef = useRef<Promise<void> | null>(null);
   const connectionReadyRef = useRef(false);
+  const didConnectionStateRef = useRef<string>("disconnected");
   
   // --- Voice & Logic Refs ---
   const recognitionRef = useRef<SpeechRecognition | null>(null);
@@ -100,21 +101,23 @@ export default function SpecialHRInterview() {
   const interviewStartedRef = useRef(false);
   const isCompleteRef = useRef(false);
   const answerSubmissionPendingRef = useRef(false);
+  const isSpeakingRequestRef = useRef(false);
 
   const agentId = "v2_agt_5A5V9r-C";
   const clientKey = "ck_0T9vL02nSJmsHMLHMYLsB";
 
   const ensureVideoPlaying = useCallback(async () => {
     const video = agentVideoRef.current;
-    if (!video || !video.srcObject || videoPlayPromiseRef.current) return;
+    if (!video || videoPlayPromiseRef.current) return;
 
     try {
-      videoPlayPromiseRef.current = video.play();
-      await videoPlayPromiseRef.current;
+      // If video has a source, attempt to play
+      if (video.srcObject || video.src) {
+        videoPlayPromiseRef.current = video.play();
+        await videoPlayPromiseRef.current;
+      }
     } catch (error: any) {
-      if (error.name === "AbortError") {
-        // Silently ignore
-      } else if (error.name === "NotAllowedError") {
+      if (error.name === "NotAllowedError") {
         setIsAudioBlocked(true);
       }
     } finally {
@@ -155,7 +158,7 @@ export default function SpecialHRInterview() {
       }
 
       if (recognitionRef.current) {
-        recognitionRef.current.stop();
+        try { recognitionRef.current.stop(); } catch(e) {}
       }
 
       const recognition = new SpeechRecognition();
@@ -202,6 +205,7 @@ export default function SpecialHRInterview() {
 
       recognition.onend = () => {
         setIsListening(false);
+        // Auto-restart if we're supposed to be listening
         if (interviewStartedRef.current && !isProcessingRef.current && !isAiSpeakingRef.current && !isCompleteRef.current && !isTypeMode) {
           setTimeout(() => {
             if (interviewStartedRef.current && !isProcessingRef.current && !isAiSpeakingRef.current) {
@@ -227,11 +231,13 @@ export default function SpecialHRInterview() {
     }
   }, []);
 
-  const waitForDIdConnection = async (maxWaitMs = 15000) => {
+  const waitForDIdConnection = async (maxWaitMs = 10000) => {
     const start = Date.now();
     while (Date.now() - start < maxWaitMs) {
-      if (agentManagerRef.current && connectionReadyRef.current) return true;
-      await new Promise(r => setTimeout(r, 500));
+      if (agentManagerRef.current && didConnectionStateRef.current === "connected") {
+        return true;
+      }
+      await new Promise(r => setTimeout(r, 200));
     }
     return false;
   };
@@ -243,24 +249,22 @@ export default function SpecialHRInterview() {
     processNextTurn(answer);
   };
 
-  const processNextTurn = async (userAnswer: string) => {
-    if (isProcessingRef.current) return;
+  const processNextTurn = async (userAnswer: string, forceStart = false) => {
+    if (isProcessingRef.current || (!interviewStartedRef.current && !forceStart)) return;
     
     setIsProcessing(true);
     isProcessingRef.current = true;
     answerSubmissionPendingRef.current = false;
 
     try {
-      const isConnected = await waitForDIdConnection();
-      if (!isConnected) throw new Error("System node timed out. Please refresh.");
-
-      const nextIndex = questionIndex + 1;
+      const nextIndex = questionIndex + (userAnswer ? 1 : 0);
       const history = userAnswer 
         ? [...conversationHistory, { question: currentQuestion, answer: userAnswer }]
         : conversationHistory;
       
       if (userAnswer) setConversationHistory(history);
 
+      // Stage A: Gemini Processing
       const result: AiMockInterviewOutput = await aiMockInterview({
         role: "Software Engineer",
         experienceLevel: "Entry Level",
@@ -292,18 +296,49 @@ export default function SpecialHRInterview() {
         isCompleteRef.current = true;
       }
 
-      if (agentManagerRef.current) {
+      // Stage B: D-ID Vocalization
+      if (isSpeakingRequestRef.current) {
+        console.warn("[D-ID] Speak request already in progress, skipping.");
+        return;
+      }
+
+      isSpeakingRequestRef.current = true;
+      try {
+        let isConnected = await waitForDIdConnection();
+        
+        if (!isConnected && agentManagerRef.current) {
+          console.warn("[D-ID] Signaling not connected, attempting manual sync...");
+          try { await agentManagerRef.current.reconnect(); } catch(e) {}
+          isConnected = await waitForDIdConnection(5000);
+        }
+
+        if (!isConnected) throw new Error("Neural interface timed out. Check connection.");
+
         await agentManagerRef.current.speak({
           type: "text",
           input: result.nextQuestion
         });
+      } catch (speakError: any) {
+        console.error("[D-ID] Speak error:", speakError);
+        // Handle 400 session errors with one reconnect attempt
+        if (speakError.message?.includes("400") || speakError.status === 400) {
+          console.log("[D-ID] Session expired, reconnecting...");
+          try {
+            await agentManagerRef.current.reconnect();
+            if (await waitForDIdConnection(5000)) {
+              await agentManagerRef.current.speak({ type: "text", input: result.nextQuestion });
+            }
+          } catch (e) {
+             toast({ variant: "destructive", title: "Session Error", description: "Interviewer session lost. Please refresh." });
+          }
+        }
+      } finally {
+        isSpeakingRequestRef.current = false;
       }
 
     } catch (error: any) {
       console.error("[Interview] Turn error:", error);
-      toast({ variant: "destructive", title: "Communication Node Error", description: error.message || "Neural link interrupted." });
-      setIsProcessing(false);
-      isProcessingRef.current = false;
+      toast({ variant: "destructive", title: "Intelligence Fault", description: error.message || "Neural link interrupted." });
     } finally {
       setIsProcessing(false);
       isProcessingRef.current = false;
@@ -320,7 +355,7 @@ export default function SpecialHRInterview() {
     setQuestionIndex(0);
     isCompleteRef.current = false;
     setIsComplete(false);
-    await processNextTurn("");
+    await processNextTurn("", true);
   };
 
   const stopInterview = () => {
@@ -329,11 +364,13 @@ export default function SpecialHRInterview() {
     stopListening();
     setIsComplete(true);
     isCompleteRef.current = true;
-    if (agentManagerRef.current) agentManagerRef.current.disconnect();
+    if (agentManagerRef.current) {
+      try { agentManagerRef.current.disconnect(); } catch(e) {}
+    }
   };
 
   const handleTypedSubmit = () => {
-    if (!typedAnswer.trim()) return;
+    if (!typedAnswer.trim() || isProcessing) return;
     const ans = typedAnswer;
     setTypedAnswer("");
     setIsTypeMode(false);
@@ -352,6 +389,7 @@ export default function SpecialHRInterview() {
           streamOptions: { compatibilityMode: "on", streamWarmup: true },
           callbacks: {
             onSrcObjectReady: (stream: MediaStream) => {
+              console.log("[D-ID] Stream received", stream.id);
               const video = agentVideoRef.current;
               if (!video) return;
               agentStreamRef.current = stream;
@@ -363,10 +401,15 @@ export default function SpecialHRInterview() {
               requestAnimationFrame(() => video.play().catch(() => {}));
             },
             onConnectionStateChange: (state: string) => {
+              console.log("[D-ID] Connection state:", state);
+              didConnectionStateRef.current = state;
               if (state === "connected") connectionReadyRef.current = true;
-              else if (state === "disconnected" || state === "fail") connectionReadyRef.current = false;
+              else if (state === "disconnected" || state === "closed" || state === "fail") {
+                connectionReadyRef.current = false;
+              }
             },
             onVideoStateChange: (state: string) => {
+              console.log("[D-ID] Video state:", state);
               if (state === "START") {
                 setIsAiSpeaking(true);
                 isAiSpeakingRef.current = true;
@@ -375,22 +418,35 @@ export default function SpecialHRInterview() {
               } else if (state === "STOP") {
                 setIsAiSpeaking(false);
                 isAiSpeakingRef.current = false;
+                // Preserve video element state but start listening
+                ensureVideoPlaying();
                 if (interviewStartedRef.current && !isProcessingRef.current && !isCompleteRef.current && !isTypeMode) {
                   startListening();
                 }
               }
             },
-            onError: (error: any) => { setStatus("ERROR"); },
+            onError: (error: any) => { 
+              console.error("[D-ID] SDK Error:", error);
+              // Handle SDK errors without crashing
+              if (error.status !== 400) setStatus("ERROR"); 
+            },
           },
         });
         agentManagerRef.current = manager;
         await manager.connect();
-      } catch (error) { setStatus("ERROR"); }
+      } catch (error) { 
+        console.error("[D-ID] Init critical failure:", error);
+        setStatus("ERROR"); 
+      }
     };
     initializeDIDAgency();
     return () => {
-      if (agentManagerRef.current) agentManagerRef.current.disconnect().catch(() => {});
-      if (recognitionRef.current) recognitionRef.current.stop();
+      if (agentManagerRef.current) {
+        agentManagerRef.current.disconnect().catch(() => {});
+      }
+      if (recognitionRef.current) {
+        try { recognitionRef.current.stop(); } catch(e) {}
+      }
     };
   }, [ensureVideoPlaying, startListening, stopListening]);
 
@@ -408,7 +464,7 @@ export default function SpecialHRInterview() {
       )}>
         {!interviewStarted && <NavigationControls className="top-40" />}
 
-        {/* --- D-ID VIDEO ARENA (BACKGROUND) --- */}
+        {/* --- D-ID VIDEO ARENA (STABLE NODE) --- */}
         <div className={cn(
           "transition-all duration-1000 ease-in-out bg-black overflow-hidden",
           interviewStarted 
@@ -421,10 +477,10 @@ export default function SpecialHRInterview() {
             playsInline
             muted
             preload="auto"
-            className="w-full h-full object-cover"
+            className="w-full h-full object-contain"
           />
           
-          {/* Landing Pre-Start Overlay */}
+          {/* Landing State Overlays */}
           {!interviewStarted && (
             <div className="absolute inset-0 z-20 flex flex-col items-center justify-center p-12 text-center bg-[#050816]/40 backdrop-blur-sm">
               <AnimatePresence mode="wait">
@@ -434,7 +490,7 @@ export default function SpecialHRInterview() {
                         <div className="absolute inset-0 border-2 border-accent/20 rounded-full animate-ping" />
                         <Loader2 className="w-full h-full text-accent animate-spin" />
                      </div>
-                     <p className="text-[10px] font-black uppercase tracking-[0.5em] text-accent animate-pulse">Establishing Neural Link</p>
+                     <p className="text-[10px] font-black uppercase tracking-[0.5em] text-accent animate-pulse">Synchronizing Session</p>
                   </motion.div>
                 ) : status === "READY" ? (
                   <motion.div key="ready" initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} className="space-y-10">
@@ -442,8 +498,8 @@ export default function SpecialHRInterview() {
                         <ShieldCheck className="w-10 h-10 text-accent" />
                      </div>
                      <div className="space-y-4">
-                       <h3 className="text-3xl font-bold tracking-tighter text-white">Simulation Ready</h3>
-                       <p className="text-muted-foreground font-light max-w-xs mx-auto">Vocal and visual protocols successfully synchronized.</p>
+                       <h3 className="text-3xl font-bold tracking-tighter text-white">Interface Ready</h3>
+                       <p className="text-muted-foreground font-light max-w-xs mx-auto">Vocal matrix calibrated. Simulation node established.</p>
                      </div>
 
                      {isAudioBlocked ? (
@@ -452,7 +508,7 @@ export default function SpecialHRInterview() {
                         </Button>
                      ) : (
                         <Button onClick={startInterview} className="h-20 px-12 btn-premium rounded-3xl text-xs font-black uppercase tracking-[0.3em] shadow-2xl hover:scale-105 transition-transform">
-                          Enter Simulation Arena <Play className="ml-3 w-5 h-5 fill-current" />
+                          Launch Arena <Play className="ml-3 w-5 h-5 fill-current" />
                         </Button>
                      )}
                   </motion.div>
@@ -468,13 +524,12 @@ export default function SpecialHRInterview() {
           )}
         </div>
 
-        {/* --- INTERVIEW ARENA HUD (OVERLAY) --- */}
+        {/* --- INTERVIEW ARENA HUD --- */}
         {interviewStarted && (
           <div className="fixed inset-0 z-50 flex pointer-events-none p-8 gap-8">
             
-            {/* LEFT HUD: Controls & Transcript */}
+            {/* LEFT HUD: Dynamic Mic State */}
             <div className="flex-1 flex flex-col justify-between h-full">
-              {/* Top Mic Overlay */}
               <div className="flex justify-center pointer-events-auto">
                  <div className={cn(
                    "px-6 py-4 glass rounded-full border border-white/10 flex items-center gap-4 transition-all duration-500",
@@ -491,26 +546,18 @@ export default function SpecialHRInterview() {
                    )}
                    <div className="flex flex-col">
                       <span className="text-[10px] font-black uppercase tracking-widest text-white/80">
-                        {isListening ? "Listening" : isProcessing ? "Thinking" : isAiSpeaking ? "Interviewer Speaking" : "Idle"}
+                        {isListening ? "Listening" : isProcessing ? "Neural Thinking" : isAiSpeaking ? "Interviewer Speaking" : "Idle"}
                       </span>
-                      <div className="w-32 h-1 bg-white/10 rounded-full mt-1 overflow-hidden">
-                        <motion.div 
-                          animate={{ width: isListening ? ["0%", "100%"] : "0%" }}
-                          transition={{ duration: 1.8, repeat: Infinity, ease: "linear" }}
-                          className="h-full bg-accent"
-                        />
-                      </div>
                    </div>
                  </div>
               </div>
 
-              {/* Bottom HUD: Live Transcript (Mobile/Fallback) */}
               {!isTypeMode && transcript && (
                 <motion.div initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} className="mx-auto w-full max-w-2xl pointer-events-auto">
-                   <div className="glass p-6 rounded-3xl border-white/10 bg-black/40 backdrop-blur-xl">
+                   <div className="glass p-6 rounded-3xl border-white/10 bg-black/60 backdrop-blur-xl">
                       <div className="flex items-center gap-3 mb-2 text-accent">
                          <MessageSquare className="w-4 h-4" />
-                         <span className="text-[9px] font-black uppercase tracking-widest">Live Transcript</span>
+                         <span className="text-[9px] font-black uppercase tracking-widest">Capture Log</span>
                       </div>
                       <p className="text-lg font-light text-white/90 leading-relaxed italic line-clamp-2">"{transcript}"</p>
                    </div>
@@ -518,14 +565,13 @@ export default function SpecialHRInterview() {
               )}
             </div>
 
-            {/* RIGHT PANEL: Interview Context & Text Input */}
+            {/* RIGHT PANEL: Communicator Node */}
             <div className="w-[450px] h-full flex flex-col pointer-events-auto">
               <motion.div 
                 initial={{ x: 50, opacity: 0 }}
                 animate={{ x: 0, opacity: 1 }}
                 className="flex-1 flex flex-col glass rounded-[2.5rem] border-white/10 bg-black/40 backdrop-blur-2xl overflow-hidden shadow-2xl"
               >
-                {/* Panel Header */}
                 <div className="p-6 border-b border-white/10 bg-white/5 flex items-center justify-between">
                    <div className="flex items-center gap-4">
                       <div className="w-10 h-10 rounded-xl bg-accent/20 flex items-center justify-center text-accent">
@@ -533,11 +579,8 @@ export default function SpecialHRInterview() {
                       </div>
                       <div>
                         <h3 className="text-xs font-black uppercase tracking-widest text-white">AI Interviewer</h3>
-                        <p className={cn(
-                          "text-[9px] font-bold uppercase tracking-[0.2em]",
-                          isAiSpeaking ? "text-accent animate-pulse" : "text-white/40"
-                        )}>
-                          {isAiSpeaking ? "Asking Question" : isListening ? "Awaiting Response" : "Processing"}
+                        <p className={cn("text-[9px] font-bold uppercase tracking-[0.2em]", isAiSpeaking ? "text-accent animate-pulse" : "text-white/40")}>
+                          {isAiSpeaking ? "Transmitting" : isListening ? "Listening" : "Calibrating"}
                         </p>
                       </div>
                    </div>
@@ -546,33 +589,31 @@ export default function SpecialHRInterview() {
                    </Button>
                 </div>
 
-                {/* Panel Body: Question Display */}
                 <div className="flex-1 p-8 flex flex-col gap-8 overflow-y-auto custom-scrollbar">
                   <div className="space-y-4">
                     <div className="flex items-center gap-2">
-                       <Badge variant="outline" className="border-accent/30 text-accent text-[8px] uppercase tracking-tighter">Step {questionIndex}</Badge>
-                       <Badge variant="outline" className="border-white/10 text-white/30 text-[8px] uppercase tracking-tighter">{interviewStage} Node</Badge>
+                       <Badge variant="outline" className="border-accent/30 text-accent text-[8px] uppercase tracking-tighter">Turn {questionIndex}</Badge>
+                       <Badge variant="outline" className="border-white/10 text-white/30 text-[8px] uppercase tracking-tighter">{interviewStage}</Badge>
                     </div>
                     <div className="p-6 glass rounded-3xl border-accent/20 bg-accent/5">
                       <h4 className="text-xl font-medium text-white leading-relaxed">
-                        {currentQuestion || "Initializing neural assessment..."}
+                        {currentQuestion || "Synchronizing initial prompt..."}
                       </h4>
                     </div>
                   </div>
 
-                  {/* Input Mode Toggle */}
                   <div className="mt-auto pt-8 border-t border-white/5">
                     <AnimatePresence mode="wait">
                       {isTypeMode ? (
                         <motion.div key="type-area" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 10 }} className="space-y-4">
                            <div className="flex items-center justify-between">
-                              <span className="text-[10px] font-black uppercase tracking-widest text-white/40">Manual Input Active</span>
-                              <Button variant="ghost" size="sm" onClick={() => setIsTypeMode(false)} className="h-6 text-[8px] uppercase tracking-widest hover:text-accent">Use Voice</Button>
+                              <span className="text-[10px] font-black uppercase tracking-widest text-white/40">Override Protocol</span>
+                              <Button variant="ghost" size="sm" onClick={() => setIsTypeMode(false)} className="h-6 text-[8px] uppercase tracking-widest hover:text-accent">Voice Link</Button>
                            </div>
                            <Textarea 
                              value={typedAnswer}
                              onChange={(e) => setTypedAnswer(e.target.value)}
-                             placeholder="Compose your technical response..."
+                             placeholder="Type your response..."
                              className="min-h-[150px] rounded-2xl glass border-white/10 bg-transparent text-white p-4 text-sm font-light resize-none focus:border-accent"
                            />
                            <Button 
@@ -580,19 +621,19 @@ export default function SpecialHRInterview() {
                             onClick={handleTypedSubmit}
                             className="w-full h-14 btn-premium rounded-xl text-[10px] font-black uppercase tracking-widest"
                            >
-                              {isProcessing ? <Loader2 className="w-4 h-4 animate-spin" /> : <><Send className="w-4 h-4 mr-2" /> Submit Answer</>}
+                              {isProcessing ? <Loader2 className="w-4 h-4 animate-spin" /> : <><Send className="w-4 h-4 mr-2" /> Commit Answer</>}
                            </Button>
                         </motion.div>
                       ) : (
                         <motion.div key="mic-area" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 10 }} className="text-center space-y-6">
-                           <p className="text-xs text-white/40 font-light italic">"Speak naturally to respond or use the keyboard override."</p>
+                           <p className="text-xs text-white/40 font-light italic">"Awaiting vocal input node..."</p>
                            <Button 
                              onClick={() => { stopListening(); setIsTypeMode(true); }}
                              variant="outline" 
                              className="w-full h-16 rounded-2xl glass border-white/10 text-[10px] font-black uppercase tracking-[0.2em] hover:bg-white/5 flex gap-3"
                            >
                              <Keyboard className="w-5 h-5 text-accent" />
-                             Type Your Answer
+                             Manual Entry
                            </Button>
                         </motion.div>
                       )}
@@ -600,28 +641,25 @@ export default function SpecialHRInterview() {
                   </div>
                 </div>
 
-                {/* Panel Footer: System Telemetry */}
                 <div className="p-4 bg-black/40 border-t border-white/5 flex items-center justify-between">
                    <div className="flex items-center gap-4 text-[8px] font-bold text-white/20 uppercase tracking-widest">
-                      <span className="flex items-center gap-1.5"><ShieldCheck className="w-3 h-3" /> Secure Node</span>
-                      <span className="flex items-center gap-1.5"><ChevronRight className="w-3 h-3" /> {interviewDifficulty}</span>
+                      <span className="flex items-center gap-1.5"><ShieldCheck className="w-3 h-3" /> Secure Arena</span>
+                      <span className="flex items-center gap-1.5"><ChevronRight className="w-3 h-3" /> Level: {interviewDifficulty}</span>
                    </div>
                    <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
                 </div>
               </motion.div>
             </div>
 
-            {/* HUD: EXIT BUTTON (FIXED TOP RIGHT) */}
             <div className="fixed top-8 right-8 pointer-events-auto">
                <Button 
                 onClick={stopInterview}
                 variant="ghost"
                 className="h-10 px-4 glass border-red-500/20 text-red-400 hover:bg-red-500/10 rounded-full text-[9px] font-black uppercase tracking-widest transition-all"
                >
-                 <Square className="w-3 h-3 mr-2 fill-current" /> Terminate
+                 <Square className="w-3 h-3 mr-2 fill-current" /> Abort
                </Button>
             </div>
-
           </div>
         )}
       </main>
