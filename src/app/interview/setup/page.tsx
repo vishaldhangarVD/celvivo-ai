@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import Navbar from '@/components/layout/Navbar';
@@ -18,14 +18,21 @@ import {
   Check,
   Search,
   Layers,
-  Sparkles,
+  ShieldCheck,
+  Upload,
+  RotateCcw,
+  CheckCircle2,
+  Trash2,
+  FileText,
   Command,
-  X,
-  ShieldCheck
+  Zap,
+  Target
 } from 'lucide-react';
-import { useUser, useFirestore } from '@/firebase';
-import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
+import { useUser, useFirestore, useDoc } from '@/firebase';
+import { doc, setDoc, serverTimestamp, updateDoc } from 'firebase/firestore';
 import { cn } from '@/lib/utils';
+import { useToast } from '@/hooks/use-toast';
+import { INTERVIEW_STAGES, STAGE_ROUTES } from '@/lib/interview-stages';
 
 const COMPANIES = [
   "Google", "Microsoft", "Amazon", "Meta", "Apple", "TCS", "Infosys", "Wipro", 
@@ -41,62 +48,101 @@ const ROLES = [
 
 const EXPERIENCE_LEVELS = ["Fresher", "0–1 Years", "1–3 Years", "3–5 Years", "5+ Years"];
 
-const ROUNDS = [
-  { id: "Technical Round", label: "Technical Round" },
-  { id: "HR Round", label: "HR Round" },
-  { id: "Technical + HR", label: "Technical + HR" },
-  { id: "Final HR Round", label: "Final HR Round" }
-];
-
 export default function InterviewSetupPage() {
   const router = useRouter();
   const { user, loading: authLoading } = useUser();
   const db = useFirestore();
+  const { toast } = useToast();
 
   const [searchQuery, setSearchQuery] = useState("");
   const [company, setCompany] = useState("");
   const [role, setRole] = useState("");
   const [experience, setExperience] = useState("");
-  const [roundType, setRoundType] = useState("Technical + HR");
   const [isInitializing, setIsInitializing] = useState(false);
+  
+  // Resume State
+  const [file, setFile] = useState<File | null>(null);
+  const [isVerifying, setIsVerifying] = useState(false);
+  const [isUploaded, setIsUploaded] = useState(false);
+  const [resumeBase64, setResumeBase64] = useState<string | null>(null);
 
-  const filteredCompanies = useMemo(() => 
-    COMPANIES.filter(c => c.toLowerCase().includes(searchQuery.toLowerCase())), 
-  [searchQuery]);
+  const journeyRef = useMemo(() => {
+    if (!db || !user?.uid) return null;
+    return doc(db, 'users', user.uid, 'journey', 'active');
+  }, [db, user?.uid]);
 
-  const filteredRoles = useMemo(() => 
-    ROLES.filter(r => r.toLowerCase().includes(searchQuery.toLowerCase())), 
-  [searchQuery]);
+  const { data: journey } = useDoc(journeyRef);
 
-  const filteredExp = useMemo(() => 
-    EXPERIENCE_LEVELS.filter(e => e.toLowerCase().includes(searchQuery.toLowerCase())), 
-  [searchQuery]);
+  const isFormValid = company && role && experience;
 
-  const isFormValid = company && role && experience && roundType;
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      const selected = e.target.files[0];
+      if (selected.type !== 'application/pdf') {
+        toast({ variant: "destructive", title: "Format Error", description: "Only PDF blueprints are supported." });
+        return;
+      }
+      if (selected.size > 10 * 1024 * 1024) {
+        toast({ variant: "destructive", title: "File Too Large", description: "Limit: 10MB" });
+        return;
+      }
 
-  const handleContinue = async () => {
-    if (!db || !user?.uid || !isFormValid) return;
+      setFile(selected);
+      setIsVerifying(true);
+      
+      const base64 = await new Promise<string>((res) => {
+        const reader = new FileReader();
+        reader.onload = () => res(reader.result as string);
+        reader.readAsDataURL(selected);
+      });
+      
+      setResumeBase64(base64);
+      setTimeout(() => {
+        setIsUploaded(true);
+        setIsVerifying(false);
+        toast({ title: "Blueprint Detected", description: "Identity file loaded successfully." });
+      }, 800);
+    }
+  };
+
+  const handleProceed = async (targetPath: 'aptitude' | 'interview') => {
+    if (!db || !user?.uid || !isFormValid || !resumeBase64) {
+      toast({ 
+        variant: "destructive", 
+        title: "Calibration Incomplete", 
+        description: "Please ensure all selections are made and resume is uploaded." 
+      });
+      return;
+    }
 
     setIsInitializing(true);
-    const sessionId = Math.random().toString(36).substring(7);
-    const journeyRef = doc(db, 'users', user.uid, 'journey', 'active');
+    const sessionId = journey?.sessionId || Math.random().toString(36).substring(7);
 
     try {
-      await setDoc(journeyRef, {
+      const finalStage = targetPath === 'aptitude' ? INTERVIEW_STAGES.APTITUDE : INTERVIEW_STAGES.HR_INTERVIEW;
+      const step = targetPath === 'aptitude' ? 4 : 8;
+
+      await setDoc(journeyRef!, {
         sessionId,
         role,
         experience,
         company,
-        roundType,
-        currentStage: "RESUME_UPLOAD",
-        step: 1,
-        createdAt: serverTimestamp(),
+        resumeName: file?.name || journey?.resumeName || "resume.pdf",
+        resumeBase64: resumeBase64,
+        currentStage: finalStage,
+        step,
         updatedAt: serverTimestamp(),
-      });
+        createdAt: journey?.createdAt || serverTimestamp()
+      }, { merge: true });
 
-      router.push('/resume-upload');
+      if (targetPath === 'aptitude') {
+        router.push(STAGE_ROUTES.APTITUDE);
+      } else {
+        router.push(`${STAGE_ROUTES.HR_INTERVIEW}${sessionId}`);
+      }
     } catch (e) {
       console.error(e);
+      toast({ variant: "destructive", title: "Protocol Fault", description: "Failed to persist identity node." });
       setIsInitializing(false);
     }
   };
@@ -114,249 +160,238 @@ export default function InterviewSetupPage() {
       <NavigationControls onHome={() => router.push('/')} />
 
       <main className="container mx-auto px-6 pt-32">
-        <div className="max-w-7xl mx-auto space-y-12">
+        <div className="max-w-7xl mx-auto grid lg:grid-cols-12 gap-12">
           
-          <header className="text-center space-y-4 mb-16">
-            <Badge className="bg-accent/20 text-accent border-none px-4 py-1 text-[10px] tracking-[0.4em] text-[10px] uppercase">
-              Simulation Calibration Node
-            </Badge>
-            <h1 className="text-6xl font-bold tracking-tighter text-premium">
-              Interview <span className="text-gradient-purple">Setup.</span>
-            </h1>
-            <p className="text-lg text-muted-foreground font-light max-w-xl mx-auto">
-              Configure your interview parameters to begin the simulation.
-            </p>
-          </header>
+          {/* LEFT SIDE: Calibration Controls */}
+          <div className="lg:col-span-7 space-y-12">
+            <header className="space-y-4">
+              <Badge className="bg-accent/20 text-accent border-none px-4 py-1 text-[10px] tracking-[0.4em] font-black uppercase">
+                Simulation Calibration Node
+              </Badge>
+              <h1 className="text-6xl font-bold tracking-tighter text-premium">
+                Interview <span className="text-gradient-purple">Setup.</span>
+              </h1>
+              <p className="text-lg text-muted-foreground font-light max-w-xl">
+                Configure your interview parameters to begin the simulation.
+              </p>
+            </header>
 
-          {/* Global Search Interface */}
-          <div className="max-w-2xl mx-auto mb-16 relative group">
-            <div className="absolute -inset-1 bg-gradient-to-r from-accent/50 to-purple-600/50 rounded-2xl blur opacity-20 group-focus-within:opacity-40 transition duration-500" />
-            <div className="relative glass border-white/10 rounded-2xl flex items-center px-6">
-              <Search className="w-5 h-5 text-white/20 group-focus-within:text-accent transition-colors" />
-              <Input 
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search company, job role, or experience..."
-                className="h-16 border-none bg-transparent text-white placeholder:text-white/20 focus-visible:ring-0 text-lg font-light"
-              />
-              {searchQuery && (
-                <button onClick={() => setSearchQuery("")} className="p-2 hover:bg-white/5 rounded-full transition-colors">
-                  <X className="w-4 h-4 text-white/40" />
-                </button>
+            <div className="space-y-8">
+              {/* Organization Selector */}
+              <div className="space-y-4">
+                <div className="flex items-center gap-3 ml-2">
+                  <Building2 className="w-4 h-4 text-accent" />
+                  <h3 className="text-xs font-black uppercase tracking-widest text-white/40">Select Organization</h3>
+                </div>
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                  {COMPANIES.map(c => (
+                    <button
+                      key={c}
+                      onClick={() => setCompany(c)}
+                      className={cn(
+                        "p-4 rounded-xl border text-[10px] font-bold uppercase tracking-widest transition-all text-left flex items-center justify-between",
+                        company === c 
+                          ? "bg-accent/20 border-accent text-accent shadow-[0_0_20px_rgba(34,211,238,0.2)]" 
+                          : "glass border-white/5 text-white/40 hover:bg-white/5"
+                      )}
+                    >
+                      {c}
+                      {company === c && <Check className="w-3 h-3" />}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Role Selector */}
+              <div className="space-y-4">
+                <div className="flex items-center gap-3 ml-2">
+                  <Briefcase className="w-4 h-4 text-accent" />
+                  <h3 className="text-xs font-black uppercase tracking-widest text-white/40">Select Job Role</h3>
+                </div>
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                  {ROLES.map(r => (
+                    <button
+                      key={r}
+                      onClick={() => setRole(r)}
+                      className={cn(
+                        "p-4 rounded-xl border text-[10px] font-bold uppercase tracking-widest transition-all text-left flex items-center justify-between",
+                        role === r 
+                          ? "bg-accent/20 border-accent text-accent shadow-[0_0_20px_rgba(34,211,238,0.2)]" 
+                          : "glass border-white/5 text-white/40 hover:bg-white/5"
+                      )}
+                    >
+                      {r}
+                      {role === r && <Check className="w-3 h-3" />}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Experience Selector */}
+              <div className="space-y-4">
+                <div className="flex items-center gap-3 ml-2">
+                  <GraduationCap className="w-4 h-4 text-accent" />
+                  <h3 className="text-xs font-black uppercase tracking-widest text-white/40">Select Experience</h3>
+                </div>
+                <div className="flex flex-wrap gap-3">
+                  {EXPERIENCE_LEVELS.map(l => (
+                    <button
+                      key={l}
+                      onClick={() => setExperience(l)}
+                      className={cn(
+                        "px-6 py-4 rounded-xl border text-[10px] font-bold uppercase tracking-widest transition-all",
+                        experience === l 
+                          ? "bg-accent/20 border-accent text-accent shadow-[0_0_20px_rgba(34,211,238,0.2)]" 
+                          : "glass border-white/5 text-white/40 hover:bg-white/5"
+                      )}
+                    >
+                      {l}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Selected Configuration Summary */}
+              {isFormValid && (
+                <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
+                  <Card className="p-6 glass border-accent/20 bg-accent/5 rounded-2xl flex flex-wrap gap-8">
+                    <div className="space-y-1">
+                      <p className="text-[8px] font-black uppercase tracking-widest text-white/30">Organization</p>
+                      <p className="text-xs font-bold text-accent">{company}</p>
+                    </div>
+                    <div className="space-y-1">
+                      <p className="text-[8px] font-black uppercase tracking-widest text-white/30">Target Role</p>
+                      <p className="text-xs font-bold text-accent">{role}</p>
+                    </div>
+                    <div className="space-y-1">
+                      <p className="text-[8px] font-black uppercase tracking-widest text-white/30">Experience</p>
+                      <p className="text-xs font-bold text-accent">{experience}</p>
+                    </div>
+                  </Card>
+                </motion.div>
               )}
             </div>
           </div>
 
-          <div className="grid lg:grid-cols-3 gap-8">
-            {/* Organization Selection */}
-            <Card className="premium-card bg-white/[0.01] border-white/5 p-8 flex flex-col h-[500px] shadow-2xl relative overflow-hidden group">
-              <div className="absolute top-0 right-0 p-8 opacity-5 group-hover:opacity-10 transition-opacity">
-                <Building2 className="w-24 h-24 text-accent" />
-              </div>
-              <div className="flex items-center justify-between mb-8 relative z-10">
-                <div className="flex items-center gap-3">
-                  <Building2 className="w-6 h-6 text-accent" />
-                  <h2 className="text-xl font-bold uppercase tracking-tight">Organization</h2>
-                </div>
-                {company && <Badge className="bg-accent/20 text-accent border-none text-[8px] font-black uppercase">Selected</Badge>}
-              </div>
-              
-              <div className="flex-1 overflow-y-auto pr-2 custom-scrollbar relative z-10 space-y-2">
-                <AnimatePresence mode="popLayout">
-                  {filteredCompanies.length > 0 ? (
-                    filteredCompanies.map(c => (
-                      <motion.button
-                        layout
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        exit={{ opacity: 0 }}
-                        key={c}
-                        onClick={() => setCompany(c)}
-                        className={cn(
-                          "w-full p-4 rounded-xl border text-[10px] font-bold uppercase tracking-widest transition-all text-left flex items-center justify-between group/item",
-                          company === c 
-                            ? "bg-accent/20 border-accent text-accent shadow-[0_0_20px_rgba(34,211,238,0.2)]" 
-                            : "glass border-white/5 text-white/40 hover:bg-white/5 hover:border-white/20"
-                        )}
-                      >
-                        {c}
-                        <div className={cn(
-                          "w-5 h-5 rounded-lg border flex items-center justify-center transition-all",
-                          company === c ? "bg-accent border-accent text-black scale-110" : "border-white/10"
-                        )}>
-                          {company === c && <Check className="w-3 h-3" />}
-                        </div>
-                      </motion.button>
-                    ))
-                  ) : (
-                    <div className="h-full flex flex-col items-center justify-center text-center p-8 opacity-20">
-                      <X className="w-4 h-4 text-white/40" />
-                      <p className="text-[10px] font-black uppercase tracking-widest">No matching companies</p>
-                    </div>
-                  )}
-                </AnimatePresence>
-              </div>
-            </Card>
-
-            {/* Role Selection */}
-            <Card className="premium-card bg-white/[0.01] border-white/5 p-8 flex flex-col h-[500px] shadow-2xl relative overflow-hidden group">
-              <div className="absolute top-0 right-0 p-8 opacity-5 group-hover:opacity-10 transition-opacity">
-                <Briefcase className="w-24 h-24 text-accent" />
-              </div>
-              <div className="flex items-center justify-between mb-8 relative z-10">
-                <div className="flex items-center gap-3">
-                  <Briefcase className="w-6 h-6 text-accent" />
-                  <h2 className="text-xl font-bold uppercase tracking-tight">Job Role</h2>
-                </div>
-                {role && <Badge className="bg-accent/20 text-accent border-none text-[8px] font-black uppercase">Selected</Badge>}
-              </div>
-              
-              <div className="flex-1 overflow-y-auto pr-2 custom-scrollbar relative z-10 space-y-2">
-                <AnimatePresence mode="popLayout">
-                  {filteredRoles.length > 0 ? (
-                    filteredRoles.map(r => (
-                      <motion.button
-                        layout
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        exit={{ opacity: 0 }}
-                        key={r}
-                        onClick={() => setRole(r)}
-                        className={cn(
-                          "w-full p-4 rounded-xl border text-[10px] font-bold uppercase tracking-widest transition-all text-left flex items-center justify-between",
-                          role === r 
-                            ? "bg-accent/20 border-accent text-accent shadow-[0_0_20px_rgba(34,211,238,0.2)]" 
-                            : "glass border-white/5 text-white/40 hover:bg-white/5 hover:border-white/20"
-                        )}
-                      >
-                        {r}
-                        <div className={cn(
-                          "w-5 h-5 rounded-lg border flex items-center justify-center transition-all",
-                          role === r ? "bg-accent border-accent text-black scale-110" : "border-white/10"
-                        )}>
-                          {role === r && <Check className="w-3 h-3" />}
-                        </div>
-                      </motion.button>
-                    ))
-                  ) : (
-                    <div className="h-full flex flex-col items-center justify-center text-center p-8 opacity-20">
-                      <X className="w-4 h-4 text-white/40" />
-                      <p className="text-[10px] font-black uppercase tracking-widest">No matching roles</p>
-                    </div>
-                  )}
-                </AnimatePresence>
-              </div>
-            </Card>
-
-            {/* Experience Selection */}
-            <Card className="premium-card bg-white/[0.01] border-white/5 p-8 flex flex-col h-[500px] shadow-2xl relative overflow-hidden group">
-              <div className="absolute top-0 right-0 p-8 opacity-5 group-hover:opacity-10 transition-opacity">
-                <GraduationCap className="w-24 h-24 text-accent" />
-              </div>
-              <div className="flex items-center justify-between mb-8 relative z-10">
-                <div className="flex items-center gap-3">
-                  <GraduationCap className="w-6 h-6 text-accent" />
-                  <h2 className="text-xl font-bold uppercase tracking-tight">Experience</h2>
-                </div>
-                {experience && <Badge className="bg-accent/20 text-accent border-none text-[8px] font-black uppercase">Selected</Badge>}
-              </div>
-
-              <div className="flex-1 overflow-y-auto pr-2 custom-scrollbar relative z-10 space-y-3">
-                <AnimatePresence mode="popLayout">
-                  {filteredExp.length > 0 ? (
-                    filteredExp.map(l => (
-                      <motion.button
-                        layout
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        exit={{ opacity: 0 }}
-                        key={l}
-                        onClick={() => setExperience(l)}
-                        className={cn(
-                          "w-full p-5 rounded-xl border text-[11px] font-bold uppercase tracking-widest transition-all flex items-center justify-between",
-                          experience === l 
-                            ? "bg-accent/20 border-accent text-accent shadow-[0_0_20px_rgba(34,211,238,0.2)]" 
-                            : "glass border-white/5 text-white/40 hover:bg-white/5 hover:border-white/20"
-                        )}
-                      >
-                        {l} Grade
-                        <div className={cn(
-                          "w-5 h-5 rounded-lg border flex items-center justify-center transition-all",
-                          experience === l ? "bg-accent border-accent text-black scale-110" : "border-white/10"
-                        )}>
-                          {experience === l && <Check className="w-3 h-3" />}
-                        </div>
-                      </motion.button>
-                    ))
-                  ) : (
-                    <div className="h-full flex flex-col items-center justify-center text-center p-8 opacity-20">
-                      <X className="w-4 h-4 text-white/40" />
-                      <p className="text-[10px] font-black uppercase tracking-widest">No matching grade</p>
-                    </div>
-                  )}
-                </AnimatePresence>
-              </div>
-            </Card>
-          </div>
-
-          {/* Round Selection Protocol */}
-          <Card className="premium-card bg-white/[0.01] border-white/5 p-8 shadow-2xl relative overflow-hidden group">
-            <div className="flex flex-col md:flex-row items-center justify-between gap-8">
-              <div className="flex items-center gap-4">
-                <div className="w-12 h-12 rounded-2xl bg-purple-500/10 flex items-center justify-center text-purple-400 border border-purple-500/20">
-                  <Layers className="w-6 h-6" />
-                </div>
-                <div>
-                  <h2 className="text-xl font-bold uppercase tracking-tight">Interview Protocol</h2>
-                  <p className="text-[10px] text-white/40 font-bold uppercase tracking-widest">Select the assessment depth</p>
-                </div>
-              </div>
-              <div className="flex flex-wrap justify-center gap-3">
-                {ROUNDS.map(r => (
-                  <button
-                    key={r.id}
-                    onClick={() => setRoundType(r.id)}
-                    className={cn(
-                      "px-6 py-3 rounded-xl border text-[9px] font-black uppercase tracking-[0.2em] transition-all",
-                      roundType === r.id 
-                        ? "bg-purple-600 border-purple-400 text-white shadow-[0_0_20px_rgba(147,51,234,0.3)]" 
-                        : "glass border-white/10 text-white/40 hover:bg-white/5"
-                    )}
-                  >
-                    {r.label}
-                  </button>
-                ))}
-              </div>
-            </div>
-          </Card>
-
-          <div className="flex flex-col items-center pt-8">
-            <Button 
-              onClick={handleContinue}
-              disabled={!isFormValid || isInitializing}
-              className="w-full max-w-2xl h-20 btn-premium rounded-[2rem] text-xs font-black uppercase tracking-[0.3em] shadow-[0_20px_60px_rgba(34,211,238,0.2)] group"
+          {/* RIGHT SIDE: Resume & Execution */}
+          <div className="lg:col-span-5 space-y-8">
+            {/* Resume Upload Card */}
+            <Card 
+              onClick={() => !isVerifying && document.getElementById('resume-input')?.click()}
+              className={cn(
+                "premium-card bg-white/[0.01] border-white/5 p-12 flex flex-col items-center justify-center text-center cursor-pointer group transition-all duration-500 min-h-[340px] relative overflow-hidden",
+                isUploaded ? "border-green-500/20 bg-green-500/[0.02]" : "hover:border-accent/20 hover:bg-white/[0.03]"
+              )}
             >
-              {isInitializing ? (
-                <Loader2 className="w-6 h-6 animate-spin" />
-              ) : (
-                <>
-                  Continue to Upload Resume 
-                  <ArrowRight className="ml-3 w-5 h-5 transition-transform group-hover:translate-x-1" />
-                </>
-              )}
-            </Button>
-            <div className="mt-8 flex items-center gap-6 opacity-30">
-              <div className="flex items-center gap-2">
-                <ShieldCheck className="w-4 h-4 text-accent" />
-                <span className="text-[8px] font-black uppercase tracking-widest text-white">Encrypted Handshake</span>
+              <input type="file" id="resume-input" className="hidden" accept=".pdf" onChange={handleFileChange} />
+              
+              <AnimatePresence mode="wait">
+                {isVerifying ? (
+                  <motion.div key="verifying" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-6">
+                    <div className="relative">
+                      <div className="w-20 h-20 rounded-full border-2 border-accent/10 border-t-accent animate-spin" />
+                      <ShieldCheck className="w-8 h-8 text-accent absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 animate-pulse" />
+                    </div>
+                    <p className="text-[10px] font-black text-accent uppercase tracking-[0.4em]">Verifying Blueprint...</p>
+                  </motion.div>
+                ) : !isUploaded ? (
+                  <motion.div key="upload" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-6">
+                    <div className="w-16 h-16 rounded-[2rem] bg-accent/10 flex items-center justify-center mx-auto border border-accent/20 group-hover:scale-110 transition-transform">
+                      <Upload className="w-8 h-8 text-accent" />
+                    </div>
+                    <div className="space-y-2">
+                      <h3 className="text-2xl font-bold">Resume Upload</h3>
+                      <p className="text-[10px] text-muted-foreground uppercase tracking-widest font-black">PDF ONLY • MAX 10MB</p>
+                    </div>
+                    <Button variant="outline" className="h-10 px-8 glass border-white/10 text-[9px] font-black uppercase rounded-full">Choose File</Button>
+                  </motion.div>
+                ) : (
+                  <motion.div key="uploaded" initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="space-y-8 w-full">
+                    <div className="w-16 h-16 rounded-full bg-green-500/20 flex items-center justify-center mx-auto border border-green-500/30">
+                      <CheckCircle2 className="w-8 h-8 text-green-400" />
+                    </div>
+                    <div className="space-y-1">
+                      <p className="text-[10px] font-black text-green-400 uppercase tracking-widest">Blueprint Received</p>
+                      <p className="text-xl font-bold text-white truncate max-w-[300px] mx-auto">{file?.name}</p>
+                    </div>
+                    <button 
+                      onClick={(e) => { e.stopPropagation(); setIsUploaded(false); setFile(null); }} 
+                      className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-white/30 hover:text-red-400 transition-all mx-auto"
+                    >
+                      <Trash2 className="w-4 h-4" /> Remove Blueprint
+                    </button>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </Card>
+
+            {/* Next Steps / Protocol Selection */}
+            <div className="space-y-6">
+              <h3 className="text-xs font-black uppercase tracking-[0.3em] text-white/20 ml-2">Select Mission Protocol</h3>
+              <div className="grid gap-4">
+                {/* Aptitude Round Card */}
+                <Card 
+                  onClick={() => isFormValid && isUploaded && handleProceed('aptitude')}
+                  className={cn(
+                    "glass p-6 rounded-[2rem] border transition-all duration-300 group/btn relative overflow-hidden",
+                    !isFormValid || !isUploaded ? "opacity-40 grayscale cursor-not-allowed border-white/5" : "hover:border-accent/40 hover:bg-accent/5 cursor-pointer border-white/10"
+                  )}
+                >
+                  <div className="flex items-center justify-between relative z-10">
+                    <div className="flex items-center gap-5">
+                      <div className="w-12 h-12 rounded-2xl bg-white/5 flex items-center justify-center text-white/40 group-hover/btn:text-accent group-hover/btn:bg-accent/10 transition-all">
+                        <Command className="w-6 h-6" />
+                      </div>
+                      <div className="text-left">
+                        <h4 className="text-lg font-bold">Aptitude Round</h4>
+                        <p className="text-[10px] text-white/30 uppercase font-bold tracking-widest">Logical & Quantitative Audit</p>
+                      </div>
+                    </div>
+                    <div className="w-10 h-10 rounded-full glass border-white/10 flex items-center justify-center group-hover/btn:translate-x-1 transition-transform">
+                      <ArrowRight className="w-4 h-4" />
+                    </div>
+                  </div>
+                </Card>
+
+                {/* Interview Round Card */}
+                <Card 
+                  onClick={() => isFormValid && isUploaded && handleProceed('interview')}
+                  className={cn(
+                    "glass p-6 rounded-[2rem] border transition-all duration-300 group/btn relative overflow-hidden",
+                    !isFormValid || !isUploaded ? "opacity-40 grayscale cursor-not-allowed border-white/5" : "hover:border-purple-500/40 hover:bg-purple-500/5 cursor-pointer border-white/10"
+                  )}
+                >
+                  <div className="flex items-center justify-between relative z-10">
+                    <div className="flex items-center gap-5">
+                      <div className="w-12 h-12 rounded-2xl bg-white/5 flex items-center justify-center text-white/40 group-hover/btn:text-purple-400 group-hover/btn:bg-purple-400/10 transition-all">
+                        <Zap className="w-6 h-6" />
+                      </div>
+                      <div className="text-left">
+                        <h4 className="text-lg font-bold">Interview Round</h4>
+                        <p className="text-[10px] text-white/30 uppercase font-bold tracking-widest">AI Virtual HR Simulation</p>
+                      </div>
+                    </div>
+                    <div className="w-10 h-10 rounded-full glass border-white/10 flex items-center justify-center group-hover/btn:translate-x-1 transition-transform">
+                      <ArrowRight className="w-4 h-4" />
+                    </div>
+                  </div>
+                </Card>
               </div>
-              <div className="w-1 h-1 rounded-full bg-white/20" />
-              <div className="flex items-center gap-2">
-                <Command className="w-4 h-4 text-purple-400" />
-                <span className="text-[8px] font-black uppercase tracking-widest text-white">Neural Calibration v5.0</span>
+
+              <div className="flex items-center justify-center gap-6 opacity-30 pt-4">
+                <div className="flex items-center gap-2">
+                  <ShieldCheck className="w-4 h-4 text-accent" />
+                  <span className="text-[8px] font-black uppercase tracking-widest text-white">Secure Session</span>
+                </div>
+                <div className="w-1 h-1 rounded-full bg-white/20" />
+                <div className="flex items-center gap-2">
+                  <Target className="w-4 h-4 text-purple-400" />
+                  <span className="text-[8px] font-black uppercase tracking-widest text-white">Target Aware</span>
+                </div>
               </div>
             </div>
           </div>
+
         </div>
       </main>
     </div>
