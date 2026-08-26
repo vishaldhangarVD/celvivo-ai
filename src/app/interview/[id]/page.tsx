@@ -32,6 +32,8 @@ import CandidateHologram from "@/components/CandidateHologram";
 import HolographicInterviewer from "@/components/HolographicInterviewer";
 import { INTERVIEW_STAGES } from "@/lib/interview-stages";
 
+const MAX_QUESTIONS = 12;
+
 function VirtualArenaContent() {
   const router = useRouter();
   const params = useParams();
@@ -57,6 +59,7 @@ function VirtualArenaContent() {
   const [isCameraOn, setIsCameraOn] = useState(true);
   const [askedQuestions, setAskedQuestions] = useState<string[]>([]);
   const mediaStreamRef = useRef<MediaStream | null>(null);
+  const recognitionRef = useRef<any>(null);
   
   const journeyRef = useMemo(() => {
     if (!db || !user?.uid) return null;
@@ -72,6 +75,62 @@ function VirtualArenaContent() {
     const name = user.displayName || user.email?.split('@')[0] || 'Candidate';
     return name.charAt(0).toUpperCase() + name.slice(1);
   }, [user, journey]);
+
+  // Speech Recognition Initialization
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+      if (SpeechRecognition) {
+        recognitionRef.current = new SpeechRecognition();
+        recognitionRef.current.continuous = true;
+        recognitionRef.current.interimResults = true;
+        recognitionRef.current.lang = 'en-US';
+
+        recognitionRef.current.onresult = (event: any) => {
+          let finalTranscript = '';
+          let interimTranscript = '';
+          for (let i = event.resultIndex; i < event.results.length; ++i) {
+            if (event.results[i].isFinal) {
+              finalTranscript += event.results[i][0].transcript;
+            } else {
+              interimTranscript += event.results[i][0].transcript;
+            }
+          }
+          if (finalTranscript) {
+            setUserAnswer(prev => {
+              const cleanedBase = prev.trim();
+              return cleanedBase ? `${cleanedBase} ${finalTranscript.trim()}` : finalTranscript.trim();
+            });
+          }
+        };
+
+        recognitionRef.current.onerror = (event: any) => {
+          console.error("Speech recognition error:", event.error);
+        };
+      }
+    }
+
+    return () => {
+      if (recognitionRef.current) {
+        recognitionRef.current.stop();
+      }
+    };
+  }, []);
+
+  // Control recognition based on mic state and processing state
+  useEffect(() => {
+    if (recognitionRef.current) {
+      if (isMicOn && !isProcessing && !isSimulationComplete && !isAiSpeaking) {
+        try {
+          recognitionRef.current.start();
+        } catch (e) {
+          // Ignore if already started
+        }
+      } else {
+        recognitionRef.current.stop();
+      }
+    }
+  }, [isMicOn, isProcessing, isSimulationComplete, isAiSpeaking]);
 
   useEffect(() => {
     if (isInitializing || isSimulationComplete || isGeneratingReport) return;
@@ -128,11 +187,13 @@ function VirtualArenaContent() {
           setTranscript([{ role: 'interviewer', text: response.nextQuestion }]);
           setAskedQuestions([response.nextQuestion]);
           setCurrentSimStage(response.stage);
+          setIsAiSpeaking(true);
 
           await updateDoc(journeyRef!, { currentStage: INTERVIEW_STAGES.HR_INTERVIEW });
         } catch (e) {
           console.error("AI Init Error:", e);
           setTranscript([{ role: 'interviewer', text: "Hello. Welcome to today's interview. Could you please introduce yourself and share a bit about your journey?" }]);
+          setIsAiSpeaking(true);
         }
       }
       setTimeout(() => setIsInitializing(false), 1500);
@@ -176,6 +237,7 @@ function VirtualArenaContent() {
       const updatedTranscript = [...newTranscript, { role: 'interviewer' as const, text: response.nextQuestion }];
       setTranscript(updatedTranscript);
       setCurrentSimStage(response.stage);
+      setIsAiSpeaking(true);
 
       if (response.isInterviewComplete) {
         setIsSimulationComplete(true);
@@ -333,7 +395,7 @@ function VirtualArenaContent() {
           </div>
 
           <div className="grid grid-cols-4 gap-2 shrink-0 pb-1">
-            <Card className="glass border-white/5 p-2 flex items-center gap-2"><Activity className="w-3.5 h-3.5 text-accent" /> <span className="text-[11px] font-bold">{Math.round((currentIdx/10)*100)}% Complete</span></Card>
+            <Card className="glass border-white/5 p-2 flex items-center gap-2"><Activity className="w-3.5 h-3.5 text-accent" /> <span className="text-[11px] font-bold">{Math.round((currentIdx/MAX_QUESTIONS)*100)}% Complete</span></Card>
             <Card className="glass border-white/5 p-2 flex items-center gap-2"><Clock className="w-3.5 h-3.5 text-purple-400" /> <span className="text-[11px] font-bold">{currentSimStage}</span></Card>
           </div>
         </div>
@@ -341,7 +403,7 @@ function VirtualArenaContent() {
         <div className="w-[300px] xl:w-[350px] border-l border-white/5 bg-[#0b0e1a] flex flex-col shrink-0 overflow-hidden">
           <div className="flex-1 p-3 flex flex-col space-y-3 overflow-hidden h-full">
              <div className="flex justify-between items-end px-1 shrink-0">
-               <h3 className="text-[9px] font-black uppercase text-white/30 tracking-widest">Question {currentIdx}</h3>
+               <h3 className="text-[9px] font-black uppercase text-white/30 tracking-widest">Question {currentIdx} OF {MAX_QUESTIONS}</h3>
                <Badge variant="outline" className="border-accent/30 text-accent text-[8px] uppercase tracking-tighter">AI Node Active</Badge>
              </div>
 
@@ -356,6 +418,7 @@ function VirtualArenaContent() {
                 <HolographicInterviewer 
                   isSpeaking={isAiSpeaking} 
                   isGenerating={isInitializing}
+                  onSpeechEnd={() => setIsAiSpeaking(false)}
                   className="rounded-2xl h-full w-full"
                 />
              </div>

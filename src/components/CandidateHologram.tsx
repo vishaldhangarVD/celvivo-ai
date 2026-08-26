@@ -12,7 +12,7 @@ interface CandidateHologramProps {
 
 /**
  * @fileOverview CandidateHologram - Static Identity Placeholder with Animated Voice Orb.
- * Replaced static icon with a morphing, glowing orb that reacts to speaking state.
+ * Uses flex layout to prevent text overlap in small containers.
  */
 export default function CandidateHologram({ 
   active = true, 
@@ -24,15 +24,15 @@ export default function CandidateHologram({
 
   return (
     <div className={cn(
-      "relative w-full h-full bg-[#050816] flex flex-col items-center justify-center rounded-[2rem] border border-white/5 overflow-hidden",
+      "relative w-full h-full bg-[#050816] flex flex-col items-center rounded-[2rem] border border-white/5 overflow-hidden",
       className
     )}>
       {/* Background patterns */}
       <div className="absolute inset-0 pointer-events-none opacity-10 bg-[linear-gradient(rgba(18,16,16,0)_50%,rgba(0,0,0,0.25)_50%),linear-gradient(90deg,rgba(255,0,0,0.06),rgba(0,255,0,0.02),rgba(0,0,255,0.06))]" />
       
-      <div className="relative z-10 flex flex-col items-center gap-12">
+      <div className="flex-1 flex flex-col items-center justify-center gap-8 relative z-10 w-full px-4 pt-8">
         {/* Voice Orb Container */}
-        <div className="relative flex items-center justify-center w-48 h-48">
+        <div className="relative flex items-center justify-center w-48 h-48 shrink-0">
           {/* Outer Pulsing Glow */}
           <div className={cn(
             "absolute inset-0 rounded-full bg-accent/20 blur-3xl transition-all duration-700 ease-in-out",
@@ -92,7 +92,7 @@ export default function CandidateHologram({
         </div>
       </div>
 
-      <div className="absolute bottom-6 left-6 right-6 flex justify-between items-center opacity-20">
+      <div className="w-full p-6 flex justify-between items-center opacity-20 relative z-10 mt-auto">
         <div className="flex items-center gap-2">
           <div className="w-1.5 h-1.5 rounded-full bg-accent animate-pulse" />
           <span className="text-[8px] font-bold uppercase tracking-widest text-white">Encrypted Node</span>
