@@ -1,3 +1,4 @@
+
 'use client';
 
 import Link from 'next/link';
@@ -135,17 +136,17 @@ function NavbarContent() {
           {user && (
             <>
               <Link 
-                href="/resume-upload?flow=special" 
+                href="/special-hr-interview" 
                 className={cn(
                   pillClasses, 
                   "border-purple-500/30 bg-purple-500/5 hover:border-purple-400 hover:bg-purple-500/10 hover:-translate-y-[3px] hover:scale-[1.05] hover:shadow-[0_0_30px_rgba(168,85,247,0.25)]", 
-                  (pathname === '/special-hr-interview' || (pathname === '/resume-upload' && searchParams.get('flow') === 'special') || (pathname === '/resume-analysis' && searchParams.get('flow') === 'special')) && "bg-purple-500/20 border-purple-500/50 shadow-[0_0_20px_rgba(168,85,247,0.3)]"
+                  pathname === '/special-hr-interview' && "bg-purple-500/20 border-purple-500/50 shadow-[0_0_20px_rgba(168,85,247,0.3)]"
                 )}
               >
                 <div className={cn(
                   pillIconWrapperClasses, 
                   "border-purple-500/20 bg-purple-500/10 text-purple-400 group-hover/pill:text-purple-300", 
-                  (pathname === '/special-hr-interview' || (pathname === '/resume-upload' && searchParams.get('flow') === 'special') || (pathname === '/resume-analysis' && searchParams.get('flow') === 'special')) && "bg-purple-500 border-purple-400 text-white"
+                  pathname === '/special-hr-interview' && "bg-purple-500 border-purple-400 text-white"
                 )}>
                   <Sparkles className="w-2.5 h-2.5 animate-pulse" />
                 </div>
@@ -360,7 +361,7 @@ function NavbarContent() {
           >
             {user && (
               <>
-                <Link href="/resume-upload?flow=special" onClick={() => setIsOpen(false)} className="text-2xl font-bold tracking-tighter uppercase text-purple-400 hover:text-purple-300 flex items-center gap-4">
+                <Link href="/special-hr-interview" onClick={() => setIsOpen(false)} className="text-2xl font-bold tracking-tighter uppercase text-purple-400 hover:text-purple-300 flex items-center gap-4">
                   <Sparkles className="w-6 h-6" /> Special HR Interview
                 </Link>
                 <Link href="/dashboard" onClick={() => setIsOpen(false)} className="text-2xl font-bold tracking-tighter uppercase text-white hover:text-accent flex items-center gap-4">
