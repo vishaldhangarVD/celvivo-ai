@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import Navbar from "@/components/layout/Navbar";
 import NavigationControls from "@/components/NavigationControls";
 import { Badge } from "@/components/ui/badge";
@@ -28,6 +28,8 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import { aiMockInterview, type AiMockInterviewOutput } from "@/ai/flows/ai-mock-interview-v2";
+import { useUser, useFirestore, useDoc } from "@/firebase";
+import { doc } from "firebase/firestore";
 
 interface SpeechRecognitionEvent extends Event {
   results: SpeechRecognitionResultList;
@@ -53,6 +55,8 @@ interface SpeechRecognition extends EventTarget {
 
 export default function SpecialHRInterview() {
   const { toast } = useToast();
+  const { user } = useUser();
+  const db = useFirestore();
 
   const [status, setStatus] = useState<"LOADING" | "READY" | "ERROR">("LOADING");
   const [isAudioBlocked, setIsAudioBlocked] = useState(false);
@@ -93,6 +97,14 @@ export default function SpecialHRInterview() {
 
   const agentId = "v2_agt_5A5V9r-C";
   const clientKey = "ck_0T9vL02nSJmsHMLHMYLsB";
+
+  // Active Journey Context
+  const journeyRef = useMemo(() => {
+    if (!db || !user?.uid) return null;
+    return doc(db, 'users', user.uid, 'journey', 'active');
+  }, [db, user?.uid]);
+
+  const { data: journey } = useDoc(journeyRef);
 
   // Use refs for callbacks to avoid re-initializing D-ID when state changes
   const startListeningRef = useRef<() => void>(() => {});
@@ -250,17 +262,17 @@ export default function SpecialHRInterview() {
       if (userAnswer) setConversationHistory(history);
 
       const result: AiMockInterviewOutput = await aiMockInterview({
-        role: "Software Engineer",
-        experienceLevel: "Entry Level",
+        role: journey?.role || "Software Engineer",
+        experienceLevel: journey?.experience || "Entry Level",
         roundType: "Technical Interview",
         currentMainQuestionIndex: nextIndex,
         history: history,
         userAnswer: userAnswer,
-        targetCompany: "Nexvoro AI",
-        candidateName: "Candidate",
-        resumeSkills: [],
-        resumeProjects: [],
-        resumeSummary: "",
+        targetCompany: journey?.company || "Nexvoro AI",
+        candidateName: journey?.resumeAnalysis?.personalInfo?.fullName || "Candidate",
+        resumeSkills: journey?.resumeAnalysis?.analysis?.technicalSkills?.map((s: any) => s.skill) || [],
+        resumeProjects: journey?.resumeAnalysis?.analysis?.sections?.projects || [],
+        resumeSummary: journey?.resumeAnalysis?.summary || "",
         askedQuestions: askedQuestions,
         currentStage: interviewStage,
         currentDifficulty: interviewDifficulty,
@@ -292,11 +304,6 @@ export default function SpecialHRInterview() {
         }
 
         if (!isConnected) throw new Error("Neural interface timed out.");
-
-        console.log("\n================ D-ID SPEAK ================");
-console.log("🟣 D-ID CONNECTION:", didConnectionStateRef.current);
-console.log("🗣️ D-ID WILL SPEAK:", result.nextQuestion);
-console.log("=============================================\n");
 
         await agentManagerRef.current.speak({
           type: "text",

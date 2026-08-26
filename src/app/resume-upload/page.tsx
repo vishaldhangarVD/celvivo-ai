@@ -27,6 +27,7 @@ import { doc, updateDoc, serverTimestamp } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { INTERVIEW_STAGES, STAGE_ROUTES } from '@/lib/interview-stages';
+import { analyzeResume } from '@/ai/flows/ai-resume-analysis';
 
 function ResumeUploadContent() {
   const router = useRouter();
@@ -64,8 +65,8 @@ function ResumeUploadContent() {
       setFile(selected);
       setIsVerifying(true);
       
-      // Simulate validation / local processing
-      await new Promise(r => setTimeout(r, 1500));
+      // Simulate local integrity check
+      await new Promise(r => setTimeout(r, 1000));
       
       setIsUploaded(true);
       setIsVerifying(false);
@@ -76,6 +77,7 @@ function ResumeUploadContent() {
   const handleProceed = async () => {
     if (!file || !user || !db || !journeyRef) return;
     
+    setIsVerifying(true);
     try {
       const base64 = await new Promise<string>((res) => {
         const reader = new FileReader();
@@ -84,16 +86,36 @@ function ResumeUploadContent() {
       });
 
       if (flowType === 'special') {
-        await updateDoc(journeyRef, {
-          resumeName: file.name,
-          resumeBase64: base64,
-          updatedAt: serverTimestamp(),
-        });
-        router.push('/resume-analysis?flow=special');
-        return;
+        // BACKGROUND ANALYSIS PROTOCOL
+        try {
+          const analysisResult = await analyzeResume({
+            resumeDataUri: base64,
+            targetRole: journey?.role || "Software Engineer"
+          });
+
+          await updateDoc(journeyRef, {
+            resumeName: file.name,
+            resumeBase64: base64,
+            resumeAnalysis: analysisResult,
+            flow: 'special',
+            updatedAt: serverTimestamp(),
+          });
+          
+          router.push('/special-hr-interview');
+          return;
+        } catch (analysisError) {
+          console.error("Background Analysis Error:", analysisError);
+          toast({ 
+            variant: "destructive", 
+            title: "Analysis Failed", 
+            description: "Neural engine could not parse dossier. Please try another PDF." 
+          });
+          setIsVerifying(false);
+          return;
+        }
       }
 
-      // Navigate directly to Aptitude stage after successful upload (Normal Flow)
+      // Normal Flow Stage Progression
       await updateDoc(journeyRef, {
         currentStage: INTERVIEW_STAGES.APTITUDE,
         step: 4,
@@ -106,6 +128,7 @@ function ResumeUploadContent() {
     } catch (e) {
       console.error(e);
       toast({ variant: "destructive", title: "Protocol Fault", description: "Failed to persist identity node." });
+      setIsVerifying(false);
     }
   };
 
@@ -166,7 +189,12 @@ function ResumeUploadContent() {
                   <div className="w-24 h-24 rounded-full border-2 border-accent/10 border-t-accent animate-spin" />
                   <ShieldCheck className="w-10 h-10 text-accent absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 animate-pulse" />
                 </div>
-                <p className="text-[10px] font-black text-accent uppercase tracking-[0.4em]">Verifying Integrity...</p>
+                <p className="text-[10px] font-black text-accent uppercase tracking-[0.4em]">
+                  {flowType === 'special' ? "Analyzing Dossier..." : "Verifying Integrity..."}
+                </p>
+                {flowType === 'special' && (
+                  <p className="text-[8px] text-white/40 uppercase tracking-widest animate-pulse">Preparing personalized simulation nodes</p>
+                )}
               </div>
             ) : !isUploaded ? (
               <div className="space-y-8">
