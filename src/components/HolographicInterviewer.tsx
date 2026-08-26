@@ -16,7 +16,7 @@ interface HolographicInterviewerProps {
   onSpeechEnd?: () => void;
 }
 
-export default function HolographicInterviewer({ 
+export default function HolographicInterviewer({
   className,
   isSpeaking = false,
   isGenerating = false,
@@ -26,6 +26,8 @@ export default function HolographicInterviewer({
   const [pulse, setPulse] = useState(false);
   const pulseTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const onSpeechEndRef = useRef(onSpeechEnd);
+  const voicesChangedListenerRef = useRef<(() => void) | null>(null);
+  const speakTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   // Store the latest callback in a ref to avoid dependency re-renders
   useEffect(() => {
@@ -49,13 +51,11 @@ export default function HolographicInterviewer({
     if (!currentQuestion || !isSpeaking) return;
 
     const synth = window.speechSynthesis;
-    
-    // Cancel existing speech
-    synth.cancel();
 
+    // Setup the utterance first
     const utterance = new SpeechSynthesisUtterance(currentQuestion);
     utterance.lang = 'en-IN';
-    utterance.rate = 1.0; // Natural rate
+    utterance.rate = 1.0; 
     utterance.pitch = 1;
 
     utterance.onend = () => {
@@ -76,38 +76,54 @@ export default function HolographicInterviewer({
     };
 
     // Voice selection and execution logic
-    const handleSpeak = () => {
+    function speakWithVoice() {
       const vList = synth.getVoices();
-      
-      // Preference: Indian English (Neural/Google) -> Indian English -> English (Neural/Google) -> English
+
+      // Browsers often load voices asynchronously. If empty, wait for the event.
+      if (vList.length === 0) {
+        const handleVoicesChanged = () => {
+          synth.removeEventListener('voiceschanged', handleVoicesChanged);
+          voicesChangedListenerRef.current = null;
+          speakWithVoice();
+        };
+        voicesChangedListenerRef.current = handleVoicesChanged;
+        synth.addEventListener('voiceschanged', handleVoicesChanged);
+        return;
+      }
+
+      // Priority logic:
+      // 1. Any en-IN voice (Microsoft Heera, Ravi, Google India, etc.)
+      // 2. Any English voice with "Google" or "Neural"
+      // 3. Any fallback English voice
       const preferredVoice = 
-        vList.find(v => v.lang === 'en-IN' && (v.name.includes('Google') || v.name.includes('Neural'))) ||
         vList.find(v => v.lang === 'en-IN') ||
-        vList.find(v => (v.name.includes('Google') || v.name.includes('Neural')) && v.lang.startsWith('en')) ||
+        vList.find(v => v.lang.startsWith('en') && (v.name.includes('Google') || v.name.includes('Neural'))) ||
         vList.find(v => v.lang.startsWith('en'));
+
+      console.log(`[TTS] Selected Voice: ${preferredVoice?.name || 'System Default'} (${preferredVoice?.lang || 'N/A'})`);
 
       if (preferredVoice) {
         utterance.voice = preferredVoice;
         utterance.lang = preferredVoice.lang;
       }
-      
-      synth.speak(utterance);
-    };
 
-    // Chrome bug workaround: cancel() and speak() in same tick can cause silence.
-    // Small delay ensures previous context is cleared.
-    const speakTimer = setTimeout(() => {
-      // Browsers often load voices asynchronously
-      if (synth.getVoices().length === 0) {
-        synth.addEventListener('voiceschanged', handleSpeak, { once: true });
-      } else {
-        handleSpeak();
-      }
-    }, 50);
+      // Chrome bug workaround: cancel() and speak() in same tick can cause silence.
+      // Small delay ensures previous context is cleared.
+      if (speakTimerRef.current) clearTimeout(speakTimerRef.current);
+      speakTimerRef.current = setTimeout(() => {
+        synth.speak(utterance);
+      }, 50);
+    }
+
+    // Start playback cycle
+    synth.cancel();
+    speakWithVoice();
 
     return () => {
-      clearTimeout(speakTimer);
-      synth.removeEventListener('voiceschanged', handleSpeak);
+      if (speakTimerRef.current) clearTimeout(speakTimerRef.current);
+      if (voicesChangedListenerRef.current) {
+        synth.removeEventListener('voiceschanged', voicesChangedListenerRef.current);
+      }
       synth.cancel();
       if (pulseTimeoutRef.current) clearTimeout(pulseTimeoutRef.current);
     };
@@ -115,7 +131,7 @@ export default function HolographicInterviewer({
 
   return (
     <div className={cn("h-full w-full", className)}>
-      <CandidateHologram 
+      <CandidateHologram
         active={true}
         speaking={isSpeaking}
         pulse={pulse}
