@@ -6,17 +6,18 @@ import { cn } from '@/lib/utils';
 interface CandidateHologramProps {
   active?: boolean;
   speaking?: boolean;
+  pulse?: boolean;
   className?: string;
   isLoader?: boolean;
 }
 
 /**
- * @fileOverview CandidateHologram - Static Identity Placeholder with Animated Voice Orb.
- * Uses flex layout to prevent text overlap in small containers.
+ * @fileOverview CandidateHologram - AI Identity Presence with morphing Voice Orb.
  */
 export default function CandidateHologram({ 
   active = true, 
   speaking = false, 
+  pulse = false,
   className = '', 
   isLoader = false 
 }: CandidateHologramProps) {
@@ -36,14 +37,14 @@ export default function CandidateHologram({
           {/* Outer Pulsing Glow */}
           <div className={cn(
             "absolute inset-0 rounded-full bg-accent/20 blur-3xl transition-all duration-700 ease-in-out",
-            speaking ? "scale-150 opacity-60" : "scale-100 opacity-30"
+            (speaking || pulse) ? "scale-150 opacity-60" : "scale-100 opacity-30"
           )} />
 
           {/* Morphing Blob */}
           <div 
             className={cn(
-              "relative w-32 h-32 transition-all duration-500 ease-in-out shadow-[0_0_50px_rgba(34,211,238,0.3)]",
-              speaking ? "scale-110" : "scale-100"
+              "relative w-32 h-32 transition-all duration-300 ease-in-out shadow-[0_0_50px_rgba(34,211,238,0.3)]",
+              pulse ? "scale-125 brightness-125" : (speaking ? "scale-110" : "scale-100")
             )}
             style={{
               animation: 'morph 8s ease-in-out infinite, rotate-gradient 12s linear infinite',
@@ -54,8 +55,8 @@ export default function CandidateHologram({
             {/* Bright core */}
             <div className="absolute inset-0 flex items-center justify-center">
               <div className={cn(
-                "w-10 h-10 rounded-full bg-white blur-md transition-all duration-500",
-                speaking ? "scale-125 opacity-100" : "scale-100 opacity-80"
+                "w-10 h-10 rounded-full bg-white blur-md transition-all duration-300",
+                (speaking || pulse) ? "scale-125 opacity-100" : "scale-100 opacity-80"
               )} />
               <div className="w-4 h-4 rounded-full bg-white shadow-[0_0_20px_rgba(255,255,255,1)]" />
             </div>
@@ -74,14 +75,14 @@ export default function CandidateHologram({
           <p className="text-[10px] font-black uppercase tracking-[0.5em] text-white/20">
             {isLoader ? "Synchronizing Neural Link" : "AI Interface Active"}
           </p>
-          {speaking && (
+          {(speaking || pulse) && (
             <div className="flex justify-center gap-1.5 h-4 items-center">
               {[1, 2, 3, 4, 5].map(i => (
                 <div 
                   key={i} 
                   className="w-1 bg-accent/60 rounded-full animate-bounce" 
                   style={{ 
-                    height: `${40 + Math.random() * 60}%`,
+                    height: `${pulse ? 80 + Math.random() * 20 : 40 + Math.random() * 60}%`,
                     animationDelay: `${i * 0.1}s`,
                     animationDuration: '0.6s'
                   }} 
