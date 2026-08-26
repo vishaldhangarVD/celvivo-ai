@@ -15,7 +15,7 @@ interface CandidateHologramProps {
 
 /**
  * @fileOverview CandidateHologram - High-Fidelity 3D Particle Hologram.
- * Fixed for WebGL stability and GLB compatibility.
+ * Fixed for WebGL stability and GLB geometry-only extraction.
  */
 const CandidateHologram: React.FC<CandidateHologramProps> = memo(({
   active = true,
@@ -40,15 +40,31 @@ const CandidateHologram: React.FC<CandidateHologramProps> = memo(({
   useEffect(() => {
     if (!active || !canvasRef.current || !containerRef.current) return;
 
+    // WebGL Availability Check
+    const checkWebGL = () => {
+      try {
+        const canvas = document.createElement('canvas');
+        return !!(window.WebGLRenderingContext && (canvas.getContext('webgl') || canvas.getContext('experimental-webgl')));
+      } catch (e) {
+        return false;
+      }
+    };
+
+    if (!checkWebGL()) {
+      setError(true);
+      setLoading(false);
+      return;
+    }
+
     let scene: THREE.Scene;
     let camera: THREE.PerspectiveCamera;
     let renderer: THREE.WebGLRenderer;
     let points: THREE.Points;
     let particlesAtmos: THREE.Points;
     
-    const TOTAL_PARTICLES = 35000;
+    const TOTAL_PARTICLES = 30000;
     const ATMOS_PARTICLES = 600;
-    const FORMATION_DURATION = 2000;
+    const FORMATION_DURATION = 1800;
     const startTime = Date.now();
 
     const init = async () => {
@@ -71,8 +87,11 @@ const CandidateHologram: React.FC<CandidateHologramProps> = memo(({
         renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.25));
         rendererRef.current = renderer;
 
-        // 2. Load Model & Extract Geometry
-        const loader = new GLTFLoader();
+        // 2. Load Model & Extract Geometry Only
+        // Use a LoadingManager to ignore texture errors since we only need geometry
+        const manager = new THREE.LoadingManager();
+        const loader = new GLTFLoader(manager);
+        
         let finalGeometry: THREE.BufferGeometry;
 
         try {
@@ -80,11 +99,12 @@ const CandidateHologram: React.FC<CandidateHologramProps> = memo(({
           const geometries: THREE.BufferGeometry[] = [];
           
           gltf.scene.updateMatrixWorld(true);
-          gltf.scene.traverse((node: any) => {
-            if (node.isMesh) {
+          gltf.scene.traverse((node: THREE.Object3D) => {
+            if (node instanceof THREE.Mesh) {
               const name = node.name.toLowerCase();
               // Exclude interior noisy geometry
               if (!/eye|cornea|iris|pupil|sclera|teeth|tongue|inner|mouth/.test(name)) {
+                // Bake world transform into geometry
                 const geom = node.geometry.index ? node.geometry.toNonIndexed() : node.geometry.clone();
                 geom.applyMatrix4(node.matrixWorld);
                 geometries.push(geom);
@@ -101,31 +121,26 @@ const CandidateHologram: React.FC<CandidateHologramProps> = memo(({
             box.getCenter(center);
             const size = new THREE.Vector3();
             box.getSize(size);
-            const scale = 3.5 / size.y;
+            const scale = 3.2 / size.y;
             finalGeometry.translate(-center.x, -center.y, -center.z);
             finalGeometry.scale(scale, scale, scale);
           } else {
-            throw new Error('No valid geometry');
+            throw new Error('No valid geometry found in model');
           }
 
-          // Cleanup original GLTF resources immediately
-          gltf.scene.traverse((node: any) => {
-            if (node.isMesh) {
+          // Cleanup GLTF scene immediately (we only need the merged geometry)
+          gltf.scene.traverse((node: THREE.Object3D) => {
+            if (node instanceof THREE.Mesh) {
               node.geometry.dispose();
               if (node.material) {
-                if (Array.isArray(node.material)) node.material.forEach((m: any) => m.dispose());
+                if (Array.isArray(node.material)) node.material.forEach((m: THREE.Material) => m.dispose());
                 else node.material.dispose();
               }
             }
           });
         } catch (loadErr) {
-          console.warn('[Hologram] Using fallback silhouette');
-          // Fallback simple silhouette if GLB fails
-          const headGeom = new THREE.SphereGeometry(1, 32, 32);
-          const shouldersGeom = new THREE.SphereGeometry(1.2, 32, 32);
-          shouldersGeom.scale(1.5, 0.6, 0.8);
-          shouldersGeom.translate(0, -1.5, 0);
-          finalGeometry = BufferGeometryUtils.mergeGeometries([headGeom, shouldersGeom]);
+          console.error('[Hologram Load Error]:', loadErr);
+          throw loadErr;
         }
 
         // 3. Sample Surface
@@ -143,10 +158,10 @@ const CandidateHologram: React.FC<CandidateHologramProps> = memo(({
           targetArray[i * 3 + 1] = tempVec.y;
           targetArray[i * 3 + 2] = tempVec.z;
           
-          // Initial scattered state
-          posArray[i * 3] = tempVec.x + (Math.random() - 0.5) * 10;
-          posArray[i * 3 + 1] = tempVec.y + (Math.random() - 0.5) * 10;
-          posArray[i * 3 + 2] = tempVec.z + (Math.random() - 0.5) * 10;
+          // Initial scattered state (atmosphere)
+          posArray[i * 3] = tempVec.x + (Math.random() - 0.5) * 8;
+          posArray[i * 3 + 1] = tempVec.y + (Math.random() - 0.5) * 8;
+          posArray[i * 3 + 2] = tempVec.z + (Math.random() - 0.5) * 6;
           
           randomArray[i] = Math.random();
         }
@@ -190,41 +205,42 @@ const CandidateHologram: React.FC<CandidateHologramProps> = memo(({
         setLoading(false);
         animate();
       } catch (err) {
-        console.error('[Hologram Error]:', err);
+        console.error('[Hologram Fatal Error]:', err);
         setError(true);
         setLoading(false);
       }
     };
 
     const animate = () => {
-      if (!renderer || !scene || !camera) return;
+      if (!rendererRef.current || !scene || !camera) return;
       
       const elapsed = Date.now() - startTime;
       const progress = Math.min(elapsed / FORMATION_DURATION, 1);
       const ease = 1 - Math.pow(1 - progress, 3); // easeOutCubic
 
-      const positions = points.geometry.attributes.position.array as Float32Array;
-      const targets = points.geometry.attributes.targetPos.array as Float32Array;
-      const randoms = points.geometry.attributes.random.array as Float32Array;
+      const positions = (points.geometry.attributes.position as THREE.BufferAttribute).array as Float32Array;
+      const targets = (points.geometry.attributes.targetPos as THREE.BufferAttribute).array as Float32Array;
+      const randoms = (points.geometry.attributes.random as THREE.BufferAttribute).array as Float32Array;
       
       const timeSec = elapsed / 1000;
 
       for (let i = 0; i < TOTAL_PARTICLES; i++) {
         const i3 = i * 3;
         
-        // 1. Formation Lerp
+        // 1. Formation Interpolation
         if (progress < 1) {
           positions[i3] += (targets[i3] - positions[i3]) * ease * 0.1;
           positions[i3 + 1] += (targets[i3 + 1] - positions[i3 + 1]) * ease * 0.1;
           positions[i3 + 2] += (targets[i3 + 2] - positions[i3 + 2]) * ease * 0.1;
         } else {
-          // 2. Idle movement
-          positions[i3] = targets[i3] + Math.sin(timeSec * 0.5 + randoms[i] * 10) * 0.002;
-          positions[i3 + 1] = targets[i3 + 1] + Math.cos(timeSec * 0.7 + randoms[i] * 10) * 0.002;
+          // 2. Idle movement (breathing)
+          const breathe = Math.sin(timeSec * 0.5 + randoms[i] * 10) * 0.002;
+          positions[i3] = targets[i3] + breathe;
+          positions[i3 + 1] = targets[i3 + 1] + breathe;
           
-          // 3. Speaking movement (Mouth area mask: y between -0.5 and -1.2, x centered)
-          if (speakingRef.current && targets[i3+1] < -0.5 && targets[i3+1] > -1.2 && Math.abs(targets[i3]) < 0.4) {
-            positions[i3 + 1] += Math.sin(timeSec * 15 + i) * 0.006;
+          // 3. Speaking movement (Lower face region)
+          if (speakingRef.current && targets[i3+1] < -0.4 && Math.abs(targets[i3]) < 0.5) {
+            positions[i3 + 1] += Math.sin(timeSec * 15 + i) * 0.005;
           }
         }
       }
@@ -232,15 +248,15 @@ const CandidateHologram: React.FC<CandidateHologramProps> = memo(({
       points.geometry.attributes.position.needsUpdate = true;
       particlesAtmos.rotation.y += 0.001;
 
-      renderer.render(scene, camera);
+      rendererRef.current.render(scene, camera);
       requestRef.current = requestAnimationFrame(animate);
     };
 
     const handleResize = () => {
-      if (!containerRef.current || !renderer || !camera) return;
+      if (!containerRef.current || !rendererRef.current || !camera) return;
       const w = containerRef.current.clientWidth;
       const h = containerRef.current.clientHeight;
-      renderer.setSize(w, h);
+      rendererRef.current.setSize(w, h);
       camera.aspect = w / h;
       camera.updateProjectionMatrix();
     };
@@ -256,11 +272,16 @@ const CandidateHologram: React.FC<CandidateHologramProps> = memo(({
         rendererRef.current.forceContextLoss();
       }
       if (scene) {
-        scene.traverse((obj: any) => {
-          if (obj.geometry) obj.geometry.dispose();
-          if (obj.material) {
-            if (Array.isArray(obj.material)) obj.material.forEach((m: any) => m.dispose());
-            else obj.material.dispose();
+        scene.traverse((obj: THREE.Object3D) => {
+          if (obj instanceof THREE.Mesh) {
+            if (obj.geometry) obj.geometry.dispose();
+            if (obj.material) {
+              if (Array.isArray(obj.material)) {
+                obj.material.forEach((m: THREE.Material) => m.dispose());
+              } else {
+                obj.material.dispose();
+              }
+            }
           }
         });
       }
@@ -293,7 +314,7 @@ const CandidateHologram: React.FC<CandidateHologramProps> = memo(({
           </div>
           <h3 className="text-sm font-bold text-white uppercase tracking-widest mb-2">Visual Node Failure</h3>
           <p className="text-[10px] text-white/40 uppercase tracking-widest leading-relaxed">
-            The neural visualizer encountered a critical shader fault. Falling back to base silhouette.
+            The neural visualizer encountered a critical fault. Re-initializing WebGL handshake.
           </p>
         </div>
       )}
