@@ -1,5 +1,5 @@
 "use client";
-import { Suspense, useEffect, useState, useRef, useMemo } from "react";
+import { Suspense, useEffect, useState, useRef, useMemo, useCallback } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
 import Link from "next/link";
@@ -227,6 +227,10 @@ function VirtualArenaContent() {
     init();
   }, [user, db, journey, journeyRef]);
 
+  const handleSpeechEnd = useCallback(() => {
+    setIsAiSpeaking(false);
+  }, []);
+
   const handleSend = async () => {
     if (!userAnswer.trim() || isProcessing || isSimulationComplete) return;
     setIsProcessing(true);
@@ -445,7 +449,7 @@ function VirtualArenaContent() {
                   isSpeaking={isAiSpeaking} 
                   isGenerating={isInitializing}
                   currentQuestion={transcript[transcript.length - 1]?.role === 'interviewer' ? transcript[transcript.length - 1].text : undefined}
-                  onSpeechEnd={() => setIsAiSpeaking(false)}
+                  onSpeechEnd={handleSpeechEnd}
                   className="rounded-2xl h-full w-full"
                 />
              </div>

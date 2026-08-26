@@ -25,16 +25,22 @@ export default function HolographicInterviewer({
 }: HolographicInterviewerProps) {
   const [pulse, setPulse] = useState(false);
   const pulseTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const onSpeechEndRef = useRef(onSpeechEnd);
+
+  // Store the latest callback in a ref to avoid dependency re-renders
+  useEffect(() => {
+    onSpeechEndRef.current = onSpeechEnd;
+  }, [onSpeechEnd]);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
 
     // Guard for Speech Synthesis API
     if (!('speechSynthesis' in window)) {
-      if (currentQuestion && onSpeechEnd) {
+      if (currentQuestion && isSpeaking) {
         const wordCount = currentQuestion.trim().split(/\s+/).length;
         const estimatedMs = Math.min(Math.max((wordCount / 2.5) * 1000, 1500), 8000);
-        const timer = setTimeout(() => onSpeechEnd(), estimatedMs);
+        const timer = setTimeout(() => onSpeechEndRef.current?.(), estimatedMs);
         return () => clearTimeout(timer);
       }
       return;
@@ -62,11 +68,11 @@ export default function HolographicInterviewer({
     }
 
     utterance.onend = () => {
-      if (onSpeechEnd) onSpeechEnd();
+      onSpeechEndRef.current?.();
     };
 
     utterance.onerror = () => {
-      if (onSpeechEnd) onSpeechEnd();
+      onSpeechEndRef.current?.();
     };
 
     // React visually to word boundaries
@@ -78,13 +84,18 @@ export default function HolographicInterviewer({
       }
     };
 
-    synth.speak(utterance);
+    // Chrome bug workaround: cancel() and speak() in same tick can cause silence.
+    // Small delay ensures previous context is cleared.
+    const speakTimer = setTimeout(() => {
+      synth.speak(utterance);
+    }, 50);
 
     return () => {
+      clearTimeout(speakTimer);
       synth.cancel();
       if (pulseTimeoutRef.current) clearTimeout(pulseTimeoutRef.current);
     };
-  }, [currentQuestion, isSpeaking, onSpeechEnd]);
+  }, [currentQuestion, isSpeaking]); // Removed onSpeechEnd from deps
 
   return (
     <div className={cn("h-full w-full", className)}>
