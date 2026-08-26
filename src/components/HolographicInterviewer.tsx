@@ -30,13 +30,20 @@ export default function HolographicInterviewer({
    * TTS Logic is intentionally disabled.
    * We skip calling the TTS API entirely to avoid 401 Unauthenticated errors
    * and potential quota issues. Speech playback is skipped silently.
+   * 
+   * We calculate an estimated duration based on the question length to ensure
+   * the visual "speaking" state behaves realistically.
    */
   useEffect(() => {
     if (currentQuestion && onSpeechEnd) {
-      // Signal completion of "speech" immediately without network activity.
+      const wordCount = currentQuestion.trim().split(/\s+/).length;
+      // Estimate duration: ~150 words per minute (2.5 words per sec)
+      // Clamped between 1.5s and 8s for visual realism
+      const estimatedMs = Math.min(Math.max((wordCount / 2.5) * 1000, 1500), 8000);
+
       const timer = setTimeout(() => {
         onSpeechEnd();
-      }, 50);
+      }, estimatedMs);
       return () => clearTimeout(timer);
     }
   }, [currentQuestion, onSpeechEnd]);

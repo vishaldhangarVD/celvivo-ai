@@ -418,6 +418,7 @@ function VirtualArenaContent() {
                 <HolographicInterviewer 
                   isSpeaking={isAiSpeaking} 
                   isGenerating={isInitializing}
+                  currentQuestion={transcript[transcript.length - 1]?.role === 'interviewer' ? transcript[transcript.length - 1].text : undefined}
                   onSpeechEnd={() => setIsAiSpeaking(false)}
                   className="rounded-2xl h-full w-full"
                 />
