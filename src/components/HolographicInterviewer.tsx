@@ -54,18 +54,9 @@ export default function HolographicInterviewer({
     synth.cancel();
 
     const utterance = new SpeechSynthesisUtterance(currentQuestion);
-    utterance.lang = 'en-US';
-    utterance.rate = 1.05; // Slightly faster for a professional feel
+    utterance.lang = 'en-IN';
+    utterance.rate = 1.0; // Natural rate
     utterance.pitch = 1;
-
-    // Try to find a high-quality English voice
-    const voices = synth.getVoices();
-    const preferredVoice = voices.find(v => (v.name.includes('Google') || v.name.includes('Neural')) && v.lang.startsWith('en')) 
-                         || voices.find(v => v.lang.startsWith('en'));
-    
-    if (preferredVoice) {
-      utterance.voice = preferredVoice;
-    }
 
     utterance.onend = () => {
       onSpeechEndRef.current?.();
@@ -84,18 +75,43 @@ export default function HolographicInterviewer({
       }
     };
 
+    // Voice selection and execution logic
+    const handleSpeak = () => {
+      const vList = synth.getVoices();
+      
+      // Preference: Indian English (Neural/Google) -> Indian English -> English (Neural/Google) -> English
+      const preferredVoice = 
+        vList.find(v => v.lang === 'en-IN' && (v.name.includes('Google') || v.name.includes('Neural'))) ||
+        vList.find(v => v.lang === 'en-IN') ||
+        vList.find(v => (v.name.includes('Google') || v.name.includes('Neural')) && v.lang.startsWith('en')) ||
+        vList.find(v => v.lang.startsWith('en'));
+
+      if (preferredVoice) {
+        utterance.voice = preferredVoice;
+        utterance.lang = preferredVoice.lang;
+      }
+      
+      synth.speak(utterance);
+    };
+
     // Chrome bug workaround: cancel() and speak() in same tick can cause silence.
     // Small delay ensures previous context is cleared.
     const speakTimer = setTimeout(() => {
-      synth.speak(utterance);
+      // Browsers often load voices asynchronously
+      if (synth.getVoices().length === 0) {
+        synth.addEventListener('voiceschanged', handleSpeak, { once: true });
+      } else {
+        handleSpeak();
+      }
     }, 50);
 
     return () => {
       clearTimeout(speakTimer);
+      synth.removeEventListener('voiceschanged', handleSpeak);
       synth.cancel();
       if (pulseTimeoutRef.current) clearTimeout(pulseTimeoutRef.current);
     };
-  }, [currentQuestion, isSpeaking]); // Removed onSpeechEnd from deps
+  }, [currentQuestion, isSpeaking]);
 
   return (
     <div className={cn("h-full w-full", className)}>
