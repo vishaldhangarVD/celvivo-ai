@@ -1,4 +1,3 @@
-import Script from "next/script";
 import type { Metadata } from "next";
 import "./globals.css";
 import { FirebaseClientProvider } from "@/firebase";
@@ -27,27 +26,6 @@ export default function RootLayout({
         <link
           href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600;700&display=swap"
           rel="stylesheet"
-        />
-        {/* Browser-native import map for TalkingHead - Three.js mapping removed to fix duplication */}
-        <script
-          type="importmap"
-          dangerouslySetInnerHTML={{
-            __html: JSON.stringify({
-              imports: {
-                "talkinghead": "https://cdn.jsdelivr.net/gh/met4citizen/TalkingHead@1.7/modules/talkinghead.mjs"
-              }
-            })
-          }}
-        />
-        <script
-          type="module"
-          dangerouslySetInnerHTML={{
-            __html: `
-              import { TalkingHead } from 'talkinghead';
-              window.TalkingHeadClass = TalkingHead;
-              window.dispatchEvent(new CustomEvent('talkinghead-ready'));
-            `
-          }}
         />
       </head>
 

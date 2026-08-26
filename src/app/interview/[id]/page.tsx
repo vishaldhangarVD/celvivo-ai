@@ -1,60 +1,36 @@
 "use client";
 import { Suspense, useEffect, useState, useRef, useMemo } from "react";
-import { useRouter, useParams, useSearchParams } from "next/navigation";
+import { useRouter, useParams } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
 import Link from "next/link";
-import dynamic from 'next/dynamic';
 import { Button } from "@/components/ui/button";
 import { 
   Loader2, 
-  Send, 
   Mic, 
-  Command, 
-  ShieldCheck, 
-  VideoOff, 
-  AlertCircle, 
-  Brain, 
   Home, 
   MessageSquare, 
-  BarChart4, 
-  HelpCircle, 
-  Settings, 
   PhoneOff, 
   MicOff, 
-  RotateCw, 
   ChevronRight, 
   Timer, 
-  User, 
   Video, 
+  VideoOff,
   Activity, 
-  Wifi, 
-  Calculator, 
-  FileEdit, 
   Award, 
-  MoreHorizontal, 
   Clock
 } from "lucide-react";
 import { aiMockInterview } from "@/ai/flows/ai-mock-interview-v2";
 import { generateInterviewFeedback } from "@/ai/flows/ai-interview-feedback";
 import { useUser, useFirestore, useDoc } from "@/firebase";
-import { doc, serverTimestamp, collection, addDoc, getDoc, deleteDoc, updateDoc, setDoc } from "firebase/firestore";
+import { doc, serverTimestamp, collection, addDoc, updateDoc } from "firebase/firestore";
 import { useToast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
+import CandidateHologram from "@/components/CandidateHologram";
 import HolographicInterviewer from "@/components/HolographicInterviewer";
-import { INTERVIEW_STAGES, STAGE_ROUTES } from "@/lib/interview-stages";
-
-const CandidateHologram = dynamic(() => import("@/components/CandidateHologram"), { 
-  ssr: false,
-  loading: () => (
-    <div className="w-full h-full flex flex-col items-center justify-center bg-[#050816]">
-       <Loader2 className="w-12 h-12 text-accent animate-spin mb-4" />
-       <p className="text-[10px] font-black uppercase tracking-[0.5em] text-accent animate-pulse">Initialising Matrix...</p>
-    </div>
-  )
-});
+import { INTERVIEW_STAGES } from "@/lib/interview-stages";
 
 function VirtualArenaContent() {
   const router = useRouter();
@@ -68,13 +44,11 @@ function VirtualArenaContent() {
   const [currentIdx, setCurrentIdx] = useState(1);
   const [transcript, setTranscript] = useState<{role: 'interviewer' | 'candidate', text: string}[]>([]);
   const [userAnswer, setUserAnswer] = useState("");
-  const [isMicActive, setIsMicActive] = useState(false);
   const [timeLeft, setTimeLeft] = useState(15 * 60); 
   const [isSimulationComplete, setIsSimulationComplete] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [isInitializing, setIsInitializing] = useState(true);
   const [isGeneratingReport, setIsGeneratingReport] = useState(false);
-  const [cameraError, setCameraError] = useState<string | null>(null);
   
   const [currentSimStage, setCurrentSimStage] = useState<string>("INTRODUCTION");
   const [isAiSpeaking, setIsAiSpeaking] = useState(false);
@@ -82,7 +56,6 @@ function VirtualArenaContent() {
   const [isMicOn, setIsMicOn] = useState(true);
   const [isCameraOn, setIsCameraOn] = useState(true);
   const [askedQuestions, setAskedQuestions] = useState<string[]>([]);
-  const [stream, setStream] = useState<MediaStream | null>(null);
   const mediaStreamRef = useRef<MediaStream | null>(null);
   
   const journeyRef = useMemo(() => {
@@ -110,15 +83,13 @@ function VirtualArenaContent() {
 
   const startCamera = async () => {
     try {
-      setCameraError(null);
       const mediaStream = await navigator.mediaDevices.getUserMedia({
         video: { width: 1280, height: 720, facingMode: "user" },
         audio: true,
       });
       mediaStreamRef.current = mediaStream;
-      setStream(mediaStream);
     } catch (error: any) {
-      setCameraError(error?.message || "Camera access required.");
+      console.error("Camera access required.", error);
     }
   };
 
@@ -164,7 +135,7 @@ function VirtualArenaContent() {
           setTranscript([{ role: 'interviewer', text: "Hello. Welcome to today's interview. Could you please introduce yourself and share a bit about your journey?" }]);
         }
       }
-      setTimeout(() => setIsInitializing(false), 2000);
+      setTimeout(() => setIsInitializing(false), 1500);
     }
     init();
   }, [user, db, journey, journeyRef]);
@@ -291,9 +262,7 @@ function VirtualArenaContent() {
   if (isInitializing) {
     return (
       <div className="h-screen w-full bg-[#050816] flex items-center justify-center relative overflow-hidden">
-        <div className="absolute inset-0 z-0 h-full w-full">
-           <CandidateHologram isLoader={true} className="w-full h-full" />
-        </div>
+        <CandidateHologram isLoader={true} className="w-full h-full" />
       </div>
     );
   }
@@ -387,8 +356,6 @@ function VirtualArenaContent() {
                 <HolographicInterviewer 
                   isSpeaking={isAiSpeaking} 
                   isGenerating={isInitializing}
-                  currentQuestion={transcript[transcript.length-1]?.text} 
-                  onSpeechEnd={() => setIsAiSpeaking(false)}
                   className="rounded-2xl h-full w-full"
                 />
              </div>
