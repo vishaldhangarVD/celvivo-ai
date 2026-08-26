@@ -2,9 +2,9 @@
 
 import React, { memo, useEffect, useRef, useState } from 'react';
 import * as THREE from 'three';
-import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
-import { MeshSurfaceSampler } from 'three/examples/jsm/math/MeshSurfaceSampler.js';
-import * as BufferGeometryUtils from 'three/examples/jsm/utils/BufferGeometryUtils.js';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { MeshSurfaceSampler } from 'three/addons/math/MeshSurfaceSampler.js';
+import * as BufferGeometryUtils from 'three/addons/utils/BufferGeometryUtils.js';
 
 interface CandidateHologramProps {
   active?: boolean;
@@ -14,9 +14,8 @@ interface CandidateHologramProps {
 }
 
 /**
- * High-Fidelity 3D Particle Hologram
- * Extracts raw geometry from woman_head.glb and renders as a dense point cloud.
- * Disposes of original GLB resources immediately to prevent shader/texture errors.
+ * @fileOverview CandidateHologram - High-Fidelity 3D Particle Hologram.
+ * Fixed for WebGL stability and GLB compatibility.
  */
 const CandidateHologram: React.FC<CandidateHologramProps> = memo(({
   active = true,
@@ -27,258 +26,244 @@ const CandidateHologram: React.FC<CandidateHologramProps> = memo(({
   const containerRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState(false);
 
-  // Use refs for Three.js objects to avoid re-renders and closure issues
-  const stateRef = useRef({
-    renderer: null as THREE.WebGLRenderer | null,
-    scene: null as THREE.Scene | null,
-    camera: null as THREE.PerspectiveCamera | null,
-    animationFrame: null as number | null,
-    material: null as THREE.ShaderMaterial | null,
-    speaking: speaking,
-    startTime: Date.now()
-  });
+  // Refs for animation state to prevent re-renders
+  const speakingRef = useRef(speaking);
+  const rendererRef = useRef<THREE.WebGLRenderer | null>(null);
+  const requestRef = useRef<number | null>(null);
 
-  // Sync speaking state to shader uniform without re-renders
   useEffect(() => {
-    stateRef.current.speaking = speaking;
-    if (stateRef.current.material) {
-      stateRef.current.material.uniforms.uSpeaking.value = speaking ? 1.0 : 0.0;
-    }
+    speakingRef.current = speaking;
   }, [speaking]);
 
   useEffect(() => {
     if (!active || !canvasRef.current || !containerRef.current) return;
 
-    const container = containerRef.current;
-    const canvas = canvasRef.current;
-
-    // --- 1. RENDERER SETUP ---
-    const renderer = new THREE.WebGLRenderer({
-      canvas,
-      alpha: true,
-      antialias: true,
-      powerPreference: 'high-performance'
-    });
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
-    renderer.setSize(container.clientWidth, container.clientHeight);
-    stateRef.current.renderer = renderer;
-
-    const scene = new THREE.Scene();
-    stateRef.current.scene = scene;
-
-    const camera = new THREE.PerspectiveCamera(
-      35,
-      container.clientWidth / container.clientHeight,
-      0.1,
-      100
-    );
-    camera.position.set(0, 0, 4);
-    stateRef.current.camera = camera;
-
-    // --- 2. CUSTOM SHADERS ---
-    const vertexShader = `
-      uniform float uTime;
-      uniform float uFormation;
-      uniform float uSpeaking;
-      attribute vec3 aTargetPosition;
-      attribute float aSize;
-      varying float vOpacity;
-
-      void main() {
-        // Morph from random sphere to face shape
-        vec3 pos = mix(position, aTargetPosition, uFormation);
-        
-        // Subtle holographic float
-        pos.y += sin(uTime * 0.4 + aTargetPosition.x * 5.0) * 0.008;
-        
-        // Speaking jitter (mouth area detection in normalized space)
-        if (uSpeaking > 0.5 && aTargetPosition.y < -0.1 && aTargetPosition.y > -0.4 && aTargetPosition.z > 0.3) {
-          pos.y += sin(uTime * 20.0) * 0.015;
-          pos.z += cos(uTime * 15.0) * 0.01;
-        }
-
-        vec4 mvPosition = modelViewMatrix * vec4(pos, 1.0);
-        gl_PointSize = aSize * (300.0 / -mvPosition.z);
-        gl_Position = projectionMatrix * mvPosition;
-        
-        vOpacity = 0.4 + (sin(uTime * 1.5 + position.y * 10.0) * 0.2);
-      }
-    `;
-
-    const fragmentShader = `
-      varying float vOpacity;
-      void main() {
-        float d = distance(gl_PointCoord, vec2(0.5));
-        if (d > 0.5) discard;
-        // Cyber Cyan
-        gl_FragColor = vec4(0.13, 0.83, 0.93, vOpacity * (1.0 - d * 2.0));
-      }
-    `;
-
-    // --- 3. MODEL LOADING & GEOMETRY EXTRACTION ---
-    const loadingManager = new THREE.LoadingManager();
-    // Ignore texture errors as we don't need them
-    loadingManager.onError = () => {}; 
+    let scene: THREE.Scene;
+    let camera: THREE.PerspectiveCamera;
+    let renderer: THREE.WebGLRenderer;
+    let points: THREE.Points;
+    let particlesAtmos: THREE.Points;
     
-    const loader = new GLTFLoader(loadingManager);
-    const TOTAL_PARTICLES = 75000;
+    const TOTAL_PARTICLES = 35000;
+    const ATMOS_PARTICLES = 600;
+    const FORMATION_DURATION = 2000;
+    const startTime = Date.now();
 
-    loader.load(
-      '/models/woman_head.glb',
-      (gltf) => {
-        const meshes: THREE.Mesh[] = [];
-        gltf.scene.traverse((node) => {
-          if ((node as THREE.Mesh).isMesh) {
-            const mesh = node as THREE.Mesh;
-            const name = mesh.name.toLowerCase();
-            // Filter out interior geometry that messes up the scan look
-            if (!name.includes('eye') && !name.includes('teeth') && !name.includes('inner')) {
-              mesh.updateMatrixWorld(true);
-              meshes.push(mesh);
-            }
-          }
+    const init = async () => {
+      try {
+        const width = containerRef.current!.clientWidth;
+        const height = containerRef.current!.clientHeight;
+
+        // 1. Setup Core
+        scene = new THREE.Scene();
+        camera = new THREE.PerspectiveCamera(35, width / height, 0.1, 100);
+        camera.position.set(0, 0, 5);
+
+        renderer = new THREE.WebGLRenderer({
+          canvas: canvasRef.current!,
+          alpha: true,
+          antialias: false,
+          powerPreference: 'high-performance'
         });
+        renderer.setSize(width, height);
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.25));
+        rendererRef.current = renderer;
 
-        if (meshes.length === 0) {
-          setError('Handshake failed: Geometry not found.');
-          setLoading(false);
-          return;
-        }
+        // 2. Load Model & Extract Geometry
+        const loader = new GLTFLoader();
+        let finalGeometry: THREE.BufferGeometry;
 
-        // Merge all geometry into one sampler source
-        const geometries = meshes.map(m => {
-          const g = m.geometry.clone();
-          g.applyMatrix4(m.matrixWorld);
-          return g;
-        });
-        const mergedGeometry = BufferGeometryUtils.mergeGeometries(geometries);
-        const mergedMesh = new THREE.Mesh(mergedGeometry);
-
-        // Normalize bounds
-        mergedGeometry.computeBoundingBox();
-        const box = mergedGeometry.boundingBox!;
-        const center = new THREE.Vector3();
-        box.getCenter(center);
-        const size = new THREE.Vector3();
-        box.getSize(size);
-        const scale = 2.2 / Math.max(size.x, size.y, size.z);
-        mergedGeometry.translate(-center.x, -center.y, -center.z);
-        mergedGeometry.scale(scale, scale, scale);
-
-        // Sample surface for points
-        const sampler = new MeshSurfaceSampler(mergedMesh).build();
-        const positions = new Float32Array(TOTAL_PARTICLES * 3);
-        const targetPositions = new Float32Array(TOTAL_PARTICLES * 3);
-        const sizes = new Float32Array(TOTAL_PARTICLES);
-
-        const tempPos = new THREE.Vector3();
-        for (let i = 0; i < TOTAL_PARTICLES; i++) {
-          sampler.sample(tempPos);
-          targetPositions.set([tempPos.x, tempPos.y, tempPos.z], i * 3);
+        try {
+          const gltf = await loader.loadAsync('/models/woman_head.glb');
+          const geometries: THREE.BufferGeometry[] = [];
           
-          // Initial scattered explosion state
-          positions.set([
-            (Math.random() - 0.5) * 10,
-            (Math.random() - 0.5) * 10,
-            (Math.random() - 0.5) * 10
-          ], i * 3);
+          gltf.scene.updateMatrixWorld(true);
+          gltf.scene.traverse((node: any) => {
+            if (node.isMesh) {
+              const name = node.name.toLowerCase();
+              // Exclude interior noisy geometry
+              if (!/eye|cornea|iris|pupil|sclera|teeth|tongue|inner|mouth/.test(name)) {
+                const geom = node.geometry.index ? node.geometry.toNonIndexed() : node.geometry.clone();
+                geom.applyMatrix4(node.matrixWorld);
+                geometries.push(geom);
+              }
+            }
+          });
 
-          sizes[i] = 0.004 + Math.random() * 0.012;
+          if (geometries.length > 0) {
+            finalGeometry = BufferGeometryUtils.mergeGeometries(geometries);
+            // Center and scale
+            finalGeometry.computeBoundingBox();
+            const box = finalGeometry.boundingBox!;
+            const center = new THREE.Vector3();
+            box.getCenter(center);
+            const size = new THREE.Vector3();
+            box.getSize(size);
+            const scale = 3.5 / size.y;
+            finalGeometry.translate(-center.x, -center.y, -center.z);
+            finalGeometry.scale(scale, scale, scale);
+          } else {
+            throw new Error('No valid geometry');
+          }
+
+          // Cleanup original GLTF resources immediately
+          gltf.scene.traverse((node: any) => {
+            if (node.isMesh) {
+              node.geometry.dispose();
+              if (node.material) {
+                if (Array.isArray(node.material)) node.material.forEach((m: any) => m.dispose());
+                else node.material.dispose();
+              }
+            }
+          });
+        } catch (loadErr) {
+          console.warn('[Hologram] Using fallback silhouette');
+          // Fallback simple silhouette if GLB fails
+          const headGeom = new THREE.SphereGeometry(1, 32, 32);
+          const shouldersGeom = new THREE.SphereGeometry(1.2, 32, 32);
+          shouldersGeom.scale(1.5, 0.6, 0.8);
+          shouldersGeom.translate(0, -1.5, 0);
+          finalGeometry = BufferGeometryUtils.mergeGeometries([headGeom, shouldersGeom]);
         }
 
-        // DISPOSE ORIGINAL RESOURCES IMMEDIATELY
-        mergedGeometry.dispose();
-        geometries.forEach(g => g.dispose());
-        gltf.scene.traverse((node) => {
-          const m = node as THREE.Mesh;
-          if (m.isMesh) {
-            m.geometry.dispose();
-            if (Array.isArray(m.material)) m.material.forEach(mat => mat.dispose());
-            else if (m.material) m.material.dispose();
-          }
-        });
+        // 3. Sample Surface
+        const dummyMesh = new THREE.Mesh(finalGeometry);
+        const sampler = new MeshSurfaceSampler(dummyMesh).build();
+        
+        const posArray = new Float32Array(TOTAL_PARTICLES * 3);
+        const targetArray = new Float32Array(TOTAL_PARTICLES * 3);
+        const randomArray = new Float32Array(TOTAL_PARTICLES);
+        const tempVec = new THREE.Vector3();
 
-        // --- 4. BUILD POINTS SYSTEM ---
-        const pointsGeometry = new THREE.BufferGeometry();
-        pointsGeometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
-        pointsGeometry.setAttribute('aTargetPosition', new THREE.BufferAttribute(targetPositions, 3));
-        pointsGeometry.setAttribute('aSize', new THREE.BufferAttribute(sizes, 1));
+        for (let i = 0; i < TOTAL_PARTICLES; i++) {
+          sampler.sample(tempVec);
+          targetArray[i * 3] = tempVec.x;
+          targetArray[i * 3 + 1] = tempVec.y;
+          targetArray[i * 3 + 2] = tempVec.z;
+          
+          // Initial scattered state
+          posArray[i * 3] = tempVec.x + (Math.random() - 0.5) * 10;
+          posArray[i * 3 + 1] = tempVec.y + (Math.random() - 0.5) * 10;
+          posArray[i * 3 + 2] = tempVec.z + (Math.random() - 0.5) * 10;
+          
+          randomArray[i] = Math.random();
+        }
 
-        const material = new THREE.ShaderMaterial({
-          uniforms: {
-            uTime: { value: 0 },
-            uFormation: { value: 0 },
-            uSpeaking: { value: speaking ? 1.0 : 0.0 }
-          },
-          vertexShader,
-          fragmentShader,
+        const pointGeom = new THREE.BufferGeometry();
+        pointGeom.setAttribute('position', new THREE.BufferAttribute(posArray, 3));
+        pointGeom.setAttribute('targetPos', new THREE.BufferAttribute(targetArray, 3));
+        pointGeom.setAttribute('random', new THREE.BufferAttribute(randomArray, 1));
+
+        const material = new THREE.PointsMaterial({
+          color: 0x22d3ee,
+          size: 0.007,
           transparent: true,
+          opacity: 0.9,
           blending: THREE.AdditiveBlending,
           depthWrite: false,
+          sizeAttenuation: true
         });
-        stateRef.current.material = material;
 
-        const points = new THREE.Points(pointsGeometry, material);
+        points = new THREE.Points(pointGeom, material);
         scene.add(points);
 
+        // 4. Atmos
+        const atmosPos = new Float32Array(ATMOS_PARTICLES * 3);
+        for (let i = 0; i < ATMOS_PARTICLES; i++) {
+          atmosPos[i * 3] = (Math.random() - 0.5) * 8;
+          atmosPos[i * 3 + 1] = (Math.random() - 0.5) * 8;
+          atmosPos[i * 3 + 2] = (Math.random() - 0.5) * 4;
+        }
+        const atmosGeom = new THREE.BufferGeometry();
+        atmosGeom.setAttribute('position', new THREE.BufferAttribute(atmosPos, 3));
+        particlesAtmos = new THREE.Points(atmosGeom, new THREE.PointsMaterial({
+          color: 0x22d3ee,
+          size: 0.005,
+          transparent: true,
+          opacity: 0.15,
+          blending: THREE.AdditiveBlending
+        }));
+        scene.add(particlesAtmos);
+
         setLoading(false);
-      },
-      undefined,
-      (err) => {
-        console.error('Neural Load Error:', err);
-        setError('Critical: Protocol Handshake Failed.');
+        animate();
+      } catch (err) {
+        console.error('[Hologram Error]:', err);
+        setError(true);
         setLoading(false);
       }
-    );
+    };
 
-    // --- 5. ANIMATION LOOP ---
     const animate = () => {
-      const elapsed = (Date.now() - stateRef.current.startTime) / 1000;
+      if (!renderer || !scene || !camera) return;
+      
+      const elapsed = Date.now() - startTime;
+      const progress = Math.min(elapsed / FORMATION_DURATION, 1);
+      const ease = 1 - Math.pow(1 - progress, 3); // easeOutCubic
 
-      if (stateRef.current.material) {
-        stateRef.current.material.uniforms.uTime.value = elapsed;
+      const positions = points.geometry.attributes.position.array as Float32Array;
+      const targets = points.geometry.attributes.targetPos.array as Float32Array;
+      const randoms = points.geometry.attributes.random.array as Float32Array;
+      
+      const timeSec = elapsed / 1000;
+
+      for (let i = 0; i < TOTAL_PARTICLES; i++) {
+        const i3 = i * 3;
         
-        // Smooth formation transition
-        const t = Math.min(elapsed / 2.5, 1.0);
-        stateRef.current.material.uniforms.uFormation.value = 1.0 - Math.pow(1.0 - t, 3.0); // Ease Out Cubic
+        // 1. Formation Lerp
+        if (progress < 1) {
+          positions[i3] += (targets[i3] - positions[i3]) * ease * 0.1;
+          positions[i3 + 1] += (targets[i3 + 1] - positions[i3 + 1]) * ease * 0.1;
+          positions[i3 + 2] += (targets[i3 + 2] - positions[i3 + 2]) * ease * 0.1;
+        } else {
+          // 2. Idle movement
+          positions[i3] = targets[i3] + Math.sin(timeSec * 0.5 + randoms[i] * 10) * 0.002;
+          positions[i3 + 1] = targets[i3 + 1] + Math.cos(timeSec * 0.7 + randoms[i] * 10) * 0.002;
+          
+          // 3. Speaking movement (Mouth area mask: y between -0.5 and -1.2, x centered)
+          if (speakingRef.current && targets[i3+1] < -0.5 && targets[i3+1] > -1.2 && Math.abs(targets[i3]) < 0.4) {
+            positions[i3 + 1] += Math.sin(timeSec * 15 + i) * 0.006;
+          }
+        }
       }
+      
+      points.geometry.attributes.position.needsUpdate = true;
+      particlesAtmos.rotation.y += 0.001;
 
       renderer.render(scene, camera);
-      stateRef.current.animationFrame = requestAnimationFrame(animate);
+      requestRef.current = requestAnimationFrame(animate);
     };
-    animate();
 
-    // --- 6. RESIZE HANDLER ---
     const handleResize = () => {
-      if (!container || !camera || !renderer) return;
-      camera.aspect = container.clientWidth / container.clientHeight;
+      if (!containerRef.current || !renderer || !camera) return;
+      const w = containerRef.current.clientWidth;
+      const h = containerRef.current.clientHeight;
+      renderer.setSize(w, h);
+      camera.aspect = w / h;
       camera.updateProjectionMatrix();
-      renderer.setSize(container.clientWidth, container.clientHeight);
     };
-    window.addEventListener('resize', handleResize);
 
-    // --- 7. CLEANUP PROTOCOL ---
+    window.addEventListener('resize', handleResize);
+    init();
+
     return () => {
       window.removeEventListener('resize', handleResize);
-      if (stateRef.current.animationFrame) cancelAnimationFrame(stateRef.current.animationFrame);
-      
-      if (renderer) {
-        renderer.dispose();
-        renderer.forceContextLoss();
+      if (requestRef.current) cancelAnimationFrame(requestRef.current);
+      if (rendererRef.current) {
+        rendererRef.current.dispose();
+        rendererRef.current.forceContextLoss();
       }
-
-      scene.traverse((obj) => {
-        if (obj instanceof THREE.Points) {
-          obj.geometry.dispose();
-          if (obj.material instanceof THREE.Material) obj.material.dispose();
-        }
-      });
-
-      stateRef.current.renderer = null;
-      stateRef.current.scene = null;
-      stateRef.current.material = null;
+      if (scene) {
+        scene.traverse((obj: any) => {
+          if (obj.geometry) obj.geometry.dispose();
+          if (obj.material) {
+            if (Array.isArray(obj.material)) obj.material.forEach((m: any) => m.dispose());
+            else obj.material.dispose();
+          }
+        });
+      }
     };
   }, [active]);
 
@@ -308,12 +293,11 @@ const CandidateHologram: React.FC<CandidateHologramProps> = memo(({
           </div>
           <h3 className="text-sm font-bold text-white uppercase tracking-widest mb-2">Visual Node Failure</h3>
           <p className="text-[10px] text-white/40 uppercase tracking-widest leading-relaxed">
-            {error}
+            The neural visualizer encountered a critical shader fault. Falling back to base silhouette.
           </p>
         </div>
       )}
 
-      {/* Holographic Overlays */}
       <div className="absolute inset-0 pointer-events-none opacity-20 bg-[linear-gradient(rgba(18,16,16,0)_50%,rgba(0,0,0,0.25)_50%),linear-gradient(90deg,rgba(255,0,0,0.06),rgba(0,255,0,0.02),rgba(0,0,255,0.06))] z-10" />
       <div className="absolute inset-0 pointer-events-none bg-[radial-gradient(circle_at_50%_50%,rgba(34,211,238,0.05),transparent_70%)] z-10" />
     </div>
