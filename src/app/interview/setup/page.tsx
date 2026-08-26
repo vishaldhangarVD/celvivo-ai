@@ -64,6 +64,81 @@ const ROLES = [
 
 const EXPERIENCE_LEVELS = ["Fresher", "0–1 Years", "1–3 Years", "3–5 Years", "5+ Years"];
 
+// Local SVG Brand Logos to ensure reliability and offline support
+const CompanyLogo = ({ name, className }: { name: string, className?: string }) => {
+  const size = "100%";
+  
+  switch (name) {
+    case "Google":
+      return (
+        <svg viewBox="0 0 48 48" className={className} style={{ width: size, height: size }}>
+          <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/>
+          <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/>
+          <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24s.92 7.54 2.56 10.78l7.97-6.19z"/>
+          <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/>
+        </svg>
+      );
+    case "Microsoft":
+      return (
+        <svg viewBox="0 0 23 23" className={className} style={{ width: size, height: size }}>
+          <path fill="#f35325" d="M1 1h10v10H1z"/><path fill="#81bc06" d="M12 1h10v10H12z"/><path fill="#05a6f0" d="M1 12h10v10H1z"/><path fill="#ffba08" d="M12 12h10v10H12z"/>
+        </svg>
+      );
+    case "Amazon":
+      return (
+        <svg viewBox="0 0 100 100" className={className} style={{ width: size, height: size }}>
+          <path fill="#FF9900" d="M20.5 66.8c18.5 12.3 40.5 12.3 59 0-1.8-1.5-3.8-2.5-6-3.2-16.5 9-34.5 9-50.5 0-1.2.7-2 1.8-2.5 3.2z"/>
+          <path fill="#000000" d="M79.5 56.5c1.8 1.5 3.5 3.2 4.8 5.2.8 1.2.8 2.8 0 4-.5.8-1.2 1.5-2 2L80 66c-1.5 1-3.2 1-4.8 0l-2.5-1.5c-.8-.5-1.2-1.2-1.5-2 0-1.2.5-2.5 1.5-3.2l6.8-4.8z"/>
+        </svg>
+      );
+    case "Meta":
+      return (
+        <svg viewBox="0 0 512 512" className={className} style={{ width: size, height: size }}>
+          <path fill="#0668E1" d="M437 175c-35-51-105-51-140 0L135 348c-8 11-20 17-33 17-25 0-46-21-46-46 0-13 6-25 17-33l35-25c4-3 5-8 2-12s-8-5-12-2l-35 25C26 295 10 326 10 359c0 53 43 96 96 96 35 0 67-18 85-48l162-241c8-11 20-17 33-17 25 0 46 21 46 46 0 13-6 25-17 33l-35 25c-4 3-5 8-2 12s8 5 12 2l35-25c37-23 53-54 53-87 0-53-43-96-96-96-35 0-67 18-85 48L114 348c-35 51 35 102 70 51L346 226c8-11 20-17 33-17 25 0 46 21 46 46 0 13-6 25-17 33l-35 25c-4 3-5 8-2 12s8 5 12 2l35-25c37-23 53-54 53-87 0-13-4-26-11-38z"/>
+        </svg>
+      );
+    case "Apple":
+      return (
+        <svg viewBox="0 0 512 512" className={className} style={{ width: size, height: size }}>
+          <path fill="#FFFFFF" d="M388.5 352.7c-5.6-3.4-11.2-6.5-16.7-9.5-38.3-21.2-69.7-18.3-95.2 7-23.7 23.5-51.5 24.2-76 6.8-21.5-15.3-33-39.7-33-72.3 0-56.4 34.3-107.5 90.7-107.5 31 0 54.3 16.5 73.2 16.5 17.5 0 42-17.5 75.8-17.5 13.8 0 27.5 2.8 40.2 8.3-43.4 23.2-65.4 69.5-54.3 118.8 11.2 49.3 46 83.2 92.5 99.3-18.7 54.3-51.5 101.5-97.2 142.2zM286.2 56.5c0-42.5 35.3-77 78.5-77 3.4 0 6.8.2 10.1.7-2.3 43-37.4 76-78.5 76.3-3.4 0-6.8-.2-10.1-.7z"/>
+        </svg>
+      );
+    case "IBM":
+      return (
+        <svg viewBox="0 0 32 32" className={className} style={{ width: size, height: size }}>
+          <path fill="#0062ff" d="M22 6h8v2h-8zm0 4h8v2h-8zm0 4h8v2h-8zm0 4h8v2h-8zM2 6h8v2H2zm0 4h8v2H2zm0 4h8v2H2zm0 4h8v2H2zm10-12h8v2h-8zm0 4h8v2h-8zm0 4h8v2h-8zm0 4h8v2h-8z"/>
+        </svg>
+      );
+    case "Accenture":
+      return (
+        <svg viewBox="0 0 256 256" className={className} style={{ width: size, height: size }}>
+          <path fill="#a100ff" d="M128 0C57.314 0 0 57.314 0 128s57.314 128 128 128 128-57.314 128-128S198.686 0 128 0zm64 128h-32l-32-32 32-32h32l-32 32 32 32z"/>
+        </svg>
+      );
+    case "Deloitte":
+      return (
+        <svg viewBox="0 0 256 256" className={className} style={{ width: size, height: size }}>
+          <circle cx="210" cy="190" r="24" fill="#86bc25"/><path fill="#FFFFFF" d="M40 70h20v116H40zm40 0h50c25 0 40 12 40 34 0 18-10 28-24 32 16 4 28 14 28 34 0 22-15 36-44 36H80zm20 18v34h30c12 0 20-6 20-17s-8-17-20-17zm0 50v34h34c12 0 20-6 20-17s-8-17-20-17z"/>
+        </svg>
+      );
+    case "TCS":
+      return (
+        <svg viewBox="0 0 120 120" className={className} style={{ width: size, height: size }}>
+          <path fill="#0054a6" d="M60 10C32.4 10 10 32.4 10 60s22.4 50 50 50 50-22.4 50-50S87.6 10 60 10zm0 85c-19.3 0-35-15.7-35-35s15.7-35 35-35 35 15.7 35 35-15.7 35-35 35z"/>
+          <path fill="#0054a6" d="M60 40c-11 0-20 9-20 20s9 20 20 20 20-9 20-20-9-20-20-20z"/>
+        </svg>
+      );
+    case "Infosys":
+      return (
+        <svg viewBox="0 0 128 128" className={className} style={{ width: size, height: size }}>
+          <path fill="#007cc3" d="M10 20h108v88H10z"/><path fill="#FFFFFF" d="M25 40h15v10H25zm25 0h15v10H50zm25 0h15v10H75zm25 0h15v10h-15zm-75 25h15v10H25zm25 0h15v10H50zm25 0h15v10H75zm25 0h15v10h-15zm-75 25h15v10H25zm25 0h15v10H50zm25 0h15v10H75zm25 0h15v10h-15z"/>
+        </svg>
+      );
+    default:
+      return <Building2 className={cn("text-accent", className)} style={{ width: size, height: size }} />;
+  }
+};
+
 export default function InterviewSetupPage() {
   const router = useRouter();
   const { user, loading: authLoading } = useUser();
@@ -162,24 +237,6 @@ export default function InterviewSetupPage() {
     }
   };
 
-  const renderLogo = (companyName: string, size: number = 20) => {
-    const comp = COMPANIES.find(c => c.name === companyName);
-    if (comp && comp.domain) {
-      return (
-        <img 
-          src={`https://logo.clearbit.com/${comp.domain}`} 
-          alt={companyName} 
-          className="rounded-sm object-contain"
-          style={{ width: size, height: size }}
-          onError={(e) => {
-            (e.target as HTMLImageElement).src = "https://placehold.co/40x40/0b0e1a/22d3ee?text=" + companyName.charAt(0);
-          }}
-        />
-      );
-    }
-    return <Building2 className="text-accent" style={{ width: size, height: size }} />;
-  };
-
   if (authLoading) return (
     <div className="min-h-screen bg-[#050816] flex items-center justify-center">
       <Loader2 className="w-12 h-12 text-accent animate-spin" />
@@ -214,7 +271,9 @@ export default function InterviewSetupPage() {
                 <Select value={company} onValueChange={setCompany}>
                   <SelectTrigger className="h-12 glass border-white/10 bg-transparent rounded-xl px-4 text-sm font-bold uppercase tracking-widest text-white">
                     <div className="flex items-center gap-3">
-                      {renderLogo(company)}
+                      <div className="w-5 h-5 flex items-center justify-center">
+                        <CompanyLogo name={company} />
+                      </div>
                       <SelectValue placeholder="Select Organization" />
                     </div>
                   </SelectTrigger>
@@ -222,7 +281,9 @@ export default function InterviewSetupPage() {
                     {COMPANIES.map(c => (
                       <SelectItem key={c.name} value={c.name}>
                         <div className="flex items-center gap-3">
-                          {renderLogo(c.name)}
+                          <div className="w-5 h-5 flex items-center justify-center">
+                            <CompanyLogo name={c.name} />
+                          </div>
                           <span>{c.name}</span>
                         </div>
                       </SelectItem>
@@ -273,7 +334,11 @@ export default function InterviewSetupPage() {
                   ].map((item, i) => (
                     <Card key={i} className="p-3 glass border-accent/20 bg-accent/5 rounded-2xl space-y-1.5">
                        <div className="w-7 h-7 rounded-lg bg-accent/10 flex items-center justify-center text-accent">
-                         {item.label === "Organization" ? renderLogo(item.val, 16) : <item.icon className="w-4 h-4" />}
+                         {item.label === "Organization" ? (
+                           <div className="w-4 h-4 flex items-center justify-center">
+                             <CompanyLogo name={item.val} />
+                           </div>
+                         ) : <item.icon className="w-4 h-4" />}
                        </div>
                        <div>
                          <p className="text-[11px] font-bold text-white leading-tight truncate">{item.val}</p>
