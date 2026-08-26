@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useEffect, useMemo } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState, useEffect, useMemo, Suspense } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import Navbar from '@/components/layout/Navbar';
 import { 
@@ -36,8 +36,10 @@ const IT_ROLES = [
   "UI/UX Designer", "Product Manager", "QA Engineer", "Mobile Developer"
 ];
 
-export default function ResumeAnalysisPage() {
+function ResumeAnalysisContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const flowType = searchParams.get('flow');
   const { user } = useUser();
   const db = useFirestore();
   const { toast } = useToast();
@@ -85,16 +87,25 @@ export default function ResumeAnalysisPage() {
       } catch (e) {
         console.error(e);
         toast({ variant: "destructive", title: "Analysis Failed", description: "Neural engine could not parse dossier." });
-        router.push('/resume-upload');
+        router.push(flowType === 'special' ? '/resume-upload?flow=special' : '/resume-upload');
       }
     }
 
     startAnalysis();
-  }, [journey, isAnalyzing, loadingStepIdx, selectedRole, journeyRef, toast, router]);
+  }, [journey, isAnalyzing, loadingStepIdx, selectedRole, journeyRef, toast, router, flowType]);
 
   const handleFinalize = async () => {
     if (!journeyRef) return;
     
+    if (flowType === 'special') {
+      await updateDoc(journeyRef, {
+        role: selectedRole,
+        updatedAt: serverTimestamp(),
+      });
+      router.push('/special-hr-interview');
+      return;
+    }
+
     await updateDoc(journeyRef, {
       role: selectedRole,
       currentStage: INTERVIEW_STAGES.RESUME_RESULT,
@@ -224,5 +235,13 @@ export default function ResumeAnalysisPage() {
         </AnimatePresence>
       </main>
     </div>
+  );
+}
+
+export default function ResumeAnalysisPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-[#050816] flex items-center justify-center"><Loader2 className="w-12 h-12 text-accent animate-spin" /></div>}>
+      <ResumeAnalysisContent />
+    </Suspense>
   );
 }

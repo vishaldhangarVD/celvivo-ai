@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useMemo } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState, useMemo, Suspense } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { motion } from 'framer-motion';
 import Navbar from '@/components/layout/Navbar';
 import NavigationControls from '@/components/NavigationControls';
@@ -28,8 +28,10 @@ import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { INTERVIEW_STAGES, STAGE_ROUTES } from '@/lib/interview-stages';
 
-export default function ResumeUploadPage() {
+function ResumeUploadContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const flowType = searchParams.get('flow');
   const { user } = useUser();
   const db = useFirestore();
   const { toast } = useToast();
@@ -81,7 +83,17 @@ export default function ResumeUploadPage() {
         reader.readAsDataURL(file);
       });
 
-      // Navigate directly to Aptitude stage after successful upload
+      if (flowType === 'special') {
+        await updateDoc(journeyRef, {
+          resumeName: file.name,
+          resumeBase64: base64,
+          updatedAt: serverTimestamp(),
+        });
+        router.push('/resume-analysis?flow=special');
+        return;
+      }
+
+      // Navigate directly to Aptitude stage after successful upload (Normal Flow)
       await updateDoc(journeyRef, {
         currentStage: INTERVIEW_STAGES.APTITUDE,
         step: 4,
@@ -113,10 +125,10 @@ export default function ResumeUploadPage() {
               className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-16"
             >
               {[
-                { label: "Target Role", val: journey.role, icon: Briefcase },
-                { label: "Experience", val: journey.experience, icon: GraduationCap },
-                { label: "Organization", val: journey.company, icon: Building2 },
-                { label: "Protocol", val: journey.roundType, icon: Layers }
+                { label: "Target Role", val: journey.role || "TBD", icon: Briefcase },
+                { label: "Experience", val: journey.experience || "TBD", icon: GraduationCap },
+                { label: "Organization", val: journey.company || "TBD", icon: Building2 },
+                { label: "Protocol", val: flowType === 'special' ? "Special HR" : (journey.roundType || "Standard"), icon: Layers }
               ].map((item, i) => (
                 <div key={item.label} className="p-4 glass rounded-2xl border-white/5 flex items-center gap-3">
                   <div className="w-8 h-8 rounded-lg bg-accent/10 flex items-center justify-center text-accent shrink-0">
@@ -173,7 +185,7 @@ export default function ResumeUploadPage() {
                 </div>
                 <div className="space-y-2">
                   <p className="text-[10px] font-black text-green-400 uppercase tracking-widest">Blueprint Received</p>
-                  <p className="text-2xl font-bold text-white truncate max-w-[400px] mx-auto">{file?.name}</p>
+                  <p className="text-2xl font-bold text-white truncate max-w-[400px] mx-auto">{file?.name || journey?.resumeName}</p>
                 </div>
                 <div className="flex gap-4 justify-center">
                   <Button variant="ghost" onClick={(e) => { e.stopPropagation(); setIsUploaded(false); setFile(null); }} className="h-12 px-6 rounded-xl glass border-white/10 text-[10px] font-black uppercase tracking-widest hover:bg-accent/10 hover:text-accent">
@@ -189,5 +201,13 @@ export default function ResumeUploadPage() {
         </div>
       </main>
     </div>
+  );
+}
+
+export default function ResumeUploadPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-[#050816] flex items-center justify-center"><Loader2 className="w-12 h-12 text-accent animate-spin" /></div>}>
+      <ResumeUploadContent />
+    </Suspense>
   );
 }
