@@ -60,6 +60,17 @@ function VirtualArenaContent() {
   const [askedQuestions, setAskedQuestions] = useState<string[]>([]);
   const mediaStreamRef = useRef<MediaStream | null>(null);
   const recognitionRef = useRef<any>(null);
+
+  // Refs to track state for speech recognition event handlers (avoiding stale closures)
+  const isMicOnRef = useRef(isMicOn);
+  const isProcessingRef = useRef(isProcessing);
+  const isSimulationCompleteRef = useRef(isSimulationComplete);
+  const isAiSpeakingRef = useRef(isAiSpeaking);
+
+  useEffect(() => { isMicOnRef.current = isMicOn; }, [isMicOn]);
+  useEffect(() => { isProcessingRef.current = isProcessing; }, [isProcessing]);
+  useEffect(() => { isSimulationCompleteRef.current = isSimulationComplete; }, [isSimulationComplete]);
+  useEffect(() => { isAiSpeakingRef.current = isAiSpeaking; }, [isAiSpeaking]);
   
   const journeyRef = useMemo(() => {
     if (!db || !user?.uid) return null;
@@ -105,7 +116,22 @@ function VirtualArenaContent() {
         };
 
         recognitionRef.current.onerror = (event: any) => {
+          // Ignore benign/expected speech API errors
+          if (event.error === 'no-speech' || event.error === 'aborted') {
+            return;
+          }
           console.error("Speech recognition error:", event.error);
+        };
+
+        recognitionRef.current.onend = () => {
+          // Automatically restart if conditions are still met
+          if (isMicOnRef.current && !isProcessingRef.current && !isSimulationCompleteRef.current && !isAiSpeakingRef.current) {
+            try {
+              recognitionRef.current.start();
+            } catch (e) {
+              // Ignore if already started
+            }
+          }
         };
       }
     }
