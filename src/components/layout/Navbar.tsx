@@ -1,4 +1,3 @@
-
 'use client';
 
 import Link from 'next/link';
@@ -51,7 +50,6 @@ function NavbarContent() {
   const db = useFirestore();
   const router = useRouter();
   const pathname = usePathname();
-  const searchParams = useSearchParams();
 
   const profileRef = useMemo(() => {
     if (!db || !user?.uid) return null;
@@ -60,14 +58,12 @@ function NavbarContent() {
 
   const { data: profile } = useDoc(profileRef);
 
-  // Identity Initial Logic - Strictly 1 character
   const userInitial = useMemo(() => {
     if (!user) return 'U';
     const rawName = user.displayName || user.email?.split('@')[0] || 'User';
     return rawName.trim().split(/\s+/)[0].charAt(0).toUpperCase() || 'U';
   }, [user]);
 
-  // Real Notification Intelligence
   const notificationsQuery = useMemo(() => {
     if (!db || !user?.uid) return null;
     return query(
@@ -101,7 +97,6 @@ function NavbarContent() {
 
   const isFounder = profile?.role === 'founder';
 
-  // Pill Styles for Navigation Buttons
   const pillClasses = "relative flex items-center gap-2.5 px-4 py-1.5 rounded-full glass border-white/10 text-[9px] font-black uppercase tracking-widest text-white transition-all duration-250 group/pill";
   const pillActiveClasses = "bg-cyan-500/20 border-cyan-500/50 shadow-[0_0_20px_rgba(34,211,238,0.3)]";
   const pillHoverClasses = "hover:border-cyan-500/50 hover:bg-white/[0.05] hover:-translate-y-[3px] hover:scale-[1.05] hover:shadow-[0_0_15px_rgba(34,211,238,0.2)]";
@@ -113,7 +108,6 @@ function NavbarContent() {
     <nav className="fixed top-0 z-[100] w-full h-[72px] border-b border-cyan-500/20 bg-[#080c19]/75 backdrop-blur-xl">
       <div className="container mx-auto px-6 h-full flex items-center justify-between">
         
-        {/* Left Section: Branding */}
         <div className="flex items-center gap-6">
           <Link href="/" className="flex items-center gap-4 group">
             <motion.div 
@@ -131,22 +125,21 @@ function NavbarContent() {
           </Link>
         </div>
 
-        {/* Center Section: Navigation Nodes */}
         <div className="hidden md:flex items-center gap-4">
           {user && (
             <>
               <Link 
-                href="/special-hr-interview" 
+                href="/special-hr-interview/setup" 
                 className={cn(
                   pillClasses, 
                   "border-purple-500/30 bg-purple-500/5 hover:border-purple-400 hover:bg-purple-500/10 hover:-translate-y-[3px] hover:scale-[1.05] hover:shadow-[0_0_30px_rgba(168,85,247,0.25)]", 
-                  pathname === '/special-hr-interview' && "bg-purple-500/20 border-purple-500/50 shadow-[0_0_20px_rgba(168,85,247,0.3)]"
+                  pathname.startsWith('/special-hr-interview') && "bg-purple-500/20 border-purple-500/50 shadow-[0_0_20px_rgba(168,85,247,0.3)]"
                 )}
               >
                 <div className={cn(
                   pillIconWrapperClasses, 
                   "border-purple-500/20 bg-purple-500/10 text-purple-400 group-hover/pill:text-purple-300", 
-                  pathname === '/special-hr-interview' && "bg-purple-500 border-purple-400 text-white"
+                  pathname.startsWith('/special-hr-interview') && "bg-purple-500 border-purple-400 text-white"
                 )}>
                   <Sparkles className="w-2.5 h-2.5 animate-pulse" />
                 </div>
@@ -201,7 +194,6 @@ function NavbarContent() {
           )}
         </div>
 
-        {/* Right Section: System Status & Identity */}
         <div className="flex items-center gap-6">
           <div className="hidden sm:flex items-center gap-3 px-4 py-1.5 rounded-full glass border-white/5 bg-white/[0.02]">
             <div className="relative flex h-2 w-2">
@@ -215,7 +207,6 @@ function NavbarContent() {
             <>
               {user ? (
                 <div className="flex items-center gap-6">
-                  {/* Neural Identity Initial */}
                   <Link href="/user-dashboard" className="hidden lg:flex flex-col items-end group transition-all duration-300">
                     <span className="text-white font-black tracking-[0.4em] text-xs leading-none group-hover:text-accent transition-colors">
                       {userInitial}
@@ -227,7 +218,6 @@ function NavbarContent() {
 
                   <div className="w-px h-6 bg-white/10 hidden lg:block"></div>
 
-                  {/* Functional Bell Logic */}
                   <Popover>
                     <PopoverTrigger asChild>
                       <button className="relative p-2 text-white/40 hover:text-accent transition-colors group">
@@ -343,14 +333,12 @@ function NavbarContent() {
             </>
           )}
 
-          {/* Mobile Toggle */}
           <button className="md:hidden text-white p-2" onClick={() => setIsOpen(!isOpen)}>
             {isOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
           </button>
         </div>
       </div>
 
-      {/* Mobile Nav */}
       <AnimatePresence>
         {isOpen && (
           <motion.div
@@ -361,7 +349,7 @@ function NavbarContent() {
           >
             {user && (
               <>
-                <Link href="/special-hr-interview" onClick={() => setIsOpen(false)} className="text-2xl font-bold tracking-tighter uppercase text-purple-400 hover:text-purple-300 flex items-center gap-4">
+                <Link href="/special-hr-interview/setup" onClick={() => setIsOpen(false)} className="text-2xl font-bold tracking-tighter uppercase text-purple-400 hover:text-purple-300 flex items-center gap-4">
                   <Sparkles className="w-6 h-6" /> Special HR Interview
                 </Link>
                 <Link href="/dashboard" onClick={() => setIsOpen(false)} className="text-2xl font-bold tracking-tighter uppercase text-white hover:text-accent flex items-center gap-4">

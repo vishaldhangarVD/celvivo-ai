@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useMemo, Suspense } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import Navbar from '@/components/layout/Navbar';
 import NavigationControls from '@/components/NavigationControls';
@@ -27,12 +27,9 @@ import { doc, updateDoc, serverTimestamp } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { INTERVIEW_STAGES, STAGE_ROUTES } from '@/lib/interview-stages';
-import { analyzeResume } from '@/ai/flows/ai-resume-analysis';
 
 function ResumeUploadContent() {
   const router = useRouter();
-  const searchParams = useSearchParams();
-  const flowType = searchParams.get('flow');
   const { user } = useUser();
   const db = useFirestore();
   const { toast } = useToast();
@@ -85,36 +82,6 @@ function ResumeUploadContent() {
         reader.readAsDataURL(file);
       });
 
-      if (flowType === 'special') {
-        // BACKGROUND ANALYSIS PROTOCOL
-        try {
-          const analysisResult = await analyzeResume({
-            resumeDataUri: base64,
-            targetRole: journey?.role || "Software Engineer"
-          });
-
-          await updateDoc(journeyRef, {
-            resumeName: file.name,
-            resumeBase64: base64,
-            resumeAnalysis: analysisResult,
-            flow: 'special',
-            updatedAt: serverTimestamp(),
-          });
-          
-          router.push('/special-hr-interview');
-          return;
-        } catch (analysisError) {
-          console.error("Background Analysis Error:", analysisError);
-          toast({ 
-            variant: "destructive", 
-            title: "Analysis Failed", 
-            description: "Neural engine could not parse dossier. Please try another PDF." 
-          });
-          setIsVerifying(false);
-          return;
-        }
-      }
-
       // Normal Flow Stage Progression
       await updateDoc(journeyRef, {
         currentStage: INTERVIEW_STAGES.APTITUDE,
@@ -151,7 +118,7 @@ function ResumeUploadContent() {
                 { label: "Target Role", val: journey.role || "TBD", icon: Briefcase },
                 { label: "Experience", val: journey.experience || "TBD", icon: GraduationCap },
                 { label: "Organization", val: journey.company || "TBD", icon: Building2 },
-                { label: "Protocol", val: flowType === 'special' ? "Special HR" : (journey.roundType || "Standard"), icon: Layers }
+                { label: "Protocol", val: journey.roundType || "Standard", icon: Layers }
               ].map((item, i) => (
                 <div key={item.label} className="p-4 glass rounded-2xl border-white/5 flex items-center gap-3">
                   <div className="w-8 h-8 rounded-lg bg-accent/10 flex items-center justify-center text-accent shrink-0">
@@ -190,11 +157,8 @@ function ResumeUploadContent() {
                   <ShieldCheck className="w-10 h-10 text-accent absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 animate-pulse" />
                 </div>
                 <p className="text-[10px] font-black text-accent uppercase tracking-[0.4em]">
-                  {flowType === 'special' ? "Analyzing Dossier..." : "Verifying Integrity..."}
+                  Verifying Integrity...
                 </p>
-                {flowType === 'special' && (
-                  <p className="text-[8px] text-white/40 uppercase tracking-widest animate-pulse">Preparing personalized simulation nodes</p>
-                )}
               </div>
             ) : !isUploaded ? (
               <div className="space-y-8">
