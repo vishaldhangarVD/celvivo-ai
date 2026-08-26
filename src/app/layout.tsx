@@ -1,4 +1,3 @@
-
 import Script from "next/script";
 import type { Metadata } from "next";
 import "./globals.css";
@@ -29,14 +28,12 @@ export default function RootLayout({
           href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600;700&display=swap"
           rel="stylesheet"
         />
-        {/* Browser-native import map to resolve Three.js and TalkingHead at runtime */}
+        {/* Browser-native import map to resolve TalkingHead at runtime while using bundled Three.js for the rest */}
         <script
           type="importmap"
           dangerouslySetInnerHTML={{
             __html: JSON.stringify({
               imports: {
-                "three": "https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js",
-                "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.180.0/examples/jsm/",
                 "talkinghead": "https://cdn.jsdelivr.net/gh/met4citizen/TalkingHead@1.7/modules/talkinghead.mjs"
               }
             })

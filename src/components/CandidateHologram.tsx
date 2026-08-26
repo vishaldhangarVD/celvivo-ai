@@ -4,7 +4,7 @@ import React, { memo, useEffect, useRef, useState } from 'react';
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { MeshSurfaceSampler } from 'three/addons/math/MeshSurfaceSampler.js';
-import { cn } from '@/lib/utils';
+import * as BufferGeometryUtils from 'three/addons/utils/BufferGeometryUtils.js';
 
 interface CandidateHologramProps {
   active?: boolean;
@@ -13,204 +13,208 @@ interface CandidateHologramProps {
   isLoader?: boolean;
 }
 
-const FORMATION_DURATION = 2200; // ms
-
-const vertexShader = `
-  uniform float uTime;
-  uniform float uFormation;
-  uniform float uSpeaking;
-  attribute vec3 aTargetPosition;
-  attribute float aSize;
-  varying float vOpacity;
-  varying vec3 vColor;
-
-  void main() {
-    // Morph from random scattered sphere to target face
-    vec3 pos = mix(position, aTargetPosition, uFormation);
-    
-    // Subtle breathing/floating movement
-    pos.y += sin(uTime * 0.4 + aTargetPosition.x * 5.0) * 0.015;
-    pos.x += cos(uTime * 0.3 + aTargetPosition.z * 5.0) * 0.005;
-    
-    // Neural shimmer jitter
-    pos += (fract(sin(aTargetPosition * 100.0 + uTime) * 43758.5453) - 0.5) * 0.002;
-    
-    // Speaking effect: Subtly displace mouth/jaw area based on Y and Z coords
-    // Target mouth is roughly at y: -0.1 to -0.25 in normalized space
-    if (uSpeaking > 0.1 && aTargetPosition.y < -0.05 && aTargetPosition.y > -0.3 && aTargetPosition.z > 0.05) {
-        float mouthWave = sin(uTime * 18.0) * uSpeaking * 0.008;
-        pos.y += mouthWave * 0.5;
-        pos.z += mouthWave;
-    }
-
-    vec4 mvPosition = modelViewMatrix * vec4(pos, 1.0);
-    gl_PointSize = aSize * (350.0 / -mvPosition.z);
-    gl_Position = projectionMatrix * mvPosition;
-    
-    vOpacity = uFormation * (0.6 + sin(uTime * 2.0 + aTargetPosition.y * 10.0) * 0.1);
-    vColor = vec3(0.13, 0.83, 0.93); // Cyan
-  }
-`;
-
-const fragmentShader = `
-  varying float vOpacity;
-  varying vec3 vColor;
-  void main() {
-    float d = distance(gl_PointCoord, vec2(0.5));
-    if (d > 0.5) discard;
-    
-    float strength = 1.0 - (d * 2.0);
-    gl_FragColor = vec4(vColor, vOpacity * strength);
-  }
-`;
-
-const CandidateHologram = memo(({
+/**
+ * Realistic Cyan Particle Hologram
+ * Extracts geometry from GLB and renders as a dense point cloud.
+ * Implements GPU-accelerated formation and speaking animations.
+ */
+const CandidateHologram: React.FC<CandidateHologramProps> = memo(({
   active = true,
   speaking = false,
   className = '',
   isLoader = false
-}: CandidateHologramProps) => {
+}) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Three.js Refs for Cleanup
+  // Animation and Three.js Refs
   const rendererRef = useRef<THREE.WebGLRenderer | null>(null);
-  const animationFrameRef = useRef<number | null>(null);
   const sceneRef = useRef<THREE.Scene | null>(null);
-  const pointsRef = useRef<THREE.Points | null>(null);
+  const cameraRef = useRef<THREE.PerspectiveCamera | null>(null);
+  const animationFrameRef = useRef<number | null>(null);
   const materialRef = useRef<THREE.ShaderMaterial | null>(null);
-
-  // Speaking state ref for shader updates
-  const speakingIntensityRef = useRef(0);
+  const speakingRef = useRef(speaking);
 
   useEffect(() => {
-    speakingIntensityRef.current = speaking ? 1.0 : 0;
+    speakingRef.current = speaking;
+    if (materialRef.current) {
+      materialRef.current.uniforms.uSpeaking.value = speaking ? 1.0 : 0.0;
+    }
   }, [speaking]);
 
   useEffect(() => {
-    if (!active || !containerRef.current || !canvasRef.current) return;
+    if (!active || !canvasRef.current || !containerRef.current) return;
 
     let mounted = true;
-    
-    // 1. Initialization
-    const scene = new THREE.Scene();
-    sceneRef.current = scene;
+    const container = containerRef.current;
 
-    const width = containerRef.current.clientWidth;
-    const height = containerRef.current.clientHeight;
-    const camera = new THREE.PerspectiveCamera(35, width / height, 0.01, 100);
-    camera.position.z = 4.5;
-
+    // --- 1. SETUP RENDERER ---
     const renderer = new THREE.WebGLRenderer({
       canvas: canvasRef.current,
       alpha: true,
       antialias: true,
       powerPreference: 'high-performance'
     });
-    renderer.setSize(width, height);
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
+    renderer.setSize(container.clientWidth, container.clientHeight);
     rendererRef.current = renderer;
 
-    // Determine particle count based on hardware
-    const getParticleCount = () => {
-      const gl = renderer.getContext();
-      const debugInfo = gl.getExtension('WEBGL_debug_renderer_info');
-      if (!debugInfo) return 50000;
-      const gpu = gl.getParameter(debugInfo.UNMASKED_RENDERER_WEBGL).toLowerCase();
-      if (gpu.includes('nvidia') || gpu.includes('amd') || gpu.includes('apple')) return 80000;
-      return 45000;
-    };
-    const count = getParticleCount();
+    const scene = new THREE.Scene();
+    sceneRef.current = scene;
 
-    // 2. Loading & Extraction
-    const manager = new THREE.LoadingManager();
-    manager.onError = (url) => console.warn('[Hologram] Texture error (ignored):', url);
+    const camera = new THREE.PerspectiveCamera(
+      35,
+      container.clientWidth / container.clientHeight,
+      0.1,
+      100
+    );
+    camera.position.set(0, 0, 4);
+    cameraRef.current = camera;
+
+    // --- 2. DEFINE SHADERS ---
+    const vertexShader = `
+      uniform float uTime;
+      uniform float uFormation;
+      uniform float uSpeaking;
+      attribute vec3 aTargetPosition;
+      attribute float aSize;
+      varying float vOpacity;
+
+      void main() {
+        // Morph from random sphere to face
+        vec3 pos = mix(position, aTargetPosition, uFormation);
+        
+        // Subtle breathing & jitter
+        pos.y += sin(uTime * 0.5 + aTargetPosition.x * 10.0) * 0.01;
+        pos.x += cos(uTime * 0.3 + aTargetPosition.y * 10.0) * 0.005;
+
+        // Speaking movement (mouth region)
+        if (uSpeaking > 0.5) {
+          // Identify mouth area in normalized space (approx)
+          if (aTargetPosition.y < -0.1 && aTargetPosition.y > -0.4 && aTargetPosition.z > 0.3) {
+            float mouthMove = sin(uTime * 25.0) * 0.015;
+            pos.y += mouthMove;
+            pos.z += mouthMove * 0.5;
+          }
+        }
+
+        vec4 mvPosition = modelViewMatrix * vec4(pos, 1.0);
+        gl_PointSize = aSize * (300.0 / -mvPosition.z);
+        gl_Position = projectionMatrix * mvPosition;
+        
+        vOpacity = 0.5 + sin(uTime * 2.0 + position.y * 5.0) * 0.1;
+      }
+    `;
+
+    const fragmentShader = `
+      varying float vOpacity;
+      void main() {
+        float d = distance(gl_PointCoord, vec2(0.5));
+        if (d > 0.5) discard;
+        // Cyan color with varying opacity
+        gl_FragColor = vec4(0.13, 0.83, 0.93, vOpacity * (1.0 - d * 2.0));
+      }
+    `;
+
+    // --- 3. LOAD MODEL & EXTRACT GEOMETRY ---
+    const loadingManager = new THREE.LoadingManager();
+    // Silently ignore texture errors as we don't need them
+    loadingManager.onError = () => {}; 
     
-    const loader = new GLTFLoader(manager);
+    const loader = new GLTFLoader(loadingManager);
+    
+    const count = window.innerWidth < 768 ? 45000 : 75000;
+
     loader.load(
       '/models/woman_head.glb',
       (gltf) => {
         if (!mounted) return;
 
         const meshes: THREE.Mesh[] = [];
-        gltf.scene.traverse((child) => {
-          if ((child as THREE.Mesh).isMesh && (child as THREE.Mesh).geometry) {
-            const name = child.name.toLowerCase();
-            // Filter interior geometry
-            if (name.includes('eye') || name.includes('teeth') || name.includes('tongue') || name.includes('inner')) return;
+        gltf.scene.traverse((node) => {
+          if ((node as THREE.Mesh).isMesh) {
+            const m = node as THREE.Mesh;
+            const name = m.name.toLowerCase();
+            // Skip interior geometry that muddies the hologram
+            if (name.includes('eye') || name.includes('teeth') || name.includes('inner') || name.includes('tongue')) return;
             
-            child.updateMatrixWorld();
-            meshes.push(child as THREE.Mesh);
+            m.updateMatrixWorld(true);
+            meshes.push(m);
           }
         });
 
         if (meshes.length === 0) {
-          setError('No valid geometry found in model.');
+          setError('No valid geometry found in model');
           setLoading(false);
           return;
         }
 
-        // Sampling
-        const targetPositions = new Float32Array(count * 3);
-        const startPositions = new Float32Array(count * 3);
-        const sizes = new Float32Array(count);
-
-        let sampledTotal = 0;
-        meshes.forEach((mesh, idx) => {
-          const sampler = new MeshSurfaceSampler(mesh).build();
-          const meshQuota = idx === meshes.length - 1 ? count - sampledTotal : Math.floor(count / meshes.length);
-          
-          const tempPos = new THREE.Vector3();
-          const tempNormal = new THREE.Vector3();
-
-          for (let i = 0; i < meshQuota; i++) {
-            sampler.sample(tempPos, tempNormal);
-            tempPos.applyMatrix4(mesh.matrixWorld);
-            
-            const pIdx = (sampledTotal + i) * 3;
-            targetPositions[pIdx] = tempPos.x;
-            targetPositions[pIdx + 1] = tempPos.y;
-            targetPositions[pIdx + 2] = tempPos.z;
-
-            // Initial scatter
-            const r = 3 + Math.random() * 2;
-            const theta = Math.random() * Math.PI * 2;
-            const phi = Math.acos(2 * Math.random() - 1);
-            startPositions[pIdx] = r * Math.sin(phi) * Math.cos(theta);
-            startPositions[pIdx + 1] = r * Math.sin(phi) * Math.sin(theta);
-            startPositions[pIdx + 2] = r * Math.cos(phi);
-
-            sizes[sampledTotal + i] = 0.005 + Math.random() * 0.015;
-          }
-          sampledTotal += meshQuota;
+        // Merge all geometries into one point-sampling source
+        const geometries = meshes.map(m => {
+          const g = m.geometry.clone();
+          g.applyMatrix4(m.matrixWorld);
+          return g;
         });
 
-        // Normalize and Center
-        const box = new THREE.Box3();
-        for(let i=0; i<count; i++) box.expandByPoint(new THREE.Vector3(targetPositions[i*3], targetPositions[i*3+1], targetPositions[i*3+2]));
-        const center = box.getCenter(new THREE.Vector3());
-        const size = box.getSize(new THREE.Vector3());
-        const scale = 2.0 / Math.max(size.x, size.y, size.z);
+        const mergedGeometry = BufferGeometryUtils.mergeGeometries(geometries);
+        const mergedMesh = new THREE.Mesh(mergedGeometry);
 
+        // Normalize geometry to fit in our viewport
+        mergedGeometry.computeBoundingBox();
+        const box = mergedGeometry.boundingBox!;
+        const center = new THREE.Vector3();
+        box.getCenter(center);
+        const size = new THREE.Vector3();
+        box.getSize(size);
+        const maxDim = Math.max(size.x, size.y, size.z);
+        const scale = 2.0 / maxDim;
+        
+        mergedGeometry.translate(-center.x, -center.y, -center.z);
+        mergedGeometry.scale(scale, scale, scale);
+
+        // Sample surface
+        const sampler = new MeshSurfaceSampler(mergedMesh).build();
+        const positions = new Float32Array(count * 3);
+        const targetPositions = new Float32Array(count * 3);
+        const sizes = new Float32Array(count);
+
+        const tempPos = new THREE.Vector3();
         for (let i = 0; i < count; i++) {
-          const ix = i * 3;
-          targetPositions[ix] = (targetPositions[ix] - center.x) * scale;
-          targetPositions[iy] = (targetPositions[iy] - center.y) * scale; // Wait pIdx fix
-        }
-        // Correcting loop index logic
-        for (let i = 0; i < count; i++) {
-            const ix = i * 3;
-            targetPositions[ix] = (targetPositions[ix] - center.x) * scale;
-            targetPositions[ix + 1] = (targetPositions[ix + 1] - center.y) * scale;
-            targetPositions[ix + 2] = (targetPositions[ix + 2] - center.z) * scale;
+          sampler.sample(tempPos);
+          targetPositions.set([tempPos.x, tempPos.y, tempPos.z], i * 3);
+          
+          // Random start positions for formation animation
+          positions.set([
+            (Math.random() - 0.5) * 6,
+            (Math.random() - 0.5) * 6,
+            (Math.random() - 0.5) * 6
+          ], i * 3);
+
+          sizes[i] = 0.005 + Math.random() * 0.015;
         }
 
-        const geometry = new THREE.BufferGeometry();
-        geometry.setAttribute('position', new THREE.BufferAttribute(startPositions, 3));
-        geometry.setAttribute('aTargetPosition', new THREE.BufferAttribute(targetPositions, 3));
-        geometry.setAttribute('aSize', new THREE.BufferAttribute(sizes, 1));
+        // Clean up GLB resources immediately
+        mergedGeometry.dispose();
+        geometries.forEach(g => g.dispose());
+        gltf.scene.traverse((node) => {
+          if ((node as THREE.Mesh).isMesh) {
+            const m = node as THREE.Mesh;
+            m.geometry.dispose();
+            if (Array.isArray(m.material)) {
+              m.material.forEach(mat => mat.dispose());
+            } else {
+              m.material.dispose();
+            }
+          }
+        });
+
+        // --- 4. CREATE PARTICLE SYSTEM ---
+        const pointsGeometry = new THREE.BufferGeometry();
+        pointsGeometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+        pointsGeometry.setAttribute('aTargetPosition', new THREE.BufferAttribute(targetPositions, 3));
+        pointsGeometry.setAttribute('aSize', new THREE.BufferAttribute(sizes, 1));
 
         const material = new THREE.ShaderMaterial({
           uniforms: {
@@ -222,99 +226,82 @@ const CandidateHologram = memo(({
           fragmentShader,
           transparent: true,
           blending: THREE.AdditiveBlending,
-          depthWrite: false
+          depthWrite: false,
         });
         materialRef.current = material;
 
-        const points = new THREE.Points(geometry, material);
+        const points = new THREE.Points(pointsGeometry, material);
         scene.add(points);
-        pointsRef.current = points;
-
-        // Cleanup temporary GLB resources
-        gltf.scene.traverse((node) => {
-          if ((node as THREE.Mesh).isMesh) {
-            (node as THREE.Mesh).geometry.dispose();
-            const mat = (node as THREE.Mesh).material;
-            if (Array.isArray(mat)) mat.forEach(m => m.dispose());
-            else mat.dispose();
-          }
-        });
 
         setLoading(false);
-        setInternalLoading(false);
       },
       undefined,
       (err) => {
-        console.error('[Hologram] Load failed:', err);
-        setError('Hologram interface failed to initialize.');
+        console.error('GLB Load Error:', err);
+        setError('Critical: Model handshake failed.');
         setLoading(false);
       }
     );
 
-    // 3. Animation Loop
-    const startTime = Date.now();
+    // --- 5. ANIMATION LOOP ---
+    let startTime = Date.now();
     const animate = () => {
       if (!mounted) return;
-      const elapsed = Date.now() - startTime;
-      
+      const elapsed = (Date.now() - startTime) / 1000;
+
       if (materialRef.current) {
-        materialRef.current.uniforms.uTime.value = elapsed / 1000;
-        materialRef.current.uniforms.uFormation.value = Math.min(elapsed / FORMATION_DURATION, 1.0);
-        
-        // Smoothly transition speaking intensity
-        materialRef.current.uniforms.uSpeaking.value = THREE.MathUtils.lerp(
-          materialRef.current.uniforms.uSpeaking.value,
-          speakingIntensityRef.current,
-          0.1
-        );
+        materialRef.current.uniforms.uTime.value = elapsed;
+        // Formation ease-out
+        const formationDuration = 2.5;
+        const t = Math.min(elapsed / formationDuration, 1.0);
+        // Cubic ease out
+        materialRef.current.uniforms.uFormation.value = 1 - Math.pow(1 - t, 3);
       }
 
-      if (rendererRef.current && sceneRef.current) {
-        rendererRef.current.render(sceneRef.current, camera);
-      }
+      renderer.render(scene, camera);
       animationFrameRef.current = requestAnimationFrame(animate);
     };
     animate();
 
-    // 4. Resize Handler
+    // --- 6. RESIZE HANDLER ---
     const handleResize = () => {
-      if (!containerRef.current || !rendererRef.current) return;
-      const w = containerRef.current.clientWidth;
-      const h = containerRef.current.clientHeight;
+      if (!container || !camera || !renderer) return;
+      const w = container.clientWidth;
+      const h = container.clientHeight;
       camera.aspect = w / h;
       camera.updateProjectionMatrix();
-      rendererRef.current.setSize(w, h);
+      renderer.setSize(w, h);
     };
     window.addEventListener('resize', handleResize);
 
+    // --- 7. CLEANUP ---
     return () => {
       mounted = false;
       window.removeEventListener('resize', handleResize);
       if (animationFrameRef.current) cancelAnimationFrame(animationFrameRef.current);
+      
+      // Extensive disposal to prevent context loss
       if (rendererRef.current) {
         rendererRef.current.dispose();
         rendererRef.current.forceContextLoss();
       }
-      if (pointsRef.current) {
-        pointsRef.current.geometry.dispose();
-      }
-      if (materialRef.current) {
-        materialRef.current.dispose();
-      }
+      
+      scene.traverse((object) => {
+        if (object instanceof THREE.Points) {
+          object.geometry.dispose();
+          if (object.material instanceof THREE.Material) {
+            object.material.dispose();
+          }
+        }
+      });
     };
   }, [active]);
 
-  const [internalLoading, setInternalLoading] = useState(true);
-
   return (
-    <div ref={containerRef} className={cn(
-      "relative w-full h-full bg-[#02040a] rounded-[2rem] overflow-hidden border border-white/5 shadow-2xl transition-opacity duration-1000",
-      loading ? "opacity-50" : "opacity-100",
-      className
-    )}>
+    <div ref={containerRef} className={`relative w-full h-full bg-[#010208] rounded-[2rem] overflow-hidden border border-white/5 ${className}`}>
       <canvas ref={canvasRef} className="block w-full h-full" />
       
-      {(internalLoading || isLoader) && !error && (
+      {(loading || isLoader) && !error && (
         <div className="absolute inset-0 flex flex-col items-center justify-center bg-[#050816]/80 backdrop-blur-md z-50">
           <div className="relative w-24 h-24">
             <div className="absolute inset-0 border-2 border-accent/20 rounded-full animate-ping" />
