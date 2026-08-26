@@ -28,7 +28,7 @@ export default function RootLayout({
           href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600;700&display=swap"
           rel="stylesheet"
         />
-        {/* Browser-native import map to resolve TalkingHead at runtime while using bundled Three.js for the rest */}
+        {/* Browser-native import map for TalkingHead - Three.js mapping removed to fix duplication */}
         <script
           type="importmap"
           dangerouslySetInnerHTML={{
@@ -39,7 +39,6 @@ export default function RootLayout({
             })
           }}
         />
-        {/* Browser-only module loader to expose TalkingHead to React without Turbopack interference */}
         <script
           type="module"
           dangerouslySetInnerHTML={{
