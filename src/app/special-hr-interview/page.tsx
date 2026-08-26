@@ -106,7 +106,11 @@ export default function SpecialHRInterview() {
 
   const { data: journey } = useDoc(journeyRef);
 
-  // Use refs for callbacks to avoid re-initializing D-ID when state changes
+  // Determine which resume data to use (Special HR fields first, then Round 1 fallback)
+  const resumeAnalysis = useMemo(() => {
+    return (journey as any)?.specialHRResumeAnalysis || journey?.resumeAnalysis;
+  }, [journey]);
+
   const startListeningRef = useRef<() => void>(() => {});
   const stopListeningRef = useRef<() => void>(() => {});
 
@@ -269,10 +273,10 @@ export default function SpecialHRInterview() {
         history: history,
         userAnswer: userAnswer,
         targetCompany: journey?.company || "Nexvoro AI",
-        candidateName: journey?.resumeAnalysis?.personalInfo?.fullName || "Candidate",
-        resumeSkills: journey?.resumeAnalysis?.analysis?.technicalSkills?.map((s: any) => s.skill) || [],
-        resumeProjects: journey?.resumeAnalysis?.analysis?.sections?.projects || [],
-        resumeSummary: journey?.resumeAnalysis?.summary || "",
+        candidateName: resumeAnalysis?.personalInfo?.fullName || "Candidate",
+        resumeSkills: resumeAnalysis?.analysis?.technicalSkills?.map((s: any) => s.skill) || [],
+        resumeProjects: resumeAnalysis?.analysis?.sections?.projects || [],
+        resumeSummary: resumeAnalysis?.summary || "",
         askedQuestions: askedQuestions,
         currentStage: interviewStage,
         currentDifficulty: interviewDifficulty,
