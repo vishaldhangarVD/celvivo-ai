@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useCallback, useRef } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import Navbar from '@/components/layout/Navbar';
@@ -8,7 +8,14 @@ import NavigationControls from '@/components/NavigationControls';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { 
   Building2, 
   Briefcase, 
@@ -16,17 +23,16 @@ import {
   ArrowRight, 
   Loader2,
   Check,
-  Search,
-  Layers,
   ShieldCheck,
   Upload,
-  RotateCcw,
   CheckCircle2,
   Trash2,
   FileText,
   Command,
   Zap,
-  Target
+  Target,
+  ChevronRight,
+  Info
 } from 'lucide-react';
 import { useUser, useFirestore, useDoc } from '@/firebase';
 import { doc, setDoc, serverTimestamp, updateDoc } from 'firebase/firestore';
@@ -54,13 +60,11 @@ export default function InterviewSetupPage() {
   const db = useFirestore();
   const { toast } = useToast();
 
-  const [searchQuery, setSearchQuery] = useState("");
-  const [company, setCompany] = useState("");
-  const [role, setRole] = useState("");
-  const [experience, setExperience] = useState("");
+  const [company, setCompany] = useState("Google");
+  const [role, setRole] = useState("Software Engineer");
+  const [experience, setExperience] = useState("Fresher");
   const [isInitializing, setIsInitializing] = useState(false);
   
-  // Resume State
   const [file, setFile] = useState<File | null>(null);
   const [isVerifying, setIsVerifying] = useState(false);
   const [isUploaded, setIsUploaded] = useState(false);
@@ -73,7 +77,17 @@ export default function InterviewSetupPage() {
 
   const { data: journey } = useDoc(journeyRef);
 
-  const isFormValid = company && role && experience;
+  useEffect(() => {
+    if (journey) {
+      if (journey.company) setCompany(journey.company);
+      if (journey.role) setRole(journey.role);
+      if (journey.experience) setExperience(journey.experience);
+      if (journey.resumeBase64) {
+        setResumeBase64(journey.resumeBase64);
+        setIsUploaded(true);
+      }
+    }
+  }, [journey]);
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
@@ -82,11 +96,6 @@ export default function InterviewSetupPage() {
         toast({ variant: "destructive", title: "Format Error", description: "Only PDF blueprints are supported." });
         return;
       }
-      if (selected.size > 10 * 1024 * 1024) {
-        toast({ variant: "destructive", title: "File Too Large", description: "Limit: 10MB" });
-        return;
-      }
-
       setFile(selected);
       setIsVerifying(true);
       
@@ -101,16 +110,16 @@ export default function InterviewSetupPage() {
         setIsUploaded(true);
         setIsVerifying(false);
         toast({ title: "Blueprint Detected", description: "Identity file loaded successfully." });
-      }, 800);
+      }, 1000);
     }
   };
 
   const handleProceed = async (targetPath: 'aptitude' | 'interview') => {
-    if (!db || !user?.uid || !isFormValid || !resumeBase64) {
+    if (!db || !user?.uid || !resumeBase64) {
       toast({ 
         variant: "destructive", 
         title: "Calibration Incomplete", 
-        description: "Please ensure all selections are made and resume is uploaded." 
+        description: "Please upload your resume to begin." 
       });
       return;
     }
@@ -157,89 +166,59 @@ export default function InterviewSetupPage() {
     <div className="min-h-screen bg-[#050816] pb-32">
       <div className="particles-bg" />
       <Navbar />
-      <NavigationControls onHome={() => router.push('/')} />
+      <NavigationControls />
 
       <main className="container mx-auto px-6 pt-32">
         <div className="max-w-7xl mx-auto grid lg:grid-cols-12 gap-12">
           
-          {/* LEFT SIDE: Calibration Controls */}
-          <div className="lg:col-span-7 space-y-12">
+          {/* LEFT COLUMN: Calibration */}
+          <div className="lg:col-span-7 space-y-10">
             <header className="space-y-4">
               <Badge className="bg-accent/20 text-accent border-none px-4 py-1 text-[10px] tracking-[0.4em] font-black uppercase">
-                Simulation Calibration Node
+                SIMULATION CALIBRATION NODE
               </Badge>
               <h1 className="text-6xl font-bold tracking-tighter text-premium">
-                Interview <span className="text-gradient-purple">Setup.</span>
+                Interview Setup.
               </h1>
               <p className="text-lg text-muted-foreground font-light max-w-xl">
                 Configure your interview parameters to begin the simulation.
               </p>
             </header>
 
-            <div className="space-y-8">
-              {/* Organization Selector */}
+            <div className="space-y-12">
               <div className="space-y-4">
-                <div className="flex items-center gap-3 ml-2">
-                  <Building2 className="w-4 h-4 text-accent" />
-                  <h3 className="text-xs font-black uppercase tracking-widest text-white/40">Select Organization</h3>
-                </div>
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                  {COMPANIES.map(c => (
-                    <button
-                      key={c}
-                      onClick={() => setCompany(c)}
-                      className={cn(
-                        "p-4 rounded-xl border text-[10px] font-bold uppercase tracking-widest transition-all text-left flex items-center justify-between",
-                        company === c 
-                          ? "bg-accent/20 border-accent text-accent shadow-[0_0_20px_rgba(34,211,238,0.2)]" 
-                          : "glass border-white/5 text-white/40 hover:bg-white/5"
-                      )}
-                    >
-                      {c}
-                      {company === c && <Check className="w-3 h-3" />}
-                    </button>
-                  ))}
-                </div>
+                <Label className="text-[10px] font-black uppercase tracking-[0.4em] text-white/40 ml-2">ORGANIZATION</Label>
+                <Select value={company} onValueChange={setCompany}>
+                  <SelectTrigger className="h-16 glass border-white/10 bg-transparent rounded-2xl px-6 text-sm font-bold uppercase tracking-widest text-white">
+                    <SelectValue placeholder="Select Organization" />
+                  </SelectTrigger>
+                  <SelectContent className="glass border-white/10 bg-[#0b0e1a] text-white">
+                    {COMPANIES.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+                  </SelectContent>
+                </Select>
               </div>
 
-              {/* Role Selector */}
               <div className="space-y-4">
-                <div className="flex items-center gap-3 ml-2">
-                  <Briefcase className="w-4 h-4 text-accent" />
-                  <h3 className="text-xs font-black uppercase tracking-widest text-white/40">Select Job Role</h3>
-                </div>
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                  {ROLES.map(r => (
-                    <button
-                      key={r}
-                      onClick={() => setRole(r)}
-                      className={cn(
-                        "p-4 rounded-xl border text-[10px] font-bold uppercase tracking-widest transition-all text-left flex items-center justify-between",
-                        role === r 
-                          ? "bg-accent/20 border-accent text-accent shadow-[0_0_20px_rgba(34,211,238,0.2)]" 
-                          : "glass border-white/5 text-white/40 hover:bg-white/5"
-                      )}
-                    >
-                      {r}
-                      {role === r && <Check className="w-3 h-3" />}
-                    </button>
-                  ))}
-                </div>
+                <Label className="text-[10px] font-black uppercase tracking-[0.4em] text-white/40 ml-2">JOB ROLE</Label>
+                <Select value={role} onValueChange={setRole}>
+                  <SelectTrigger className="h-16 glass border-white/10 bg-transparent rounded-2xl px-6 text-sm font-bold uppercase tracking-widest text-white">
+                    <SelectValue placeholder="Select Job Role" />
+                  </SelectTrigger>
+                  <SelectContent className="glass border-white/10 bg-[#0b0e1a] text-white">
+                    {ROLES.map(r => <SelectItem key={r} value={r}>{r}</SelectItem>)}
+                  </SelectContent>
+                </Select>
               </div>
 
-              {/* Experience Selector */}
               <div className="space-y-4">
-                <div className="flex items-center gap-3 ml-2">
-                  <GraduationCap className="w-4 h-4 text-accent" />
-                  <h3 className="text-xs font-black uppercase tracking-widest text-white/40">Select Experience</h3>
-                </div>
+                <Label className="text-[10px] font-black uppercase tracking-[0.4em] text-white/40 ml-2">EXPERIENCE LEVEL</Label>
                 <div className="flex flex-wrap gap-3">
                   {EXPERIENCE_LEVELS.map(l => (
                     <button
                       key={l}
                       onClick={() => setExperience(l)}
                       className={cn(
-                        "px-6 py-4 rounded-xl border text-[10px] font-bold uppercase tracking-widest transition-all",
+                        "px-6 py-4 rounded-xl border text-[10px] font-black uppercase tracking-widest transition-all",
                         experience === l 
                           ? "bg-accent/20 border-accent text-accent shadow-[0_0_20px_rgba(34,211,238,0.2)]" 
                           : "glass border-white/5 text-white/40 hover:bg-white/5"
@@ -251,147 +230,148 @@ export default function InterviewSetupPage() {
                 </div>
               </div>
 
-              {/* Selected Configuration Summary */}
-              {isFormValid && (
-                <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
-                  <Card className="p-6 glass border-accent/20 bg-accent/5 rounded-2xl flex flex-wrap gap-8">
-                    <div className="space-y-1">
-                      <p className="text-[8px] font-black uppercase tracking-widest text-white/30">Organization</p>
-                      <p className="text-xs font-bold text-accent">{company}</p>
-                    </div>
-                    <div className="space-y-1">
-                      <p className="text-[8px] font-black uppercase tracking-widest text-white/30">Target Role</p>
-                      <p className="text-xs font-bold text-accent">{role}</p>
-                    </div>
-                    <div className="space-y-1">
-                      <p className="text-[8px] font-black uppercase tracking-widest text-white/30">Experience</p>
-                      <p className="text-xs font-bold text-accent">{experience}</p>
-                    </div>
-                  </Card>
-                </motion.div>
-              )}
+              <div className="space-y-6">
+                <h3 className="text-[11px] font-black uppercase tracking-[0.4em] text-white/40 ml-2">SELECTED CONFIGURATION</h3>
+                <div className="grid grid-cols-3 gap-4">
+                  {[
+                    { label: "Organization", val: company, icon: Building2 },
+                    { label: "Job Role", val: role, icon: Briefcase },
+                    { label: "Experience Level", val: experience, icon: GraduationCap }
+                  ].map((item, i) => (
+                    <Card key={i} className="p-5 glass border-accent/20 bg-accent/5 rounded-2xl space-y-3">
+                       <div className="w-8 h-8 rounded-lg bg-accent/10 flex items-center justify-center text-accent">
+                         <item.icon className="w-4 h-4" />
+                       </div>
+                       <div>
+                         <p className="text-sm font-bold text-white leading-tight">{item.val}</p>
+                         <p className="text-[8px] font-black uppercase tracking-widest text-white/30 mt-1">{item.label}</p>
+                       </div>
+                    </Card>
+                  ))}
+                </div>
+              </div>
+
+              <Button 
+                onClick={() => document.getElementById('next-steps-section')?.scrollIntoView({ behavior: 'smooth' })}
+                className="w-full h-18 btn-premium text-xs font-black uppercase tracking-[0.4em] shadow-[0_20px_60px_rgba(147,51,234,0.3)]"
+              >
+                CONTINUE TO NEXT STEP
+              </Button>
             </div>
           </div>
 
-          {/* RIGHT SIDE: Resume & Execution */}
-          <div className="lg:col-span-5 space-y-8">
-            {/* Resume Upload Card */}
-            <Card 
-              onClick={() => !isVerifying && document.getElementById('resume-input')?.click()}
-              className={cn(
-                "premium-card bg-white/[0.01] border-white/5 p-12 flex flex-col items-center justify-center text-center cursor-pointer group transition-all duration-500 min-h-[340px] relative overflow-hidden",
-                isUploaded ? "border-green-500/20 bg-green-500/[0.02]" : "hover:border-accent/20 hover:bg-white/[0.03]"
-              )}
-            >
-              <input type="file" id="resume-input" className="hidden" accept=".pdf" onChange={handleFileChange} />
+          {/* RIGHT COLUMN: Resume & Actions */}
+          <div className="lg:col-span-5 space-y-12">
+            
+            {/* RESUME UPLOAD */}
+            <div className="space-y-4">
+              <h2 className="text-xl font-bold tracking-tighter ml-2">Resume Upload</h2>
+              <p className="text-[10px] text-white/40 uppercase tracking-widest ml-2 mb-6">Upload your professional blueprint to calibrate the simulation.</p>
               
-              <AnimatePresence mode="wait">
-                {isVerifying ? (
-                  <motion.div key="verifying" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-6">
-                    <div className="relative">
-                      <div className="w-20 h-20 rounded-full border-2 border-accent/10 border-t-accent animate-spin" />
-                      <ShieldCheck className="w-8 h-8 text-accent absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 animate-pulse" />
-                    </div>
-                    <p className="text-[10px] font-black text-accent uppercase tracking-[0.4em]">Verifying Blueprint...</p>
-                  </motion.div>
-                ) : !isUploaded ? (
-                  <motion.div key="upload" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-6">
-                    <div className="w-16 h-16 rounded-[2rem] bg-accent/10 flex items-center justify-center mx-auto border border-accent/20 group-hover:scale-110 transition-transform">
-                      <Upload className="w-8 h-8 text-accent" />
-                    </div>
-                    <div className="space-y-2">
-                      <h3 className="text-2xl font-bold">Resume Upload</h3>
-                      <p className="text-[10px] text-muted-foreground uppercase tracking-widest font-black">PDF ONLY • MAX 10MB</p>
-                    </div>
-                    <Button variant="outline" className="h-10 px-8 glass border-white/10 text-[9px] font-black uppercase rounded-full">Choose File</Button>
-                  </motion.div>
-                ) : (
-                  <motion.div key="uploaded" initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="space-y-8 w-full">
-                    <div className="w-16 h-16 rounded-full bg-green-500/20 flex items-center justify-center mx-auto border border-green-500/30">
-                      <CheckCircle2 className="w-8 h-8 text-green-400" />
+              <Card 
+                onClick={() => !isVerifying && document.getElementById('resume-input')?.click()}
+                className={cn(
+                  "premium-card bg-white/[0.01] border-white/5 p-10 flex flex-col items-center justify-center text-center cursor-pointer group transition-all duration-500 min-h-[340px] relative overflow-hidden",
+                  isUploaded ? "border-green-500/20 bg-green-500/[0.02]" : "hover:border-accent/20 hover:bg-white/[0.03]"
+                )}
+              >
+                <input type="file" id="resume-input" className="hidden" accept=".pdf" onChange={handleFileChange} />
+                
+                <AnimatePresence mode="wait">
+                  {isVerifying ? (
+                    <motion.div key="verifying" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-6">
+                      <div className="relative">
+                        <div className="w-20 h-20 rounded-full border-2 border-accent/10 border-t-accent animate-spin" />
+                        <ShieldCheck className="w-8 h-8 text-accent absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 animate-pulse" />
+                      </div>
+                      <p className="text-[10px] font-black text-accent uppercase tracking-[0.4em]">Verifying Blueprint...</p>
+                    </motion.div>
+                  ) : !isUploaded ? (
+                    <motion.div key="upload" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-6">
+                      <div className="w-16 h-16 rounded-[2rem] bg-accent/10 flex items-center justify-center mx-auto border border-accent/20 group-hover:scale-110 transition-transform">
+                        <Upload className="w-8 h-8 text-accent" />
+                      </div>
+                      <div className="space-y-2">
+                        <h3 className="text-2xl font-bold">Choose File</h3>
+                        <p className="text-[10px] text-muted-foreground uppercase tracking-widest font-black">Drag & Drop Resume area</p>
+                      </div>
+                      <p className="text-[9px] text-white/20 uppercase tracking-widest">Supported formats: PDF (Max 10MB)</p>
+                    </motion.div>
+                  ) : (
+                    <motion.div key="uploaded" initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="space-y-8 w-full">
+                      <div className="relative mx-auto w-24 h-32 glass rounded-xl border-white/10 flex items-center justify-center overflow-hidden">
+                        <FileText className="w-12 h-12 text-white/20" />
+                        <Badge className="absolute top-2 right-2 bg-red-500/20 text-red-500 border-none text-[8px] font-black px-1.5 py-0.5">PDF</Badge>
+                      </div>
+                      <div className="space-y-1">
+                        <p className="text-xl font-bold text-white truncate max-w-[300px] mx-auto">{file?.name || journey?.resumeName}</p>
+                        <p className="text-[9px] font-black text-white/30 uppercase tracking-widest">
+                          {file ? `${(file.size / (1024 * 1024)).toFixed(1)} MB` : "Blueprint Synced"}
+                        </p>
+                      </div>
+                      <button 
+                        onClick={(e) => { e.stopPropagation(); setIsUploaded(false); setFile(null); }} 
+                        className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-white/30 hover:text-red-400 transition-all mx-auto"
+                      >
+                        <Trash2 className="w-4 h-4" /> Remove Blueprint
+                      </button>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </Card>
+            </div>
+
+            {/* NEXT STEPS */}
+            <div id="next-steps-section" className="space-y-6">
+              <div className="space-y-1 ml-2">
+                <h3 className="text-xl font-bold tracking-tighter">NEXT STEPS</h3>
+                <p className="text-[10px] text-white/40 uppercase tracking-widest">Choose how you want to proceed with your assessment</p>
+              </div>
+              
+              <div className="grid grid-cols-2 gap-4">
+                {/* Aptitude Card */}
+                <Card className="glass border-white/5 bg-white/[0.01] p-6 rounded-[2rem] flex flex-col justify-between hover:border-accent/40 transition-all group">
+                  <div className="space-y-4">
+                    <div className="w-10 h-10 rounded-xl bg-accent/10 flex items-center justify-center text-accent">
+                      <Command className="w-5 h-5" />
                     </div>
                     <div className="space-y-1">
-                      <p className="text-[10px] font-black text-green-400 uppercase tracking-widest">Blueprint Received</p>
-                      <p className="text-xl font-bold text-white truncate max-w-[300px] mx-auto">{file?.name}</p>
-                    </div>
-                    <button 
-                      onClick={(e) => { e.stopPropagation(); setIsUploaded(false); setFile(null); }} 
-                      className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-white/30 hover:text-red-400 transition-all mx-auto"
-                    >
-                      <Trash2 className="w-4 h-4" /> Remove Blueprint
-                    </button>
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </Card>
-
-            {/* Next Steps / Protocol Selection */}
-            <div className="space-y-6">
-              <h3 className="text-xs font-black uppercase tracking-[0.3em] text-white/20 ml-2">Select Mission Protocol</h3>
-              <div className="grid gap-4">
-                {/* Aptitude Round Card */}
-                <Card 
-                  onClick={() => isFormValid && isUploaded && handleProceed('aptitude')}
-                  className={cn(
-                    "glass p-6 rounded-[2rem] border transition-all duration-300 group/btn relative overflow-hidden",
-                    !isFormValid || !isUploaded ? "opacity-40 grayscale cursor-not-allowed border-white/5" : "hover:border-accent/40 hover:bg-accent/5 cursor-pointer border-white/10"
-                  )}
-                >
-                  <div className="flex items-center justify-between relative z-10">
-                    <div className="flex items-center gap-5">
-                      <div className="w-12 h-12 rounded-2xl bg-white/5 flex items-center justify-center text-white/40 group-hover/btn:text-accent group-hover/btn:bg-accent/10 transition-all">
-                        <Command className="w-6 h-6" />
-                      </div>
-                      <div className="text-left">
-                        <h4 className="text-lg font-bold">Aptitude Round</h4>
-                        <p className="text-[10px] text-white/30 uppercase font-bold tracking-widest">Logical & Quantitative Audit</p>
-                      </div>
-                    </div>
-                    <div className="w-10 h-10 rounded-full glass border-white/10 flex items-center justify-center group-hover/btn:translate-x-1 transition-transform">
-                      <ArrowRight className="w-4 h-4" />
+                      <h4 className="font-bold text-sm uppercase tracking-widest">Aptitude Round</h4>
+                      <p className="text-[10px] text-white/30 leading-relaxed font-medium">Logical, quantitative, and verbal intelligence audit.</p>
                     </div>
                   </div>
+                  <Button 
+                    onClick={() => handleProceed('aptitude')}
+                    disabled={isInitializing || !isUploaded}
+                    className="w-full h-11 mt-6 rounded-xl glass border-white/10 text-[9px] font-black uppercase tracking-widest hover:bg-accent hover:text-black transition-all"
+                  >
+                    CONTINUE TO APTITUDE
+                  </Button>
                 </Card>
 
-                {/* Interview Round Card */}
-                <Card 
-                  onClick={() => isFormValid && isUploaded && handleProceed('interview')}
-                  className={cn(
-                    "glass p-6 rounded-[2rem] border transition-all duration-300 group/btn relative overflow-hidden",
-                    !isFormValid || !isUploaded ? "opacity-40 grayscale cursor-not-allowed border-white/5" : "hover:border-purple-500/40 hover:bg-purple-500/5 cursor-pointer border-white/10"
-                  )}
-                >
-                  <div className="flex items-center justify-between relative z-10">
-                    <div className="flex items-center gap-5">
-                      <div className="w-12 h-12 rounded-2xl bg-white/5 flex items-center justify-center text-white/40 group-hover/btn:text-purple-400 group-hover/btn:bg-purple-400/10 transition-all">
-                        <Zap className="w-6 h-6" />
-                      </div>
-                      <div className="text-left">
-                        <h4 className="text-lg font-bold">Interview Round</h4>
-                        <p className="text-[10px] text-white/30 uppercase font-bold tracking-widest">AI Virtual HR Simulation</p>
-                      </div>
+                {/* Interview Card */}
+                <Card className="glass border-white/5 bg-white/[0.01] p-6 rounded-[2rem] flex flex-col justify-between hover:border-purple-500/40 transition-all group">
+                  <div className="space-y-4">
+                    <div className="w-10 h-10 rounded-xl bg-purple-500/10 flex items-center justify-center text-purple-400">
+                      <Zap className="w-5 h-5" />
                     </div>
-                    <div className="w-10 h-10 rounded-full glass border-white/10 flex items-center justify-center group-hover/btn:translate-x-1 transition-transform">
-                      <ArrowRight className="w-4 h-4" />
+                    <div className="space-y-1">
+                      <h4 className="font-bold text-sm uppercase tracking-widest">Interview Round</h4>
+                      <p className="text-[10px] text-white/30 leading-relaxed font-medium">Hyper-realistic AI virtual executive simulation.</p>
                     </div>
                   </div>
+                  <Button 
+                    onClick={() => handleProceed('interview')}
+                    disabled={isInitializing || !isUploaded}
+                    className="w-full h-11 mt-6 rounded-xl glass border-white/10 text-[9px] font-black uppercase tracking-widest hover:bg-purple-600 hover:text-white transition-all"
+                  >
+                    CONTINUE TO INTERVIEW
+                  </Button>
                 </Card>
-              </div>
-
-              <div className="flex items-center justify-center gap-6 opacity-30 pt-4">
-                <div className="flex items-center gap-2">
-                  <ShieldCheck className="w-4 h-4 text-accent" />
-                  <span className="text-[8px] font-black uppercase tracking-widest text-white">Secure Session</span>
-                </div>
-                <div className="w-1 h-1 rounded-full bg-white/20" />
-                <div className="flex items-center gap-2">
-                  <Target className="w-4 h-4 text-purple-400" />
-                  <span className="text-[8px] font-black uppercase tracking-widest text-white">Target Aware</span>
-                </div>
               </div>
             </div>
-          </div>
 
+          </div>
         </div>
       </main>
     </div>
