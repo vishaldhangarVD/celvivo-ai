@@ -196,10 +196,20 @@ const aiMockInterviewFlow = ai.defineFlow(
         stage: "INTRODUCTION",
         isInterviewComplete: input.currentMainQuestionIndex >= 7,
         isHint: false
-      };
+      }; 
     }
 
     try {
+      console.log("\n================ INTERVIEW TURN START ================");
+      console.log("📌 QUESTION INDEX:", input.currentMainQuestionIndex);
+      console.log("📌 CURRENT STAGE:", input.currentStage);
+      console.log("📌 CURRENT DIFFICULTY:", input.currentDifficulty);
+      console.log("👤 USER ANSWER:", input.userAnswer);
+      console.log("📚 HISTORY:", input.history);
+      console.log("❓ ALREADY ASKED:", input.askedQuestions);
+      console.log("🧠 RESUME SKILLS:", input.resumeSkills);
+      console.log("🚀 RESUME PROJECTS:", input.resumeProjects);
+    
       const { output } = await runWithResilience(prompt, {
         ...input,
         askedQuestions: input.askedQuestions || [],
@@ -207,29 +217,67 @@ const aiMockInterviewFlow = ai.defineFlow(
         currentDifficulty: input.currentDifficulty || "MEDIUM",
         hintUsed: input.hintUsed || false
       });
-
-      if (!output) throw new Error("Neural synthesis failed.");
-
+    
+      console.log("\n🟢 GEMINI RESPONSE RECEIVED");
+    
+      console.log("🤖 NEXT QUESTION:", output?.nextQuestion);
+      console.log("📍 STAGE:", output?.stage);
+      console.log("📊 DIFFICULTY:", output?.difficulty);
+      console.log("💡 IS HINT:", output?.isHint);
+      console.log("🏁 INTERVIEW COMPLETE:", output?.isInterviewComplete);
+    
+      if (!output) {
+        console.log("❌ GEMINI RETURNED NO OUTPUT");
+        throw new Error("Neural synthesis failed.");
+      }
+    
+      console.log("🟢 QUESTION SOURCE: GEMINI");
+      console.log("🎯 FINAL QUESTION:", output.nextQuestion);
+    
+      console.log("================ INTERVIEW TURN END ================\n");
+    
       return {
         ...output,
-        isInterviewComplete: output.isInterviewComplete || input.currentMainQuestionIndex >= 12,
+        isInterviewComplete:
+          output.isInterviewComplete ||
+          input.currentMainQuestionIndex >= 12,
       };
+    
     } catch (error) {
-      console.error("AI Mock Interview Flow Error:", error);
-      
+    
+      console.error("\n🔴 AI MOCK INTERVIEW ERROR");
+      console.error("❌ ERROR:", error);
+    
       let nextQuestion = "";
       const isComplete = input.currentMainQuestionIndex >= 12;
-
+    
       if (isComplete) {
-        nextQuestion = FALLBACK_QUESTIONS[FALLBACK_QUESTIONS.length - 1]; // Use professional closing
-      } else if (input.currentMainQuestionIndex === 1 || (input.history || []).length === 0) {
-        // Use a random intro variant for fallback
-        nextQuestion = FALLBACK_INTRODUCTIONS[Math.floor(Math.random() * FALLBACK_INTRODUCTIONS.length)];
+    
+        nextQuestion = FALLBACK_QUESTIONS[FALLBACK_QUESTIONS.length - 1];
+    
+      } else if (
+        input.currentMainQuestionIndex === 1 ||
+        (input.history || []).length === 0
+      ) {
+    
+        nextQuestion =
+          FALLBACK_INTRODUCTIONS[
+            Math.floor(Math.random() * FALLBACK_INTRODUCTIONS.length)
+          ];
+    
       } else {
-        const bankIndex = Math.max(0, input.currentMainQuestionIndex - 1) % FALLBACK_QUESTIONS.length;
+    
+        const bankIndex =
+          Math.max(0, input.currentMainQuestionIndex - 1) %
+          FALLBACK_QUESTIONS.length;
+    
         nextQuestion = FALLBACK_QUESTIONS[bankIndex];
       }
-
+    
+      console.log("🔴 QUESTION SOURCE: FALLBACK");
+      console.log("🔴 FALLBACK QUESTION:", nextQuestion);
+      console.log("====================================================\n");
+    
       return {
         nextQuestion,
         difficulty: input.currentDifficulty || "MEDIUM",

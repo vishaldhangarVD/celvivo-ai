@@ -32,6 +32,7 @@ const AiResumeAnalysisOutputSchema = z.object({
     fullName: z.string(),
     email: z.string(),
     phone: z.string().optional(),
+    location: z.string().optional(),
   }),
   atsScore: z.number().min(0).max(100),
   interviewReadinessScore: z.number().min(0).max(100),
@@ -78,65 +79,31 @@ const prompt = ai.definePrompt({
   name: 'aiResumeAnalysisPrompt',
   input: {schema: AiResumeAnalysisInputSchema},
   output: {schema: AiResumeAnalysisOutputSchema},
-  prompt: `You are Nexvoro Resume Intelligence Engine.
+  prompt: `You are the Nexvoro Resume Intelligence Engine, a world-class ATS evaluator, Technical Recruiter, and Engineering Manager.
 
-You are an expert ATS evaluator, Senior Technical Recruiter, Engineering Manager, and Career Coach.
+Your mission is to perform a high-fidelity, evidence-based analysis of the provided resume for the target role: "{{{targetRole}}}".
 
-Your task is to analyze the uploaded resume for the target role and target company.
+### CRITICAL DIRECTIVES:
+- **NO HALLUCINATION**: Use ONLY information available in the resume. If a section is missing, return an empty array or indicator; NEVER invent data.
+- **EVIDENCE-BASED PROFICIENCY**: Assign proficiency ('Beginner', 'Intermediate', 'Advanced', 'Expert') based on actual usage evidence (years of use, complexity of projects, depth of responsibilities). Do not assume Expertise without strong evidence.
+- **INDIVIDUAL SKILLS**: Extract individual technologies and tools. Do not combine unrelated tech into single generic skills.
 
-Rules:
+### EXTRACTION REQUIREMENTS:
 
-- Use ONLY the information available in the resume.
-- Never guess or invent information.
-- If information is missing, clearly indicate that it is missing.
-- Evaluate the resume as if you are hiring for the target company.
-- Be strict but fair.
-- Return only data that matches the required JSON schema.
-
-Analyze the resume and perform the following:
-
-1. Extract:
-   - Candidate Name
-   - Email
-   - Phone Number
-
-2. Generate a professional summary.
-
-3. Calculate:
-   - ATS Score (0-100)
-   - Interview Readiness Score (0-100)
-   - Resume Quality Score (0-100)
-   - Technical Skills Score (0-100)
-   - Keyword Optimization Score (0-100)
-
-4. Identify:
-   - Strengths
-   - Weaknesses
-   - Missing Skills for the target role
-
-5. Analyze every technical skill and classify it as:
-   - Beginner
-   - Intermediate
-   - Advanced
-   - Expert
-
-6. Extract:
-   - Education
-   - Experience
-   - Projects
-   - Certifications
-   - Achievements
-
-7. Compare the resume with the target role and provide role match percentages.
-
-8. Generate practical resume improvement suggestions that will increase interview selection chances.
-
-Evaluation Guidelines:
-
-- Give higher scores only if the resume contains measurable achievements, relevant projects, strong technical skills, and role-specific keywords.
-- Reduce ATS score if important technologies or keywords for the target role are missing.
-- Consider the target company standards while evaluating.
-- Be consistent in scoring.
+1. **Personal Information**: Extract Candidate Name, Email, Phone, and Location.
+2. **Professional Summary**: Generate a high-fidelity 2-3 sentence summary based STRICTLY on the career history nodes in the document.
+3. **Sections (Rich Detail Required)**:
+   - **Education**: Extract Degree, Institution, Course, Specialization, Dates, and GPA/Percentage (if present).
+   - **Experience**: Extract EVERY professional role. For each entry, format as a descriptive string including: [Company Name] | [Job Title] | [Duration] | [Detailed Responsibilities & Specific Tech used] | [Quantifiable Results/Achievements].
+   - **Projects**: Extract EVERY project. Format as a descriptive string including: [Project Name] | [Detailed Description] | [Core Tech Stack] | [Role/Contribution] | [Features/Impact].
+   - **Certifications**: List all verified certifications and issuing providers.
+   - **Achievements**: List all listed awards, ranks, or notable professional nodes.
+4. **Technical Skills**: Map all identified technologies with their evidence-based proficiency levels.
+5. **Evaluation**:
+   - Calculate REAListic scores (0-100) for ATS, Readiness, Quality, Technical Depth, and Keyword Optimization relative to standard benchmarks for a "{{{targetRole}}}".
+   - Identify concrete strengths and weaknesses found in the text.
+   - Identify missingSkills that are vital for the role but absent from the resume text.
+6. **Role Match**: Provide match percentages for the target role and 1-2 other related industry tracks.
 
 Resume:
 {{media url=resumeDataUri}}`,
@@ -147,38 +114,33 @@ function generateFallbackAnalysis(targetRole: string): AiResumeAnalysisOutput {
   
   return {
     personalInfo: {
-      fullName: "CANDIDATE IDENTITY EXTRACTED",
+      fullName: "CANDIDATE IDENTITY NOT PARSED",
       email: "identity@nexus.ai",
     },
-    atsScore: 68,
-    interviewReadinessScore: 65,
-    resumeQualityScore: 72,
-    technicalSkillsScore: 65,
-    keywordOptimizationScore: 60,
-    summary: "A focused technical professional with strong core engineering nodes.",
-    strengths: ["Clean Architectural Reasoning", "Strategic Problem Solving"],
-    weaknesses: ["Missing Quantifiable Impact", "Low Cloud-Native Keywords"],
-    skillAnalysis: [
-      { skill: "Technical Core Nodes", proficiency: "Advanced" },
-      { skill: "Architecture Awareness", proficiency: "Intermediate" },
-      { skill: "Strategic Communication", proficiency: "Expert" }
-    ],
+    atsScore: 0,
+    interviewReadinessScore: 0,
+    resumeQualityScore: 0,
+    technicalSkillsScore: 0,
+    keywordOptimizationScore: 0,
+    summary: "The neural engine was unable to parse the document content. Manual review of the PDF is required.",
+    strengths: ["Manual Review Required"],
+    weaknesses: ["Extraction Protocol Failure"],
+    skillAnalysis: [],
     sections: {
-      education: ["Verified academic history detected."],
-      projects: ["Localized project node extraction active."],
-      experience: ["Professional history archived."],
-      certifications: ["Industry certification detected."],
-      achievements: ["Impact nodes identified."]
+      education: ["Parsing error: education nodes not extracted"],
+      projects: ["Parsing error: project nodes not extracted"],
+      experience: ["Parsing error: experience nodes not extracted"],
+      certifications: [],
+      achievements: []
     },
-    missingSkills: ["Cloud-Native Architecture", "Advanced System Design"],
+    missingSkills: [],
     improvementSuggestions: [
-      "Quantify your impact using exact performance metrics.",
-      "Integrate more " + targetRole + " specific technical nodes.",
-      "Adopt the STAR method for project descriptions."
+      "Ensure the PDF contains selectable text (not scanned images).",
+      "Check that the file is not password protected.",
+      "Verify the file format is standard PDF or DOCX."
     ],
     roleMatches: [
-      { role: targetRole, matchPercentage: 68 },
-      { role: "Software Engineer", matchPercentage: 75 }
+      { role: targetRole, matchPercentage: 0 }
     ],
     isOffline: true
   };
@@ -195,10 +157,9 @@ const aiResumeAnalysisFlow = ai.defineFlow(
       const { output } = await runWithResilience(prompt, input);
       if (!output) return generateFallbackAnalysis(input.targetRole);
       return { ...output, isOffline: false };
-    }catch (error) {
-      console.error("===== RESUME ANALYSIS ERROR =====");
-      console.error(error);
-      throw error;
+    } catch (error) {
+      console.error("===== RESUME ANALYSIS ERROR =====", error);
+      return generateFallbackAnalysis(input.targetRole);
     }
   }
 );

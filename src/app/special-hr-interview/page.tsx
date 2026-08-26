@@ -293,6 +293,11 @@ export default function SpecialHRInterview() {
 
         if (!isConnected) throw new Error("Neural interface timed out.");
 
+        console.log("\n================ D-ID SPEAK ================");
+console.log("🟣 D-ID CONNECTION:", didConnectionStateRef.current);
+console.log("🗣️ D-ID WILL SPEAK:", result.nextQuestion);
+console.log("=============================================\n");
+
         await agentManagerRef.current.speak({
           type: "text",
           input: result.nextQuestion
