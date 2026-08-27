@@ -1,10 +1,9 @@
 'use server';
 /**
- * @fileOverview Nexvoro AI Virtual Interview Agent (Elite Senior Interviewer v10.0).
- * MASTER PROTOCOL: Calibrated for zero-chatbot behavior. Mimics a Lead Engineer at a Tier-1 tech firm.
- * Integrates Resume, Projects, Coding Score, Aptitude Score, and Conversation History.
- * Implements granular stage progression with natural acknowledgments and transitions.
- * Includes ONE-HINT PROTOCOL for handling non-meaningful responses.
+ * @fileOverview Nexvoro AI Virtual Interview Agent (Elite Senior Interviewer v11.0).
+ * MASTER PROTOCOL: Calibrated for multi-round intelligence.
+ * Integrates Round 1 (Aptitude, Coding, Technical) + Round 2 (Special HR Resume).
+ * Implements granular stage progression with cross-round context awareness.
  */
 
 import { ai, runWithResilience } from '@/ai/genkit';
@@ -25,9 +24,23 @@ const FALLBACK_INTRODUCTIONS = [
   "Let's begin with a quick introduction. Could you tell me your name and give me a brief overview of yourself?",
   "Before we dive into the technical discussion, could you please introduce yourself and share a little about your professional journey?",
   "Great to have you here. To get started, could you tell me about yourself and your background?",
-  "Let's start with the basics. Please introduce yourself and briefly walk me through your background.",
+  "Let's start with the basics. Please introduce yourself and briefly walk me through your background?",
   "Welcome! Could you tell me a little about yourself, including your name and what you've been working or studying recently?"
 ];
+
+const Round1ContextSchema = z.object({
+  resumeSummary: z.string().optional(),
+  resumeSkills: z.array(z.string()).optional(),
+  resumeProjects: z.array(z.string()).optional(),
+  scores: z.object({
+    aptitude: z.number().optional(),
+    coding: z.number().optional(),
+  }).optional(),
+  history: z.array(z.object({
+    question: z.string(),
+    answer: z.string(),
+  })).optional(),
+});
 
 const AiMockInterviewInputSchema = z.object({
   role: z.string(),
@@ -61,6 +74,7 @@ const AiMockInterviewInputSchema = z.object({
     "CLOSING"
   ]).optional(),
   currentDifficulty: z.enum(["EASY", "MEDIUM", "HARD"]).optional(),
+  round1Context: Round1ContextSchema.optional(),
 });
 export type AiMockInterviewInput = z.infer<typeof AiMockInterviewInputSchema>;
 
@@ -104,82 +118,57 @@ CRITICAL PERSONA RULES:
 - NEVER generate bullet points, lists, or bold text.
 - NEVER reveal numeric scores, ATS percentages, or specific performance ratings to the candidate.
 
+MULTI-ROUND INTEGRITY PROTOCOL:
+You have access to candidate data from two distinct phases. Use them intelligently:
+
+### ROUND 1 CONTEXT (Historical Intelligence):
+- Resume Summary: {{{round1Context.resumeSummary}}}
+- Technical Skills: {{#each round1Context.resumeSkills}}{{{this}}}, {{/each}}
+- Projects: {{#each round1Context.resumeProjects}}{{{this}}}, {{/each}}
+- Performance: Aptitude ({{{round1Context.scores.aptitude}}}%), Coding ({{{round1Context.scores.coding}}}%)
+- Previous History:
+{{#each round1Context.history}}
+Interviewer: {{{this.question}}}
+Candidate: {{{this.answer}}}
+{{/each}}
+
+### ROUND 2 CONTEXT (Active Intelligence):
+- This is the current session.
+- New Resume Summary: {{{resumeSummary}}}
+- New Resume Skills: {{#each resumeSkills}}{{{this}}}, {{/each}}
+- New Resume Projects: {{#each resumeProjects}}{{{this}}}, {{/each}}
+
+INTELLIGENCE DIRECTIVES:
+1. **Continuation**: Round 2 is an evolution. Do NOT repeat questions asked in Round 1 History.
+2. **Consistency Check**: Look for inconsistencies or updates between the Round 1 resume and the Round 2 resume. Ask deep follow-ups on new skills or project details.
+3. **Difficulty Calibration**: If Coding/Aptitude scores are high (>85%), start at HARD difficulty. If they are moderate (60-85%), start at MEDIUM.
+4. **Contextual Linking**: If the candidate mentioned a specific technology in Round 1 (e.g., MySQL) and lists something related in Round 2 (e.g., PostgreSQL), ask a comparative architectural question.
+
 ONE-HINT PROTOCOL:
 If the candidate's latest response ({{{userAnswer}}}) is non-meaningful (e.g. "I don't know", "Not sure", "Hmm", "No idea", "I can't remember"):
 1. If hintUsed is false: Provide ONE short, strategic hint or a leading follow-up question to help them approach the problem without giving the answer. Set isHint: true in your response.
 2. If hintUsed is true: Do not give another hint. Acknowledge the lack of response professionally and move to the NEXT question or stage. Set isHint: false.
-- A meaningful short answer (e.g. "Python", "Agile", "Yes") is NOT a non-meaningful response.
 
 ACKNOWLEDGEMENT PROTOCOL:
-Assess the candidate's latest response ({{{userAnswer}}}) and prepend a short acknowledgement to your next question:
-1. STRONG ANSWER: Use positive validation (e.g., "Good answer.", "That's a good point.", "Excellent, that's clear.").
+Assess the candidate's latest response ({{{userAnswer}}}) and prepend a short acknowledgement:
+1. STRONG ANSWER: Use positive validation (e.g., "Good answer.", "That's a good point.").
 2. AVERAGE ANSWER: Use neutral transition (e.g., "Alright, I see.", "Okay, thank you for that context.").
-3. WEAK/UNCLEAR ANSWER: Do not praise. Use a natural clarifying transition (e.g., "Okay, let's explore that a bit more.", "I'd like to understand that in more detail.").
-- NEVER use the same phrase twice.
-- The acknowledgement and question MUST feel like a single natural spoken turn.
+3. WEAK/UNCLEAR ANSWER: Do not praise. Use a natural clarifying transition (e.g., "Okay, let's explore that a bit more.").
 
 SIMULATION STATE:
 - CURRENT STAGE: {{{currentStage}}}
 - CURRENT DIFFICULTY: {{{currentDifficulty}}}
-- HINT USED FOR CURRENT NODE: {{{hintUsed}}}
-
-CANDIDATE DOSSIER:
-- NAME: {{{candidateName}}}
-- SUMMARY: {{{resumeSummary}}}
-- SKILLS: {{#each resumeSkills}}{{{this}}}, {{/each}}
-- PROJECTS: {{#each resumeProjects}}{{{this}}}, {{/each}}
-
-INTERVIEW FLOW PROTOCOL:
-
-STAGE 1: PERSONAL INTRODUCTION (Node 1 ONLY)
-- If history is empty, you MUST start with a natural, welcoming, and varied introduction.
-- Ask the candidate to introduce themselves, state their name, and provide a high-level background.
-- VARIETY PROTOCOL: Dynamically generate the wording.
-
-STAGE 2: EDUCATION & PROFESSIONAL BACKGROUND (Node 2)
-- Acknowledge the introduction.
-- Ask about their professional journey or academic foundations.
-
-STAGE 3: ROLE-SPECIFIC EXPERIENCE (Node 3)
-- Connect their background to the requirements of the {{{role}}} position.
-- Ask about their experience with specific core tools or methodologies mentioned in their dossier.
-
-STAGE 4: PROJECTS & PRACTICAL EXPERIENCE (Node 4)
-- Analyze their PROJECTS: {{#each resumeProjects}}{{{this}}}, {{/each}}
-- Select one and ask deep, architectural questions.
-
-STAGE 5: TECHNICAL & SYSTEM REASONING (Nodes 5-6)
-- Probe technical reasoning and systems thinking.
-- Use their previous project answers as context for scenarios.
-- CODING/APTITUDE DATA: Use Coding Score ({{{codingScore}}}%) and Aptitude Score ({{{aptitudeScore}}}%) to calibrate difficulty.
-
-STAGE 6: ADVANCED SCENARIOS & ADAPTIVITY (Node 7)
-- Ask complex real-world situational questions.
-
-STAGE 7: FOLLOW-UP & CLOSING (Nodes 8+)
-- Every new question MUST acknowledge or follow up on the previous answer.
-- Continue deep probing until the session is complete.
+- TURN INDEX: {{{currentMainQuestionIndex}}}
 
 TERMINATION PROTOCOL:
 - MINIMUM questions: 7.
 - MAXIMUM questions: 12.
-- Set "isInterviewComplete": true if index >= 7 and you have sufficient data for a final audit.
-- IF "isInterviewComplete" is true: YOU MUST provide a professional closing message in "nextQuestion". 
-- The closing message should be polite, thank the candidate for their time, and explicitly state that the session has concluded.
-- NEVER ask a question, start a new topic, or invite further response when isInterviewComplete is true.
-
-SESSION INTEGRITY:
-- NEVER repeat a question listed in "Previously Asked Questions".
-- History:
-{{#each history}}
-You: {{{this.question}}}
-Candidate: {{{this.answer}}}
-{{/each}}
+- IF "isInterviewComplete" is true: Provide a professional closing message in "nextQuestion". 
 
 LATEST CANDIDATE RESPONSE:
 {{{userAnswer}}}
 
-Based on the protocol and candidate response, output the next logical question or hint as JSON.`
+Based on the protocol and multi-round context, output the next logical question or hint as JSON.`
 });
 
 const aiMockInterviewFlow = ai.defineFlow(
@@ -203,12 +192,7 @@ const aiMockInterviewFlow = ai.defineFlow(
       console.log("\n================ INTERVIEW TURN START ================");
       console.log("📌 QUESTION INDEX:", input.currentMainQuestionIndex);
       console.log("📌 CURRENT STAGE:", input.currentStage);
-      console.log("📌 CURRENT DIFFICULTY:", input.currentDifficulty);
-      console.log("👤 USER ANSWER:", input.userAnswer);
-      console.log("📚 HISTORY:", input.history);
-      console.log("❓ ALREADY ASKED:", input.askedQuestions);
-      console.log("🧠 RESUME SKILLS:", input.resumeSkills);
-      console.log("🚀 RESUME PROJECTS:", input.resumeProjects);
+      console.log("📌 R1 SCORES: Aptitude:", input.round1Context?.scores?.aptitude, "Coding:", input.round1Context?.scores?.coding);
     
       const { output } = await runWithResilience(prompt, {
         ...input,
@@ -218,65 +202,27 @@ const aiMockInterviewFlow = ai.defineFlow(
         hintUsed: input.hintUsed || false
       });
     
-      console.log("\n🟢 GEMINI RESPONSE RECEIVED");
-    
-      console.log("🤖 NEXT QUESTION:", output?.nextQuestion);
-      console.log("📍 STAGE:", output?.stage);
-      console.log("📊 DIFFICULTY:", output?.difficulty);
-      console.log("💡 IS HINT:", output?.isHint);
-      console.log("🏁 INTERVIEW COMPLETE:", output?.isInterviewComplete);
-    
-      if (!output) {
-        console.log("❌ GEMINI RETURNED NO OUTPUT");
-        throw new Error("Neural synthesis failed.");
-      }
-    
-      console.log("🟢 QUESTION SOURCE: GEMINI");
-      console.log("🎯 FINAL QUESTION:", output.nextQuestion);
-    
-      console.log("================ INTERVIEW TURN END ================\n");
+      if (!output) throw new Error("Neural synthesis failed.");
     
       return {
         ...output,
-        isInterviewComplete:
-          output.isInterviewComplete ||
-          input.currentMainQuestionIndex >= 12,
+        isInterviewComplete: output.isInterviewComplete || input.currentMainQuestionIndex >= 12,
       };
     
     } catch (error) {
-    
-      console.error("\n🔴 AI MOCK INTERVIEW ERROR");
-      console.error("❌ ERROR:", error);
+      console.error("\n🔴 AI MOCK INTERVIEW ERROR", error);
     
       let nextQuestion = "";
       const isComplete = input.currentMainQuestionIndex >= 12;
     
       if (isComplete) {
-    
         nextQuestion = FALLBACK_QUESTIONS[FALLBACK_QUESTIONS.length - 1];
-    
-      } else if (
-        input.currentMainQuestionIndex === 1 ||
-        (input.history || []).length === 0
-      ) {
-    
-        nextQuestion =
-          FALLBACK_INTRODUCTIONS[
-            Math.floor(Math.random() * FALLBACK_INTRODUCTIONS.length)
-          ];
-    
+      } else if (input.currentMainQuestionIndex === 1 || (input.history || []).length === 0) {
+        nextQuestion = FALLBACK_INTRODUCTIONS[Math.floor(Math.random() * FALLBACK_INTRODUCTIONS.length)];
       } else {
-    
-        const bankIndex =
-          Math.max(0, input.currentMainQuestionIndex - 1) %
-          FALLBACK_QUESTIONS.length;
-    
+        const bankIndex = Math.max(0, input.currentMainQuestionIndex - 1) % FALLBACK_QUESTIONS.length;
         nextQuestion = FALLBACK_QUESTIONS[bankIndex];
       }
-    
-      console.log("🔴 QUESTION SOURCE: FALLBACK");
-      console.log("🔴 FALLBACK QUESTION:", nextQuestion);
-      console.log("====================================================\n");
     
       return {
         nextQuestion,

@@ -106,9 +106,24 @@ export default function SpecialHRInterview() {
 
   const { data: journey } = useDoc(journeyRef);
 
-  // Determine which resume data to use (Special HR fields first, then Round 1 fallback)
+  // Round 2 Specific Resume Data
   const resumeAnalysis = useMemo(() => {
-    return (journey as any)?.specialHRResumeAnalysis || journey?.resumeAnalysis;
+    return (journey as any)?.specialHRResumeAnalysis;
+  }, [journey]);
+
+  // Round 1 Specific Intelligence
+  const round1Context = useMemo(() => {
+    if (!journey) return undefined;
+    return {
+      resumeSummary: journey.resumeAnalysis?.summary || "",
+      resumeSkills: journey.resumeAnalysis?.analysis?.technicalSkills?.map((s: any) => s.skill) || [],
+      resumeProjects: journey.resumeAnalysis?.analysis?.sections?.projects || [],
+      scores: {
+        aptitude: journey.aptitudeReport?.overallScore || 0,
+        coding: journey.codingReport?.score || 0,
+      },
+      history: journey.history || [] // Round 1 conversation history
+    };
   }, [journey]);
 
   const startListeningRef = useRef<() => void>(() => {});
@@ -225,7 +240,6 @@ export default function SpecialHRInterview() {
     }
   }, []);
 
-  // Update refs
   useEffect(() => {
     startListeningRef.current = startListening;
     stopListeningRef.current = stopListening;
@@ -268,22 +282,22 @@ export default function SpecialHRInterview() {
       const result: AiMockInterviewOutput = await aiMockInterview({
         role: journey?.role || "Software Engineer",
         experienceLevel: journey?.experience || "Entry Level",
-        roundType: "Technical Interview",
+        roundType: "Special HR Interview",
         currentMainQuestionIndex: nextIndex,
         history: history,
         userAnswer: userAnswer,
         targetCompany: journey?.company || "Nexvoro AI",
-        candidateName: resumeAnalysis?.personalInfo?.fullName || "Candidate",
-        // Prefer context from the Round-2 specific Special HR Resume
-        resumeSkills: (journey as any)?.specialHRResumeAnalysis?.skillAnalysis?.map(
-          (s: any) => s.skill
-        ) || [],
-        resumeProjects: (journey as any)?.specialHRResumeAnalysis?.sections?.projects || [],
-        resumeSummary: (journey as any)?.specialHRResumeAnalysis?.summary || "",
+        candidateName: resumeAnalysis?.personalInfo?.fullName || user?.displayName || "Candidate",
+        resumeSkills: resumeAnalysis?.skillAnalysis?.map((s: any) => s.skill) || [],
+        resumeProjects: resumeAnalysis?.sections?.projects || [],
+        resumeSummary: resumeAnalysis?.summary || "",
+        aptitudeScore: round1Context?.scores?.aptitude || 0,
+        codingScore: round1Context?.scores?.coding || 0,
         askedQuestions: askedQuestions,
         currentStage: interviewStage,
         currentDifficulty: interviewDifficulty,
-        hintUsed: false
+        hintUsed: false,
+        round1Context: round1Context // PASSING ROUND 1 CONTEXT HERE
       });
 
       setCurrentQuestion(result.nextQuestion);
