@@ -15,6 +15,7 @@ interface HolographicInterviewerProps {
   isGenerating?: boolean;
   currentQuestion?: string;
   onSpeechEnd?: () => void;
+  stage?: string;
 }
 
 export default function HolographicInterviewer({
@@ -23,6 +24,7 @@ export default function HolographicInterviewer({
   isGenerating = false,
   currentQuestion,
   onSpeechEnd,
+  stage
 }: HolographicInterviewerProps) {
   const [pulse, setPulse] = useState(false);
   const onSpeechEndRef = useRef(onSpeechEnd);
@@ -112,6 +114,7 @@ export default function HolographicInterviewer({
         speaking={isSpeaking}
         pulse={pulse}
         isLoader={isGenerating}
+        stage={stage}
         className="w-full h-full"
       />
     </div>

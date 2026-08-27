@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
 
@@ -10,21 +10,32 @@ interface CandidateHologramProps {
   pulse?: boolean;
   className?: string;
   isLoader?: boolean;
+  stage?: string;
 }
 
 /**
  * @fileOverview CandidateHologram - Technical HUD Interface.
- * Features rotating rings, segmented arcs, scanning lines, and hex readouts.
+ * Features rotating rings, segmented arcs, scanning lines, stage-based color themes, and branded "N" core.
  */
 export default function CandidateHologram({ 
   active = true, 
   speaking = false, 
   pulse = false,
   className = '', 
-  isLoader = false 
+  isLoader = false,
+  stage
 }: CandidateHologramProps) {
   const [hexCode, setHexCode] = useState('0x0000');
   const [litSegments, setLitSegments] = useState<boolean[]>(new Array(12).fill(false));
+
+  // Determine theme color based on interview stage
+  const themeColor = useMemo(() => {
+    if (!stage) return '#22d3ee'; // Default Cyan
+    const s = stage.toUpperCase();
+    if (s.includes('TECH') || s.includes('RAPID')) return '#a855f7'; // Purple
+    if (s.includes('BEHAV') || s.includes('SCENARIO') || s.includes('FOLLOW')) return '#f59e0b'; // Amber
+    return '#22d3ee'; // Default Cyan
+  }, [stage]);
 
   // Helper to round coordinates to prevent hydration mismatches
   const round = (num: number) => Math.round(num * 100) / 100;
@@ -64,34 +75,37 @@ export default function CandidateHologram({
     )}>
       {/* Hex Grid Background Texture */}
       <div className="absolute inset-0 pointer-events-none opacity-20" 
-           style={{ backgroundImage: `radial-gradient(circle at 2px 2px, rgba(34, 211, 238, 0.15) 1px, transparent 0)`, backgroundSize: '24px 24px' }} />
+           style={{ backgroundImage: `radial-gradient(circle at 2px 2px, rgba(255, 255, 255, 0.05) 1px, transparent 0)`, backgroundSize: '24px 24px' }} />
       
       {/* Background patterns and Scanline */}
       <div className="absolute inset-0 pointer-events-none opacity-10 bg-[linear-gradient(rgba(18,16,16,0)_50%,rgba(0,0,0,0.25)_50%),linear-gradient(90deg,rgba(255,0,0,0.06),rgba(0,255,0,0.02),rgba(0,0,255,0.06))]" />
-      <div className="absolute inset-0 pointer-events-none w-full h-[2px] bg-accent/20 shadow-[0_0_15px_#22d3ee] animate-scanline z-20" />
+      <div className="absolute inset-0 pointer-events-none w-full h-[2px] opacity-40 shadow-[0_0_15px_#fff] animate-scanline z-20" style={{ backgroundColor: themeColor }} />
 
       {/* Targeting Brackets */}
-      <div className="absolute top-12 left-12 pointer-events-none border-l border-t border-accent/20 w-8 h-8 rounded-tl-xl" />
-      <div className="absolute top-12 right-12 pointer-events-none border-r border-t border-accent/20 w-8 h-8 rounded-tr-xl" />
-      <div className="absolute bottom-12 left-12 pointer-events-none border-l border-b border-accent/20 w-8 h-8 rounded-bl-xl" />
-      <div className="absolute bottom-12 right-12 pointer-events-none border-r border-b border-accent/20 w-8 h-8 rounded-br-xl" />
+      <div className="absolute top-12 left-12 pointer-events-none border-l border-t w-8 h-8 rounded-tl-xl transition-colors duration-700" style={{ borderColor: speaking ? themeColor : 'rgba(255, 255, 255, 0.1)' }} />
+      <div className="absolute top-12 right-12 pointer-events-none border-r border-t w-8 h-8 rounded-tr-xl transition-colors duration-700" style={{ borderColor: speaking ? themeColor : 'rgba(255, 255, 255, 0.1)' }} />
+      <div className="absolute bottom-12 left-12 pointer-events-none border-l border-b w-8 h-8 rounded-bl-xl transition-colors duration-700" style={{ borderColor: speaking ? themeColor : 'rgba(255, 255, 255, 0.1)' }} />
+      <div className="absolute bottom-12 right-12 pointer-events-none border-r border-b w-8 h-8 rounded-br-xl transition-colors duration-700" style={{ borderColor: speaking ? themeColor : 'rgba(255, 255, 255, 0.1)' }} />
 
       <div className="flex-1 flex flex-col items-center justify-center relative z-10 w-full px-4">
         
         {/* HUD Graphics Container */}
         <div className="relative flex items-center justify-center w-72 h-72 shrink-0">
           
-          <div className={cn(
-            "absolute inset-0 rounded-full bg-accent/5 blur-3xl transition-all duration-700",
-            speaking ? "opacity-40 scale-125" : "opacity-10 scale-100"
-          )} />
+          <div 
+            className={cn(
+              "absolute inset-0 rounded-full blur-3xl transition-all duration-700",
+              speaking ? "opacity-30 scale-125" : "opacity-5 scale-100"
+            )} 
+            style={{ backgroundColor: themeColor }}
+          />
 
           {/* HUD Rings (SVG) */}
           <svg className="absolute inset-0 w-full h-full overflow-visible" viewBox="0 0 200 200">
             {/* Outer Tick Ring */}
             <g 
-              style={{ transformOrigin: '100px 100px' }}
-              className={cn("transition-all duration-500 animate-rotate-slow", speaking ? "text-accent/40" : "text-white/10")}
+              style={{ transformOrigin: '100px 100px', color: speaking ? themeColor : 'rgba(255, 255, 255, 0.1)' }}
+              className={cn("transition-all duration-700 animate-rotate-slow")}
             >
               <circle cx="100" cy="100" r="95" fill="none" stroke="currentColor" strokeWidth="0.5" strokeDasharray="1 4" />
               {[...Array(36)].map((_, i) => (
@@ -115,10 +129,10 @@ export default function CandidateHologram({
                     key={i}
                     d={`M ${x1} ${y1} A 80 80 0 0 1 ${x2} ${y2}`}
                     fill="none"
-                    stroke={litSegments[i] ? "rgba(34, 211, 238, 0.8)" : "rgba(255, 255, 255, 0.05)"}
+                    stroke={litSegments[i] ? themeColor : "rgba(255, 255, 255, 0.05)"}
                     strokeWidth="3"
                     className="transition-colors duration-150"
-                    style={{ filter: litSegments[i] ? 'drop-shadow(0 0 5px #22d3ee)' : 'none' }}
+                    style={{ filter: litSegments[i] ? `drop-shadow(0 0 5px ${themeColor})` : 'none', opacity: litSegments[i] ? 0.8 : 1 }}
                   />
                 );
               })}
@@ -128,11 +142,11 @@ export default function CandidateHologram({
             <circle 
               cx="100" cy="100" r="60" 
               fill="none" 
-              stroke="rgba(34, 211, 238, 0.1)" 
+              stroke={speaking ? themeColor : "rgba(255, 255, 255, 0.05)"} 
               strokeWidth="1" 
               strokeDasharray="10 5" 
-              style={{ transformOrigin: '100px 100px' }}
-              className="animate-rotate-fast" 
+              style={{ transformOrigin: '100px 100px', opacity: speaking ? 0.3 : 0.1 }}
+              className="animate-rotate-fast transition-all duration-700" 
             />
           </svg>
 
@@ -147,32 +161,37 @@ export default function CandidateHologram({
               <polygon 
                 points="50,5 90,27 90,73 50,95 10,73 10,27" 
                 fill="none" 
-                stroke={speaking ? '#22d3ee' : 'rgba(255,255,255,0.2)'} 
+                stroke={speaking ? themeColor : 'rgba(255,255,255,0.2)'} 
                 strokeWidth="2" 
                 style={{ 
-                  filter: speaking ? 'drop-shadow(0 0 8px #22d3ee)' : 'none', 
+                  filter: speaking ? `drop-shadow(0 0 8px ${themeColor})` : 'none', 
                   transformOrigin: '50px 50px' 
                 }} 
-                className="animate-rotate-counter" 
+                className="animate-rotate-counter transition-all duration-700" 
               />
             </svg>
             
-            {/* Pulsing Core */}
+            {/* Pulsing Core Branded "N" */}
             <div className={cn(
-              "w-4 h-4 rounded-full transition-all duration-300 relative z-10",
-              speaking ? "bg-accent shadow-[0_0_20px_#22d3ee] animate-pulse" : "bg-white/10"
-            )} />
+              "relative z-10 flex items-center justify-center font-headline font-black text-2xl transition-all duration-300",
+              speaking ? "animate-pulse" : "opacity-20"
+            )} style={{ 
+              color: themeColor,
+              textShadow: speaking ? `0 0 10px ${themeColor}` : 'none'
+            }}>
+              N
+            </div>
 
             {/* Readout Nodes */}
-            <div className="absolute -top-12 text-[8px] font-black tracking-widest text-accent/60 flex flex-col items-center">
+            <div className="absolute -top-12 text-[8px] font-black tracking-widest flex flex-col items-center transition-all duration-700" style={{ color: speaking ? themeColor : 'rgba(255, 255, 255, 0.2)' }}>
               <span>{isLoader ? "SYNC" : (speaking ? "TRANSMITTING" : "STANDBY")}</span>
-              <div className="w-px h-6 bg-accent/20 mt-1" />
+              <div className="w-px h-6 mt-1 transition-all duration-700" style={{ backgroundColor: speaking ? themeColor : 'rgba(255, 255, 255, 0.1)', opacity: speaking ? 0.4 : 0.2 }} />
             </div>
           </div>
 
           {/* Orbitting Satellites */}
           <div className="absolute inset-0 animate-rotate-slow">
-            <div className="absolute top-0 left-1/2 -translate-x-1/2 w-1.5 h-1.5 rounded-full bg-accent shadow-[0_0_8px_#22d3ee]" />
+            <div className="absolute top-0 left-1/2 -translate-x-1/2 w-1.5 h-1.5 rounded-full transition-all duration-700" style={{ backgroundColor: speaking ? themeColor : 'rgba(255, 255, 255, 0.2)', boxShadow: speaking ? `0 0 8px ${themeColor}` : 'none' }} />
           </div>
         </div>
         
@@ -180,8 +199,8 @@ export default function CandidateHologram({
         <div className="mt-12 text-center space-y-4">
           <div className="flex flex-col gap-1">
             <div className="flex items-center justify-center gap-2">
-              <span className="text-[10px] font-black text-accent/40 tracking-[0.2em]">{hexCode}</span>
-              <div className="w-1 h-1 rounded-full bg-accent/40" />
+              <span className="text-[10px] font-black tracking-[0.2em] transition-all duration-700" style={{ color: speaking ? themeColor : 'rgba(255, 255, 255, 0.1)', opacity: speaking ? 0.6 : 0.3 }}>{hexCode}</span>
+              <div className="w-1 h-1 rounded-full transition-all duration-700" style={{ backgroundColor: themeColor, opacity: speaking ? 0.6 : 0.1 }} />
               <span className="text-[10px] font-black text-white/40 tracking-[0.4em] uppercase">
                 {isLoader ? "Neural Sync" : (speaking ? "SYS.ACTIVE" : "SYS.NOMINAL")}
               </span>
@@ -194,7 +213,8 @@ export default function CandidateHologram({
                   key={i}
                   animate={{ height: speaking ? [4, Math.random() * 12 + 4, 4] : 2 }}
                   transition={{ duration: 0.2, repeat: Infinity, delay: i * 0.05 }}
-                  className={cn("w-1 bg-accent/40 rounded-t-sm", !speaking && "opacity-20")}
+                  className={cn("w-1 rounded-t-sm transition-colors duration-700")}
+                  style={{ backgroundColor: themeColor, opacity: speaking ? 0.6 : 0.1 }}
                 />
               ))}
             </div>
@@ -209,7 +229,7 @@ export default function CandidateHologram({
       {/* Bottom status bar */}
       <div className="w-full p-6 flex justify-between items-center opacity-20 relative z-10 mt-auto">
         <div className="flex items-center gap-2">
-          <div className="w-1.5 h-1.5 rounded-full bg-accent animate-pulse" />
+          <div className="w-1.5 h-1.5 rounded-full animate-pulse" style={{ backgroundColor: themeColor }} />
           <span className="text-[8px] font-bold uppercase tracking-widest text-white">Encrypted Node</span>
         </div>
         <span className="text-[8px] font-bold uppercase tracking-widest text-white">Status: Optimal</span>

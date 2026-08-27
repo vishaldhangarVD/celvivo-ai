@@ -385,6 +385,7 @@ function VirtualArenaContent() {
             <CandidateHologram 
               active={true}
               speaking={isAiSpeaking}
+              stage={currentSimStage}
               className="w-full h-full"
             />
             
@@ -450,6 +451,7 @@ function VirtualArenaContent() {
                   isGenerating={isInitializing}
                   currentQuestion={transcript[transcript.length - 1]?.role === 'interviewer' ? transcript[transcript.length - 1].text : undefined}
                   onSpeechEnd={handleSpeechEnd}
+                  stage={currentSimStage}
                   className="rounded-2xl h-full w-full"
                 />
              </div>
