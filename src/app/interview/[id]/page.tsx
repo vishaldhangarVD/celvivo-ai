@@ -386,6 +386,9 @@ function VirtualArenaContent() {
               active={true}
               speaking={isAiSpeaking}
               stage={currentSimStage}
+              sessionId={sessionId}
+              currentQuestionIndex={currentIdx}
+              totalQuestions={MAX_QUESTIONS}
               className="w-full h-full"
             />
             
@@ -452,6 +455,9 @@ function VirtualArenaContent() {
                   currentQuestion={transcript[transcript.length - 1]?.role === 'interviewer' ? transcript[transcript.length - 1].text : undefined}
                   onSpeechEnd={handleSpeechEnd}
                   stage={currentSimStage}
+                  sessionId={sessionId}
+                  currentQuestionIndex={currentIdx}
+                  totalQuestions={MAX_QUESTIONS}
                   className="rounded-2xl h-full w-full"
                 />
              </div>

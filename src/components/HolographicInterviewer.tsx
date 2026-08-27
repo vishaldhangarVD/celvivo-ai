@@ -6,7 +6,7 @@ import { cn } from '@/lib/utils';
 
 /**
  * @fileOverview HolographicInterviewer - AI Interviewer Presence using browser-native Speech Synthesis.
- * Optimized for en-IN locale with reactive word-boundary pulsing.
+ * Optimized for en-IN locale with reactive word-boundary pulsing and session telemetry support.
  */
 
 interface HolographicInterviewerProps {
@@ -16,6 +16,9 @@ interface HolographicInterviewerProps {
   currentQuestion?: string;
   onSpeechEnd?: () => void;
   stage?: string;
+  sessionId?: string;
+  currentQuestionIndex?: number;
+  totalQuestions?: number;
 }
 
 export default function HolographicInterviewer({
@@ -24,7 +27,10 @@ export default function HolographicInterviewer({
   isGenerating = false,
   currentQuestion,
   onSpeechEnd,
-  stage
+  stage,
+  sessionId,
+  currentQuestionIndex,
+  totalQuestions
 }: HolographicInterviewerProps) {
   const [pulse, setPulse] = useState(false);
   const onSpeechEndRef = useRef(onSpeechEnd);
@@ -115,6 +121,9 @@ export default function HolographicInterviewer({
         pulse={pulse}
         isLoader={isGenerating}
         stage={stage}
+        sessionId={sessionId}
+        currentQuestionIndex={currentQuestionIndex}
+        totalQuestions={totalQuestions}
         className="w-full h-full"
       />
     </div>

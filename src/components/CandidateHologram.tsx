@@ -11,12 +11,15 @@ interface CandidateHologramProps {
   className?: string;
   isLoader?: boolean;
   stage?: string;
+  sessionId?: string;
+  currentQuestionIndex?: number;
+  totalQuestions?: number;
 }
 
 /**
  * @fileOverview CandidateHologram - Technical HUD Interface.
  * Features rotating rings, segmented arcs, scanning lines, stage-based color themes, and branded "N" core.
- * Enhanced with brand-signature details: Seal ring, speaking rays, etched labels, and boot animations.
+ * Enhanced with real session telemetry: Session ID, Stage Tracking, and Question Progression.
  */
 export default function CandidateHologram({ 
   active = true, 
@@ -24,12 +27,33 @@ export default function CandidateHologram({
   pulse = false,
   className = '', 
   isLoader = false,
-  stage
+  stage,
+  sessionId,
+  currentQuestionIndex,
+  totalQuestions
 }: CandidateHologramProps) {
-  const [hexCode, setHexCode] = useState('0x0000');
   const [litSegments, setLitSegments] = useState<boolean[]>(new Array(12).fill(false));
   const [rayFlicker, setRayFlicker] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
+
+  // Derive display values from real props
+  const displaySid = useMemo(() => {
+    if (!sessionId) return null;
+    return `SID:${sessionId.slice(-6).toUpperCase()}`;
+  }, [sessionId]);
+
+  const displayStage = useMemo(() => {
+    if (!stage) return "STAGE::NULL";
+    return `STAGE::${stage.toUpperCase().replace(/\s+/g, '_')}`;
+  }, [stage]);
+
+  const displayProgress = useMemo(() => {
+    if (isLoader) return "Synchronizing Neural Link";
+    if (currentQuestionIndex !== undefined && totalQuestions !== undefined) {
+      return `QUESTION ${currentQuestionIndex} OF ${totalQuestions}`;
+    }
+    return "Neural Interface Active";
+  }, [isLoader, currentQuestionIndex, totalQuestions]);
 
   // Set mounted state for boot animation
   useEffect(() => {
@@ -48,30 +72,22 @@ export default function CandidateHologram({
   // Helper to round coordinates to prevent hydration mismatches
   const round = (num: number) => Math.round(num * 100) / 100;
 
-  // Drive hex readout and arc bursts when speaking
+  // Drive arc bursts when speaking
   useEffect(() => {
-    let hexInterval: NodeJS.Timeout;
     let arcInterval: NodeJS.Timeout;
 
     if (speaking) {
-      hexInterval = setInterval(() => {
-        const randomHex = Math.floor(Math.random() * 65535).toString(16).toUpperCase().padStart(4, '0');
-        setHexCode(`0x${randomHex}`);
-      }, 150);
-
       arcInterval = setInterval(() => {
         const newSegments = new Array(12).fill(false).map(() => Math.random() > 0.5);
         setLitSegments(newSegments);
         setRayFlicker(Math.random() > 0.3);
       }, 90);
     } else {
-      setHexCode('0x7F00');
       setLitSegments(new Array(12).fill(false));
       setRayFlicker(false);
     }
 
     return () => {
-      clearInterval(hexInterval);
       clearInterval(arcInterval);
     };
   }, [speaking]);
@@ -240,10 +256,12 @@ export default function CandidateHologram({
         <div className="mt-12 text-center space-y-4">
           <div className="flex flex-col gap-1">
             <div className="flex items-center justify-center gap-2">
-              <span className="text-[10px] font-black tracking-[0.2em] transition-all duration-700" style={{ color: speaking ? themeColor : 'rgba(255, 255, 255, 0.1)', opacity: speaking ? 0.6 : 0.3 }}>{hexCode}</span>
+              <span className="text-[10px] font-black tracking-[0.2em] transition-all duration-700" style={{ color: speaking ? themeColor : 'rgba(255, 255, 255, 0.1)', opacity: speaking ? 0.6 : 0.3 }}>
+                {displaySid}
+              </span>
               <div className="w-1 h-1 rounded-full transition-all duration-700" style={{ backgroundColor: themeColor, opacity: speaking ? 0.6 : 0.1 }} />
               <span className="text-[10px] font-black text-white/40 tracking-[0.4em] uppercase">
-                {isLoader ? "Neural Sync" : (speaking ? "SYS.ACTIVE" : "SYS.NOMINAL")}
+                {displayStage}
               </span>
             </div>
             
@@ -262,7 +280,7 @@ export default function CandidateHologram({
           </div>
           
           <p className="text-[10px] font-black uppercase tracking-[0.6em] text-white/20 animate-pulse">
-            {isLoader ? "Synchronizing Neural Link" : "Neural Interface Active"}
+            {displayProgress}
           </p>
         </div>
       </div>
