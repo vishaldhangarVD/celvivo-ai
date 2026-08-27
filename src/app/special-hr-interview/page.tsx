@@ -274,9 +274,12 @@ export default function SpecialHRInterview() {
         userAnswer: userAnswer,
         targetCompany: journey?.company || "Nexvoro AI",
         candidateName: resumeAnalysis?.personalInfo?.fullName || "Candidate",
-        resumeSkills: resumeAnalysis?.analysis?.technicalSkills?.map((s: any) => s.skill) || [],
-        resumeProjects: resumeAnalysis?.analysis?.sections?.projects || [],
-        resumeSummary: resumeAnalysis?.summary || "",
+        // Prefer context from the Round-2 specific Special HR Resume
+        resumeSkills: (journey as any)?.specialHRResumeAnalysis?.skillAnalysis?.map(
+          (s: any) => s.skill
+        ) || [],
+        resumeProjects: (journey as any)?.specialHRResumeAnalysis?.sections?.projects || [],
+        resumeSummary: (journey as any)?.specialHRResumeAnalysis?.summary || "",
         askedQuestions: askedQuestions,
         currentStage: interviewStage,
         currentDifficulty: interviewDifficulty,
