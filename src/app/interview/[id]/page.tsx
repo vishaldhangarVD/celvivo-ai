@@ -212,8 +212,8 @@ function VirtualArenaContent() {
             history: [], 
             targetCompany: journey.company,
             candidateName: journey.resumeAnalysis?.personalInfo?.fullName || user.displayName || undefined,
-            resumeSkills: journey.resumeAnalysis?.analysis?.technicalSkills?.map((s: any) => s.skill) || journey.resumeAnalysis?.missingSkills || [],
-            resumeProjects: journey.resumeAnalysis?.analysis?.sections?.projects || [],
+            resumeSkills: journey.resumeAnalysis?.skillAnalysis?.map((s: any) => s.skill) || journey.resumeAnalysis?.missingSkills || [],
+            resumeProjects: journey.resumeAnalysis?.sections?.projects || [],
             resumeSummary: journey.resumeAnalysis?.summary || "",
             aptitudeScore: journey.aptitudeReport?.overallScore || 0,
             codingScore: journey.codingReport?.score || 0,
@@ -267,8 +267,8 @@ function VirtualArenaContent() {
         userAnswer: currentAns, 
         targetCompany: journey!.company,
         candidateName: formattedName,
-        resumeSkills: journey?.resumeAnalysis?.analysis?.technicalSkills?.map((s: any) => s.skill) || [],
-        resumeProjects: journey?.resumeAnalysis?.analysis?.sections?.projects || [],
+        resumeSkills: journey?.resumeAnalysis?.skillAnalysis?.map((s: any) => s.skill) || journey?.resumeAnalysis?.missingSkills || [],
+        resumeProjects: journey?.resumeAnalysis?.sections?.projects || [],
         resumeSummary: journey?.resumeAnalysis?.summary || "",
         aptitudeScore: journey?.aptitudeReport?.overallScore || 0,
         codingScore: journey?.codingReport?.score || 0,
@@ -308,9 +308,9 @@ function VirtualArenaContent() {
         interviewTranscript: currentTranscript.map(t => `${t.role}: ${t.text}`).join('\n\n'),
         resumeContext: {
           atsScore: journey?.resumeAnalysis?.atsScore || 0,
-          strengths: journey?.resumeAnalysis?.analysis?.strengths || [],
-          weaknesses: journey?.resumeAnalysis?.analysis?.weaknesses || [],
-          missingSkills: journey?.resumeAnalysis?.analysis?.missingSkills || [],
+          strengths: journey?.resumeAnalysis?.strengths || [],
+          weaknesses: journey?.resumeAnalysis?.weaknesses || [],
+          missingSkills: journey?.resumeAnalysis?.missingSkills || [],
         },
         aptitudeContext: journey?.aptitudeReport ? {
           overallScore: journey.aptitudeReport.overallScore,
@@ -477,6 +477,7 @@ function VirtualArenaContent() {
                     autoPlay
                     muted
                     playsInline
+                    style={{ filter: 'none' }}
                     className="w-full h-full object-cover transition-all duration-700"
                   />
                 ) : (
