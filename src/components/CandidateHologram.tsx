@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
 
 interface CandidateHologramProps {
@@ -215,9 +216,4 @@ export default function CandidateHologram({
       `}</style>
     </div>
   );
-}
-
-// Minimal motion div for the waveform
-function motion_div({ className, animate, transition }: any) {
-  return <div className={className} style={{ height: animate?.height?.[0] }} />;
 }
