@@ -477,7 +477,7 @@ function VirtualArenaContent() {
                     autoPlay
                     muted
                     playsInline
-                    className="w-full h-full object-cover grayscale brightness-90 hover:grayscale-0 transition-all duration-700"
+                    className="w-full h-full object-cover transition-all duration-700"
                   />
                 ) : (
                   <div className="w-full h-full flex flex-col items-center justify-center bg-[#050816] gap-4">
