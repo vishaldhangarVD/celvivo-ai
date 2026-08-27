@@ -5,7 +5,7 @@ import CandidateHologram from './CandidateHologram';
 import { cn } from '@/lib/utils';
 
 /**
- * @fileOverview HolographicInterviewer - AI Interviewer Presence with browser-native TTS.
+ * @fileOverview HolographicInterviewer - AI Interviewer Presence with Gemini Neural TTS.
  */
 
 interface HolographicInterviewerProps {
@@ -24,110 +24,92 @@ export default function HolographicInterviewer({
   onSpeechEnd,
 }: HolographicInterviewerProps) {
   const [pulse, setPulse] = useState(false);
-  const pulseTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const onSpeechEndRef = useRef(onSpeechEnd);
-  const voicesChangedListenerRef = useRef<(() => void) | null>(null);
-  const speakTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const pulseIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const currentUrlRef = useRef<string | null>(null);
 
-  // Store the latest callback in a ref to avoid dependency re-renders
+  // Sync callback ref to avoid closure issues
   useEffect(() => {
     onSpeechEndRef.current = onSpeechEnd;
   }, [onSpeechEnd]);
 
+  // Handle TTS synthesis and playback
   useEffect(() => {
-    if (typeof window === 'undefined') return;
-
-    // Guard for Speech Synthesis API
-    if (!('speechSynthesis' in window)) {
-      if (currentQuestion && isSpeaking) {
-        const wordCount = currentQuestion.trim().split(/\s+/).length;
-        const estimatedMs = Math.min(Math.max((wordCount / 2.5) * 1000, 1500), 8000);
-        const timer = setTimeout(() => onSpeechEndRef.current?.(), estimatedMs);
-        return () => clearTimeout(timer);
+    if (!currentQuestion || !isSpeaking) {
+      if (audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current.currentTime = 0;
       }
+      if (pulseIntervalRef.current) {
+        clearInterval(pulseIntervalRef.current);
+        pulseIntervalRef.current = null;
+      }
+      setPulse(false);
       return;
     }
 
-    if (!currentQuestion || !isSpeaking) return;
+    const synthesizeAndPlay = async () => {
+      try {
+        // Cleanup previous session
+        if (currentUrlRef.current) {
+          URL.revokeObjectURL(currentUrlRef.current);
+        }
+        if (audioRef.current) {
+          audioRef.current.pause();
+        }
 
-    const synth = window.speechSynthesis;
+        const response = await fetch('/api/tts', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ text: currentQuestion }),
+        });
 
-    // Setup the utterance first
-    const utterance = new SpeechSynthesisUtterance(currentQuestion);
-    utterance.lang = 'en-IN';
-    utterance.rate = 1.0; 
-    utterance.pitch = 1;
+        if (!response.ok) throw new Error('TTS Network Error');
 
-    utterance.onend = () => {
-      onSpeechEndRef.current?.();
-    };
+        const blob = await response.blob();
+        const url = URL.createObjectURL(blob);
+        currentUrlRef.current = url;
 
-    utterance.onerror = () => {
-      onSpeechEndRef.current?.();
-    };
-
-    // React visually to word boundaries
-    utterance.onboundary = (event) => {
-      if (event.name === 'word') {
-        setPulse(true);
-        if (pulseTimeoutRef.current) clearTimeout(pulseTimeoutRef.current);
-        pulseTimeoutRef.current = setTimeout(() => setPulse(false), 150);
+        if (audioRef.current) {
+          audioRef.current.src = url;
+          await audioRef.current.play();
+          
+          // Start periodic pulse effect while audio plays
+          if (pulseIntervalRef.current) clearInterval(pulseIntervalRef.current);
+          pulseIntervalRef.current = setInterval(() => {
+            setPulse(true);
+            setTimeout(() => setPulse(false), 200);
+          }, 450);
+        }
+      } catch (err) {
+        console.error('[Hologram TTS] Playback failed:', err);
+        // Fallback to end speech so the UI doesn't hang
+        onSpeechEndRef.current?.();
       }
     };
 
-    // Voice selection and execution logic
-    function speakWithVoice() {
-      const vList = synth.getVoices();
-
-      // Browsers often load voices asynchronously. If empty, wait for the event.
-      if (vList.length === 0) {
-        const handleVoicesChanged = () => {
-          synth.removeEventListener('voiceschanged', handleVoicesChanged);
-          voicesChangedListenerRef.current = null;
-          speakWithVoice();
-        };
-        voicesChangedListenerRef.current = handleVoicesChanged;
-        synth.addEventListener('voiceschanged', handleVoicesChanged);
-        return;
-      }
-
-      // Priority logic:
-      // 1. Any en-IN voice (Microsoft Heera, Ravi, Google India, etc.)
-      // 2. Any English voice with "Google" or "Neural"
-      // 3. Any fallback English voice
-      const preferredVoice = 
-        vList.find(v => v.lang === 'en-IN') ||
-        vList.find(v => v.lang.startsWith('en') && (v.name.includes('Google') || v.name.includes('Neural'))) ||
-        vList.find(v => v.lang.startsWith('en'));
-
-      console.log(`[TTS] Selected Voice: ${preferredVoice?.name || 'System Default'} (${preferredVoice?.lang || 'N/A'})`);
-
-      if (preferredVoice) {
-        utterance.voice = preferredVoice;
-        utterance.lang = preferredVoice.lang;
-      }
-
-      // Chrome bug workaround: cancel() and speak() in same tick can cause silence.
-      // Small delay ensures previous context is cleared.
-      if (speakTimerRef.current) clearTimeout(speakTimerRef.current);
-      speakTimerRef.current = setTimeout(() => {
-        synth.speak(utterance);
-      }, 50);
-    }
-
-    // Start playback cycle
-    synth.cancel();
-    speakWithVoice();
+    synthesizeAndPlay();
 
     return () => {
-      if (speakTimerRef.current) clearTimeout(speakTimerRef.current);
-      if (voicesChangedListenerRef.current) {
-        synth.removeEventListener('voiceschanged', voicesChangedListenerRef.current);
-      }
-      synth.cancel();
-      if (pulseTimeoutRef.current) clearTimeout(pulseTimeoutRef.current);
+      if (pulseIntervalRef.current) clearInterval(pulseIntervalRef.current);
+      if (currentUrlRef.current) URL.revokeObjectURL(currentUrlRef.current);
     };
   }, [currentQuestion, isSpeaking]);
+
+  const handleEnded = () => {
+    if (pulseIntervalRef.current) {
+      clearInterval(pulseIntervalRef.current);
+      pulseIntervalRef.current = null;
+    }
+    setPulse(false);
+    onSpeechEndRef.current?.();
+  };
+
+  const handleError = () => {
+    console.error('[Hologram TTS] Audio element reported error');
+    handleEnded();
+  };
 
   return (
     <div className={cn("h-full w-full", className)}>
@@ -137,6 +119,13 @@ export default function HolographicInterviewer({
         pulse={pulse}
         isLoader={isGenerating}
         className="w-full h-full"
+      />
+      <audio 
+        ref={audioRef} 
+        className="hidden" 
+        onEnded={handleEnded} 
+        onError={handleError}
+        autoPlay={false}
       />
     </div>
   );

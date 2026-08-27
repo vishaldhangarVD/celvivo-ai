@@ -100,19 +100,16 @@ export async function POST(req: Request) {
     }
     const text = body.text;
     
-    // ElevenLabs integration is permanently disabled.
-    // Proceeding directly to Gemini Neural Vocalization Protocol.
-
-    const fallbackResult = await tryGeminiTTS(text);
-    if (fallbackResult && fallbackResult.buffer.byteLength > 0) {
-      return new NextResponse(fallbackResult.buffer, {
-        headers: { 'Content-Type': fallbackResult.contentType },
+    const ttsResult = await tryGeminiTTS(text);
+    if (ttsResult && ttsResult.buffer.byteLength > 0) {
+      return new NextResponse(ttsResult.buffer, {
+        headers: { 'Content-Type': ttsResult.contentType },
       });
     }
 
     return NextResponse.json({ 
       error: 'TTS Failure',
-      details: `Gemini vocalization protocol failed. Detail: ${fallbackResult?.error || 'Unknown Error'}`
+      details: `Gemini vocalization protocol failed. Detail: ${ttsResult?.error || 'Unknown Error'}`
     }, { status: 500 });
 
   } catch (error: any) {
