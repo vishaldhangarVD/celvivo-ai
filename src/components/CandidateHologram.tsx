@@ -16,6 +16,7 @@ interface CandidateHologramProps {
 /**
  * @fileOverview CandidateHologram - Technical HUD Interface.
  * Features rotating rings, segmented arcs, scanning lines, stage-based color themes, and branded "N" core.
+ * Enhanced with brand-signature details: Seal ring, speaking rays, etched labels, and boot animations.
  */
 export default function CandidateHologram({ 
   active = true, 
@@ -27,6 +28,13 @@ export default function CandidateHologram({
 }: CandidateHologramProps) {
   const [hexCode, setHexCode] = useState('0x0000');
   const [litSegments, setLitSegments] = useState<boolean[]>(new Array(12).fill(false));
+  const [rayFlicker, setRayFlicker] = useState(false);
+  const [isMounted, setIsMounted] = useState(false);
+
+  // Set mounted state for boot animation
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
 
   // Determine theme color based on interview stage
   const themeColor = useMemo(() => {
@@ -54,10 +62,12 @@ export default function CandidateHologram({
       arcInterval = setInterval(() => {
         const newSegments = new Array(12).fill(false).map(() => Math.random() > 0.5);
         setLitSegments(newSegments);
+        setRayFlicker(Math.random() > 0.3);
       }, 90);
     } else {
       setHexCode('0x7F00');
       setLitSegments(new Array(12).fill(false));
+      setRayFlicker(false);
     }
 
     return () => {
@@ -154,7 +164,8 @@ export default function CandidateHologram({
           <div className={cn(
             "relative w-24 h-24 flex items-center justify-center transition-all duration-300",
             speaking ? "scale-110" : "scale-100",
-            pulse && "scale-125 brightness-150"
+            pulse && "scale-125 brightness-150",
+            isMounted ? "animate-boot-signature" : "opacity-0 scale-0"
           )}>
             {/* Hexagon Outline SVG */}
             <svg className="absolute inset-0 w-full h-full overflow-visible" viewBox="0 0 100 100">
@@ -169,12 +180,35 @@ export default function CandidateHologram({
                 }} 
                 className="animate-rotate-counter transition-all duration-700" 
               />
+              
+              {/* Brand Seal Ring (Interior) */}
+              <circle 
+                cx="50" cy="50" r="18" 
+                fill="none" 
+                stroke="#F5D061" 
+                strokeWidth="0.5" 
+                strokeDasharray="1 3" 
+                style={{ transformOrigin: '50px 50px', opacity: 0.4 }}
+                className="animate-rotate-slow" 
+              />
+
+              {/* Speaking Rays (Triggered when AI is active) */}
+              {speaking && rayFlicker && [...Array(6)].map((_, i) => (
+                <line 
+                  key={i}
+                  x1="50" y1="35" x2="50" y2="30"
+                  stroke="#F5D061"
+                  strokeWidth="1"
+                  style={{ transformOrigin: '50px 50px', opacity: 0.8 }}
+                  transform={`rotate(${i * 60}, 50, 50)`}
+                />
+              ))}
             </svg>
             
             {/* Branded Core Initial - Fixed Gold Color */}
             <div className={cn(
               "relative z-10 flex items-center justify-center font-headline font-black text-2xl transition-all duration-300 select-none",
-              speaking ? "animate-pulse scale-110" : "opacity-40 scale-100"
+              speaking ? "animate-pulse scale-110" : "animate-breathing-glow scale-100"
             )} style={{ 
               color: '#F5D061', // Fixed Premium Gold Brand Color
               textShadow: speaking 
@@ -188,6 +222,11 @@ export default function CandidateHologram({
             <div className="absolute -top-12 text-[8px] font-black tracking-widest flex flex-col items-center transition-all duration-700" style={{ color: speaking ? themeColor : 'rgba(255, 255, 255, 0.2)' }}>
               <span>{isLoader ? "SYNC" : (speaking ? "TRANSMITTING" : "STANDBY")}</span>
               <div className="w-px h-6 mt-1 transition-all duration-700" style={{ backgroundColor: speaking ? themeColor : 'rgba(255, 255, 255, 0.1)', opacity: speaking ? 0.4 : 0.2 }} />
+            </div>
+
+            {/* Etched Brand Name below hexagon */}
+            <div className="absolute -bottom-8 text-[7px] font-bold tracking-[0.6em] text-white/20 uppercase select-none">
+              NEXVOROAI
             </div>
           </div>
 
@@ -252,6 +291,15 @@ export default function CandidateHologram({
           95% { opacity: 0.5; }
           100% { top: 102%; opacity: 0; }
         }
+        @keyframes breathing-glow {
+          0%, 100% { filter: drop-shadow(0 0 5px rgba(245, 208, 97, 0.4)); opacity: 0.7; }
+          50% { filter: drop-shadow(0 0 15px rgba(245, 208, 97, 0.7)); opacity: 1; }
+        }
+        @keyframes boot-signature {
+          0% { transform: scale(0); opacity: 0; filter: blur(10px); }
+          70% { transform: scale(1.15); opacity: 0.8; filter: blur(0px); }
+          100% { transform: scale(1); opacity: 1; filter: blur(0px); }
+        }
         .animate-rotate-slow {
           animation: rotate-clockwise 20s linear infinite;
         }
@@ -263,6 +311,12 @@ export default function CandidateHologram({
         }
         .animate-scanline {
           animation: scanline 4s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        }
+        .animate-breathing-glow {
+          animation: breathing-glow 3s ease-in-out infinite;
+        }
+        .animate-boot-signature {
+          animation: boot-signature 1s cubic-bezier(0.16, 1, 0.3, 1) forwards;
         }
       `}</style>
     </div>
