@@ -37,6 +37,7 @@ import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { INTERVIEW_STAGES, STAGE_ROUTES } from '@/lib/interview-stages';
+import { analyzeResume } from '@/ai/flows/ai-resume-analysis';
 
 const COMPANIES = [
   { name: "Google", domain: "google.com" },
@@ -209,6 +210,14 @@ export default function InterviewSetupPage() {
     const sessionId = journey?.sessionId || Math.random().toString(36).substring(7);
 
     try {
+      // CALIBRATE NEURAL ENGINE WITH FRESH RESUME DATA
+      const analysisResult = await analyzeResume({
+        resumeDataUri: resumeBase64,
+        targetRole: role,
+        experienceLevel: experience,
+        targetCompany: company
+      });
+
       const finalStage = targetPath === 'aptitude' ? INTERVIEW_STAGES.APTITUDE : INTERVIEW_STAGES.HR_INTERVIEW;
       const step = targetPath === 'aptitude' ? 4 : 8;
 
@@ -219,6 +228,7 @@ export default function InterviewSetupPage() {
         company,
         resumeName: file?.name || journey?.resumeName || "resume.pdf",
         resumeBase64: resumeBase64,
+        resumeAnalysis: analysisResult,
         currentStage: finalStage,
         step,
         updatedAt: serverTimestamp(),
@@ -431,7 +441,7 @@ export default function InterviewSetupPage() {
                     disabled={isInitializing || !isUploaded}
                     className="w-full h-9 mt-3 rounded-lg glass border-white/10 text-[8px] font-black uppercase tracking-widest hover:bg-accent hover:text-black transition-all"
                   >
-                    CONTINUE TO APTITUDE
+                    {isInitializing ? <Loader2 className="w-3 h-3 animate-spin" /> : "CONTINUE TO APTITUDE"}
                   </Button>
                 </Card>
 
@@ -450,7 +460,7 @@ export default function InterviewSetupPage() {
                     disabled={isInitializing || !isUploaded}
                     className="w-full h-9 mt-3 rounded-lg glass border-white/10 text-[8px] font-black uppercase tracking-widest hover:bg-purple-600 hover:text-white transition-all"
                   >
-                    CONTINUE TO INTERVIEW
+                    {isInitializing ? <Loader2 className="w-3 h-3 animate-spin" /> : "CONTINUE TO INTERVIEW"}
                   </Button>
                 </Card>
               </div>
