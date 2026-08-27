@@ -1,3 +1,4 @@
+
 "use client";
 import { Suspense, useEffect, useState, useRef, useMemo, useCallback } from "react";
 import { useRouter, useParams } from "next/navigation";
@@ -17,7 +18,8 @@ import {
   VideoOff,
   Activity, 
   Award, 
-  Clock
+  Clock,
+  User
 } from "lucide-react";
 import { aiMockInterview } from "@/ai/flows/ai-mock-interview-v2";
 import { generateInterviewFeedback } from "@/ai/flows/ai-interview-feedback";
@@ -59,6 +61,7 @@ function VirtualArenaContent() {
   const [isCameraOn, setIsCameraOn] = useState(true);
   const [askedQuestions, setAskedQuestions] = useState<string[]>([]);
   const mediaStreamRef = useRef<MediaStream | null>(null);
+  const localVideoRef = useRef<HTMLVideoElement>(null);
   const recognitionRef = useRef<any>(null);
 
   // Refs to track state for speech recognition event handlers (avoiding stale closures)
@@ -173,6 +176,9 @@ function VirtualArenaContent() {
         audio: true,
       });
       mediaStreamRef.current = mediaStream;
+      if (localVideoRef.current) {
+        localVideoRef.current.srcObject = mediaStream;
+      }
     } catch (error: any) {
       console.error("Camera access required.", error);
     }
@@ -184,6 +190,13 @@ function VirtualArenaContent() {
       mediaStreamRef.current?.getTracks().forEach(t => t.stop());
     };
   }, []);
+
+  // Ensure stream is attached to local video when camera is toggled or init completes
+  useEffect(() => {
+    if (isCameraOn && localVideoRef.current && mediaStreamRef.current && !isInitializing) {
+      localVideoRef.current.srcObject = mediaStreamRef.current;
+    }
+  }, [isCameraOn, isInitializing]);
 
   useEffect(() => {
     async function init() {
@@ -449,17 +462,26 @@ function VirtualArenaContent() {
              </Card>
 
              <div className="flex-1 min-h-[300px] relative rounded-2xl overflow-hidden border border-white/5 shadow-2xl bg-black/40 group h-full">
-                <HolographicInterviewer 
-                  isSpeaking={isAiSpeaking} 
-                  isGenerating={isInitializing}
-                  currentQuestion={transcript[transcript.length - 1]?.role === 'interviewer' ? transcript[transcript.length - 1].text : undefined}
-                  onSpeechEnd={handleSpeechEnd}
-                  stage={currentSimStage}
-                  sessionId={sessionId}
-                  currentQuestionIndex={currentIdx}
-                  totalQuestions={MAX_QUESTIONS}
-                  className="rounded-2xl h-full w-full"
-                />
+                {isCameraOn ? (
+                  <video
+                    ref={localVideoRef}
+                    autoPlay
+                    muted
+                    playsInline
+                    className="w-full h-full object-cover grayscale brightness-90 hover:grayscale-0 transition-all duration-700"
+                  />
+                ) : (
+                  <div className="w-full h-full flex flex-col items-center justify-center bg-[#050816] gap-4">
+                    <div className="w-20 h-20 rounded-[2.5rem] bg-white/5 border border-white/10 flex items-center justify-center">
+                      <User className="w-10 h-10 text-white/10" />
+                    </div>
+                    <div className="text-center space-y-1">
+                      <p className="text-[10px] font-black uppercase tracking-widest text-white/30">Camera Protocol Offline</p>
+                      <p className="text-[8px] font-bold uppercase tracking-[0.2em] text-white/10">Vocal Node Only</p>
+                    </div>
+                  </div>
+                )}
+                <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent pointer-events-none" />
              </div>
           </div>
 
