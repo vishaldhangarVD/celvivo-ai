@@ -27,6 +27,9 @@ export default function CandidateHologram({
   const [hexCode, setHexCode] = useState('0x0000');
   const [litSegments, setLitSegments] = useState<boolean[]>(new Array(12).fill(false));
 
+  // Helper to round coordinates to prevent hydration mismatches
+  const round = (num: number) => Math.round(num * 100) / 100;
+
   // Drive hex readout and arc bursts when speaking
   useEffect(() => {
     let hexInterval: NodeJS.Timeout;
@@ -99,17 +102,24 @@ export default function CandidateHologram({
 
             {/* Mid Segmented Arc Ring */}
             <g className="animate-rotate-counter">
-              {[...Array(12)].map((_, i) => (
-                <path
-                  key={i}
-                  d={`M ${100 + 80 * Math.cos((i * 30 * Math.PI) / 180)} ${100 + 80 * Math.sin((i * 30 * Math.PI) / 180)} A 80 80 0 0 1 ${100 + 80 * Math.cos(((i * 30 + 20) * Math.PI) / 180)} ${100 + 80 * Math.sin(((i * 30 + 20) * Math.PI) / 180)}`}
-                  fill="none"
-                  stroke={litSegments[i] ? "rgba(34, 211, 238, 0.8)" : "rgba(255, 255, 255, 0.05)"}
-                  strokeWidth="3"
-                  className="transition-colors duration-150"
-                  style={{ filter: litSegments[i] ? 'drop-shadow(0 0 5px #22d3ee)' : 'none' }}
-                />
-              ))}
+              {[...Array(12)].map((_, i) => {
+                const x1 = round(100 + 80 * Math.cos((i * 30 * Math.PI) / 180));
+                const y1 = round(100 + 80 * Math.sin((i * 30 * Math.PI) / 180));
+                const x2 = round(100 + 80 * Math.cos(((i * 30 + 20) * Math.PI) / 180));
+                const y2 = round(100 + 80 * Math.sin(((i * 30 + 20) * Math.PI) / 180));
+                
+                return (
+                  <path
+                    key={i}
+                    d={`M ${x1} ${y1} A 80 80 0 0 1 ${x2} ${y2}`}
+                    fill="none"
+                    stroke={litSegments[i] ? "rgba(34, 211, 238, 0.8)" : "rgba(255, 255, 255, 0.05)"}
+                    strokeWidth="3"
+                    className="transition-colors duration-150"
+                    style={{ filter: litSegments[i] ? 'drop-shadow(0 0 5px #22d3ee)' : 'none' }}
+                  />
+                );
+              })}
             </g>
 
             {/* Inner HUD Data Ring */}
