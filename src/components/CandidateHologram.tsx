@@ -15,7 +15,6 @@ interface CandidateHologramProps {
 /**
  * @fileOverview CandidateHologram - Technical HUD Interface.
  * Features rotating rings, segmented arcs, scanning lines, and hex readouts.
- * Replaces the liquid orb with a JARVIS-style holographic presence for Round 2.
  */
 export default function CandidateHologram({ 
   active = true, 
@@ -36,13 +35,11 @@ export default function CandidateHologram({
     let arcInterval: NodeJS.Timeout;
 
     if (speaking) {
-      // Rapidly changing hex code
       hexInterval = setInterval(() => {
         const randomHex = Math.floor(Math.random() * 65535).toString(16).toUpperCase().padStart(4, '0');
         setHexCode(`0x${randomHex}`);
       }, 150);
 
-      // Randomized arc bursts
       arcInterval = setInterval(() => {
         const newSegments = new Array(12).fill(false).map(() => Math.random() > 0.5);
         setLitSegments(newSegments);
@@ -74,17 +71,16 @@ export default function CandidateHologram({
       <div className="absolute inset-0 pointer-events-none w-full h-[2px] bg-accent/20 shadow-[0_0_15px_#22d3ee] animate-scanline z-20" />
 
       {/* Targeting Brackets */}
-      <div className="absolute inset-12 pointer-events-none border-l border-t border-accent/20 w-8 h-8 rounded-tl-xl" />
-      <div className="absolute inset-12 left-auto pointer-events-none border-r border-t border-accent/20 w-8 h-8 rounded-tr-xl" />
-      <div className="absolute inset-12 top-auto pointer-events-none border-l border-b border-accent/20 w-8 h-8 rounded-bl-xl" />
-      <div className="absolute inset-12 left-auto top-auto pointer-events-none border-r border-b border-accent/20 w-8 h-8 rounded-br-xl" />
+      <div className="absolute top-12 left-12 pointer-events-none border-l border-t border-accent/20 w-8 h-8 rounded-tl-xl" />
+      <div className="absolute top-12 right-12 pointer-events-none border-r border-t border-accent/20 w-8 h-8 rounded-tr-xl" />
+      <div className="absolute bottom-12 left-12 pointer-events-none border-l border-b border-accent/20 w-8 h-8 rounded-bl-xl" />
+      <div className="absolute bottom-12 right-12 pointer-events-none border-r border-b border-accent/20 w-8 h-8 rounded-br-xl" />
 
       <div className="flex-1 flex flex-col items-center justify-center relative z-10 w-full px-4">
         
         {/* HUD Graphics Container */}
         <div className="relative flex items-center justify-center w-72 h-72 shrink-0">
           
-          {/* Static Ambient Glow */}
           <div className={cn(
             "absolute inset-0 rounded-full bg-accent/5 blur-3xl transition-all duration-700",
             speaking ? "opacity-40 scale-125" : "opacity-10 scale-100"
@@ -93,15 +89,21 @@ export default function CandidateHologram({
           {/* HUD Rings (SVG) */}
           <svg className="absolute inset-0 w-full h-full overflow-visible" viewBox="0 0 200 200">
             {/* Outer Tick Ring */}
-            <g className={cn("transition-all duration-500", speaking ? "text-accent/40" : "text-white/10")}>
-              <circle cx="100" cy="100" r="95" fill="none" stroke="currentColor" strokeWidth="0.5" strokeDasharray="1 4" className="animate-rotate-slow" />
+            <g 
+              style={{ transformOrigin: '100px 100px' }}
+              className={cn("transition-all duration-500 animate-rotate-slow", speaking ? "text-accent/40" : "text-white/10")}
+            >
+              <circle cx="100" cy="100" r="95" fill="none" stroke="currentColor" strokeWidth="0.5" strokeDasharray="1 4" />
               {[...Array(36)].map((_, i) => (
                 <line key={i} x1="100" y1="5" x2="100" y2="10" stroke="currentColor" strokeWidth="1" transform={`rotate(${i * 10}, 100, 100)`} />
               ))}
             </g>
 
             {/* Mid Segmented Arc Ring */}
-            <g className="animate-rotate-counter">
+            <g 
+              style={{ transformOrigin: '100px 100px' }}
+              className="animate-rotate-counter"
+            >
               {[...Array(12)].map((_, i) => {
                 const x1 = round(100 + 80 * Math.cos((i * 30 * Math.PI) / 180));
                 const y1 = round(100 + 80 * Math.sin((i * 30 * Math.PI) / 180));
@@ -123,7 +125,15 @@ export default function CandidateHologram({
             </g>
 
             {/* Inner HUD Data Ring */}
-            <circle cx="100" cy="100" r="60" fill="none" stroke="rgba(34, 211, 238, 0.1)" strokeWidth="1" strokeDasharray="10 5" className="animate-rotate-fast" />
+            <circle 
+              cx="100" cy="100" r="60" 
+              fill="none" 
+              stroke="rgba(34, 211, 238, 0.1)" 
+              strokeWidth="1" 
+              strokeDasharray="10 5" 
+              style={{ transformOrigin: '100px 100px' }}
+              className="animate-rotate-fast" 
+            />
           </svg>
 
           {/* Central Wireframe polygon */}
@@ -132,15 +142,24 @@ export default function CandidateHologram({
             speaking ? "scale-110" : "scale-100",
             pulse && "scale-125 brightness-150"
           )}>
-            {/* Hexagon Outline */}
-            <div className={cn(
-              "absolute inset-0 animate-rotate-counter transition-colors duration-500",
-              speaking ? "border-accent shadow-[0_0_15px_#22d3ee]" : "border-white/20"
-            )} style={{ clipPath: 'polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%)', border: '2px solid currentColor' }} />
+            {/* Hexagon Outline SVG */}
+            <svg className="absolute inset-0 w-full h-full overflow-visible" viewBox="0 0 100 100">
+              <polygon 
+                points="50,5 90,27 90,73 50,95 10,73 10,27" 
+                fill="none" 
+                stroke={speaking ? '#22d3ee' : 'rgba(255,255,255,0.2)'} 
+                strokeWidth="2" 
+                style={{ 
+                  filter: speaking ? 'drop-shadow(0 0 8px #22d3ee)' : 'none', 
+                  transformOrigin: '50px 50px' 
+                }} 
+                className="animate-rotate-counter" 
+              />
+            </svg>
             
             {/* Pulsing Core */}
             <div className={cn(
-              "w-4 h-4 rounded-full transition-all duration-300",
+              "w-4 h-4 rounded-full transition-all duration-300 relative z-10",
               speaking ? "bg-accent shadow-[0_0_20px_#22d3ee] animate-pulse" : "bg-white/10"
             )} />
 
@@ -187,7 +206,7 @@ export default function CandidateHologram({
         </div>
       </div>
 
-      {/* Bottom status bar - PRESERVED */}
+      {/* Bottom status bar */}
       <div className="w-full p-6 flex justify-between items-center opacity-20 relative z-10 mt-auto">
         <div className="flex items-center gap-2">
           <div className="w-1.5 h-1.5 rounded-full bg-accent animate-pulse" />
