@@ -43,6 +43,7 @@ async function tryGeminiTTS(text: string): Promise<{ buffer: ArrayBuffer; conten
   }
 
   try {
+    // FIX: Pass API Key as query parameter to avoid "ACCESS_TOKEN_TYPE_UNSUPPORTED" error
     const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
     
     const response = await fetch(url, {
@@ -65,7 +66,7 @@ async function tryGeminiTTS(text: string): Promise<{ buffer: ArrayBuffer; conten
 
     if (!response.ok) {
       const errorBody = await response.text();
-      console.error(`[TTS Fallback API Error] Status: ${response.status}`, errorBody);
+      console.error(`[TTS API Error] Status: ${response.status}`, errorBody);
       return { buffer: new ArrayBuffer(0), contentType: "", error: `Google API Error (${response.status}): ${errorBody}` };
     }
 
@@ -80,7 +81,7 @@ async function tryGeminiTTS(text: string): Promise<{ buffer: ArrayBuffer; conten
     const pcmBuffer = Buffer.from(audioBase64, 'base64');
     const wavBuffer = await pcmToWav(pcmBuffer);
     
-    console.log("[TTS] Using Gemini Neural Protocol");
+    console.log("[TTS] Successfully generated neural audio via Gemini");
     return { 
       buffer: wavBuffer.buffer.slice(wavBuffer.byteOffset, wavBuffer.byteOffset + wavBuffer.byteLength),
       contentType: 'audio/wav' 
