@@ -21,7 +21,7 @@ import {
   Clock,
   User
 } from "lucide-react";
-import { aiMockInterview } from "@/ai/flows/ai-mock-interview-v2";
+import { aiMockInterview, type AiMockInterviewOutput } from "@/ai/flows/ai-mock-interview-v2";
 import { generateInterviewFeedback } from "@/ai/flows/ai-interview-feedback";
 import { useUser, useFirestore, useDoc } from "@/firebase";
 import { doc, serverTimestamp, collection, addDoc, updateDoc } from "firebase/firestore";
@@ -56,6 +56,7 @@ function VirtualArenaContent() {
   
   const [currentSimStage, setCurrentSimStage] = useState<string>("INTRODUCTION");
   const [isAiSpeaking, setIsAiSpeaking] = useState(false);
+  const [pendingFinalize, setPendingFinalize] = useState<any[] | null>(null);
 
   const [isMicOn, setIsMicOn] = useState(true);
   const [isCameraOn, setIsCameraOn] = useState(true);
@@ -212,8 +213,8 @@ function VirtualArenaContent() {
             history: [], 
             targetCompany: journey.company,
             candidateName: journey.resumeAnalysis?.personalInfo?.fullName || user.displayName || undefined,
-            resumeSkills: journey.resumeAnalysis?.skillAnalysis?.map((s: any) => s.skill) || journey.resumeAnalysis?.missingSkills || [],
-            resumeProjects: journey.resumeAnalysis?.sections?.projects || [],
+            resumeSkills: journey?.resumeAnalysis?.skillAnalysis?.map((s: any) => s.skill) || journey?.resumeAnalysis?.missingSkills || [],
+            resumeProjects: journey?.resumeAnalysis?.sections?.projects || [],
             resumeSummary: journey.resumeAnalysis?.summary || "",
             aptitudeScore: journey.aptitudeReport?.overallScore || 0,
             codingScore: journey.codingReport?.score || 0,
@@ -238,66 +239,13 @@ function VirtualArenaContent() {
       setTimeout(() => setIsInitializing(false), 1500);
     }
     init();
-  }, [user, db, journey, journeyRef]);
+  }, [user, db, journey, journeyRef, transcript.length]);
 
   const handleSpeechEnd = useCallback(() => {
     setIsAiSpeaking(false);
   }, []);
 
-  const handleSend = async () => {
-    if (!userAnswer.trim() || isProcessing || isSimulationComplete) return;
-    setIsProcessing(true);
-    const newTranscript = [...transcript, { role: 'candidate' as const, text: userAnswer }];
-    setTranscript(newTranscript);
-    const currentAns = userAnswer;
-    setUserAnswer("");
-
-    try {
-      const chatHistory = newTranscript.filter(t => t.role === 'candidate').map((t) => {
-        const idx = newTranscript.indexOf(t);
-        return { question: newTranscript[idx - 1]?.text || "Intro", answer: t.text };
-      });
-
-      const response = await aiMockInterview({
-        role: journey!.role, 
-        experienceLevel: journey!.experience, 
-        roundType: journey!.roundType || "Final HR Round", 
-        currentMainQuestionIndex: currentIdx + 1,
-        history: chatHistory, 
-        userAnswer: currentAns, 
-        targetCompany: journey!.company,
-        candidateName: formattedName,
-        resumeSkills: journey?.resumeAnalysis?.skillAnalysis?.map((s: any) => s.skill) || journey?.resumeAnalysis?.missingSkills || [],
-        resumeProjects: journey?.resumeAnalysis?.sections?.projects || [],
-        resumeSummary: journey?.resumeAnalysis?.summary || "",
-        aptitudeScore: journey?.aptitudeReport?.overallScore || 0,
-        codingScore: journey?.codingReport?.score || 0,
-        askedQuestions: askedQuestions,
-        currentStage: currentSimStage as any,
-        currentDifficulty: "MEDIUM"
-      });
-
-      const updatedTranscript = [...newTranscript, { role: 'interviewer' as const, text: response.nextQuestion }];
-      setTranscript(updatedTranscript);
-      setCurrentSimStage(response.stage);
-      setIsAiSpeaking(true);
-
-      if (response.isInterviewComplete) {
-        setIsSimulationComplete(true);
-        setTimeout(() => finalizeSession(updatedTranscript), 3000);
-      } else {
-        setAskedQuestions(prev => [...prev, response.nextQuestion]);
-        setCurrentIdx(prev => prev + 1);
-      }
-    } catch (error) {
-      console.error("AI Turn Error:", error);
-      toast({ variant: "destructive", title: "Neural Link Sync Fault" });
-    } finally {
-      setIsProcessing(false);
-    }
-  };
-
-  const finalizeSession = async (currentTranscript: any[]) => {
+  const finalizeSession = useCallback(async (currentTranscript: any[]) => {
     if (isGeneratingReport) return;
     setIsGeneratingReport(true);
     try {
@@ -343,6 +291,79 @@ function VirtualArenaContent() {
       console.error("Master Audit Error:", e);
       setIsGeneratingReport(false);
       toast({ variant: "destructive", title: "Audit Generation Failed" });
+    }
+  }, [db, journey, journeyRef, router, toast, user, isGeneratingReport]);
+
+  // Monitor for completion triggers
+  useEffect(() => {
+    if (pendingFinalize && !isAiSpeaking) {
+      finalizeSession(pendingFinalize);
+      setPendingFinalize(null);
+    }
+  }, [pendingFinalize, isAiSpeaking, finalizeSession]);
+
+  // Fallback safety for completion
+  useEffect(() => {
+    if (!pendingFinalize) return;
+    const fallback = setTimeout(() => {
+      if (pendingFinalize) {
+        finalizeSession(pendingFinalize);
+        setPendingFinalize(null);
+      }
+    }, 10000);
+    return () => clearTimeout(fallback);
+  }, [pendingFinalize, finalizeSession]);
+
+  const handleSend = async () => {
+    if (!userAnswer.trim() || isProcessing || isSimulationComplete) return;
+    setIsProcessing(true);
+    const newTranscript = [...transcript, { role: 'candidate' as const, text: userAnswer }];
+    setTranscript(newTranscript);
+    const currentAns = userAnswer;
+    setUserAnswer("");
+
+    try {
+      const chatHistory = newTranscript.filter(t => t.role === 'candidate').map((t) => {
+        const idx = newTranscript.indexOf(t);
+        return { question: newTranscript[idx - 1]?.text || "Intro", answer: t.text };
+      });
+
+      const response = await aiMockInterview({
+        role: journey!.role, 
+        experienceLevel: journey!.experience, 
+        roundType: journey!.roundType || "Final HR Round", 
+        currentMainQuestionIndex: currentIdx + 1,
+        history: chatHistory, 
+        userAnswer: currentAns, 
+        targetCompany: journey!.company,
+        candidateName: formattedName,
+        resumeSkills: journey?.resumeAnalysis?.skillAnalysis?.map((s: any) => s.skill) || journey?.resumeAnalysis?.missingSkills || [],
+        resumeProjects: journey?.resumeAnalysis?.sections?.projects || [],
+        resumeSummary: journey?.resumeAnalysis?.summary || "",
+        aptitudeScore: journey?.aptitudeReport?.overallScore || 0,
+        codingScore: journey?.codingReport?.score || 0,
+        askedQuestions: askedQuestions,
+        currentStage: currentSimStage as any,
+        currentDifficulty: "MEDIUM"
+      });
+
+      const updatedTranscript = [...newTranscript, { role: 'interviewer' as const, text: response.nextQuestion }];
+      setTranscript(updatedTranscript);
+      setCurrentSimStage(response.stage);
+      setIsAiSpeaking(true);
+
+      if (response.isInterviewComplete) {
+        setIsSimulationComplete(true);
+        setPendingFinalize(updatedTranscript);
+      } else {
+        setAskedQuestions(prev => [...prev, response.nextQuestion]);
+        setCurrentIdx(prev => prev + 1);
+      }
+    } catch (error) {
+      console.error("AI Turn Error:", error);
+      toast({ variant: "destructive", title: "Neural Link Sync Fault" });
+    } finally {
+      setIsProcessing(false);
     }
   };
 
@@ -468,6 +489,10 @@ function VirtualArenaContent() {
                     isSpeaking={isAiSpeaking}
                     currentQuestion={transcript[transcript.length-1]?.role === 'interviewer' ? transcript[transcript.length-1].text : ""}
                     onSpeechEnd={handleSpeechEnd}
+                    stage={currentSimStage}
+                    sessionId={sessionId}
+                    currentQuestionIndex={currentIdx}
+                    totalQuestions={MAX_QUESTIONS}
                   />
                 </div>
 

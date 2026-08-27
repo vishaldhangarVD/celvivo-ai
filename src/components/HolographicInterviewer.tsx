@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useEffect, useState, useRef } from 'react';
@@ -88,8 +89,12 @@ export default function HolographicInterviewer({
           onSpeechEndRef.current?.();
         };
 
-        utterance.onerror = (err) => {
-          console.error('[Vocal Matrix] Synthesis Error:', err);
+        utterance.onerror = (err: any) => {
+          if (err.error === 'interrupted' || err.error === 'canceled') {
+            console.log('[Vocal Matrix] Synthesis stopped:', err.error);
+          } else {
+            console.error('[Vocal Matrix] Synthesis Error:', err);
+          }
           setPulse(false);
           onSpeechEndRef.current?.();
         };
