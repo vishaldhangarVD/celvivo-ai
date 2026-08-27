@@ -462,6 +462,15 @@ function VirtualArenaContent() {
              </Card>
 
              <div className="flex-1 min-h-[300px] relative rounded-2xl overflow-hidden border border-white/5 shadow-2xl bg-black/40 group h-full">
+                {/* Hidden Interviewer for Audio Logic Execution */}
+                <div className="absolute w-0 h-0 overflow-hidden opacity-0 pointer-events-none">
+                  <HolographicInterviewer 
+                    isSpeaking={isAiSpeaking}
+                    currentQuestion={transcript[transcript.length-1]?.role === 'interviewer' ? transcript[transcript.length-1].text : ""}
+                    onSpeechEnd={handleSpeechEnd}
+                  />
+                </div>
+
                 {isCameraOn ? (
                   <video
                     ref={localVideoRef}
