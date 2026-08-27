@@ -171,13 +171,15 @@ export default function CandidateHologram({
               />
             </svg>
             
-            {/* Pulsing Core Branded "N" */}
+            {/* Branded Core Initial - Fixed Gold Color */}
             <div className={cn(
-              "relative z-10 flex items-center justify-center font-headline font-black text-2xl transition-all duration-300",
-              speaking ? "animate-pulse" : "opacity-20"
+              "relative z-10 flex items-center justify-center font-headline font-black text-2xl transition-all duration-300 select-none",
+              speaking ? "animate-pulse scale-110" : "opacity-40 scale-100"
             )} style={{ 
-              color: themeColor,
-              textShadow: speaking ? `0 0 10px ${themeColor}` : 'none'
+              color: '#F5D061', // Fixed Premium Gold Brand Color
+              textShadow: speaking 
+                ? '0 0 20px rgba(245, 208, 97, 0.8), 0 0 10px rgba(245, 208, 97, 0.4), 0 0 5px rgba(255, 255, 255, 0.3)' 
+                : '0 0 5px rgba(245, 208, 97, 0.2)'
             }}>
               N
             </div>
