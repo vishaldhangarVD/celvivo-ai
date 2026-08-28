@@ -70,6 +70,7 @@ function VirtualArenaContent() {
   const isProcessingRef = useRef(isProcessing);
   const isSimulationCompleteRef = useRef(isSimulationComplete);
   const isAiSpeakingRef = useRef(isAiSpeaking);
+  const isRecognitionActiveRef = useRef(false);
 
   useEffect(() => { isMicOnRef.current = isMicOn; }, [isMicOn]);
   useEffect(() => { isProcessingRef.current = isProcessing; }, [isProcessing]);
@@ -101,6 +102,11 @@ function VirtualArenaContent() {
         recognitionRef.current.interimResults = true;
         recognitionRef.current.lang = 'en-US';
 
+        recognitionRef.current.onstart = () => {
+          isRecognitionActiveRef.current = true;
+          console.log("[Speech] Recognition session started");
+        };
+
         recognitionRef.current.onresult = (event: any) => {
           let finalTranscript = '';
           let interimTranscript = '';
@@ -111,6 +117,11 @@ function VirtualArenaContent() {
               interimTranscript += event.results[i][0].transcript;
             }
           }
+          
+          if (finalTranscript || interimTranscript) {
+            console.log("[Speech] Transcript detected:", { final: finalTranscript, interim: interimTranscript });
+          }
+
           if (finalTranscript) {
             setUserAnswer(prev => {
               const cleanedBase = prev.trim();
@@ -120,20 +131,23 @@ function VirtualArenaContent() {
         };
 
         recognitionRef.current.onerror = (event: any) => {
-          // Ignore benign/expected speech API errors
+          console.log("[Speech] Recognition error:", event.error);
           if (event.error === 'no-speech' || event.error === 'aborted') {
             return;
           }
-          console.error("Speech recognition error:", event.error);
         };
 
         recognitionRef.current.onend = () => {
+          isRecognitionActiveRef.current = false;
+          const shouldRestart = isMicOnRef.current && !isProcessingRef.current && !isSimulationCompleteRef.current && !isAiSpeakingRef.current;
+          console.log("[Speech] Recognition session ended, restarting:", shouldRestart);
+          
           // Automatically restart if conditions are still met
-          if (isMicOnRef.current && !isProcessingRef.current && !isSimulationCompleteRef.current && !isAiSpeakingRef.current) {
+          if (shouldRestart) {
             try {
               recognitionRef.current.start();
             } catch (e) {
-              // Ignore if already started
+              console.warn("[Speech] Auto-restart failed:", e);
             }
           }
         };
@@ -150,14 +164,20 @@ function VirtualArenaContent() {
   // Control recognition based on mic state and processing state
   useEffect(() => {
     if (recognitionRef.current) {
-      if (isMicOn && !isProcessing && !isSimulationComplete && !isAiSpeaking) {
-        try {
-          recognitionRef.current.start();
-        } catch (e) {
-          // Ignore if already started
+      const shouldRun = isMicOn && !isProcessing && !isSimulationComplete && !isAiSpeaking;
+      
+      if (shouldRun) {
+        if (!isRecognitionActiveRef.current) {
+          try {
+            recognitionRef.current.start();
+          } catch (e) {
+            console.warn("[Speech] Start attempted but failed:", e);
+          }
         }
       } else {
-        recognitionRef.current.stop();
+        if (isRecognitionActiveRef.current) {
+          recognitionRef.current.stop();
+        }
       }
     }
   }, [isMicOn, isProcessing, isSimulationComplete, isAiSpeaking]);
