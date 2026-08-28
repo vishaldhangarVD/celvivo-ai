@@ -106,6 +106,8 @@ export default function FeedbackDialog() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isSubmitting) return; // Prevent duplicate submissions
+
     if (!user || !db || !formData.consent) {
       toast({
         variant: "destructive",
@@ -119,11 +121,17 @@ export default function FeedbackDialog() {
     try {
       let finalPhotoURL = null;
 
+      // Wrap optional image upload in its own try/catch to prevent CORS errors from blocking the whole form
       if (imageFile && storage) {
-        const fileName = `${Date.now()}_${imageFile.name}`;
-        const storageRef = ref(storage, `userFeedback/${user.uid}/${fileName}`);
-        const uploadResult = await uploadBytes(storageRef, imageFile);
-        finalPhotoURL = await getDownloadURL(uploadResult.ref);
+        try {
+          const fileName = `${Date.now()}_${imageFile.name}`;
+          const storageRef = ref(storage, `userFeedback/${user.uid}/${fileName}`);
+          const uploadResult = await uploadBytes(storageRef, imageFile);
+          finalPhotoURL = await getDownloadURL(uploadResult.ref);
+        } catch (uploadError: any) {
+          console.warn("[Feedback] Profile image upload failed (CORS/Network), continuing without photo:", uploadError);
+          // Feedback continues without the image URL
+        }
       }
 
       await addDoc(collection(db, 'userFeedback'), {
