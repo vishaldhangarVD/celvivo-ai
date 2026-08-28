@@ -1,9 +1,9 @@
 "use client";
 
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useUser, useFirestore, useCollection } from '@/firebase';
-import { collection, query, orderBy, doc, setDoc, deleteDoc, addDoc, serverTimestamp, getDoc } from 'firebase/firestore';
+import { collection, query, orderBy, doc, setDoc, deleteDoc, addDoc, serverTimestamp } from 'firebase/firestore';
 import { useRouter } from 'next/navigation';
 import Navbar from '@/components/layout/Navbar';
 import { Button } from '@/components/ui/button';
@@ -17,18 +17,15 @@ import {
   FileText, 
   Plus, 
   Trash2, 
-  Edit3, 
   CheckCircle2, 
-  Printer, 
   ArrowLeft, 
-  ArrowRight,
-  Target,
-  Sparkles,
-  Command,
-  Clock,
   ChevronRight,
   Loader2,
-  AlertCircle
+  Clock,
+  Zap,
+  Target,
+  Cpu,
+  Sparkles
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -61,7 +58,7 @@ interface ResumeData {
 }
 
 /* ---------- CONSTANTS ---------- */
-const STEPS = ["Measure", "Tailor", "Fit", "Cut", "Press"];
+const STEPS = ["Cut", "Measure", "Tailor", "Fit", "Press"];
 const ROMAN_NUMERALS = ['I', 'II', 'III', 'IV', 'V'];
 
 const THEMES = [
@@ -73,22 +70,16 @@ const THEMES = [
 
 const INITIAL_DATA: ResumeData = {
   title: "New Resume",
-  name: "Ananya Kulkarni",
-  role: "Product Designer",
-  email: "ananya@email.com",
-  phone: "+91 90000 00000",
-  loc: "Pune, IN",
-  summary: "Product designer with 3+ years shipping B2B dashboards. Led design for a fintech onboarding flow that cut drop-off by 27%.",
-  skills: ["Figma", "User Research", "Design Systems", "Prototyping"],
-  experience: [
-    { company: "Vaultly Fintech", role: "Product Designer", dates: "2023–Present", bullets: "Redesigned onboarding flow, cutting drop-off by 27%\nBuilt a design system used across 6 product teams" }
-  ],
-  projects: [
-    { name: "Onboarding Revamp", desc: "End-to-end redesign of KYC flow reducing steps from 9 to 4" }
-  ],
-  education: [
-    { school: "MIT WPU, Pune", degree: "B.Des — Interaction Design", dates: "2019–2023" }
-  ],
+  name: "",
+  role: "",
+  email: "",
+  phone: "",
+  loc: "",
+  summary: "",
+  skills: [],
+  experience: [],
+  projects: [],
+  education: [],
   theme: "windsor"
 };
 
@@ -202,11 +193,6 @@ export default function ResumeAtelierPage() {
     </div>
   );
 
-  if (!user) {
-    router.push('/login?redirectTo=/resume-atelier');
-    return null;
-  }
-
   return (
     <div className="atelier-root min-h-screen bg-[#0c0b09] text-[#ece7db] font-sans selection:bg-[#c9a24d]/30">
       <style jsx global>{`
@@ -244,6 +230,37 @@ export default function ResumeAtelierPage() {
         .rs-savile .side { background: #1c1811; color: #e8e2d3; padding: 36px 24px; }
         .rs-savile .main { padding: 36px 32px; color: #241f18; }
         .rs-savile .crest2 { width: 44px; height: 44px; border: 1px solid var(--c-accent); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-family: var(--disp); font-weight: 600; font-size: 16px; color: var(--c-accent); margin-bottom: 18px; }
+
+        .atelier-input {
+          background: transparent; border: none; border-bottom: 1px solid var(--hair);
+          padding: 8px 0; color: var(--ivory); font-family: var(--body); font-size: 14px;
+          border-radius: 0; outline: none; transition: .2s;
+        }
+        .atelier-input:focus { border-bottom-color: var(--gold); }
+        .atelier-input::placeholder { color: #5a5348; opacity: 0.6; }
+        
+        .atelier-textarea {
+          background: transparent; border: 1px solid var(--hair); padding: 12px;
+          color: var(--ivory); font-family: var(--body); font-size: 13px; line-height: 1.6;
+          border-radius: 0; outline: none; transition: .2s; resize: none;
+        }
+        .atelier-textarea:focus { border-color: var(--gold); }
+        .atelier-textarea::placeholder { color: #5a5348; opacity: 0.6; }
+
+        .ghost-input {
+          width: 100%; background: transparent; border: none; font-family: var(--body);
+          color: var(--ivory); font-size: 13px; outline: none; padding: 4px 0;
+          border-bottom: 1px solid transparent;
+        }
+        .ghost-input:focus { border-bottom-color: var(--gold-dim); }
+        .ghost-input::placeholder { color: #5a5348; opacity: 0.6; }
+
+        .ghost-textarea {
+          width: 100%; background: transparent; border: none; font-family: var(--body);
+          color: var(--ivory-dim); font-size: 12px; outline: none; resize: none;
+          line-height: 1.5; padding: 4px 0;
+        }
+        .ghost-textarea::placeholder { color: #5a5348; opacity: 0.6; }
 
         @media print {
           body * { visibility: hidden; }
@@ -359,146 +376,6 @@ export default function ResumeAtelierPage() {
                       <motion.div key="step1" initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 10 }} className="space-y-8">
                         <div className="space-y-1">
                           <p className="font-mono text-[9px] tracking-[0.3em] text-[#c9a24d] uppercase">Chapter I</p>
-                          <h3 className="font-disp text-3xl font-medium">The Measure</h3>
-                          <p className="text-[#cfc7b4] text-sm font-light italic">Take your particulars precisely. This is the foundation.</p>
-                        </div>
-                        <div className="grid grid-cols-2 gap-6">
-                          <div className="space-y-2">
-                            <Label className="text-[9px] font-mono uppercase text-[#8a723a]">Full Name</Label>
-                            <Input value={data.name} onChange={e => setData({...data, name: e.target.value})} className="atelier-input" />
-                          </div>
-                          <div className="space-y-2">
-                            <Label className="text-[9px] font-mono uppercase text-[#8a723a]">Target Role</Label>
-                            <Input value={data.role} onChange={e => setData({...data, role: e.target.value})} className="atelier-input" />
-                          </div>
-                        </div>
-                        <div className="grid grid-cols-3 gap-6">
-                          <div className="space-y-2">
-                            <Label className="text-[9px] font-mono uppercase text-[#8a723a]">Email</Label>
-                            <Input value={data.email} onChange={e => setData({...data, email: e.target.value})} className="atelier-input" />
-                          </div>
-                          <div className="space-y-2">
-                            <Label className="text-[9px] font-mono uppercase text-[#8a723a]">Phone</Label>
-                            <Input value={data.phone} onChange={e => setData({...data, phone: e.target.value})} className="atelier-input" />
-                          </div>
-                          <div className="space-y-2">
-                            <Label className="text-[9px] font-mono uppercase text-[#8a723a]">Location</Label>
-                            <Input value={data.loc} onChange={e => setData({...data, loc: e.target.value})} className="atelier-input" />
-                          </div>
-                        </div>
-                        <div className="space-y-2">
-                          <Label className="text-[9px] font-mono uppercase text-[#8a723a]">Professional Summary</Label>
-                          <Textarea value={data.summary} onChange={e => setData({...data, summary: e.target.value})} className="atelier-textarea" rows={4} />
-                        </div>
-                        <Button onClick={() => setCurrentStep(2)} className="w-full h-14 bg-[#c9a24d] text-[#0c0b09] hover:bg-[#f7f2e6] transition-colors rounded-none font-mono text-[11px] uppercase tracking-[0.2em]">Proceed to Tailoring →</Button>
-                      </motion.div>
-                    )}
-
-                    {currentStep === 2 && (
-                      <motion.div key="step2" initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 10 }} className="space-y-8">
-                        <div className="space-y-1">
-                          <p className="font-mono text-[9px] tracking-[0.3em] text-[#c9a24d] uppercase">Chapter II</p>
-                          <h3 className="font-disp text-3xl font-medium">The Tailoring</h3>
-                          <p className="text-[#cfc7b4] text-sm font-light italic">Cut your experience into nodes the machine can parse.</p>
-                        </div>
-                        
-                        <div className="space-y-6">
-                          {data.experience.map((exp, i) => (
-                            <div key={i} className="p-6 border border-[#332c22] bg-[#1c1814] relative group">
-                              <button onClick={() => {
-                                const n = [...data.experience]; n.splice(i, 1); setData({...data, experience: n});
-                              }} className="absolute top-4 right-4 text-[#cfc7b4]/40 hover:text-[#7a2531]"><Trash2 className="w-4 h-4" /></button>
-                              <div className="grid grid-cols-2 gap-4">
-                                <div><Label className="text-[8px] font-mono uppercase text-[#8a723a]">Company</Label>
-                                <input value={exp.company} onChange={e => {
-                                  const n = [...data.experience]; n[i].company = e.target.value; setData({...data, experience: n});
-                                }} className="ghost-input" /></div>
-                                <div><Label className="text-[8px] font-mono uppercase text-[#8a723a]">Title</Label>
-                                <input value={exp.role} onChange={e => {
-                                  const n = [...data.experience]; n[i].role = e.target.value; setData({...data, experience: n});
-                                }} className="ghost-input" /></div>
-                              </div>
-                              <div className="mt-4"><Label className="text-[8px] font-mono uppercase text-[#8a723a]">Dates</Label>
-                              <input value={exp.dates} onChange={e => {
-                                const n = [...data.experience]; n[i].dates = e.target.value; setData({...data, experience: n});
-                              }} className="ghost-input" /></div>
-                              <div className="mt-4"><Label className="text-[8px] font-mono uppercase text-[#8a723a]">Bullets</Label>
-                              <textarea value={exp.bullets} onChange={e => {
-                                const n = [...data.experience]; n[i].bullets = e.target.value; setData({...data, experience: n});
-                              }} className="ghost-textarea" rows={3} /></div>
-                            </div>
-                          ))}
-                          <button onClick={() => setData({...data, experience: [...data.experience, {company:"",role:"",dates:"",bullets:""}]})} className="w-full py-4 border border-dashed border-[#332c22] text-[#8a723a] text-[10px] font-mono uppercase tracking-widest hover:border-[#c9a24d]/40">+ Add Position</button>
-                        </div>
-                        <div className="flex gap-4">
-                          <Button onClick={() => setCurrentStep(1)} variant="outline" className="flex-1 h-14 border-[#332c22] text-[#cfc7b4] rounded-none font-mono text-[11px] uppercase tracking-widest">← Back</Button>
-                          <Button onClick={() => setCurrentStep(3)} className="flex-[2] h-14 bg-[#c9a24d] text-[#0c0b09] hover:bg-[#f7f2e6] rounded-none font-mono text-[11px] uppercase tracking-widest">Proceed to Fitting →</Button>
-                        </div>
-                      </motion.div>
-                    )}
-
-                    {currentStep === 3 && (
-                      <motion.div key="step3" initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 10 }} className="space-y-8">
-                        <div className="space-y-1">
-                          <p className="font-mono text-[9px] tracking-[0.3em] text-[#c9a24d] uppercase">Chapter III</p>
-                          <h3 className="font-disp text-3xl font-medium">The Fitting</h3>
-                          <p className="text-[#cfc7b4] text-sm font-light italic">Skills are the thread. They must be visible to the machine.</p>
-                        </div>
-
-                        <div className="space-y-6">
-                           <div className="space-y-2">
-                             <Label className="text-[9px] font-mono uppercase text-[#8a723a]">Skills Archive</Label>
-                             <div className="flex flex-wrap gap-2">
-                               {data.skills.map((s, i) => (
-                                 <Badge key={i} className="bg-transparent border border-[#332c22] text-[#cfc7b4] px-3 py-1.5 rounded-none font-light gap-2">
-                                   {s} <button onClick={() => {
-                                     const n = [...data.skills]; n.splice(i, 1); setData({...data, skills: n});
-                                   }} className="text-[#c9a24d] hover:text-white">×</button>
-                                 </Badge>
-                               ))}
-                             </div>
-                             <div className="flex gap-2 pt-2">
-                               <Input id="skill-add" placeholder="Type skill..." className="atelier-input" onKeyDown={e => {
-                                 if (e.key === 'Enter') {
-                                   const val = (e.target as HTMLInputElement).value;
-                                   if (val.trim()) { setData({...data, skills: [...data.skills, val.trim()]}); (e.target as HTMLInputElement).value = ""; }
-                                 }
-                               }} />
-                             </div>
-                           </div>
-
-                           <div className="space-y-4">
-                             <Label className="text-[9px] font-mono uppercase text-[#8a723a]">Education</Label>
-                             {data.education.map((ed, i) => (
-                               <div key={i} className="p-4 border border-[#332c22] bg-[#1c1814]">
-                                 <input value={ed.school} placeholder="School" onChange={e => {
-                                   const n = [...data.education]; n[i].school = e.target.value; setData({...data, education: n});
-                                 }} className="ghost-input font-bold" />
-                                 <div className="grid grid-cols-2 gap-4 mt-2">
-                                   <input value={ed.degree} placeholder="Degree" onChange={e => {
-                                     const n = [...data.education]; n[i].degree = e.target.value; setData({...data, education: n});
-                                   }} className="ghost-input text-xs" />
-                                   <input value={ed.dates} placeholder="Dates" onChange={e => {
-                                     const n = [...data.education]; n[i].dates = e.target.value; setData({...data, education: n});
-                                   }} className="ghost-input text-xs text-right" />
-                                 </div>
-                               </div>
-                             ))}
-                             <button onClick={() => setData({...data, education: [...data.education, {school:"",degree:"",dates:""}]})} className="w-full py-3 border border-dashed border-[#332c22] text-[9px] font-mono text-[#8a723a] uppercase">+ Add School</button>
-                           </div>
-                        </div>
-
-                        <div className="flex gap-4">
-                          <Button onClick={() => setCurrentStep(2)} variant="outline" className="flex-1 h-14 border-[#332c22] rounded-none font-mono text-[11px] uppercase">← Back</Button>
-                          <Button onClick={() => setCurrentStep(4)} className="flex-[2] h-14 bg-[#c9a24d] text-[#0c0b09] rounded-none font-mono text-[11px] uppercase">Choose a Cut →</Button>
-                        </div>
-                      </motion.div>
-                    )}
-
-                    {currentStep === 4 && (
-                      <motion.div key="step4" initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 10 }} className="space-y-8">
-                        <div className="space-y-1">
-                          <p className="font-mono text-[9px] tracking-[0.3em] text-[#c9a24d] uppercase">Chapter IV</p>
                           <h3 className="font-disp text-3xl font-medium">The Cut</h3>
                           <p className="text-[#cfc7b4] text-sm font-light italic">Select your silhouette. Genuinely different house styles.</p>
                         </div>
@@ -522,9 +399,149 @@ export default function ResumeAtelierPage() {
                           ))}
                         </div>
 
+                        <Button onClick={() => setCurrentStep(2)} className="w-full h-14 bg-[#c9a24d] text-[#0c0b09] hover:bg-[#f7f2e6] transition-colors rounded-none font-mono text-[11px] uppercase tracking-[0.2em]">Proceed to Measure →</Button>
+                      </motion.div>
+                    )}
+
+                    {currentStep === 2 && (
+                      <motion.div key="step2" initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 10 }} className="space-y-8">
+                        <div className="space-y-1">
+                          <p className="font-mono text-[9px] tracking-[0.3em] text-[#c9a24d] uppercase">Chapter II</p>
+                          <h3 className="font-disp text-3xl font-medium">The Measure</h3>
+                          <p className="text-[#cfc7b4] text-sm font-light italic">Take your particulars precisely. This is the foundation.</p>
+                        </div>
+                        <div className="grid grid-cols-2 gap-6">
+                          <div className="space-y-2">
+                            <Label className="text-[9px] font-mono uppercase text-[#8a723a]">Full Name</Label>
+                            <Input value={data.name} onChange={e => setData({...data, name: e.target.value})} placeholder="eg:- Ananya Birla" className="atelier-input" />
+                          </div>
+                          <div className="space-y-2">
+                            <Label className="text-[9px] font-mono uppercase text-[#8a723a]">Target Role</Label>
+                            <Input value={data.role} onChange={e => setData({...data, role: e.target.value})} placeholder="eg:- Data Analyst" className="atelier-input" />
+                          </div>
+                        </div>
+                        <div className="grid grid-cols-3 gap-6">
+                          <div className="space-y-2">
+                            <Label className="text-[9px] font-mono uppercase text-[#8a723a]">Email</Label>
+                            <Input value={data.email} onChange={e => setData({...data, email: e.target.value})} placeholder="eg:- ananya@email.com" className="atelier-input" />
+                          </div>
+                          <div className="space-y-2">
+                            <Label className="text-[9px] font-mono uppercase text-[#8a723a]">Phone</Label>
+                            <Input value={data.phone} onChange={e => setData({...data, phone: e.target.value})} placeholder="eg:- +91 90000 00000" className="atelier-input" />
+                          </div>
+                          <div className="space-y-2">
+                            <Label className="text-[9px] font-mono uppercase text-[#8a723a]">Location</Label>
+                            <Input value={data.loc} onChange={e => setData({...data, loc: e.target.value})} placeholder="eg:- Pune, IN" className="atelier-input" />
+                          </div>
+                        </div>
+                        <div className="space-y-2">
+                          <Label className="text-[9px] font-mono uppercase text-[#8a723a]">Professional Summary</Label>
+                          <Textarea value={data.summary} onChange={e => setData({...data, summary: e.target.value})} placeholder="eg:- Strategic data analyst with 3+ years experience shipping analytics tools..." className="atelier-textarea" rows={4} />
+                        </div>
+                        <div className="flex gap-4">
+                          <Button onClick={() => setCurrentStep(1)} variant="outline" className="flex-1 h-14 border-[#332c22] text-[#cfc7b4] rounded-none font-mono text-[11px] uppercase tracking-widest">← Back</Button>
+                          <Button onClick={() => setCurrentStep(3)} className="flex-[2] h-14 bg-[#c9a24d] text-[#0c0b09] hover:bg-[#f7f2e6] rounded-none font-mono text-[11px] uppercase tracking-widest">Proceed to Tailoring →</Button>
+                        </div>
+                      </motion.div>
+                    )}
+
+                    {currentStep === 3 && (
+                      <motion.div key="step3" initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 10 }} className="space-y-8">
+                        <div className="space-y-1">
+                          <p className="font-mono text-[9px] tracking-[0.3em] text-[#c9a24d] uppercase">Chapter III</p>
+                          <h3 className="font-disp text-3xl font-medium">The Tailoring</h3>
+                          <p className="text-[#cfc7b4] text-sm font-light italic">Cut your experience into nodes the machine can parse.</p>
+                        </div>
+                        
+                        <div className="space-y-6">
+                          {data.experience.map((exp, i) => (
+                            <div key={i} className="p-6 border border-[#332c22] bg-[#1c1814] relative group">
+                              <button onClick={() => {
+                                const n = [...data.experience]; n.splice(i, 1); setData({...data, experience: n});
+                              }} className="absolute top-4 right-4 text-[#cfc7b4]/40 hover:text-[#7a2531]"><Trash2 className="w-4 h-4" /></button>
+                              <div className="grid grid-cols-2 gap-4">
+                                <div><Label className="text-[8px] font-mono uppercase text-[#8a723a]">Company</Label>
+                                <input value={exp.company} placeholder="eg:- Reliance Industries" onChange={e => {
+                                  const n = [...data.experience]; n[i].company = e.target.value; setData({...data, experience: n});
+                                }} className="ghost-input" /></div>
+                                <div><Label className="text-[8px] font-mono uppercase text-[#8a723a]">Title</Label>
+                                <input value={exp.role} placeholder="eg:- Systems Engineer" onChange={e => {
+                                  const n = [...data.experience]; n[i].role = e.target.value; setData({...data, experience: n});
+                                }} className="ghost-input" /></div>
+                              </div>
+                              <div className="mt-4"><Label className="text-[8px] font-mono uppercase text-[#8a723a]">Dates</Label>
+                              <input value={exp.dates} placeholder="eg:- 2021–Present" onChange={e => {
+                                const n = [...data.experience]; n[i].dates = e.target.value; setData({...data, experience: n});
+                              }} className="ghost-input" /></div>
+                              <div className="mt-4"><Label className="text-[8px] font-mono uppercase text-[#8a723a]">Bullets</Label>
+                              <textarea value={exp.bullets} placeholder="eg:- Optimized pipeline efficiency by 30%..." onChange={e => {
+                                const n = [...data.experience]; n[i].bullets = e.target.value; setData({...data, experience: n});
+                              }} className="ghost-textarea" rows={3} /></div>
+                            </div>
+                          ))}
+                          <button onClick={() => setData({...data, experience: [...data.experience, {company:"",role:"",dates:"",bullets:""}]})} className="w-full py-4 border border-dashed border-[#332c22] text-[#8a723a] text-[10px] font-mono uppercase tracking-widest hover:border-[#c9a24d]/40">+ Add Position</button>
+                        </div>
+                        <div className="flex gap-4">
+                          <Button onClick={() => setCurrentStep(2)} variant="outline" className="flex-1 h-14 border-[#332c22] text-[#cfc7b4] rounded-none font-mono text-[11px] uppercase tracking-widest">← Back</Button>
+                          <Button onClick={() => setCurrentStep(4)} className="flex-[2] h-14 bg-[#c9a24d] text-[#0c0b09] hover:bg-[#f7f2e6] rounded-none font-mono text-[11px] uppercase tracking-widest">Proceed to Fitting →</Button>
+                        </div>
+                      </motion.div>
+                    )}
+
+                    {currentStep === 4 && (
+                      <motion.div key="step4" initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 10 }} className="space-y-8">
+                        <div className="space-y-1">
+                          <p className="font-mono text-[9px] tracking-[0.3em] text-[#c9a24d] uppercase">Chapter IV</p>
+                          <h3 className="font-disp text-3xl font-medium">The Fitting</h3>
+                          <p className="text-[#cfc7b4] text-sm font-light italic">Skills are the thread. They must be visible to the machine.</p>
+                        </div>
+
+                        <div className="space-y-6">
+                           <div className="space-y-2">
+                             <Label className="text-[9px] font-mono uppercase text-[#8a723a]">Skills Archive</Label>
+                             <div className="flex flex-wrap gap-2">
+                               {data.skills.map((s, i) => (
+                                 <Badge key={i} className="bg-transparent border border-[#332c22] text-[#cfc7b4] px-3 py-1.5 rounded-none font-light gap-2">
+                                   {s} <button onClick={() => {
+                                     const n = [...data.skills]; n.splice(i, 1); setData({...data, skills: n});
+                                   }} className="text-[#c9a24d] hover:text-white">×</button>
+                                 </Badge>
+                               ))}
+                             </div>
+                             <div className="flex gap-2 pt-2">
+                               <Input id="skill-add" placeholder="eg:- Python, Figma..." className="atelier-input" onKeyDown={e => {
+                                 if (e.key === 'Enter') {
+                                   const val = (e.target as HTMLInputElement).value;
+                                   if (val.trim()) { setData({...data, skills: [...data.skills, val.trim()]}); (e.target as HTMLInputElement).value = ""; }
+                                 }
+                               }} />
+                             </div>
+                           </div>
+
+                           <div className="space-y-4">
+                             <Label className="text-[9px] font-mono uppercase text-[#8a723a]">Education</Label>
+                             {data.education.map((ed, i) => (
+                               <div key={i} className="p-4 border border-[#332c22] bg-[#1c1814]">
+                                 <input value={ed.school} placeholder="eg:- Sant Gadge Baba Amravati University" onChange={e => {
+                                   const n = [...data.education]; n[i].school = e.target.value; setData({...data, education: n});
+                                 }} className="ghost-input font-bold" />
+                                 <div className="grid grid-cols-2 gap-4 mt-2">
+                                   <input value={ed.degree} placeholder="eg:- B.Tech in CS" onChange={e => {
+                                     const n = [...data.education]; n[i].degree = e.target.value; setData({...data, education: n});
+                                   }} className="ghost-input text-xs" />
+                                   <input value={ed.dates} placeholder="eg:- 2017–2021" onChange={e => {
+                                     const n = [...data.education]; n[i].dates = e.target.value; setData({...data, education: n});
+                                   }} className="ghost-input text-xs text-right" />
+                                 </div>
+                               </div>
+                             ))}
+                             <button onClick={() => setData({...data, education: [...data.education, {school:"",degree:"",dates:""}]})} className="w-full py-3 border border-dashed border-[#332c22] text-[9px] font-mono text-[#8a723a] uppercase">+ Add School</button>
+                           </div>
+                        </div>
+
                         <div className="flex gap-4">
                           <Button onClick={() => setCurrentStep(3)} variant="outline" className="flex-1 h-14 border-[#332c22] rounded-none font-mono text-[11px] uppercase">← Back</Button>
-                          <Button onClick={() => setCurrentStep(5)} className="flex-[2] h-14 bg-[#c9a24d] text-[#0c0b09] rounded-none font-mono text-[11px] uppercase">Fit Check →</Button>
+                          <Button onClick={() => setCurrentStep(5)} className="flex-[2] h-14 bg-[#c9a24d] text-[#0c0b09] rounded-none font-mono text-[11px] uppercase">Proceed to Press →</Button>
                         </div>
                       </motion.div>
                     )}
@@ -606,35 +623,6 @@ export default function ResumeAtelierPage() {
       <div className="fixed bottom-10 left-1/2 -translate-x-1/2 pointer-events-none opacity-40">
         <p className="text-[8px] font-mono tracking-[0.8em] uppercase text-[#cfc7b4]">Authentic Neural Craftsmanship</p>
       </div>
-
-      <style jsx>{`
-        .atelier-input {
-          background: transparent; border: none; border-bottom: 1px solid var(--hair);
-          padding: 8px 0; color: var(--ivory); font-family: var(--body); font-size: 14px;
-          border-radius: 0; outline: none; transition: .2s;
-        }
-        .atelier-input:focus { border-bottom-color: var(--gold); }
-        
-        .atelier-textarea {
-          background: transparent; border: 1px solid var(--hair); padding: 12px;
-          color: var(--ivory); font-family: var(--body); font-size: 13px; line-height: 1.6;
-          border-radius: 0; outline: none; transition: .2s; resize: none;
-        }
-        .atelier-textarea:focus { border-color: var(--gold); }
-
-        .ghost-input {
-          width: 100%; background: transparent; border: none; font-family: var(--body);
-          color: var(--ivory); font-size: 13px; outline: none; padding: 4px 0;
-          border-bottom: 1px solid transparent;
-        }
-        .ghost-input:focus { border-bottom-color: var(--gold-dim); }
-
-        .ghost-textarea {
-          width: 100%; background: transparent; border: none; font-family: var(--body);
-          color: var(--ivory-dim); font-size: 12px; outline: none; resize: none;
-          line-height: 1.5; padding: 4px 0;
-        }
-      `}</style>
     </div>
   );
 }
@@ -646,7 +634,7 @@ function ResumePreview({ data, theme }: { data: ResumeData, theme: string }) {
 
   const Bullets = ({ str }: { str: string }) => (
     <div className="space-y-1 mt-1">
-      {str.split('\n').filter(x => x.trim()).map((b, i) => (
+      {(str || '').split('\n').filter(x => x.trim()).map((b, i) => (
         <div key={i} className="bul flex gap-2 text-[#4a4438] leading-tight">
           <span className="shrink-0">—</span> <span>{b}</span>
         </div>
@@ -654,44 +642,35 @@ function ResumePreview({ data, theme }: { data: ResumeData, theme: string }) {
     </div>
   );
 
+  const name = data.name || "UNNAMED OPERATOR";
+  const role = data.role || "FIELD PENDING";
+
   if (theme === 'windsor') {
     return (
       <div className="rs-windsor h-full" style={vars}>
-        <div className="name">{data.name}</div>
-        <div className="role">{data.role}</div>
-        <div className="contact">{data.email} · {data.phone} · {data.loc}</div>
-        <div className="summary">{data.summary}</div>
+        <div className="name">{name}</div>
+        <div className="role">{role}</div>
+        <div className="contact">{data.email || "email@nexus.ai"} · {data.phone || "+91 00000 00000"} · {data.loc || "Global"}</div>
+        <div className="summary">{data.summary || "Awaiting summary calibration..."}</div>
         
         <div className="sec-title">Experience</div>
-        {data.experience.map((e, i) => (
+        {data.experience.length > 0 ? data.experience.map((e, i) => (
           <div key={i} className="mb-4">
-            <div className="job-head"><span>{e.role}, {e.company}</span><span>{e.dates}</span></div>
+            <div className="job-head"><span>{e.role || "Title"}, {e.company || "Company"}</span><span>{e.dates || "Dates"}</span></div>
             <Bullets str={e.bullets || ""} />
           </div>
-        ))}
-
-        {data.projects.length > 0 && (
-          <>
-            <div className="sec-title">Projects</div>
-            {data.projects.map((p, i) => (
-              <div key={i} className="mb-3">
-                <div className="font-bold text-[12px]">{p.name}</div>
-                <div className="text-[11px] text-[#4a4438] mt-1">{p.desc}</div>
-              </div>
-            ))}
-          </>
-        )}
+        )) : <p className="text-[10px] text-[#4a4438] italic">No positions tailored.</p>}
 
         <div className="sec-title">Education</div>
-        {data.education.map((ed, i) => (
-          <div key={i} className="job-head"><span>{ed.degree}, {ed.school}</span><span>{ed.dates}</span></div>
-        ))}
+        {data.education.length > 0 ? data.education.map((ed, i) => (
+          <div key={i} className="job-head"><span>{ed.degree || "Degree"}, {ed.school || "Institution"}</span><span>{ed.dates || "Dates"}</span></div>
+        )) : <p className="text-[10px] text-[#4a4438] italic">No academic nodes recorded.</p>}
 
         <div className="sec-title">Skills</div>
         <div className="flex flex-wrap gap-2">
-          {data.skills.map((s, i) => (
+          {data.skills.length > 0 ? data.skills.map((s, i) => (
             <span key={i} className="border border-[#ddd3ba] px-2 py-0.5 text-[9.5px] font-semibold text-[#4a4438] uppercase tracking-wider">{s}</span>
-          ))}
+          )) : <span className="text-[10px] text-[#4a4438] italic">Awaiting skill matrix...</span>}
         </div>
       </div>
     );
@@ -701,15 +680,15 @@ function ResumePreview({ data, theme }: { data: ResumeData, theme: string }) {
     return (
       <div className="rs-savile h-full" style={vars}>
         <div className="side flex flex-col">
-          <div className="crest2">{data.name.split(' ').map(w => w[0]).slice(0, 2).join('')}</div>
-          <div className="font-disp text-lg font-bold">{data.name}</div>
-          <div className="text-[10px] text-[var(--c-accent)] uppercase tracking-wider mt-1">{data.role}</div>
+          <div className="crest2">{name.split(' ').map(w => w[0]).slice(0, 2).join('')}</div>
+          <div className="font-disp text-lg font-bold">{name}</div>
+          <div className="text-[10px] text-[var(--c-accent)] uppercase tracking-wider mt-1">{role}</div>
           
           <div className="mt-8 space-y-1">
              <div className="text-[9px] uppercase tracking-widest text-[var(--c-accent)] font-bold mb-2">Contact</div>
-             <div className="text-[10.5px] text-[#cfc7b4]">{data.email}</div>
-             <div className="text-[10.5px] text-[#cfc7b4]">{data.phone}</div>
-             <div className="text-[10.5px] text-[#cfc7b4]">{data.loc}</div>
+             <div className="text-[10.5px] text-[#cfc7b4]">{data.email || "email@nexus.ai"}</div>
+             <div className="text-[10.5px] text-[#cfc7b4]">{data.phone || "+91 00000 00000"}</div>
+             <div className="text-[10.5px] text-[#cfc7b4]">{data.loc || "Global"}</div>
           </div>
 
           <div className="mt-8">
@@ -722,14 +701,14 @@ function ResumePreview({ data, theme }: { data: ResumeData, theme: string }) {
         <div className="main">
            <div className="mb-6">
              <div className="font-disp text-[12px] font-bold border-bottom border-[#e4dcc6] pb-1 mb-2 uppercase">Summary</div>
-             <div className="text-[11.5px] italic text-[#4a4438] leading-relaxed">{data.summary}</div>
+             <div className="text-[11.5px] italic text-[#4a4438] leading-relaxed">{data.summary || "Awaiting summary calibration..."}</div>
            </div>
            <div>
              <div className="font-disp text-[12px] font-bold border-bottom border-[#e4dcc6] pb-1 mb-3 uppercase">Experience</div>
              {data.experience.map((e, i) => (
                 <div key={i} className="mb-4">
-                  <div className="flex justify-between font-bold text-[12px]"><span>{e.role}</span><span>{e.dates}</span></div>
-                  <div className="text-[10.5px] text-[#8a8072] italic mb-1">{e.company}</div>
+                  <div className="flex justify-between font-bold text-[12px]"><span>{e.role || "Title"}</span><span>{e.dates || "Dates"}</span></div>
+                  <div className="text-[10.5px] text-[#8a8072] italic mb-1">{e.company || "Company"}</div>
                   <Bullets str={e.bullets || ""} />
                 </div>
              ))}
@@ -739,17 +718,17 @@ function ResumePreview({ data, theme }: { data: ResumeData, theme: string }) {
     );
   }
 
-  // Fallback to Windsor for other themes to keep preview simple but correctable if needed
+  // Simplified Default for other themes
   return (
     <div className="rs-windsor h-full" style={vars}>
-      <div className="name">{data.name}</div>
-      <div className="role">{data.role}</div>
-      <div className="contact">{data.email} · {data.phone} · {data.loc}</div>
-      <div className="summary">{data.summary}</div>
+      <div className="name">{name}</div>
+      <div className="role">{role}</div>
+      <div className="contact">{data.email || "email@nexus.ai"} · {data.phone || "+91 00000 00000"}</div>
+      <div className="summary">{data.summary || "Awaiting summary calibration..."}</div>
       <div className="sec-title uppercase">Experience</div>
       {data.experience.map((e, i) => (
         <div key={i} className="mb-4">
-          <div className="job-head"><span>{e.role}, {e.company}</span><span>{e.dates}</span></div>
+          <div className="job-head"><span>{e.role || "Title"}, {e.company || "Company"}</span><span>{e.dates || "Dates"}</span></div>
           <Bullets str={e.bullets || ""} />
         </div>
       ))}
