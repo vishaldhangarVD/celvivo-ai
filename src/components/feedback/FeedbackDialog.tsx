@@ -126,15 +126,24 @@ export default function FeedbackDialog() {
       if (imageFile && storage) {
         try {
           const fileName = `${Date.now()}_${imageFile.name}`;
-          const storageRef = ref(storage, `userFeedback/${user.uid}/${fileName}`);
+          const storageRef = ref(
+            storage,
+            `userFeedback/${user.uid}/${fileName}`
+          );
+
           const uploadResult = await uploadBytes(storageRef, imageFile);
           finalPhotoURL = await getDownloadURL(uploadResult.ref);
-        } catch (uploadError: any) {
-          console.warn("[Feedback] Profile image upload failed (Storage CORS/Network), continuing without photo:", uploadError);
+        } catch (uploadError) {
+          console.warn(
+            '[Feedback] Optional profile image upload failed. Continuing without photo.',
+            uploadError
+          );
+          finalPhotoURL = null;
         }
       }
 
       // 2. Save feedback data to Firestore.
+      // This MUST always execute regardless of optional image upload status.
       await addDoc(collection(db, 'userFeedback'), {
         userId: user.uid,
         name: formData.name,
