@@ -203,9 +203,9 @@ export default function LandingPage() {
                 >
                   🚀 Start Mock Interview <Zap className="ml-3 w-4 h-4 fill-current" />
                 </Button>
-                <Link href="/resume">
+                <Link href="/resume-atelier">
                   <Button variant="outline" className="h-14 px-8 glass border-white/10 rounded-2xl text-[10px] font-bold tracking-widest uppercase hover:bg-white/5">
-                    🤖 AI Resume Analysis
+                    🤖 Resume Atelier
                   </Button>
                 </Link>
               </div>
@@ -476,9 +476,9 @@ export default function LandingPage() {
               <div className="space-y-6">
                 <h4 className="text-[10px] font-black uppercase tracking-[0.4em] text-white">Products</h4>
                 <ul className="space-y-4">
-                  {['Resume Analysis', 'Mock Interviews', 'Skill Gap', 'Personal Roadmaps'].map((item) => (
+                  {['Resume Atelier', 'Mock Interviews', 'Skill Gap', 'Personal Roadmaps'].map((item) => (
                     <li key={item}>
-                      <Link href={item === 'Mock Interviews' ? '/interview' : `/${item.toLowerCase().replace(' ', '-')}`} className="text-sm text-white/40 hover:text-accent transition-colors flex items-center gap-2 group">
+                      <Link href={item === 'Mock Interviews' ? '/interview' : item === 'Resume Atelier' ? '/resume-atelier' : `/${item.toLowerCase().replace(' ', '-')}`} className="text-sm text-white/40 hover:text-accent transition-colors flex items-center gap-2 group">
                         {item} <ArrowUpRight className="w-3 h-3 opacity-0 group-hover:opacity-100 transition-all" />
                       </Link>
                     </li>
