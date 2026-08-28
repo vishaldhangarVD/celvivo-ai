@@ -278,7 +278,6 @@ export default function ResumeAtelierPage() {
           position: relative; transform-origin: top center;
         }
 
-        /* WINDSOR */
         .rs-windsor { padding: 46px 42px; color: #241f18; }
         .rs-windsor .name { font-family: var(--disp); font-size: 29px; font-weight: 600; color: #1c1811; text-align: center; }
         .rs-windsor .role { font-size: 11.5px; color: var(--c-accent); font-weight: 600; letter-spacing: 1px; text-transform: uppercase; margin-top: 5px; text-align: center; }
@@ -288,7 +287,6 @@ export default function ResumeAtelierPage() {
         .rs-windsor .job-head { display: flex; justify-content: space-between; font-size: 12px; font-weight: 700; color: #241f18; }
         .rs-windsor .bul { font-size: 11px; color: #4a4438; line-height: 1.6; margin-left: 14px; margin-top: 2px; }
 
-        /* SAVILE */
         .rs-savile { display: grid; grid-template-columns: 33% 67%; min-height: 842px; }
         .rs-savile .side { background: #1c1811; color: #e8e2d3; padding: 36px 24px; }
         .rs-savile .main { padding: 36px 32px; color: #241f18; }
@@ -519,27 +517,37 @@ export default function ResumeAtelierPage() {
                         <div className="space-y-6">
                           {data.experience.map((exp, i) => (
                             <div key={i} className="p-6 border border-[#332c22] bg-[#1c1814] relative group">
-                              <button onClick={() => {
-                                const n = [...data.experience]; n.splice(i, 1); setData({...data, experience: n});
-                              }} className="absolute top-4 right-4 text-[#cfc7b4]/40 hover:text-[#7a2531]"><Trash2 className="w-4 h-4" /></button>
+                              {data.experience.length > 1 && (
+                                <button onClick={() => {
+                                  const n = [...data.experience]; n.splice(i, 1); setData({...data, experience: n});
+                                }} className="absolute top-4 right-4 text-[#cfc7b4]/40 hover:text-[#7a2531]"><Trash2 className="w-4 h-4" /></button>
+                              )}
                               <div className="grid grid-cols-2 gap-4">
-                                <div><Label className="text-[8px] font-mono uppercase text-[#8a723a]">Company</Label>
-                                <input value={exp.company} placeholder="eg:- Vaultly Fintech" onChange={e => {
-                                  const n = [...data.experience]; n[i].company = e.target.value; setData({...data, experience: n});
-                                }} className="ghost-input" /></div>
-                                <div><Label className="text-[8px] font-mono uppercase text-[#8a723a]">Title</Label>
-                                <input value={exp.role} placeholder="eg:- Data Analyst" onChange={e => {
-                                  const n = [...data.experience]; n[i].role = e.target.value; setData({...data, experience: n});
-                                }} className="ghost-input" /></div>
+                                <div>
+                                  <Label className="text-[8px] font-mono uppercase text-[#8a723a]">Company</Label>
+                                  <input value={exp.company} placeholder="eg:- Vaultly Fintech" onChange={e => {
+                                    const n = [...data.experience]; n[i].company = e.target.value; setData({...data, experience: n});
+                                  }} className="ghost-input" />
+                                </div>
+                                <div>
+                                  <Label className="text-[8px] font-mono uppercase text-[#8a723a]">Title</Label>
+                                  <input value={exp.role} placeholder="eg:- Data Analyst" onChange={e => {
+                                    const n = [...data.experience]; n[i].role = e.target.value; setData({...data, experience: n});
+                                  }} className="ghost-input" />
+                                </div>
                               </div>
-                              <div className="mt-4"><Label className="text-[8px] font-mono uppercase text-[#8a723a]">Dates</Label>
-                              <input value={exp.dates} placeholder="eg:- 2023–Present" onChange={e => {
-                                const n = [...data.experience]; n[i].dates = e.target.value; setData({...data, experience: n});
-                              }} className="ghost-input" /></div>
-                              <div className="mt-4"><Label className="text-[8px] font-mono uppercase text-[#8a723a]">Bullet Points</Label>
-                              <textarea value={exp.bullets} placeholder="eg:- Built dashboards that cut reporting time by 40%" onChange={e => {
-                                const n = [...data.experience]; n[i].bullets = e.target.value; setData({...data, experience: n});
-                              }} className="ghost-textarea" rows={3} /></div>
+                              <div className="mt-4">
+                                <Label className="text-[8px] font-mono uppercase text-[#8a723a]">Dates</Label>
+                                <input value={exp.dates} placeholder="eg:- 2023–Present" onChange={e => {
+                                  const n = [...data.experience]; n[i].dates = e.target.value; setData({...data, experience: n});
+                                }} className="ghost-input" />
+                              </div>
+                              <div className="mt-4">
+                                <Label className="text-[8px] font-mono uppercase text-[#8a723a]">Bullet Points (one per line)</Label>
+                                <textarea value={exp.bullets} placeholder="eg:- Built dashboards that cut reporting time by 40%" onChange={e => {
+                                  const n = [...data.experience]; n[i].bullets = e.target.value; setData({...data, experience: n});
+                                }} className="ghost-textarea" rows={3} />
+                              </div>
                             </div>
                           ))}
                           <button onClick={() => setData({...data, experience: [...data.experience, {company:"",role:"",dates:"",bullets:""}]})} className="w-full py-4 border border-dashed border-[#332c22] text-[#8a723a] text-[10px] font-mono uppercase tracking-widest hover:border-[#c9a24d]/40">+ Add Another Position</button>
@@ -604,9 +612,11 @@ export default function ResumeAtelierPage() {
                              <Label className="text-[9px] font-mono uppercase text-[#8a723a]">Education</Label>
                              {data.education.map((ed, i) => (
                                <div key={i} className="p-4 border border-[#332c22] bg-[#1c1814] relative">
-                                 <button onClick={() => {
-                                   const n = [...data.education]; n.splice(i, 1); setData({...data, education: n});
-                                 }} className="absolute top-4 right-4 text-[#cfc7b4]/40 hover:text-[#7a2531]"><Trash2 className="w-4 h-4" /></button>
+                                 {data.education.length > 1 && (
+                                   <button onClick={() => {
+                                     const n = [...data.education]; n.splice(i, 1); setData({...data, education: n});
+                                   }} className="absolute top-4 right-4 text-[#cfc7b4]/40 hover:text-[#7a2531]"><Trash2 className="w-4 h-4" /></button>
+                                 )}
                                  <Label className="text-[8px] font-mono uppercase text-[#8a723a]">Institution</Label>
                                  <input value={ed.school} placeholder="eg:- Sant Gadge Baba Amravati University" onChange={e => {
                                    const n = [...data.education]; n[i].school = e.target.value; setData({...data, education: n});
@@ -747,36 +757,62 @@ function ResumePreview({ data, theme }: { data: ResumeData, theme: string }) {
     </div>
   );
 
-  const name = data.name || "UNNAMED CANDIDATE";
-  const role = data.role || "FIELD PENDING";
+  const name = data.name || "";
+  const role = data.role || "";
 
   if (theme === 'windsor') {
     return (
       <div className="rs-windsor h-full" style={vars}>
         <div className="name">{name}</div>
         <div className="role">{role}</div>
-        <div className="contact">{data.email || "email@nexus.ai"} · {data.phone || "+91 00000 00000"} · {data.loc || "Global"}</div>
-        <div className="summary">{data.summary || "Awaiting summary calibration..."}</div>
-        
-        <div className="sec-title">Experience</div>
-        {data.experience.length > 0 && data.experience[0].role ? data.experience.map((e, i) => (
-          <div key={i} className="mb-4">
-            <div className="job-head"><span>{e.role || "Title"}, {e.company || "Company"}</span><span>{e.dates || "Dates"}</span></div>
-            <Bullets str={e.bullets || ""} />
-          </div>
-        )) : <p className="text-[10px] text-[#4a4438] italic">No positions tailored.</p>}
-
-        <div className="sec-title">Education</div>
-        {data.education.length > 0 && data.education[0].school ? data.education.map((ed, i) => (
-          <div key={i} className="job-head"><span>{ed.degree || "Degree"}, {ed.school || "Institution"}</span><span>{ed.dates || "Dates"}</span></div>
-        )) : <p className="text-[10px] text-[#4a4438] italic">No academic nodes recorded.</p>}
-
-        <div className="sec-title">Skills</div>
-        <div className="flex flex-wrap gap-2">
-          {data.skills.length > 0 ? data.skills.map((s, i) => (
-            <span key={i} className="border border-[#ddd3ba] px-2 py-0.5 text-[9.5px] font-semibold text-[#4a4438] uppercase tracking-wider">{s}</span>
-          )) : <span className="text-[10px] text-[#4a4438] italic">Awaiting skill matrix...</span>}
+        <div className="contact">
+          {[data.email, data.phone, data.loc].filter(Boolean).join(' · ')}
         </div>
+        <div className="summary">{data.summary}</div>
+        
+        {data.experience.some(e => e.role || e.company) && (
+          <div className="sec">
+            <div className="sec-title">Experience</div>
+            {data.experience.map((e, i) => (
+              <div key={i} className="mb-4">
+                <div className="job-head"><span>{[e.role, e.company].filter(Boolean).join(', ')}</span><span>{e.dates}</span></div>
+                <Bullets str={e.bullets || ""} />
+              </div>
+            ))}
+          </div>
+        )}
+
+        {data.projects.length > 0 && (
+          <div className="sec">
+            <div className="sec-title">Projects</div>
+            {data.projects.map((p, i) => (
+              <div key={i} className="mb-4">
+                <div className="job-head"><span>{p.name}</span></div>
+                <div className="bul" style={{ marginLeft: 0 }}>{p.desc}</div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {data.education.some(ed => ed.school || ed.degree) && (
+          <div className="sec">
+            <div className="sec-title">Education</div>
+            {data.education.map((ed, i) => (
+              <div key={i} className="job-head"><span>{[ed.degree, ed.school].filter(Boolean).join(', ')}</span><span>{ed.dates}</span></div>
+            ))}
+          </div>
+        )}
+
+        {data.skills.length > 0 && (
+          <div className="sec">
+            <div className="sec-title">Skills</div>
+            <div className="flex flex-wrap gap-2">
+              {data.skills.map((s, i) => (
+                <span key={i} className="pill">{s}</span>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
     );
   }
@@ -785,39 +821,67 @@ function ResumePreview({ data, theme }: { data: ResumeData, theme: string }) {
     return (
       <div className="rs-savile h-full" style={vars}>
         <div className="side flex flex-col">
-          <div className="crest2">{name.split(' ').map(w => w[0]).slice(0, 2).join('')}</div>
+          <div className="crest2">{(name || "?").split(' ').map(w => w[0]).slice(0, 2).join('')}</div>
           <div className="side-name">{name}</div>
           <div className="side-role">{role}</div>
           
-          <div className="mt-8 space-y-1">
-             <div className="text-[9px] uppercase tracking-widest text-[var(--c-accent)] font-bold mb-2">Contact</div>
-             <div className="text-[10.5px] text-[#cfc7b4]">{data.email || "email@nexus.ai"}</div>
-             <div className="text-[10.5px] text-[#cfc7b4]">{data.phone || "+91 00000 00000"}</div>
-             <div className="text-[10.5px] text-[#cfc7b4]">{data.loc || "Global"}</div>
-          </div>
+          {(data.email || data.phone || data.loc) && (
+            <div className="side-sec">
+              <div className="side-title">Contact</div>
+              {[data.email, data.phone, data.loc].filter(Boolean).map((l, idx) => (
+                <div key={idx} className="side-line">{l}</div>
+              ))}
+            </div>
+          )}
 
-          <div className="mt-8">
-             <div className="text-[9px] uppercase tracking-widest text-[var(--c-accent)] font-bold mb-2">Technical</div>
-             <div className="flex flex-wrap gap-1">
-               {data.skills.map(s => <span key={s} className="border border-white/10 px-2 py-0.5 text-[9px] text-[#cfc7b4]">{s}</span>)}
-             </div>
-          </div>
+          {data.skills.length > 0 && (
+            <div className="side-sec">
+              <div className="side-title">Skills</div>
+              <div className="flex flex-wrap gap-1">
+                {data.skills.map(s => <span key={s} className="side-pill">{s}</span>)}
+              </div>
+            </div>
+          )}
+
+          {data.education.some(ed => ed.school || ed.degree) && (
+            <div className="side-sec">
+              <div className="side-title">Education</div>
+              {data.education.map((ed, i) => (
+                <div key={i} className="side-line"><b>{ed.degree}</b><br />{ed.school}<br />{ed.dates}</div>
+              ))}
+            </div>
+          )}
         </div>
         <div className="main">
-           <div className="mb-6">
-             <div className="font-disp text-[12px] font-bold border-bottom border-[#e4dcc6] pb-1 mb-2 uppercase">Summary</div>
-             <div className="text-[11.5px] italic text-[#4a4438] leading-relaxed">{data.summary || "Awaiting summary calibration..."}</div>
-           </div>
-           <div>
-             <div className="font-disp text-[12px] font-bold border-bottom border-[#e4dcc6] pb-1 mb-3 uppercase">Experience</div>
-             {data.experience.length > 0 && data.experience[0].role ? data.experience.map((e, i) => (
-                <div key={i} className="mb-4">
-                  <div className="flex justify-between font-bold text-[12px]"><span>{e.role || "Title"}</span><span>{e.dates || "Dates"}</span></div>
-                  <div className="text-[10.5px] text-[#8a8072] italic mb-1">{e.company || "Company"}</div>
-                  <Bullets str={e.bullets || ""} />
-                </div>
-             )) : <p className="text-[10px] text-[#4a4438] italic">No experience added.</p>}
-           </div>
+           {data.summary && (
+             <div className="main-sec">
+               <div className="main-title">Summary</div>
+               <div className="summary">{data.summary}</div>
+             </div>
+           )}
+           {data.experience.some(e => e.role || e.company) && (
+             <div className="main-sec">
+               <div className="main-title">Experience</div>
+               {data.experience.map((e, i) => (
+                  <div key={i} className="mb-4">
+                    <div className="flex justify-between font-bold text-[12px]"><span>{e.role}</span><span>{e.dates}</span></div>
+                    <div className="text-[10.5px] text-[#8a8072] italic mb-1">{e.company}</div>
+                    <Bullets str={e.bullets || ""} />
+                  </div>
+               ))}
+             </div>
+           )}
+           {data.projects.length > 0 && (
+             <div className="main-sec">
+               <div className="main-title">Projects</div>
+               {data.projects.map((p, i) => (
+                 <div key={i} style={{ marginBottom: 8 }}>
+                   <div className="job-head"><span>{p.name}</span></div>
+                   <div className="bul" style={{ marginLeft: 0 }}>{p.desc}</div>
+                 </div>
+               ))}
+             </div>
+           )}
         </div>
       </div>
     );
@@ -829,33 +893,53 @@ function ResumePreview({ data, theme }: { data: ResumeData, theme: string }) {
         <div className="band">
           <div className="name">{name}</div>
           <div className="role">{role}</div>
-          <div className="contact">{data.email || "email@nexus.ai"} · {data.phone || "+91 00000 00000"} · {data.loc || "Global"}</div>
+          <div className="contact">{[data.email, data.phone, data.loc].filter(Boolean).join(' · ')}</div>
         </div>
         <div className="body">
           <div>
-            <div className="sec-title">Summary</div>
-            <div className="summary">{data.summary || "Awaiting summary calibration..."}</div>
-            <div className="sec-title">Experience</div>
-            {data.experience.length > 0 && data.experience[0].role ? data.experience.map((e, i) => (
-              <div key={i} className="mb-4">
-                <div className="job-head"><span>{e.role || "Title"}, {e.company || "Company"}</span><span>{e.dates || "Dates"}</span></div>
-                <Bullets str={e.bullets || ""} />
-              </div>
-            )) : <p className="text-[10px] text-[#4a4438] italic">No positions defined.</p>}
+            {data.summary && (
+              <>
+                <div className="sec-title">Summary</div>
+                <div className="summary">{data.summary}</div>
+              </>
+            )}
+            {data.experience.some(e => e.role || e.company) && (
+              <>
+                <div className="sec-title">Experience</div>
+                {data.experience.map((e, i) => (
+                  <div key={i} className="mb-4">
+                    <div className="job-head"><span>{[e.role, e.company].filter(Boolean).join(', ')}</span><span>{e.dates}</span></div>
+                    <Bullets str={e.bullets || ""} />
+                  </div>
+                ))}
+              </>
+            )}
           </div>
           <div>
-            <div className="aside-box">
-              <div className="sec-title">Skills</div>
-              <div className="flex flex-wrap gap-1">
-                {data.skills.map(s => <span key={s} className="side-pill">{s}</span>)}
+            {data.skills.length > 0 && (
+              <div className="aside-box">
+                <div className="sec-title">Skills</div>
+                <div className="flex flex-wrap gap-1">
+                  {data.skills.map(s => <span key={s} className="side-pill">{s}</span>)}
+                </div>
               </div>
-            </div>
-            <div className="aside-box">
-              <div className="sec-title">Education</div>
-              {data.education.map((ed, i) => (
-                <div key={i} className="side-line"><b>{ed.degree}</b><br />{ed.school}, {ed.dates}</div>
-              ))}
-            </div>
+            )}
+            {data.education.some(ed => ed.school || ed.degree) && (
+              <div className="aside-box">
+                <div className="sec-title">Education</div>
+                {data.education.map((ed, i) => (
+                  <div key={i} className="side-line"><b>{ed.degree}</b><br />{ed.school}, {ed.dates}</div>
+                ))}
+              </div>
+            )}
+            {data.projects.length > 0 && (
+              <div className="aside-box">
+                <div className="sec-title">Projects</div>
+                {data.projects.map((p, i) => (
+                  <div key={i} className="side-line"><b>{p.name}</b><br />{p.desc}</div>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -867,26 +951,36 @@ function ResumePreview({ data, theme }: { data: ResumeData, theme: string }) {
       <div className="rs-bond h-full" style={vars}>
         <div className="name">{name}</div>
         <div className="role">{role}</div>
-        <div className="contact">{data.email || "email@nexus.ai"} · {data.phone || "+91 00000 00000"}</div>
-        <div className="summary">{data.summary || "Awaiting summary calibration..."}</div>
-        <div className="sec-title uppercase">Experience</div>
-        <div className="tl">
-          {data.experience.length > 0 && data.experience[0].role ? data.experience.map((e, i) => (
-            <div key={i} className="tl-item">
-              <div className="job-head"><span>{e.role}, {e.company}</span><span>{e.dates}</span></div>
-              <Bullets str={e.bullets || ""} />
+        <div className="contact">{[data.email, data.phone].filter(Boolean).join(' · ')}</div>
+        <div className="summary">{data.summary}</div>
+        
+        {data.experience.some(e => e.role || e.company) && (
+          <>
+            <div className="sec-title uppercase">Experience</div>
+            <div className="tl">
+              {data.experience.map((e, i) => (
+                <div key={i} className="tl-item">
+                  <div className="job-head"><span>{[e.role, e.company].filter(Boolean).join(', ')}</span><span>{e.dates}</span></div>
+                  <Bullets str={e.bullets || ""} />
+                </div>
+              ))}
+              {data.education.map((ed, i) => (
+                <div key={i} className="tl-item">
+                  <div className="job-head"><span>{[ed.degree, ed.school].filter(Boolean).join(', ')}</span><span>{ed.dates}</span></div>
+                </div>
+              ))}
             </div>
-          )) : <p className="text-[10px] text-[#4a4438] italic ml-4">No experience recorded.</p>}
-          {data.education.map((ed, i) => (
-            <div key={i} className="tl-item">
-              <div className="job-head"><span>{ed.degree}, {ed.school}</span><span>{ed.dates}</span></div>
+          </>
+        )}
+
+        {data.skills.length > 0 && (
+          <>
+            <div className="sec-title uppercase">Skills</div>
+            <div className="flex flex-wrap gap-2">
+              {data.skills.map(s => <span key={s} className="pill">{s}</span>)}
             </div>
-          ))}
-        </div>
-        <div className="sec-title uppercase">Skills</div>
-        <div className="flex flex-wrap gap-2">
-          {data.skills.map(s => <span key={s} className="pill">{s}</span>)}
-        </div>
+          </>
+        )}
       </div>
     );
   }
