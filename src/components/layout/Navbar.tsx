@@ -59,10 +59,17 @@ function NavbarContent() {
   const { data: profile } = useDoc(profileRef);
 
   const userInitial = useMemo(() => {
-    if (!user) return 'U';
-    const rawName = user.displayName || user.email?.split('@')[0] || 'User';
+    if (!user && !profile) return 'U';
+    const rawName = profile?.displayName || user?.displayName || user?.email?.split('@')[0] || 'User';
     return rawName.trim().split(/\s+/)[0].charAt(0).toUpperCase() || 'U';
-  }, [user]);
+  }, [user, profile]);
+
+  const userFirstName = useMemo(() => {
+    if (!user && !profile) return 'U';
+    const rawName = profile?.displayName || user?.displayName || user?.email?.split('@')[0] || 'User';
+    const firstName = rawName.trim().split(/\s+/)[0];
+    return firstName.toUpperCase() || 'U';
+  }, [user, profile]);
 
   const notificationsQuery = useMemo(() => {
     if (!db || !user?.uid) return null;
@@ -209,7 +216,7 @@ function NavbarContent() {
                 <div className="flex items-center gap-6">
                   <Link href="/user-dashboard" className="hidden lg:flex flex-col items-end group transition-all duration-300">
                     <span className="text-white font-black tracking-[0.4em] text-xs leading-none group-hover:text-accent transition-colors">
-                      {userInitial}
+                      {userFirstName}
                     </span>
                     <span className="text-[#22D3EE] font-bold tracking-[0.3em] text-[7px] leading-tight uppercase mt-1 group-hover:drop-shadow-[0_0_8px_rgba(34,211,238,0.5)] transition-all">
                       IDENTITY
@@ -294,7 +301,7 @@ function NavbarContent() {
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end" className="w-56 glass border-white/10 bg-[#0b0e1a] text-white mt-2 p-2 rounded-2xl">
                       <DropdownMenuLabel className="px-3 py-2">
-                        <p className="text-xs font-black uppercase tracking-widest">Operator {userInitial}</p>
+                        <p className="text-xs font-black uppercase tracking-widest">Operator {userFirstName}</p>
                         <p className="text-[10px] text-white/40 font-light truncate">{user.email}</p>
                       </DropdownMenuLabel>
                       <DropdownMenuSeparator className="bg-white/5" />
@@ -367,7 +374,7 @@ function NavbarContent() {
                   <CreditCard className="w-6 h-6" /> Pricing
                 </Link>
                 <Link href="/user-dashboard" onClick={() => setIsOpen(false)} className="text-2xl font-bold tracking-tighter uppercase text-white hover:text-accent flex items-center gap-4">
-                  <ShieldCheck className="w-6 h-6" /> Verified Identity: {userInitial}
+                  <ShieldCheck className="w-6 h-6" /> Verified Identity: {userFirstName}
                 </Link>
                 <div className="h-px bg-white/5 my-4"></div>
               </>
