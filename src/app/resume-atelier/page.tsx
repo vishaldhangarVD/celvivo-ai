@@ -25,7 +25,8 @@ import {
   Zap,
   Target,
   Cpu,
-  Sparkles
+  Sparkles,
+  AlertCircle
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -58,7 +59,7 @@ interface ResumeData {
 }
 
 /* ---------- CONSTANTS ---------- */
-const STEPS = ["Cut", "Measure", "Tailor", "Fit", "Press"];
+const STEPS = ["Design", "Details", "Experience", "Skills", "Finish"];
 const ROMAN_NUMERALS = ['I', 'II', 'III', 'IV', 'V'];
 
 const THEMES = [
@@ -77,9 +78,13 @@ const INITIAL_DATA: ResumeData = {
   loc: "",
   summary: "",
   skills: [],
-  experience: [],
+  experience: [
+    { company: "", role: "", dates: "", bullets: "" }
+  ],
   projects: [],
-  education: [],
+  education: [
+    { school: "", degree: "", dates: "" }
+  ],
   theme: "windsor"
 };
 
@@ -89,6 +94,61 @@ const STOP_WORDS = new Set("the a an and or of to in on for with is are we our y
 function tokenize(str: string) {
   return (str || '').toLowerCase().match(/[a-z0-9+.#]+/g)?.filter(w => w.length > 2 && !STOP_WORDS.has(w)) || [];
 }
+
+/* ---------- MINIATURE PREVIEW COMPONENT ---------- */
+const CutThumbnail = ({ themeId, accent }: { themeId: string, accent: string }) => {
+  if (themeId === 'savile') {
+    return (
+      <div className="grid grid-cols-[35%_65%] h-full">
+        <div className="bg-[#1c1811]" />
+        <div className="p-3">
+          <div className="w-[55%] h-1 mb-2" style={{ backgroundColor: accent }} />
+          <div className="w-[80%] h-0.5 bg-[#e4dcc6] mb-1" />
+          <div className="w-[65%] h-0.5 bg-[#e4dcc6]" />
+        </div>
+      </div>
+    );
+  }
+  if (themeId === 'regent') {
+    return (
+      <div className="h-full">
+        <div className="h-[32%] bg-[#1c1811] border-b-2" style={{ borderColor: accent }} />
+        <div className="p-2.5 grid grid-cols-[60%_40%] gap-2">
+          <div>
+            <div className="w-[85%] h-0.5 bg-[#e4dcc6] mb-1" />
+            <div className="w-[65%] h-0.5 bg-[#e4dcc6]" />
+          </div>
+          <div className="border-l-2 pl-1.5" style={{ borderColor: accent }}>
+            <div className="w-[80%] h-0.5 bg-[#e4dcc6]" />
+          </div>
+        </div>
+      </div>
+    );
+  }
+  if (themeId === 'bond') {
+    return (
+      <div className="p-3">
+        <div className="w-[45%] h-1.5 bg-[#1c1811] mb-2.5" />
+        <div className="border-l-[1.5px] border-[#ddd3ba] pl-3 ml-0.5">
+          <div className="w-1.5 h-1.5 rounded-full mb-1 -ml-[16.5px]" style={{ backgroundColor: accent }} />
+          <div className="w-[75%] h-0.5 bg-[#e4dcc6] mb-2" />
+          <div className="w-1.5 h-1.5 rounded-full mb-1 -ml-[16.5px]" style={{ backgroundColor: accent }} />
+          <div className="w-[55%] h-0.5 bg-[#e4dcc6]" />
+        </div>
+      </div>
+    );
+  }
+  return (
+    <div className="p-3.5 text-center">
+      <div className="w-[48%] h-1.5 bg-[#1c1811] mx-auto mb-2" />
+      <div className="w-[65%] h-0.5 bg-[#e4dcc6] mx-auto mb-1" />
+      <div className="w-[40%] h-0.5 mx-auto mb-3" style={{ backgroundColor: accent }} />
+      <div className="w-[88%] h-[1px] bg-[#e4dcc6] mx-auto mb-2" />
+      <div className="w-[78%] h-0.5 bg-[#e4dcc6] mx-auto mb-1" />
+      <div className="w-[60%] h-0.5 bg-[#e4dcc6] mx-auto" />
+    </div>
+  );
+};
 
 export default function ResumeAtelierPage() {
   const router = useRouter();
@@ -146,7 +206,7 @@ export default function ResumeAtelierPage() {
       setView('editor');
       setCurrentStep(1);
     } catch (e) {
-      toast({ variant: "destructive", title: "Creation Failed", description: "Could not initialize new blueprint." });
+      toast({ variant: "destructive", title: "Creation Failed", description: "Could not initialize new resume." });
     }
   };
 
@@ -161,10 +221,10 @@ export default function ResumeAtelierPage() {
   const handleDelete = async (e: React.MouseEvent, id: string) => {
     e.stopPropagation();
     if (!user || !db) return;
-    if (!confirm("Are you sure you want to purge this blueprint from the atelier?")) return;
+    if (!confirm("Are you sure you want to delete this resume?")) return;
     try {
       await deleteDoc(doc(db, 'users', user.uid, 'resumes_atelier', id));
-      toast({ title: "Blueprint Purged", description: "Record removed from archives." });
+      toast({ title: "Resume Deleted", description: "Record removed from archives." });
     } catch (e) {
       toast({ variant: "destructive", title: "Action Failed" });
     }
@@ -172,17 +232,20 @@ export default function ResumeAtelierPage() {
 
   const runAts = () => {
     const resumeText = [
+      data.name,
+      data.role,
       data.summary, 
       data.skills.join(' '),
       data.experience.map(e => `${e.role} ${e.company} ${e.bullets}`).join(' '),
-      data.projects.map(p => `${p.name} ${p.desc}`).join(' ')
+      data.projects.map(p => `${p.name} ${p.desc}`).join(' '),
+      data.education.map(ed => `${ed.school} ${ed.degree}`).join(' ')
     ].join(' ');
 
-    const jdWords = Array.from(new Set(tokenize(jd)));
-    const resumeWords = new Set(tokenize(resumeText));
-    const matched = jdWords.filter(w => resumeWords.has(w));
-    const missing = jdWords.filter(w => !resumeWords.has(w)).slice(0, 8);
-    const score = jdWords.length ? Math.round((matched.length / jdWords.length) * 100) : 0;
+    const jdTokens = Array.from(new Set(tokenize(jd)));
+    const resumeTokens = new Set(tokenize(resumeText));
+    const matched = jdTokens.filter(w => resumeTokens.has(w));
+    const missing = jdTokens.filter(w => !resumeTokens.has(w)).slice(0, 8);
+    const score = jdTokens.length ? Math.round((matched.length / jdTokens.length) * 100) : 0;
 
     setAtsResult({ score, matched, missing });
   };
@@ -288,7 +351,7 @@ export default function ResumeAtelierPage() {
                 <div className="w-16 h-16 rounded-full bg-[#c9a24d]/10 flex items-center justify-center group-hover:scale-110 transition-transform">
                   <Plus className="w-8 h-8 text-[#c9a24d]" />
                 </div>
-                <p className="mt-6 font-mono text-[11px] tracking-[0.2em] uppercase text-[#8a723a]">Initialize New Order</p>
+                <p className="mt-6 font-mono text-[11px] tracking-[0.2em] uppercase text-[#8a723a]">Initialize New Resume</p>
               </Card>
 
               {savedResumes?.map((resume: any) => (
@@ -307,8 +370,8 @@ export default function ResumeAtelierPage() {
                       <FileText className="w-5 h-5" />
                     </div>
                     <div>
-                      <h3 className="font-disp text-xl text-[#f7f2e6] line-clamp-1">{resume.title || "Untitled Blueprint"}</h3>
-                      <p className="text-[#8a723a] font-mono text-[10px] tracking-widest uppercase mt-1">{resume.role}</p>
+                      <h3 className="font-disp text-xl text-[#f7f2e6] line-clamp-1">{resume.title || "Untitled Resume"}</h3>
+                      <p className="text-[#8a723a] font-mono text-[10px] tracking-widest uppercase mt-1">{resume.role || "No Role Defined"}</p>
                     </div>
                   </div>
                   <div className="flex items-center justify-between border-t border-[#332c22] pt-6">
@@ -329,7 +392,7 @@ export default function ResumeAtelierPage() {
                 <ArrowLeft className="w-4 h-4" /> Back to Archive
               </Button>
               <div className="flex items-center gap-4">
-                {isSaving && <span className="text-[9px] font-mono uppercase text-[#8a723a] animate-pulse">Syncing nodes...</span>}
+                {isSaving && <span className="text-[9px] font-mono uppercase text-[#8a723a] animate-pulse">Syncing...</span>}
                 <Input 
                   value={data.title}
                   onChange={e => setData({...data, title: e.target.value})}
@@ -375,9 +438,9 @@ export default function ResumeAtelierPage() {
                     {currentStep === 1 && (
                       <motion.div key="step1" initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 10 }} className="space-y-8">
                         <div className="space-y-1">
-                          <p className="font-mono text-[9px] tracking-[0.3em] text-[#c9a24d] uppercase">Chapter I</p>
-                          <h3 className="font-disp text-3xl font-medium">The Cut</h3>
-                          <p className="text-[#cfc7b4] text-sm font-light italic">Select your silhouette. Genuinely different house styles.</p>
+                          <p className="font-mono text-[9px] tracking-[0.3em] text-[#c9a24d] uppercase">Step 1 of 5</p>
+                          <h3 className="font-disp text-3xl font-medium">Choose Your Design</h3>
+                          <p className="text-[#cfc7b4] text-sm font-light italic">Pick a resume layout before you add your details. Four house styles — each a genuinely different structure, not just a different colour.</p>
                         </div>
 
                         <div className="grid grid-cols-2 gap-4">
@@ -390,8 +453,8 @@ export default function ResumeAtelierPage() {
                                 data.theme === t.id ? "border-[#c9a24d] ring-1 ring-[#c9a24d]" : "border-[#332c22] hover:border-[#8a723a]"
                               )}
                             >
-                              <div className="h-20 bg-white/5 mb-4 relative overflow-hidden flex items-center justify-center opacity-40 group-hover:opacity-100 transition-opacity">
-                                <span className="font-disp text-[8px] text-[#c9a24d] font-bold uppercase tracking-widest">Cut Thumb</span>
+                              <div className="h-[100px] bg-white mb-4 relative overflow-hidden">
+                                <CutThumbnail themeId={t.id} accent={t.accent} />
                               </div>
                               <h4 className="font-disp text-sm text-[#f7f2e6]">{t.name}</h4>
                               <p className="text-[9px] font-mono text-[#8a723a] uppercase mt-1">{t.tag}</p>
@@ -399,16 +462,16 @@ export default function ResumeAtelierPage() {
                           ))}
                         </div>
 
-                        <Button onClick={() => setCurrentStep(2)} className="w-full h-14 bg-[#c9a24d] text-[#0c0b09] hover:bg-[#f7f2e6] transition-colors rounded-none font-mono text-[11px] uppercase tracking-[0.2em]">Proceed to Measure →</Button>
+                        <Button onClick={() => setCurrentStep(2)} className="w-full h-14 bg-[#c9a24d] text-[#0c0b09] hover:bg-[#f7f2e6] transition-colors rounded-none font-mono text-[11px] uppercase tracking-[0.2em]">Continue to Your Details →</Button>
                       </motion.div>
                     )}
 
                     {currentStep === 2 && (
                       <motion.div key="step2" initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 10 }} className="space-y-8">
                         <div className="space-y-1">
-                          <p className="font-mono text-[9px] tracking-[0.3em] text-[#c9a24d] uppercase">Chapter II</p>
-                          <h3 className="font-disp text-3xl font-medium">The Measure</h3>
-                          <p className="text-[#cfc7b4] text-sm font-light italic">Take your particulars precisely. This is the foundation.</p>
+                          <p className="font-mono text-[9px] tracking-[0.3em] text-[#c9a24d] uppercase">Step 2 of 5</p>
+                          <h3 className="font-disp text-3xl font-medium">Your Details</h3>
+                          <p className="text-[#cfc7b4] text-sm font-light italic">Let's start with the basics — your name, contact info, and a short summary.</p>
                         </div>
                         <div className="grid grid-cols-2 gap-6">
                           <div className="space-y-2">
@@ -430,17 +493,17 @@ export default function ResumeAtelierPage() {
                             <Input value={data.phone} onChange={e => setData({...data, phone: e.target.value})} placeholder="eg:- +91 90000 00000" className="atelier-input" />
                           </div>
                           <div className="space-y-2">
-                            <Label className="text-[9px] font-mono uppercase text-[#8a723a]">Location</Label>
+                            <Label className="text-[9px] font-mono uppercase text-[#8a723a]">City</Label>
                             <Input value={data.loc} onChange={e => setData({...data, loc: e.target.value})} placeholder="eg:- Pune, IN" className="atelier-input" />
                           </div>
                         </div>
                         <div className="space-y-2">
                           <Label className="text-[9px] font-mono uppercase text-[#8a723a]">Professional Summary</Label>
-                          <Textarea value={data.summary} onChange={e => setData({...data, summary: e.target.value})} placeholder="eg:- Strategic data analyst with 3+ years experience shipping analytics tools..." className="atelier-textarea" rows={4} />
+                          <Textarea value={data.summary} onChange={e => setData({...data, summary: e.target.value})} placeholder="eg:- Data analyst with 3+ years turning raw data into dashboards leadership actually uses." className="atelier-textarea" rows={4} />
                         </div>
                         <div className="flex gap-4">
                           <Button onClick={() => setCurrentStep(1)} variant="outline" className="flex-1 h-14 border-[#332c22] text-[#cfc7b4] rounded-none font-mono text-[11px] uppercase tracking-widest">← Back</Button>
-                          <Button onClick={() => setCurrentStep(3)} className="flex-[2] h-14 bg-[#c9a24d] text-[#0c0b09] hover:bg-[#f7f2e6] rounded-none font-mono text-[11px] uppercase tracking-widest">Proceed to Tailoring →</Button>
+                          <Button onClick={() => setCurrentStep(3)} className="flex-[2] h-14 bg-[#c9a24d] text-[#0c0b09] hover:bg-[#f7f2e6] rounded-none font-mono text-[11px] uppercase tracking-widest">Continue to Experience →</Button>
                         </div>
                       </motion.div>
                     )}
@@ -448,9 +511,9 @@ export default function ResumeAtelierPage() {
                     {currentStep === 3 && (
                       <motion.div key="step3" initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 10 }} className="space-y-8">
                         <div className="space-y-1">
-                          <p className="font-mono text-[9px] tracking-[0.3em] text-[#c9a24d] uppercase">Chapter III</p>
-                          <h3 className="font-disp text-3xl font-medium">The Tailoring</h3>
-                          <p className="text-[#cfc7b4] text-sm font-light italic">Cut your experience into nodes the machine can parse.</p>
+                          <p className="font-mono text-[9px] tracking-[0.3em] text-[#c9a24d] uppercase">Step 3 of 5</p>
+                          <h3 className="font-disp text-3xl font-medium">Your Experience</h3>
+                          <p className="text-[#cfc7b4] text-sm font-light italic">Add your work experience and projects in a format ATS systems can scan cleanly.</p>
                         </div>
                         
                         <div className="space-y-6">
@@ -461,29 +524,48 @@ export default function ResumeAtelierPage() {
                               }} className="absolute top-4 right-4 text-[#cfc7b4]/40 hover:text-[#7a2531]"><Trash2 className="w-4 h-4" /></button>
                               <div className="grid grid-cols-2 gap-4">
                                 <div><Label className="text-[8px] font-mono uppercase text-[#8a723a]">Company</Label>
-                                <input value={exp.company} placeholder="eg:- Reliance Industries" onChange={e => {
+                                <input value={exp.company} placeholder="eg:- Vaultly Fintech" onChange={e => {
                                   const n = [...data.experience]; n[i].company = e.target.value; setData({...data, experience: n});
                                 }} className="ghost-input" /></div>
                                 <div><Label className="text-[8px] font-mono uppercase text-[#8a723a]">Title</Label>
-                                <input value={exp.role} placeholder="eg:- Systems Engineer" onChange={e => {
+                                <input value={exp.role} placeholder="eg:- Data Analyst" onChange={e => {
                                   const n = [...data.experience]; n[i].role = e.target.value; setData({...data, experience: n});
                                 }} className="ghost-input" /></div>
                               </div>
                               <div className="mt-4"><Label className="text-[8px] font-mono uppercase text-[#8a723a]">Dates</Label>
-                              <input value={exp.dates} placeholder="eg:- 2021–Present" onChange={e => {
+                              <input value={exp.dates} placeholder="eg:- 2023–Present" onChange={e => {
                                 const n = [...data.experience]; n[i].dates = e.target.value; setData({...data, experience: n});
                               }} className="ghost-input" /></div>
-                              <div className="mt-4"><Label className="text-[8px] font-mono uppercase text-[#8a723a]">Bullets</Label>
-                              <textarea value={exp.bullets} placeholder="eg:- Optimized pipeline efficiency by 30%..." onChange={e => {
+                              <div className="mt-4"><Label className="text-[8px] font-mono uppercase text-[#8a723a]">Bullet Points</Label>
+                              <textarea value={exp.bullets} placeholder="eg:- Built dashboards that cut reporting time by 40%" onChange={e => {
                                 const n = [...data.experience]; n[i].bullets = e.target.value; setData({...data, experience: n});
                               }} className="ghost-textarea" rows={3} /></div>
                             </div>
                           ))}
-                          <button onClick={() => setData({...data, experience: [...data.experience, {company:"",role:"",dates:"",bullets:""}]})} className="w-full py-4 border border-dashed border-[#332c22] text-[#8a723a] text-[10px] font-mono uppercase tracking-widest hover:border-[#c9a24d]/40">+ Add Position</button>
+                          <button onClick={() => setData({...data, experience: [...data.experience, {company:"",role:"",dates:"",bullets:""}]})} className="w-full py-4 border border-dashed border-[#332c22] text-[#8a723a] text-[10px] font-mono uppercase tracking-widest hover:border-[#c9a24d]/40">+ Add Another Position</button>
+                        </div>
+                        <div id="proj-list" className="space-y-6">
+                           <Label className="text-[9px] font-mono uppercase text-[#8a723a]">Projects (Optional)</Label>
+                           {data.projects.map((p, i) => (
+                             <div key={i} className="p-6 border border-[#332c22] bg-[#1c1814] relative group">
+                               <button onClick={() => {
+                                 const n = [...data.projects]; n.splice(i, 1); setData({...data, projects: n});
+                               }} className="absolute top-4 right-4 text-[#cfc7b4]/40 hover:text-[#7a2531]"><Trash2 className="w-4 h-4" /></button>
+                               <Label className="text-[8px] font-mono uppercase text-[#8a723a]">Project Name</Label>
+                               <input value={p.name} placeholder="eg:- Sales Dashboard Revamp" onChange={e => {
+                                 const n = [...data.projects]; n[i].name = e.target.value; setData({...data, projects: n});
+                               }} className="ghost-input" />
+                               <div className="mt-4"><Label className="text-[8px] font-mono uppercase text-[#8a723a]">Description</Label>
+                               <textarea value={p.desc} placeholder="eg:- Rebuilt the sales dashboard, cutting report time by 40%" onChange={e => {
+                                 const n = [...data.projects]; n[i].desc = e.target.value; setData({...data, projects: n});
+                               }} className="ghost-textarea" rows={2} /></div>
+                             </div>
+                           ))}
+                           <button onClick={() => setData({...data, projects: [...data.projects, {name:"",desc:""}]})} className="w-full py-4 border border-dashed border-[#332c22] text-[#8a723a] text-[10px] font-mono uppercase tracking-widest hover:border-[#c9a24d]/40">+ Add a Project</button>
                         </div>
                         <div className="flex gap-4">
                           <Button onClick={() => setCurrentStep(2)} variant="outline" className="flex-1 h-14 border-[#332c22] text-[#cfc7b4] rounded-none font-mono text-[11px] uppercase tracking-widest">← Back</Button>
-                          <Button onClick={() => setCurrentStep(4)} className="flex-[2] h-14 bg-[#c9a24d] text-[#0c0b09] hover:bg-[#f7f2e6] rounded-none font-mono text-[11px] uppercase tracking-widest">Proceed to Fitting →</Button>
+                          <Button onClick={() => setCurrentStep(4)} className="flex-[2] h-14 bg-[#c9a24d] text-[#0c0b09] hover:bg-[#f7f2e6] rounded-none font-mono text-[11px] uppercase tracking-widest">Continue to Skills →</Button>
                         </div>
                       </motion.div>
                     )}
@@ -491,9 +573,9 @@ export default function ResumeAtelierPage() {
                     {currentStep === 4 && (
                       <motion.div key="step4" initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 10 }} className="space-y-8">
                         <div className="space-y-1">
-                          <p className="font-mono text-[9px] tracking-[0.3em] text-[#c9a24d] uppercase">Chapter IV</p>
-                          <h3 className="font-disp text-3xl font-medium">The Fitting</h3>
-                          <p className="text-[#cfc7b4] text-sm font-light italic">Skills are the thread. They must be visible to the machine.</p>
+                          <p className="font-mono text-[9px] tracking-[0.3em] text-[#c9a24d] uppercase">Step 4 of 5</p>
+                          <h3 className="font-disp text-3xl font-medium">Skills & Education</h3>
+                          <p className="text-[#cfc7b4] text-sm font-light italic">Skills are the first thing an ATS system searches for — add yours, then your education.</p>
                         </div>
 
                         <div className="space-y-6">
@@ -509,7 +591,7 @@ export default function ResumeAtelierPage() {
                                ))}
                              </div>
                              <div className="flex gap-2 pt-2">
-                               <Input id="skill-add" placeholder="eg:- Python, Figma..." className="atelier-input" onKeyDown={e => {
+                               <Input id="skill-add" placeholder="eg:- Excel, SQL, Power BI" className="atelier-input" onKeyDown={e => {
                                  if (e.key === 'Enter') {
                                    const val = (e.target as HTMLInputElement).value;
                                    if (val.trim()) { setData({...data, skills: [...data.skills, val.trim()]}); (e.target as HTMLInputElement).value = ""; }
@@ -521,27 +603,33 @@ export default function ResumeAtelierPage() {
                            <div className="space-y-4">
                              <Label className="text-[9px] font-mono uppercase text-[#8a723a]">Education</Label>
                              {data.education.map((ed, i) => (
-                               <div key={i} className="p-4 border border-[#332c22] bg-[#1c1814]">
+                               <div key={i} className="p-4 border border-[#332c22] bg-[#1c1814] relative">
+                                 <button onClick={() => {
+                                   const n = [...data.education]; n.splice(i, 1); setData({...data, education: n});
+                                 }} className="absolute top-4 right-4 text-[#cfc7b4]/40 hover:text-[#7a2531]"><Trash2 className="w-4 h-4" /></button>
+                                 <Label className="text-[8px] font-mono uppercase text-[#8a723a]">Institution</Label>
                                  <input value={ed.school} placeholder="eg:- Sant Gadge Baba Amravati University" onChange={e => {
                                    const n = [...data.education]; n[i].school = e.target.value; setData({...data, education: n});
                                  }} className="ghost-input font-bold" />
                                  <div className="grid grid-cols-2 gap-4 mt-2">
-                                   <input value={ed.degree} placeholder="eg:- B.Tech in CS" onChange={e => {
+                                   <div><Label className="text-[8px] font-mono uppercase text-[#8a723a]">Degree</Label>
+                                   <input value={ed.degree} placeholder="eg:- B.Tech — Computer Science" onChange={e => {
                                      const n = [...data.education]; n[i].degree = e.target.value; setData({...data, education: n});
-                                   }} className="ghost-input text-xs" />
-                                   <input value={ed.dates} placeholder="eg:- 2017–2021" onChange={e => {
+                                   }} className="ghost-input text-xs" /></div>
+                                   <div><Label className="text-[8px] font-mono uppercase text-[#8a723a]">Dates</Label>
+                                   <input value={ed.dates} placeholder="eg:- 2019–2023" onChange={e => {
                                      const n = [...data.education]; n[i].dates = e.target.value; setData({...data, education: n});
-                                   }} className="ghost-input text-xs text-right" />
+                                   }} className="ghost-input text-xs text-right" /></div>
                                  </div>
                                </div>
                              ))}
-                             <button onClick={() => setData({...data, education: [...data.education, {school:"",degree:"",dates:""}]})} className="w-full py-3 border border-dashed border-[#332c22] text-[9px] font-mono text-[#8a723a] uppercase">+ Add School</button>
+                             <button onClick={() => setData({...data, education: [...data.education, {school:"",degree:"",dates:""}]})} className="w-full py-3 border border-dashed border-[#332c22] text-[9px] font-mono text-[#8a723a] uppercase">+ Add Education</button>
                            </div>
                         </div>
 
                         <div className="flex gap-4">
                           <Button onClick={() => setCurrentStep(3)} variant="outline" className="flex-1 h-14 border-[#332c22] rounded-none font-mono text-[11px] uppercase">← Back</Button>
-                          <Button onClick={() => setCurrentStep(5)} className="flex-[2] h-14 bg-[#c9a24d] text-[#0c0b09] rounded-none font-mono text-[11px] uppercase">Proceed to Press →</Button>
+                          <Button onClick={() => setCurrentStep(5)} className="flex-[2] h-14 bg-[#c9a24d] text-[#0c0b09] rounded-none font-mono text-[11px] uppercase">Continue to ATS Check →</Button>
                         </div>
                       </motion.div>
                     )}
@@ -549,9 +637,9 @@ export default function ResumeAtelierPage() {
                     {currentStep === 5 && (
                       <motion.div key="step5" initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 10 }} className="space-y-8">
                         <div className="space-y-1">
-                          <p className="font-mono text-[9px] tracking-[0.3em] text-[#c9a24d] uppercase">Chapter V</p>
-                          <h3 className="font-disp text-3xl font-medium">The Fit Check</h3>
-                          <p className="text-[#cfc7b4] text-sm font-light italic">Hold the garment against the machine's light.</p>
+                          <p className="font-mono text-[9px] tracking-[0.3em] text-[#c9a24d] uppercase">Step 5 of 5</p>
+                          <h3 className="font-disp text-3xl font-medium">ATS Check & Download</h3>
+                          <p className="text-[#cfc7b4] text-sm font-light italic">Paste a job description below to see how well your resume matches it.</p>
                         </div>
 
                         <div className="space-y-4">
@@ -559,37 +647,54 @@ export default function ResumeAtelierPage() {
                            <Textarea 
                              value={jd} 
                              onChange={e => setJd(e.target.value)} 
-                             placeholder="Paste posting here..." 
+                             placeholder="eg:- paste the job posting text here..." 
                              className="atelier-textarea" 
                              rows={6} 
                            />
-                           <Button onClick={runAts} className="w-full h-12 bg-transparent border border-[#c9a24d] text-[#c9a24d] hover:bg-[#c9a24d] hover:text-[#0c0b09] font-mono text-[10px] uppercase tracking-widest">Analyze Fit →</Button>
+                           <Button onClick={runAts} className="w-full h-12 bg-transparent border border-[#c9a24d] text-[#c9a24d] hover:bg-[#c9a24d] hover:text-[#0c0b09] font-mono text-[10px] uppercase tracking-widest">Run ATS Check →</Button>
                         </div>
 
                         {atsResult && (
                           <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="p-8 border border-[#332c22] bg-[#1c1814] space-y-8">
                             <div className="flex items-center gap-6">
-                              <div className="w-20 h-20 rounded-full flex items-center justify-center relative border-4 border-[#332c22]" style={{ borderColor: atsResult.score > 70 ? "#34d399" : "#c9a24d" }}>
+                              <div className="w-20 h-20 rounded-full flex items-center justify-center relative border-4 border-[#332c22]" style={{ borderColor: atsResult.score > 75 ? "#34d399" : atsResult.score > 45 ? "#c9a24d" : "#7a2531" }}>
                                 <span className="font-disp text-xl">{atsResult.score}%</span>
                               </div>
                               <div>
-                                <h4 className="font-disp text-lg">System Match</h4>
+                                <h4 className="font-disp text-lg">Match With This Job</h4>
                                 <p className="text-[10px] font-mono text-[#8a723a] uppercase tracking-widest">
-                                  {atsResult.score > 75 ? "Excellent Fit" : atsResult.score > 40 ? "Fair Match" : "Needs Tailoring"}
+                                  {atsResult.score >= 75 ? "Strong Match" : atsResult.score >= 45 ? "Moderate Match" : "Needs More Keywords"}
                                 </p>
                               </div>
                             </div>
+
+                            <div className="space-y-3">
+                               {[
+                                 { label: 'Standard section headers ATS can read', pass: true },
+                                 { label: 'Contact info present', pass: !!data.email && !!data.phone },
+                                 { label: 'Quantifiable results in bullet points', pass: /\d/.test(data.experience.map(e => e.bullets).join(' ')) },
+                                 { label: 'No tables or images blocking text extraction', pass: true }
+                               ].map((c, idx) => (
+                                 <div key={idx} className="flex items-center gap-3 text-[11px] text-[#cfc7b4]">
+                                    <div className={cn("w-4 h-4 rounded-full border flex items-center justify-center text-[9px]", c.pass ? "border-[#c9a24d] text-[#c9a24d]" : "border-[#7a2531] text-[#e6a1ab]")}>
+                                      {c.pass ? "✓" : "!"}
+                                    </div>
+                                    {c.label}
+                                 </div>
+                               ))}
+                            </div>
+
                             <div className="space-y-4">
                                <div>
-                                 <p className="text-[9px] font-mono uppercase text-[#8a723a] mb-2">Matched Threads</p>
+                                 <p className="text-[9px] font-mono uppercase text-[#8a723a] mb-2">Keywords That Match</p>
                                  <div className="flex flex-wrap gap-2">
-                                   {atsResult.matched.map((w: string) => <span key={w} className="px-3 py-1 bg-green-500/10 text-green-400 text-[10px] border border-green-500/20">{w}</span>)}
+                                   {atsResult.matched.length > 0 ? atsResult.matched.map((w: string) => <span key={w} className="px-3 py-1 bg-green-500/10 text-green-400 text-[10px] border border-green-500/20">{w}</span>) : <span className="text-[10px] text-[#cfc7b4]/40 italic">No keywords matched yet</span>}
                                  </div>
                                </div>
                                <div>
-                                 <p className="text-[9px] font-mono uppercase text-[#8a723a] mb-2">Missing Threads</p>
+                                 <p className="text-[9px] font-mono uppercase text-[#8a723a] mb-2">Keywords Missing</p>
                                  <div className="flex flex-wrap gap-2">
-                                   {atsResult.missing.map((w: string) => <span key={w} className="px-3 py-1 bg-[#7a2531]/20 text-red-300 text-[10px] border border-[#7a2531]/40">{w}</span>)}
+                                   {atsResult.missing.length > 0 ? atsResult.missing.map((w: string) => <span key={w} className="px-3 py-1 bg-[#7a2531]/20 text-red-300 text-[10px] border border-[#7a2531]/40">{w}</span>) : <span className="text-[10px] text-[#cfc7b4]/40 italic">All important keywords covered</span>}
                                  </div>
                                </div>
                             </div>
@@ -598,7 +703,7 @@ export default function ResumeAtelierPage() {
 
                         <div className="flex gap-4 pt-4">
                           <Button onClick={() => setCurrentStep(4)} variant="outline" className="flex-1 h-14 border-[#332c22] rounded-none font-mono text-[11px] uppercase">← Back</Button>
-                          <Button onClick={() => window.print()} className="flex-[2] h-14 bg-[#7a2531] text-white hover:bg-red-800 rounded-none font-mono text-[11px] uppercase tracking-widest shadow-xl">Press & Deliver (PDF) →</Button>
+                          <Button onClick={() => window.print()} className="flex-[2] h-14 bg-[#7a2531] text-white hover:bg-red-800 rounded-none font-mono text-[11px] uppercase tracking-widest shadow-xl">Download PDF →</Button>
                         </div>
                       </motion.div>
                     )}
@@ -642,7 +747,7 @@ function ResumePreview({ data, theme }: { data: ResumeData, theme: string }) {
     </div>
   );
 
-  const name = data.name || "UNNAMED OPERATOR";
+  const name = data.name || "UNNAMED CANDIDATE";
   const role = data.role || "FIELD PENDING";
 
   if (theme === 'windsor') {
@@ -654,7 +759,7 @@ function ResumePreview({ data, theme }: { data: ResumeData, theme: string }) {
         <div className="summary">{data.summary || "Awaiting summary calibration..."}</div>
         
         <div className="sec-title">Experience</div>
-        {data.experience.length > 0 ? data.experience.map((e, i) => (
+        {data.experience.length > 0 && data.experience[0].role ? data.experience.map((e, i) => (
           <div key={i} className="mb-4">
             <div className="job-head"><span>{e.role || "Title"}, {e.company || "Company"}</span><span>{e.dates || "Dates"}</span></div>
             <Bullets str={e.bullets || ""} />
@@ -662,7 +767,7 @@ function ResumePreview({ data, theme }: { data: ResumeData, theme: string }) {
         )) : <p className="text-[10px] text-[#4a4438] italic">No positions tailored.</p>}
 
         <div className="sec-title">Education</div>
-        {data.education.length > 0 ? data.education.map((ed, i) => (
+        {data.education.length > 0 && data.education[0].school ? data.education.map((ed, i) => (
           <div key={i} className="job-head"><span>{ed.degree || "Degree"}, {ed.school || "Institution"}</span><span>{ed.dates || "Dates"}</span></div>
         )) : <p className="text-[10px] text-[#4a4438] italic">No academic nodes recorded.</p>}
 
@@ -681,8 +786,8 @@ function ResumePreview({ data, theme }: { data: ResumeData, theme: string }) {
       <div className="rs-savile h-full" style={vars}>
         <div className="side flex flex-col">
           <div className="crest2">{name.split(' ').map(w => w[0]).slice(0, 2).join('')}</div>
-          <div className="font-disp text-lg font-bold">{name}</div>
-          <div className="text-[10px] text-[var(--c-accent)] uppercase tracking-wider mt-1">{role}</div>
+          <div className="side-name">{name}</div>
+          <div className="side-role">{role}</div>
           
           <div className="mt-8 space-y-1">
              <div className="text-[9px] uppercase tracking-widest text-[var(--c-accent)] font-bold mb-2">Contact</div>
@@ -705,33 +810,86 @@ function ResumePreview({ data, theme }: { data: ResumeData, theme: string }) {
            </div>
            <div>
              <div className="font-disp text-[12px] font-bold border-bottom border-[#e4dcc6] pb-1 mb-3 uppercase">Experience</div>
-             {data.experience.map((e, i) => (
+             {data.experience.length > 0 && data.experience[0].role ? data.experience.map((e, i) => (
                 <div key={i} className="mb-4">
                   <div className="flex justify-between font-bold text-[12px]"><span>{e.role || "Title"}</span><span>{e.dates || "Dates"}</span></div>
                   <div className="text-[10.5px] text-[#8a8072] italic mb-1">{e.company || "Company"}</div>
                   <Bullets str={e.bullets || ""} />
                 </div>
-             ))}
+             )) : <p className="text-[10px] text-[#4a4438] italic">No experience added.</p>}
            </div>
         </div>
       </div>
     );
   }
 
-  // Simplified Default for other themes
-  return (
-    <div className="rs-windsor h-full" style={vars}>
-      <div className="name">{name}</div>
-      <div className="role">{role}</div>
-      <div className="contact">{data.email || "email@nexus.ai"} · {data.phone || "+91 00000 00000"}</div>
-      <div className="summary">{data.summary || "Awaiting summary calibration..."}</div>
-      <div className="sec-title uppercase">Experience</div>
-      {data.experience.map((e, i) => (
-        <div key={i} className="mb-4">
-          <div className="job-head"><span>{e.role || "Title"}, {e.company || "Company"}</span><span>{e.dates || "Dates"}</span></div>
-          <Bullets str={e.bullets || ""} />
+  if (theme === 'regent') {
+    return (
+      <div className="rs-regent h-full" style={vars}>
+        <div className="band">
+          <div className="name">{name}</div>
+          <div className="role">{role}</div>
+          <div className="contact">{data.email || "email@nexus.ai"} · {data.phone || "+91 00000 00000"} · {data.loc || "Global"}</div>
         </div>
-      ))}
-    </div>
-  );
+        <div className="body">
+          <div>
+            <div className="sec-title">Summary</div>
+            <div className="summary">{data.summary || "Awaiting summary calibration..."}</div>
+            <div className="sec-title">Experience</div>
+            {data.experience.length > 0 && data.experience[0].role ? data.experience.map((e, i) => (
+              <div key={i} className="mb-4">
+                <div className="job-head"><span>{e.role || "Title"}, {e.company || "Company"}</span><span>{e.dates || "Dates"}</span></div>
+                <Bullets str={e.bullets || ""} />
+              </div>
+            )) : <p className="text-[10px] text-[#4a4438] italic">No positions defined.</p>}
+          </div>
+          <div>
+            <div className="aside-box">
+              <div className="sec-title">Skills</div>
+              <div className="flex flex-wrap gap-1">
+                {data.skills.map(s => <span key={s} className="side-pill">{s}</span>)}
+              </div>
+            </div>
+            <div className="aside-box">
+              <div className="sec-title">Education</div>
+              {data.education.map((ed, i) => (
+                <div key={i} className="side-line"><b>{ed.degree}</b><br />{ed.school}, {ed.dates}</div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (theme === 'bond') {
+    return (
+      <div className="rs-bond h-full" style={vars}>
+        <div className="name">{name}</div>
+        <div className="role">{role}</div>
+        <div className="contact">{data.email || "email@nexus.ai"} · {data.phone || "+91 00000 00000"}</div>
+        <div className="summary">{data.summary || "Awaiting summary calibration..."}</div>
+        <div className="sec-title uppercase">Experience</div>
+        <div className="tl">
+          {data.experience.length > 0 && data.experience[0].role ? data.experience.map((e, i) => (
+            <div key={i} className="tl-item">
+              <div className="job-head"><span>{e.role}, {e.company}</span><span>{e.dates}</span></div>
+              <Bullets str={e.bullets || ""} />
+            </div>
+          )) : <p className="text-[10px] text-[#4a4438] italic ml-4">No experience recorded.</p>}
+          {data.education.map((ed, i) => (
+            <div key={i} className="tl-item">
+              <div className="job-head"><span>{ed.degree}, {ed.school}</span><span>{ed.dates}</span></div>
+            </div>
+          ))}
+        </div>
+        <div className="sec-title uppercase">Skills</div>
+        <div className="flex flex-wrap gap-2">
+          {data.skills.map(s => <span key={s} className="pill">{s}</span>)}
+        </div>
+      </div>
+    );
+  }
+
+  return null;
 }
