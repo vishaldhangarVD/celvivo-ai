@@ -106,7 +106,7 @@ export default function FeedbackDialog() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (isSubmitting) return; // Prevent duplicate submissions
+    if (isSubmitting) return;
 
     if (!user || !db || !formData.consent) {
       toast({
@@ -121,7 +121,8 @@ export default function FeedbackDialog() {
     try {
       let finalPhotoURL = null;
 
-      // Wrap optional image upload in its own try/catch to prevent CORS errors from blocking the whole form
+      // 1. Attempt optional image upload.
+      // Failure here does NOT block the rest of the submission.
       if (imageFile && storage) {
         try {
           const fileName = `${Date.now()}_${imageFile.name}`;
@@ -129,11 +130,11 @@ export default function FeedbackDialog() {
           const uploadResult = await uploadBytes(storageRef, imageFile);
           finalPhotoURL = await getDownloadURL(uploadResult.ref);
         } catch (uploadError: any) {
-          console.warn("[Feedback] Profile image upload failed (CORS/Network), continuing without photo:", uploadError);
-          // Feedback continues without the image URL
+          console.warn("[Feedback] Profile image upload failed (Storage CORS/Network), continuing without photo:", uploadError);
         }
       }
 
+      // 2. Save feedback data to Firestore.
       await addDoc(collection(db, 'userFeedback'), {
         userId: user.uid,
         name: formData.name,
@@ -147,11 +148,13 @@ export default function FeedbackDialog() {
         createdAt: serverTimestamp()
       });
 
+      // 3. Handle success UI.
       setIsSuccess(true);
       setTimeout(() => {
         setIsOpen(false);
         resetForm();
       }, 3000);
+
     } catch (error: any) {
       console.error("Submission Error:", error);
       toast({
@@ -159,6 +162,7 @@ export default function FeedbackDialog() {
         title: "Protocol Error",
         description: error.message || "Failed to transmit feedback node. Please try again."
       });
+    } finally {
       setIsSubmitting(false);
     }
   };
