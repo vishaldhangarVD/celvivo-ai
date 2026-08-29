@@ -3,7 +3,7 @@
  * @fileOverview Nexvoro AI Coding Challenge Architect v3.0.
  * Dynamically synthesizes batches of high-fidelity algorithmic challenges using Google Gemini.
  * Implements persistent history awareness and semantic duplicate prevention.
- * Now generates FULL RUNNABLE BOILERPLATES for 13 languages.
+ * Now generates FULL RUNNABLE BOILERPLATES for 13 languages with strict indentation standards.
  */
 
 import { ai, runWithResilience } from '@/ai/genkit';
@@ -20,19 +20,19 @@ const CodingProblemSchema = z.object({
   sampleOutput: z.string(),
   explanation: z.string(),
   starterCode: z.object({
-    java: z.string().describe("Full Main.java boilerplate with imports and Scanner. Must be multi-line and properly indented."),
-    python: z.string().describe("Full Python script with sys.stdin.read(). Must be multi-line with proper indentation. DO NOT use semicolons for line breaks."),
-    javascript: z.string().describe("Node.js script with fs.readFileSync(0). Must be multi-line and properly indented."),
-    typescript: z.string().describe("TypeScript script with imports and fs. Must be multi-line and properly indented."),
-    cpp: z.string().describe("C++ boilerplate with #include <iostream> and main. Must be multi-line and properly indented."),
-    c: z.string().describe("C boilerplate with #include <stdio.h> and main. Must be multi-line and properly indented."),
-    csharp: z.string().describe("C# boilerplate with using System and static void Main. Must be multi-line and properly indented."),
-    go: z.string().describe("Go boilerplate with package main and fmt. Must be multi-line and properly indented."),
-    rust: z.string().describe("Rust boilerplate with use std::io and fn main. Must be multi-line and properly indented."),
-    kotlin: z.string().describe("Kotlin boilerplate with java.util.Scanner. Must be multi-line and properly indented."),
-    php: z.string().describe("PHP boilerplate with file_get_contents('php://stdin'). Must be multi-line and properly indented."),
-    swift: z.string().describe("Swift boilerplate with import Foundation and readLine(). Must be multi-line and properly indented."),
-    ruby: z.string().describe("Ruby boilerplate with STDIN.read. Must be multi-line and properly indented."),
+    java: z.string().describe("Full Main.java boilerplate with imports and Scanner. 4-space indentation."),
+    python: z.string().describe("Full Python script with sys.stdin.read(). 4-space indentation."),
+    javascript: z.string().describe("Node.js script with fs.readFileSync(0). 2-space indentation."),
+    typescript: z.string().describe("TypeScript script with imports and fs. 2-space indentation."),
+    cpp: z.string().describe("C++ boilerplate with #include <iostream> and main. 4-space indentation."),
+    c: z.string().describe("C boilerplate with #include <stdio.h> and main. 4-space indentation."),
+    csharp: z.string().describe("C# boilerplate with using System and static void Main. 4-space indentation."),
+    go: z.string().describe("Go boilerplate with package main and fmt. Standard tab or 4-space indentation."),
+    rust: z.string().describe("Rust boilerplate with use std::io and fn main. 4-space indentation."),
+    kotlin: z.string().describe("Kotlin boilerplate with java.util.Scanner. 4-space indentation."),
+    php: z.string().describe("PHP boilerplate with file_get_contents('php://stdin'). 4-space indentation."),
+    swift: z.string().describe("Swift boilerplate with import Foundation and readLine(). 4-space indentation."),
+    ruby: z.string().describe("Ruby boilerplate with STDIN.read. 2-space indentation."),
   }),
   hiddenTestCases: z.array(z.object({
     input: z.string(),
@@ -83,11 +83,16 @@ Your objective is to architect a set of {{{count}}} UNIQUE, high-fidelity algori
 2. EXECUTION ENGINE REQUIREMENTS: 
    - Every template MUST be a COMPLETE, RUNNABLE SCRIPT that reads from STDIN and writes to STDOUT.
    - It must include necessary imports, a primary logic function, and a main driver block.
-   - The logic function should be empty except for a default return value and a comment "// Write your logic here".
+   - The logic function should be empty except for a default return value and a comment "// Write your logic here" (use # for Python/Ruby/PHP).
    - DO NOT include the solution logic.
-   - FORMATTING: Every starterCode string MUST use actual newline characters (\\n) and standard indentation. 
-   - NEVER return code as a single-line or condensed string using semicolons.
-3. HIDDEN VERIFICATION: Provide exactly 5 hidden test cases with expected outputs.
+3. INDENTATION PROTOCOL:
+   - Python: Exactly 4 spaces.
+   - JavaScript/TypeScript: Exactly 2 spaces.
+   - Java/C++/C/C#/Rust/Kotlin/Swift: Exactly 4 spaces with standard brace style.
+   - Ruby/PHP: Exactly 2 spaces.
+   - Go: Standard 4-space or tab indentation.
+4. FORMATTING: Every starterCode string MUST use actual newline characters (\n) and proper indentation. NEVER return code as a single-line or condensed string using semicolons.
+5. HIDDEN VERIFICATION: Provide exactly 5 hidden test cases with expected outputs.
 
 Return a strictly structured JSON matching the output schema. No conversational text.`,
 });
