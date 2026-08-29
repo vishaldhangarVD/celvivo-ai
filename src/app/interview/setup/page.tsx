@@ -167,10 +167,7 @@ export default function InterviewSetupPage() {
       if (journey.company) setCompany(journey.company);
       if (journey.role) setRole(journey.role);
       if (journey.experience) setExperience(journey.experience);
-      if (journey.resumeBase64) {
-        setResumeBase64(journey.resumeBase64);
-        setIsUploaded(true);
-      }
+      // NOTE: Resume data is deliberately NOT pre-filled here to enforce fresh upload per session.
     }
   }, [journey]);
 
@@ -227,7 +224,7 @@ export default function InterviewSetupPage() {
         role,
         experience,
         company,
-        resumeName: file?.name || journey?.resumeName || "resume.pdf",
+        resumeName: file?.name || "resume.pdf",
         resumeBase64: resumeBase64,
         resumeAnalysis: analysisResult,
         currentStage: finalStage,
@@ -414,7 +411,7 @@ export default function InterviewSetupPage() {
                         <Badge className="absolute top-0.5 right-0.5 bg-red-500/20 text-red-500 border-none text-[6px] font-black px-1">PDF</Badge>
                       </div>
                       <div className="space-y-0.5">
-                        <p className="text-sm font-bold text-white truncate max-w-[240px] mx-auto">{file?.name || journey?.resumeName}</p>
+                        <p className="text-sm font-bold text-white truncate max-w-[240px] mx-auto">{file?.name}</p>
                         <button 
                           onClick={(e) => { e.stopPropagation(); setIsUploaded(false); setFile(null); }} 
                           className="flex items-center gap-1.5 text-[8px] font-bold uppercase tracking-widest text-white/30 hover:text-red-400 transition-all mx-auto pt-2"
