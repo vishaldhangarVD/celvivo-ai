@@ -112,7 +112,6 @@ export default function AptitudeEnginePage() {
 
   useEffect(() => {
     async function init() {
-      // GUARD: Prevent re-initialization during submission or after navigation starts
       if (!db || !user?.uid || !journeyRef || initGuard.current || isSubmitting || justSubmittedRef.current) return;
       initGuard.current = true;
       
@@ -124,7 +123,6 @@ export default function AptitudeEnginePage() {
       
       const data = snap.data();
       
-      // GUARD: If the test is already completed, do not initialize the test UI
       if (data.aptitudeStatus === "completed" || data.currentStage === INTERVIEW_STAGES.APTITUDE_RESULT) {
         router.replace(STAGE_ROUTES.APTITUDE_RESULT);
         return;
@@ -167,8 +165,6 @@ export default function AptitudeEnginePage() {
         const userRef = doc(db, 'users', user.uid);
         const userSnap = await getDoc(userRef);
         const fullHistory = userSnap.data()?.aptitudeQuestionHistory || [];
-        
-        // Only send the most recent 150 fingerprints to Gemini
         const history = fullHistory.slice(-150);
 
         const response = await generateAptitudeTest({
@@ -198,7 +194,6 @@ export default function AptitudeEnginePage() {
           currentStage: INTERVIEW_STAGES.APTITUDE
         });
 
-        // Cap stored history at 300 to prevent document bloat
         const updatedHistory = [...fullHistory, ...newFingerprints].slice(-300);
         await updateDoc(userRef, {
           aptitudeQuestionHistory: updatedHistory
@@ -209,7 +204,7 @@ export default function AptitudeEnginePage() {
         setIsInitializing(false);
       } catch (e: any) {
         console.error("[APTITUDE SESSION] Initialization fault:", e);
-        toast({ variant: "destructive", title: "Synthesis Error", description: "Assessment calibration failure." });
+        toast({ variant: "destructive", title: "Assessment calibration failure." });
         setIsInitializing(false);
       }
     }
@@ -231,6 +226,8 @@ export default function AptitudeEnginePage() {
 
     let correctCount = 0;
     let notAnsweredCount = 0;
+
+    console.log("--- GRADUATION AUDIT TRACE ---");
     const formattedResults = questions.map((q, idx) => {
       const userSelectedIdx = answers[idx];
       const isAnswered = userSelectedIdx !== undefined;
@@ -242,6 +239,8 @@ export default function AptitudeEnginePage() {
       const isCorrect = isAnswered && userSelectedIdx === q.correctOptionIndex;
       if (isCorrect) correctCount++;
       
+      console.log(`Q${idx+1}: Answered: ${isAnswered}, SelectedIdx: ${userSelectedIdx}, CorrectIdx: ${q.correctOptionIndex}, Result: ${isCorrect ? 'SUCCESS' : 'FAIL'}`);
+
       return {
         question: q.question,
         category: q.category,
@@ -251,9 +250,11 @@ export default function AptitudeEnginePage() {
         isCorrect: isCorrect,
       };
     });
+    console.log(`Final Scores: Correct: ${correctCount}, Total: ${questions.length}, Score: ${Math.round((correctCount/questions.length)*100)}%`);
+    console.log("------------------------------");
 
     const finalNumericScore = Math.round((correctCount / questions.length) * 100);
-    const steps = ["Auditing Quantitative Accuracy...", "Mapping Logical Consistency...", "Verbal Capability Synthesis...", "Finalizing Performance Dossier..."];
+    const steps = ["Processing Answers...", "Checking Accuracy...", "Generating Analysis...", "Finalizing Result..."];
     
     for (let i = 0; i < steps.length; i++) {
       setEvaluationStep(i);
@@ -290,12 +291,11 @@ export default function AptitudeEnginePage() {
         updatedAt: serverTimestamp()
       });
 
-      // Mark as submitted to prevent local initialization effects from interrupting navigation
       justSubmittedRef.current = true;
       router.push(STAGE_ROUTES.APTITUDE_RESULT);
     } catch (e) {
       console.error("[APTITUDE SESSION] Submission fault:", e);
-      toast({ variant: "destructive", title: "Audit Protocol Fault" });
+      toast({ variant: "destructive", title: "Error submitting results" });
       setIsSubmitting(false);
       setIsEvaluating(false);
       submissionGuard.current = false;
@@ -381,9 +381,9 @@ export default function AptitudeEnginePage() {
           <Brain className="w-10 h-10 text-accent absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 animate-pulse" />
         </div>
         <div className="text-center space-y-2">
-          <h2 className="text-2xl font-bold tracking-tighter text-premium uppercase">Synthesizing Unique Nodes</h2>
+          <h2 className="text-2xl font-bold tracking-tighter text-premium uppercase">Preparing Your Questions</h2>
           <p className="text-[10px] font-black uppercase tracking-[0.4em] text-accent animate-pulse">
-            Personalizing Environment for {journey?.company || "Standard Tech"}
+            Personalizing test for {journey?.company || "Standard Tech"}
           </p>
         </div>
       </div>
@@ -398,10 +398,10 @@ export default function AptitudeEnginePage() {
           <Cpu className="w-12 h-12 text-accent absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 animate-pulse" />
         </div>
         <div className="space-y-8 max-w-lg w-full">
-          <h2 className="text-4xl font-bold tracking-tighter text-premium uppercase">AI Performance Audit</h2>
+          <h2 className="text-4xl font-bold tracking-tighter text-premium uppercase">Analyzing Performance</h2>
           <div className="space-y-4">
              <Progress value={(evaluationStep + 1) * 25} className="h-1.5" />
-             <p className="text-[10px] font-black uppercase tracking-[0.6em] text-accent animate-pulse">{["Processing Nodes", "Mapping Logic", "Calibrating Score", "Finalizing Audit"][evaluationStep]}</p>
+             <p className="text-[10px] font-black uppercase tracking-[0.6em] text-accent animate-pulse">{["Processing Answers", "Checking Accuracy", "Generating Analysis", "Finalizing Result"][evaluationStep]}</p>
           </div>
         </div>
       </div>
@@ -422,7 +422,7 @@ export default function AptitudeEnginePage() {
           </div>
           <div>
             <h1 className="text-sm font-black uppercase tracking-widest text-premium">NEXVOROAI</h1>
-            <p className="text-[9px] font-bold text-white/40 uppercase tracking-widest mt-0.5">{journey?.role || "Protocol"} • SESSION ACTIVE</p>
+            <p className="text-[9px] font-bold text-white/40 uppercase tracking-widest mt-0.5">{journey?.role || "Protocol"} • TEST IN PROGRESS</p>
           </div>
         </div>
 
@@ -457,7 +457,7 @@ export default function AptitudeEnginePage() {
               
               <div className="max-w-3xl mx-auto w-full space-y-10">
                 <div className="space-y-4">
-                  <Badge className="bg-purple-500/10 text-purple-400 border-none text-[9px] font-black uppercase tracking-widest">{currentQ?.category || "Logic"}</Badge>
+                  <Badge className="bg-purple-500/10 text-purple-400 border-none text-[9px] font-black uppercase tracking-widest">{currentQ?.category || "Category"}</Badge>
                   <h2 className="text-3xl font-bold tracking-tight text-white/90 leading-tight whitespace-pre-wrap">{currentQ?.question}</h2>
                 </div>
 
@@ -496,10 +496,10 @@ export default function AptitudeEnginePage() {
               </div>
               <div className="flex gap-4">
                 {currentIdx < questions.length - 1 ? (
-                  <Button onClick={() => handleNav(Math.min(questions.length - 1, currentIdx + 1))} disabled={isSubmitting} className="h-16 px-12 btn-premium rounded-2xl text-[10px] font-black uppercase">Commit & Next <ChevronRight className="ml-2 w-4 h-4" /></Button>
+                  <Button onClick={() => handleNav(Math.min(questions.length - 1, currentIdx + 1))} disabled={isSubmitting} className="h-16 px-12 btn-premium rounded-2xl text-[10px] font-black uppercase">Next Question <ChevronRight className="ml-2 w-4 h-4" /></Button>
                 ) : (
                   <Button onClick={handleSubmit} disabled={isSubmitting} className="h-16 px-12 bg-green-600 hover:bg-green-500 text-white rounded-2xl text-[10px] font-black uppercase shadow-lg group">
-                    {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <>Submit Audit <ShieldCheck className="ml-2 w-4 h-4 group-hover:scale-110 transition-transform" /></>}
+                    {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <>Finish Test <ShieldCheck className="ml-2 w-4 h-4 group-hover:scale-110 transition-transform" /></>}
                   </Button>
                 )}
               </div>
@@ -508,7 +508,7 @@ export default function AptitudeEnginePage() {
 
           <div className="lg:col-span-3">
             <Card className="premium-card bg-white/[0.01] border-white/5 p-8 space-y-8 sticky top-[168px]">
-              <h3 className="text-xs font-black uppercase tracking-[0.3em] text-accent flex items-center gap-3"><LayoutGrid className="w-4 h-4" /> Node Matrix</h3>
+              <h3 className="text-xs font-black uppercase tracking-[0.3em] text-accent flex items-center gap-3"><LayoutGrid className="w-4 h-4" /> Questions</h3>
               <div className="grid grid-cols-5 gap-3">
                 {questions.map((_, i) => (
                   <button 
