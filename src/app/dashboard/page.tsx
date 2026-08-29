@@ -39,6 +39,7 @@ import { useRouter } from 'next/navigation';
 import { useUser, useFirestore, useCollection, useDoc } from '@/firebase';
 import { collection, query, orderBy, doc } from 'firebase/firestore';
 import { runGeminiTest } from '@/ai/flows/test-gemini';
+import { cn } from '@/lib/utils';
 
 export default function Dashboard() {
   const router = useRouter();
