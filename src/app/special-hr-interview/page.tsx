@@ -495,6 +495,13 @@ export default function SpecialHRInterview() {
     };
   }, []);
 
+  useEffect(() => {
+    if (interviewStarted && userVideoRef.current && userStreamRef.current) {
+      userVideoRef.current.srcObject = userStreamRef.current;
+      userVideoRef.current.play().catch(() => {});
+    }
+  }, [interviewStarted]);
+
   return (
     <div className={cn(
       "min-h-screen bg-[#050816] flex flex-col relative overflow-hidden",
