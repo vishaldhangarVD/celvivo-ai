@@ -15,7 +15,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className="dark">
+    <html lang="en" className="dark" style={{ backgroundColor: '#050816' }}>
       <head>
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link
@@ -29,7 +29,10 @@ export default function RootLayout({
         />
       </head>
 
-      <body className="font-body antialiased bg-background text-foreground selection:bg-primary/30">
+      <body 
+        className="font-body antialiased bg-background text-foreground selection:bg-primary/30"
+        style={{ backgroundColor: '#050816' }}
+      >
         <FirebaseClientProvider>
           {children}
           <Toaster />
