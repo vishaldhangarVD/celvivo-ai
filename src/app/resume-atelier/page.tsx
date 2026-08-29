@@ -13,6 +13,13 @@ import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { 
+  Dialog, 
+  DialogContent, 
+  DialogHeader, 
+  DialogTitle, 
+  DialogTrigger 
+} from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
 import { 
   FileText, 
@@ -26,9 +33,14 @@ import {
   Target,
   Cpu,
   Sparkles,
-  AlertCircle
+  AlertCircle,
+  ShieldCheck,
+  Search,
+  CheckCircle2,
+  Check
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { runAtsCheck } from '@/ai/flows/ai-resume-ats-check';
 
 /* ---------- TYPES ---------- */
 interface ResumeEntry {
@@ -98,18 +110,6 @@ const INITIAL_DATA: ResumeData = {
   theme: "windsor"
 };
 
-/* ---------- UTILS ---------- */
-const STOP_WORDS = new Set("the a an and or of to in on for with is are we our your you will must have has this that as be an at by from experience looking".split(' '));
-
-function tokenize(str: string) {
-  return (str || '').toLowerCase().match(/[a-z0-9+.#]+/g)?.filter(w => w.length > 2 && !STOP_WORDS.has(w)) || [];
-}
-
-function getInitials(name: string) {
-  const parts = (name || '').trim().split(/\s+/).filter(Boolean);
-  return parts.length ? parts.map(w => w[0]).slice(0, 2).join('').toUpperCase() : '?';
-}
-
 /* ---------- MINIATURE PREVIEW COMPONENT ---------- */
 const CutThumbnail = ({ template }: { template: any }) => {
   const a = template.accent;
@@ -178,7 +178,7 @@ const CutThumbnail = ({ template }: { template: any }) => {
     );
   }
 
-  if (template.variant === 'v-avatar') {
+  if (template.family === 'single' && template.variant === 'v-avatar') {
     return (
       <div style={{ padding: '14px', textAlign: 'center' }}>
         <div style={{ width: '22px', height: '22px', borderRadius: '50%', background: a, margin: '0 auto 8px' }} />
@@ -189,67 +189,7 @@ const CutThumbnail = ({ template }: { template: any }) => {
     );
   }
 
-  if (template.variant === 'v-tagcloud') {
-    return (
-      <div style={{ padding: '14px', textAlign: 'center' }}>
-        <div style={{ width: '48%', height: '6px', background: '#1c1811', margin: '0 auto 8px' }} />
-        <div style={{ display: 'flex', justifyContent: 'center', gap: '4px', marginBottom: '9px' }}>
-          <div style={{ width: '16px', height: '6px', borderRadius: '3px', border: `1px solid ${a}` }} />
-          <div style={{ width: '16px', height: '6px', borderRadius: '3px', border: `1px solid ${a}` }} />
-          <div style={{ width: '16px', height: '6px', borderRadius: '3px', border: `1px solid ${a}` }} />
-        </div>
-        <div style={{ width: '80%', height: '2.5px', background: '#e4dcc6', margin: '0 auto 5px' }} />
-      </div>
-    );
-  }
-
-  if (template.variant === 'v-pillheaders') {
-    return (
-      <div style={{ padding: '14px', textAlign: 'center' }}>
-        <div style={{ width: '48%', height: '6px', background: '#1c1811', margin: '0 auto 9px' }} />
-        <div style={{ width: '34%', height: '8px', borderRadius: '100px', background: a, margin: '0 auto 8px' }} />
-        <div style={{ width: '78%', height: '2.5px', background: '#e4dcc6', margin: '0 auto 5px' }} />
-      </div>
-    );
-  }
-
-  if (template.variant === 'v-accentborder') {
-    return (
-      <div style={{ padding: '14px' }}>
-        <div style={{ width: '48%', height: '6px', background: '#1c1811', marginBottom: '10px' }} />
-        <div style={{ borderLeft: `2px solid ${a}`, paddingLeft: '8px' }}>
-          <div style={{ width: '70%', height: '2.5px', background: '#e4dcc6', marginBottom: '5px' }} />
-          <div style={{ width: '55%', height: '2.5px', background: '#e4dcc6' }} />
-        </div>
-      </div>
-    );
-  }
-
-  if (template.variant === 'v-boxed') {
-    return (
-      <div style={{ padding: '14px' }}>
-        <div style={{ width: '48%', height: '6px', background: '#1c1811', marginBottom: '9px' }} />
-        <div style={{ background: '#f6f3ea', borderRadius: '4px', padding: '6px' }}>
-          <div style={{ width: '70%', height: '2.5px', background: a, marginBottom: '5px' }} />
-          <div style={{ width: '55%', height: '2.5px', background: '#ddd3ba' }} />
-        </div>
-      </div>
-    );
-  }
-
-  if (template.variant === 'v-dense') {
-    return (
-      <div style={{ padding: '10px' }}>
-        <div style={{ width: '40%', height: '5px', background: '#1c1811', marginBottom: '5px' }} />
-        <div style={{ width: '30%', height: '2px', background: a, marginBottom: '8px' }} />
-        <div style={{ width: '85%', height: '2px', background: '#e4dcc6', marginBottom: '3px' }} />
-        <div style={{ width: '80%', height: '2px', background: '#e4dcc6', marginBottom: '3px' }} />
-        <div style={{ width: '75%', height: '2px', background: '#e4dcc6', marginBottom: '3px' }} />
-        <div style={{ width: '82%', height: '2px', background: '#e4dcc6' }} />
-      </div>
-    );
-  }
-
+  // default single/minimal
   return (
     <div style={{ padding: '14px', textAlign: 'center' }}>
       <div style={{ width: '48%', height: '6px', background: '#1c1811', margin: '0 auto 9px' }} />
@@ -274,7 +214,15 @@ export default function ResumeAtelierPage() {
   const [data, setData] = useState<ResumeData>(INITIAL_DATA);
   const [jd, setJd] = useState("");
   const [atsResult, setAtsResult] = useState<any>(null);
+  const [isAtsLoading, setIsAtsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+
+  // Quick ATS Modal State
+  const [isQuickAtsOpen, setIsQuickAtsOpen] = useState(false);
+  const [quickAtsResume, setQuickAtsResume] = useState<ResumeData | null>(null);
+  const [quickAtsJd, setQuickAtsJd] = useState("");
+  const [quickAtsResult, setQuickAtsResult] = useState<any>(null);
+  const [isQuickAtsLoading, setIsQuickAtsLoading] = useState(false);
 
   // Firestore Queries
   const resumesQuery = useMemo(() => {
@@ -342,24 +290,38 @@ export default function ResumeAtelierPage() {
     }
   };
 
-  const runAts = () => {
-    const resumeText = [
-      data.name,
-      data.role,
-      data.summary, 
-      data.skills.join(' '),
-      data.experience.map(e => `${e.role} ${e.company} ${e.bullets}`).join(' '),
-      data.projects.map(p => `${p.name} ${p.desc}`).join(' '),
-      data.education.map(ed => `${ed.school} ${ed.degree}`).join(' ')
-    ].join(' ');
+  const handleRunAts = async (resume: ResumeData, jdText: string, setResults: any, setLoading: any) => {
+    if (!jdText.trim()) {
+      toast({ variant: "destructive", title: "Missing Input", description: "Please paste a job description first." });
+      return;
+    }
 
-    const jdTokens = Array.from(new Set(tokenize(jd)));
-    const resumeTokens = new Set(tokenize(resumeText));
-    const matched = jdTokens.filter(w => resumeTokens.has(w));
-    const missing = jdTokens.filter(w => !resumeTokens.has(w)).slice(0, 8);
-    const score = jdTokens.length ? Math.round((matched.length / jdTokens.length) * 100) : 0;
+    setLoading(true);
+    setResults(null);
 
-    setAtsResult({ score, matched, missing });
+    try {
+      const result = await runAtsCheck({
+        resumeData: {
+          name: resume.name,
+          role: resume.role,
+          summary: resume.summary,
+          skills: resume.skills,
+          experience: resume.experience,
+          projects: resume.projects,
+          education: resume.education,
+        },
+        jobDescription: jdText
+      });
+      setResults(result);
+    } catch (e: any) {
+      toast({ 
+        variant: "destructive", 
+        title: "Audit Failed", 
+        description: e.message || "Couldn't complete the ATS check — please try again." 
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
   if (authLoading || resumesLoading) return (
@@ -390,6 +352,7 @@ export default function ResumeAtelierPage() {
           position: relative; transform-origin: top center;
         }
 
+        /* Generic Resume Document System Primitives */
         .doc-name{font-family:var(--disp); font-size:27px; font-weight:600; color:#1c1811;}
         .doc-role-badge{display:inline-block; background:var(--c-accent); color:#fff; font-size:10px; font-weight:700; letter-spacing:1.2px; text-transform:uppercase; padding:5px 14px; border-radius:100px; margin-top:8px;}
         .doc-role-badge-inv{background:rgba(255,255,255,.16); color:#fff;}
@@ -481,6 +444,18 @@ export default function ResumeAtelierPage() {
         }
         .ghost-textarea::placeholder { color: #5a5348; opacity: 0.6; }
 
+        .fit-ring {
+          width: 76px; height: 76px; border-radius: 50%; 
+          display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+          background: conic-gradient(var(--gold) var(--pct,0%), var(--hair) 0);
+          transition: background 1s ease;
+        }
+        .fit-ring-inner {
+          width: 60px; height: 60px; border-radius: 50%; background: var(--panel-2);
+          display: flex; align-items: center; justify-content: center; font-family: var(--disp);
+          font-size: 16px; font-weight: 500; color: var(--gold);
+        }
+
         @media print {
           body * { visibility: hidden; }
           #resume-paper, #resume-paper * { visibility: visible; }
@@ -489,6 +464,7 @@ export default function ResumeAtelierPage() {
       `}</style>
 
       <Navbar />
+      <NavigationControls />
 
       <div className="max-w-[1220px] mx-auto px-6 pt-24 pb-32">
         {view === 'list' ? (
@@ -514,9 +490,19 @@ export default function ResumeAtelierPage() {
                 <Card 
                   key={resume.id}
                   onClick={() => handleEdit(resume)}
-                  className="h-[280px] bg-[#151210] border-[#332c22] p-8 flex flex-col justify-between hover:border-[#c9a24d]/30 transition-all cursor-pointer group relative overflow-hidden"
+                  className="h-[320px] bg-[#151210] border-[#332c22] p-8 flex flex-col justify-between hover:border-[#c9a24d]/30 transition-all cursor-pointer group relative overflow-hidden"
                 >
-                  <div className="absolute top-0 right-0 p-6 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <div className="absolute top-0 right-0 p-6 opacity-0 group-hover:opacity-100 transition-opacity flex gap-4">
+                    <button 
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setQuickAtsResume(resume);
+                        setIsQuickAtsOpen(true);
+                      }}
+                      className="text-[#c9a24d] hover:text-[#f7f2e6]"
+                    >
+                      <Target className="w-5 h-5" />
+                    </button>
                     <button onClick={(e) => handleDelete(e, resume.id)} className="text-[#7a2531] hover:text-red-400">
                       <Trash2 className="w-5 h-5" />
                     </button>
@@ -530,16 +516,101 @@ export default function ResumeAtelierPage() {
                       <p className="text-[#8a723a] font-mono text-[10px] tracking-widest uppercase mt-1">{resume.role || "No Role Defined"}</p>
                     </div>
                   </div>
-                  <div className="flex items-center justify-between border-t border-[#332c22] pt-6">
-                    <div className="flex items-center gap-2 text-[#cfc7b4]/40 text-[9px] font-mono uppercase">
-                      <Clock className="w-3 h-3" /> 
-                      {resume.updatedAt?.seconds ? new Date(resume.updatedAt.seconds * 1000).toLocaleDateString() : "Recent"}
+                  <div className="space-y-4">
+                    <Button 
+                      variant="outline" 
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setQuickAtsResume(resume);
+                        setIsQuickAtsOpen(true);
+                      }}
+                      className="w-full h-10 border-[#c9a24d]/20 text-[#c9a24d] hover:bg-[#c9a24d]/10 rounded-none text-[9px] uppercase tracking-widest font-black"
+                    >
+                      Check ATS Score
+                    </Button>
+                    <div className="flex items-center justify-between border-t border-[#332c22] pt-4">
+                      <div className="flex items-center gap-2 text-[#cfc7b4]/40 text-[9px] font-mono uppercase">
+                        <Clock className="w-3 h-3" /> 
+                        {resume.updatedAt?.seconds ? new Date(resume.updatedAt.seconds * 1000).toLocaleDateString() : "Recent"}
+                      </div>
+                      <ChevronRight className="w-4 h-4 text-[#c9a24d] translate-x-4 opacity-0 group-hover:opacity-100 group-hover:translate-x-0 transition-all" />
                     </div>
-                    <ChevronRight className="w-4 h-4 text-[#c9a24d] translate-x-4 opacity-0 group-hover:opacity-100 group-hover:translate-x-0 transition-all" />
                   </div>
                 </Card>
               ))}
             </div>
+
+            {/* Quick ATS Modal */}
+            <Dialog open={isQuickAtsOpen} onOpenChange={setIsQuickAtsOpen}>
+              <DialogContent className="bg-[#0b0e1a] border-[#332c22] text-[#ece7db] max-w-2xl rounded-[2.5rem] overflow-hidden custom-scrollbar max-h-[90vh] overflow-y-auto">
+                <DialogHeader className="mb-8">
+                  <DialogTitle className="font-disp text-3xl flex items-center gap-4">
+                    <Target className="w-8 h-8 text-[#c9a24d]" /> Quick ATS Check
+                  </DialogTitle>
+                </DialogHeader>
+
+                <div className="space-y-8">
+                  <div className="space-y-4">
+                    <Label className="text-[10px] font-mono uppercase text-[#8a723a] tracking-widest ml-1">Job Description</Label>
+                    <Textarea 
+                      value={quickAtsJd}
+                      onChange={e => setQuickAtsJd(e.target.value)}
+                      placeholder="Paste the job requirements here..."
+                      className="atelier-textarea h-40"
+                    />
+                    <Button 
+                      onClick={() => handleRunAts(quickAtsResume!, quickAtsJd, setQuickAtsResult, setIsQuickAtsLoading)}
+                      disabled={isQuickAtsLoading || !quickAtsJd.trim()}
+                      className="w-full h-14 bg-[#c9a24d] text-[#0c0b09] hover:bg-[#f7f2e6] rounded-none font-mono text-[11px] uppercase tracking-widest shadow-xl"
+                    >
+                      {isQuickAtsLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : "Run Neural Audit →"}
+                    </Button>
+                  </div>
+
+                  {quickAtsResult && (
+                    <div className="p-8 border border-[#332c22] bg-[#1c1814] space-y-10 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                      <div className="flex items-center gap-8">
+                        <div className="fit-ring" style={{ '--pct': `${quickAtsResult.score}%` } as any}>
+                          <div className="fit-ring-inner">{quickAtsResult.score}%</div>
+                        </div>
+                        <div className="space-y-1">
+                          <p className="text-[10px] font-mono text-[#8a723a] uppercase tracking-widest">Match Verdict</p>
+                          <h4 className="font-disp text-2xl text-[#f7f2e6]">{quickAtsResult.verdict}</h4>
+                        </div>
+                      </div>
+
+                      <div className="grid md:grid-cols-2 gap-10">
+                        <div className="space-y-6">
+                           <div className="space-y-3">
+                             <p className="text-[9px] font-mono uppercase text-green-400/60 tracking-widest">Matched Keywords</p>
+                             <div className="flex flex-wrap gap-2">
+                               {quickAtsResult.matchedKeywords?.map((w: string) => <span key={w} className="px-3 py-1 bg-green-500/10 text-green-400 text-[10px] border border-green-500/20">{w}</span>)}
+                             </div>
+                           </div>
+                           <div className="space-y-3">
+                             <p className="text-[9px] font-mono uppercase text-red-400/60 tracking-widest">Missing Requirements</p>
+                             <div className="flex flex-wrap gap-2">
+                               {quickAtsResult.missingKeywords?.map((w: string) => <span key={w} className="px-3 py-1 bg-red-500/10 text-red-400 text-[10px] border border-red-500/20">{w}</span>)}
+                             </div>
+                           </div>
+                        </div>
+                        <div className="space-y-6">
+                           <p className="text-[9px] font-mono uppercase text-[#c9a24d] tracking-widest">Strategic Recommendations</p>
+                           <div className="space-y-4">
+                             {quickAtsResult.suggestions?.map((s: string, i: number) => (
+                               <div key={i} className="flex gap-4 items-start group">
+                                 <div className="w-1.5 h-1.5 rounded-full bg-[#c9a24d] mt-1.5 shrink-0" />
+                                 <p className="text-xs font-light text-[#cfc7b4] leading-relaxed italic">"{s}"</p>
+                               </div>
+                             ))}
+                           </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </DialogContent>
+            </Dialog>
           </motion.div>
         ) : (
           <div className="editor-view">
@@ -731,7 +802,7 @@ export default function ResumeAtelierPage() {
                         </div>
                         <div className="flex gap-4">
                           <Button onClick={() => setCurrentStep(2)} variant="outline" className="flex-1 h-14 border-[#332c22] text-[#cfc7b4] rounded-none font-mono text-[11px] uppercase tracking-widest">← Back</Button>
-                          <Button onClick={() => setCurrentStep(4)} className="flex-[2] h-14 bg-[#c9a24d] text-[#0c0b09] hover:bg-[#f7f2e6] rounded-none font-mono text-[11px] uppercase tracking-widest">Continue to Skills →</Button>
+                          <Button onClick={() => setCurrentStep(3)} className="flex-[2] h-14 bg-[#c9a24d] text-[#0c0b09] hover:bg-[#f7f2e6] rounded-none font-mono text-[11px] uppercase tracking-widest">Continue to Experience →</Button>
                         </div>
                       </motion.div>
                     )}
@@ -819,50 +890,52 @@ export default function ResumeAtelierPage() {
                              className="atelier-textarea" 
                              rows={6} 
                            />
-                           <Button onClick={runAts} className="w-full h-12 bg-transparent border border-[#c9a24d] text-[#c9a24d] hover:bg-[#c9a24d] hover:text-[#0c0b09] font-mono text-[10px] uppercase tracking-widest">Run ATS Check →</Button>
+                           <Button 
+                             onClick={() => handleRunAts(data, jd, setAtsResult, setIsAtsLoading)} 
+                             disabled={isAtsLoading || !jd.trim()}
+                             className="w-full h-12 bg-transparent border border-[#c9a24d] text-[#c9a24d] hover:bg-[#c9a24d] hover:text-[#0c0b09] font-mono text-[10px] uppercase tracking-widest"
+                           >
+                             {isAtsLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : "Run Neural Audit →"}
+                           </Button>
                         </div>
 
                         {atsResult && (
-                          <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="p-8 border border-[#332c22] bg-[#1c1814] space-y-8">
-                            <div className="flex items-center gap-6">
-                              <div className="w-20 h-20 rounded-full flex items-center justify-center relative border-4 border-[#332c22]" style={{ borderColor: atsResult.score > 75 ? "#34d399" : atsResult.score > 45 ? "#c9a24d" : "#7a2531" }}>
-                                <span className="font-disp text-xl">{atsResult.score}%</span>
+                          <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="p-8 border border-[#332c22] bg-[#1c1814] space-y-10">
+                            <div className="flex items-center gap-8">
+                              <div className={cn("fit-ring", isAtsLoading && "animate-pulse")} style={{ '--pct': `${atsResult.score}%` } as any}>
+                                <div className="fit-ring-inner">{atsResult.score}%</div>
                               </div>
                               <div>
-                                <h4 className="font-disp text-lg">Match With This Job</h4>
-                                <p className="text-[10px] font-mono text-[#8a723a] uppercase tracking-widest">
-                                  {atsResult.score >= 75 ? "Strong Match" : atsResult.score >= 45 ? "Moderate Match" : "Needs More Keywords"}
-                                </p>
+                                <p className="text-[10px] font-mono text-[#8a723a] uppercase tracking-widest">Neural Verdict</p>
+                                <h4 className="font-disp text-2xl text-[#f7f2e6]">{atsResult.verdict}</h4>
                               </div>
                             </div>
 
-                            <div className="space-y-3">
-                               {[
-                                 { label: 'Standard section headers ATS can read', pass: true },
-                                 { label: 'Contact info present', pass: !!data.email && !!data.phone },
-                                 { label: 'Quantifiable results in bullet points', pass: /\d/.test(data.experience.map(e => e.bullets).join(' ')) },
-                                 { label: 'No tables or images blocking text extraction', pass: true }
-                               ].map((c, idx) => (
-                                 <div key={idx} className="flex items-center gap-3 text-[11px] text-[#cfc7b4]">
-                                    <div className={cn("w-4 h-4 rounded-full border flex items-center justify-center text-[9px]", c.pass ? "border-[#c9a24d] text-[#c9a24d]" : "border-[#7a2531] text-[#e6a1ab]")}>
-                                      {c.pass ? "✓" : "!"}
-                                    </div>
-                                    {c.label}
+                            <div className="grid md:grid-cols-2 gap-10">
+                               <div className="space-y-6">
+                                 <div className="space-y-3">
+                                   <p className="text-[9px] font-mono uppercase text-green-400/60 tracking-widest">Matched Keywords</p>
+                                   <div className="flex flex-wrap gap-2">
+                                     {atsResult.matchedKeywords?.length > 0 ? atsResult.matchedKeywords.map((w: string) => <span key={w} className="px-3 py-1 bg-green-500/10 text-green-400 text-[10px] border border-green-500/20">{w}</span>) : <span className="text-[10px] text-[#cfc7b4]/40 italic">No matches detected</span>}
+                                   </div>
                                  </div>
-                               ))}
-                            </div>
-
-                            <div className="space-y-4">
-                               <div>
-                                 <p className="text-[9px] font-mono uppercase text-[#8a723a] mb-2">Keywords That Match</p>
-                                 <div className="flex flex-wrap gap-2">
-                                   {atsResult.matched.length > 0 ? atsResult.matched.map((w: string) => <span key={w} className="px-3 py-1 bg-green-500/10 text-green-400 text-[10px] border border-green-500/20">{w}</span>) : <span className="text-[10px] text-[#cfc7b4]/40 italic">No keywords matched yet</span>}
+                                 <div className="space-y-3">
+                                   <p className="text-[9px] font-mono uppercase text-red-400/60 tracking-widest">Critical Gaps</p>
+                                   <div className="flex flex-wrap gap-2">
+                                     {atsResult.missingKeywords?.length > 0 ? atsResult.missingKeywords.map((w: string) => <span key={w} className="px-3 py-1 bg-[#7a2531]/20 text-red-300 text-[10px] border border-[#7a2531]/40">{w}</span>) : <span className="text-[10px] text-[#cfc7b4]/40 italic">All nodes covered</span>}
+                                   </div>
                                  </div>
                                </div>
-                               <div>
-                                 <p className="text-[9px] font-mono uppercase text-[#8a723a] mb-2">Keywords Missing</p>
-                                 <div className="flex flex-wrap gap-2">
-                                   {atsResult.missing.length > 0 ? atsResult.missing.map((w: string) => <span key={w} className="px-3 py-1 bg-[#7a2531]/20 text-red-300 text-[10px] border border-[#7a2531]/40">{w}</span>) : <span className="text-[10px] text-[#cfc7b4]/40 italic">All important keywords covered</span>}
+
+                               <div className="space-y-6">
+                                 <p className="text-[9px] font-mono uppercase text-[#c9a24d] tracking-widest">Strategic Recommendations</p>
+                                 <div className="space-y-4">
+                                   {atsResult.suggestions?.map((s: string, i: number) => (
+                                     <div key={i} className="flex gap-4 items-start group">
+                                       <div className="w-1.5 h-1.5 rounded-full bg-[#c9a24d] mt-1.5 shrink-0" />
+                                       <p className="text-xs font-light text-[#cfc7b4] leading-relaxed italic">"{s}"</p>
+                                     </div>
+                                   ))}
                                  </div>
                                </div>
                             </div>
@@ -911,6 +984,11 @@ function ResumePreview({ data, theme }: { data: ResumeData, theme: string }) {
     return (str || '').split('\n').filter(x => x.trim()).map((b, i) => (
       <div key={i} className="doc-bul">— {b}</div>
     ));
+  };
+
+  const getInitials = (name: string) => {
+    const parts = (name || '').trim().split(/\s+/).filter(Boolean);
+    return parts.length ? parts.map(w => w[0]).slice(0, 2).join('').toUpperCase() : '?';
   };
 
   const contactRows = (cls: string) => (
@@ -1023,7 +1101,7 @@ function ResumePreview({ data, theme }: { data: ResumeData, theme: string }) {
               {data.projects.length > 0 && <div className="doc-sec"><div className="doc-sectitle">Projects</div>{projItems()}</div>}
             </div>
             <div className="doc-side-light">
-              <div className="doc-avatar doc-avatar-lg">{getInitials(data.name)}</div>
+              <div className="doc-avatar doc-avatar-lg" style={{ margin: '0 auto 14px' }}>{getInitials(data.name)}</div>
               <div className="doc-sec" style={{ marginTop: 0 }}><div className="doc-sidetitle">Skills</div>{skillsItems('doc-sidepill')}</div>
               <div className="doc-sec"><div className="doc-sidetitle">Education</div>{eduSideItems()}</div>
             </div>
@@ -1066,7 +1144,7 @@ function ResumePreview({ data, theme }: { data: ResumeData, theme: string }) {
         return (
           <div className="shell-twocol">
             <div className="doc-side-light">
-              <div className="doc-avatar doc-avatar-lg">{getInitials(data.name)}</div>
+              <div className="doc-avatar doc-avatar-lg" style={{ margin: '0 auto 12px' }}>{getInitials(data.name)}</div>
               <div className="doc-name" style={{ fontSize: '19px', textAlign: 'center' }}>{data.name || 'Your Name'}</div>
               <div className="doc-role-badge" style={{ margin: '6px auto 0', display: 'block', textAlign: 'center' }}>{data.role || 'Target Role'}</div>
               <div className="doc-sec"><div className="doc-sidetitle">Contact</div>{contactRows('doc-sideline-ic')}</div>
