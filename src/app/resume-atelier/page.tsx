@@ -6,6 +6,7 @@ import { useUser, useFirestore, useCollection } from '@/firebase';
 import { collection, query, orderBy, doc, setDoc, deleteDoc, addDoc, serverTimestamp } from 'firebase/firestore';
 import { useRouter } from 'next/navigation';
 import Navbar from '@/components/layout/Navbar';
+import NavigationControls from '@/components/NavigationControls';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -17,7 +18,6 @@ import {
   FileText, 
   Plus, 
   Trash2, 
-  CheckCircle2, 
   ArrowLeft, 
   ChevronRight,
   Loader2,
@@ -105,7 +105,7 @@ function tokenize(str: string) {
   return (str || '').toLowerCase().match(/[a-z0-9+.#]+/g)?.filter(w => w.length > 2 && !STOP_WORDS.has(w)) || [];
 }
 
-function initials(name: string) {
+function getInitials(name: string) {
   const parts = (name || '').trim().split(/\s+/).filter(Boolean);
   return parts.length ? parts.map(w => w[0]).slice(0, 2).join('').toUpperCase() : '?';
 }
@@ -391,28 +391,37 @@ export default function ResumeAtelierPage() {
         }
 
         .doc-name{font-family:var(--disp); font-size:27px; font-weight:600; color:#1c1811;}
-        .doc-role{font-size:11.5px; color:var(--c-accent); font-weight:600; letter-spacing:1px; text-transform:uppercase; margin-top:4px;}
+        .doc-role-badge{display:inline-block; background:var(--c-accent); color:#fff; font-size:10px; font-weight:700; letter-spacing:1.2px; text-transform:uppercase; padding:5px 14px; border-radius:100px; margin-top:8px;}
+        .doc-role-badge-inv{background:rgba(255,255,255,.16); color:#fff;}
         .doc-contact{font-size:10.5px; color:#8a8072; margin-top:9px;}
+        .doc-contact-inline span{white-space:nowrap;}
+        .doc-contact-inline .doc-dot{margin:0 8px; opacity:.5;}
+        .doc-ic{display:inline-block; width:14px; margin-right:2px; opacity:.85;}
         .doc-summary{font-size:11.5px; color:#4a4438; line-height:1.75; margin-top:14px; font-style:italic;}
         .doc-sec{margin-top:20px;}
-        .doc-sectitle{font-family:var(--disp); font-size:12px; font-weight:600; letter-spacing:.4px; color:#1c1811; border-bottom:1px solid var(--c-accent); padding-bottom:6px; margin-bottom:10px;}
+        .doc-sectitle{font-family:var(--disp); font-size:12px; font-weight:600; letter-spacing:.4px; color:#1c1811; border-bottom:2px solid var(--c-accent); padding-bottom:6px; margin-bottom:10px; position:relative; padding-left:12px;}
+        .doc-sectitle::before{content:''; position:absolute; left:0; top:2px; width:5px; height:12px; background:var(--c-accent); border-radius:1px;}
         .doc-job{margin-bottom:12px;}
         .doc-jobhead{display:flex; justify-content:space-between; font-size:12px; font-weight:700; color:#241f18;}
         .doc-jobsub{font-size:10.5px; color:#8a8072; font-style:italic; margin-bottom:5px;}
         .doc-bul{font-size:11px; color:#4a4438; line-height:1.65; margin-left:14px;}
-        .doc-pill{display:inline-block; border:1px solid #ddd3ba; color:#4a4438; font-size:9.5px; font-weight:600; padding:4px 10px; margin:2px 5px 2px 0;}
+        .doc-pill{display:inline-block; background:var(--c-accent); color:#fff; font-size:9.5px; font-weight:600; padding:5px 12px; border-radius:100px; margin:2px 5px 2px 0;}
         .doc-avatar{width:52px; height:52px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-family:var(--disp); font-weight:600; font-size:18px; color:#fff; background:var(--c-accent); flex-shrink:0;}
+        .doc-avatar-lg{width:76px; height:76px; font-size:24px; margin:0 auto 12px; border:3px solid rgba(255,255,255,.35); box-shadow:0 4px 14px rgba(0,0,0,.25);}
+        .doc-avatar-band{width:58px; height:58px; font-size:20px; border:3px solid rgba(255,255,255,.35); flex-shrink:0;}
         .doc-header-row{display:flex; align-items:center; gap:16px; margin-bottom:4px;}
 
         .doc-side-dark{background:#1c1811; color:#e8e2d3; padding:36px 24px;}
-        .doc-side-dark .doc-sidetitle{font-size:9px; letter-spacing:2px; text-transform:uppercase; color:var(--c-accent); font-weight:700; margin-bottom:9px;}
+        .doc-side-dark .doc-sidetitle{font-size:9px; letter-spacing:2px; text-transform:uppercase; color:var(--c-accent); font-weight:700; margin-bottom:9px; border-bottom:1px solid rgba(255,255,255,.12); padding-bottom:6px;}
         .doc-side-dark .doc-sideline{font-size:10.5px; color:#b5ac98; margin-bottom:7px; line-height:1.55;}
-        .doc-side-dark .doc-sidepill{display:inline-block; border:1px solid #4a4234; font-size:9.5px; padding:4px 10px; margin:2px 5px 2px 0; color:#d9d2c1;}
+        .doc-side-dark .doc-sideline-ic{font-size:10px; color:#c9c2b0; margin-bottom:9px; line-height:1.5; word-break:break-word;}
+        .doc-side-dark .doc-sidepill{display:inline-block; background:var(--c-accent); font-size:9.5px; padding:4px 10px; margin:2px 5px 2px 0; color:#fff; border-radius:100px; font-weight:600;}
 
         .doc-side-light{background:#f6f3ea; padding:30px 26px;}
-        .doc-side-light .doc-sidetitle{font-size:9px; letter-spacing:2px; text-transform:uppercase; color:var(--c-accent); font-weight:700; margin-bottom:9px;}
+        .doc-side-light .doc-sidetitle{font-size:9px; letter-spacing:2px; text-transform:uppercase; color:var(--c-accent); font-weight:700; margin-bottom:9px; border-bottom:1px solid #e4dcc6; padding-bottom:6px;}
         .doc-side-light .doc-sideline{font-size:10.5px; color:#4a4438; margin-bottom:7px; line-height:1.55;}
-        .doc-side-light .doc-sidepill{display:inline-block; border:1px solid #ddd3ba; color:#4a4438; font-size:9.5px; padding:4px 10px; margin:2px 5px 2px 0;}
+        .doc-side-light .doc-sideline-ic{font-size:10px; color:#4a4438; margin-bottom:9px; line-height:1.5; word-break:break-word;}
+        .doc-side-light .doc-sidepill{display:inline-block; background:var(--c-accent); font-size:9.5px; padding:4px 10px; margin:2px 5px 2px 0; color:#fff; border-radius:100px; font-weight:600;}
 
         .shell-single{padding:44px 40px; font-family:'Inter',sans-serif; color:#241f18;}
         .shell-sidebar-l{display:grid; grid-template-columns:33% 67%; min-height:640px; font-family:'Inter',sans-serif; color:#241f18;}
@@ -420,7 +429,7 @@ export default function ResumeAtelierPage() {
         .shell-sidebar-r{display:grid; grid-template-columns:67% 33%; min-height:640px; font-family:'Inter',sans-serif; color:#241f18;}
         .shell-sidebar-r .doc-main{padding:36px 32px;}
         .shell-band{font-family:'Inter',sans-serif; color:#241f18;}
-        .shell-band .doc-band{background:#1c1811; padding:30px 38px; color:var(--ivory); border-bottom:3px solid var(--c-accent);}
+        .shell-band .doc-band{background:#1c1811; padding:30px 38px; color:var(--ivory); border-bottom:3px solid var(--c-accent); display:flex; align-items:center; gap:18px;}
         .shell-band .doc-band .doc-name{color:var(--ivory);}
         .shell-band .doc-band .doc-contact{color:#a89f8c;}
         .shell-band .doc-body{display:grid; grid-template-columns:63% 37%; padding:28px 38px; gap:28px;}
@@ -429,7 +438,6 @@ export default function ResumeAtelierPage() {
         .shell-timeline .doc-tl-item{position:relative; margin-bottom:18px;}
         .shell-timeline .doc-tl-item::before{content:''; position:absolute; left:-27px; top:4px; width:8px; height:8px; border-radius:50%; background:var(--c-accent); border:2px solid var(--ivory); box-shadow:0 0 0 1px var(--c-accent);}
         .shell-twocol{display:grid; grid-template-columns:50% 50%; min-height:640px; font-family:'Inter',sans-serif; color:#241f18;}
-        .shell-twocol .doc-side-light{padding:36px 32px;}
         .shell-twocol .doc-main{padding:36px 32px;}
 
         .v-minimal .doc-name{font-family:'Inter',sans-serif; letter-spacing:.3px;}
@@ -892,102 +900,97 @@ export default function ResumeAtelierPage() {
   );
 }
 
-/* ---------- PREVIEW RENDERER (Clean, Generic Engine) ---------- */
+/* ---------- PREVIEW RENDERER ---------- */
 function ResumePreview({ data, theme }: { data: ResumeData, theme: string }) {
   const t = TEMPLATES.find(x => x.id === theme) || TEMPLATES[0];
   const accent = t.accent;
   const vars = { '--c-accent': accent } as React.CSSProperties;
   const variant = t.variant || '';
-  const contactLine = [data.email, data.phone, data.loc].filter(Boolean).join(' · ');
 
-  const Bullets = ({ str }: { str: string }) => (
-    <div className="space-y-1">
-      {(str || '').split('\n').filter(x => x.trim()).map((b, i) => (
-        <div key={i} className="doc-bul">— {b}</div>
-      ))}
+  const bulletsHtml = (str: string) => {
+    return (str || '').split('\n').filter(x => x.trim()).map((b, i) => (
+      <div key={i} className="doc-bul">— {b}</div>
+    ));
+  };
+
+  const contactRows = (cls: string) => (
+    <>
+      {data.email && <div className={cls}><span className="doc-ic">✉</span>{data.email}</div>}
+      {data.phone && <div className={cls}><span className="doc-ic">☎</span>{data.phone}</div>}
+      {data.loc && <div className={cls}><span className="doc-ic">📍</span>{data.loc}</div>}
+    </>
+  );
+
+  const contactInline = () => {
+    const items = [data.email, data.phone, data.loc].filter(Boolean);
+    return items.map((v, i) => (
+      <span key={i}>
+        {v}{i < items.length - 1 && <span className="doc-dot">•</span>}
+      </span>
+    ));
+  };
+
+  const expItems = () => data.experience.map((e, i) => (
+    <div key={i} className="doc-job">
+      <div className="doc-jobhead"><span>{e.role || 'Title'}{e.company ? `, ${e.company}` : ''}</span><span>{e.dates}</span></div>
+      {bulletsHtml(e.bullets || '')}
     </div>
-  );
+  ));
 
-  const ExpList = () => (
-    <>{data.experience.map((e, i) => (
-      <div key={i} className="doc-job">
-        <div className="doc-jobhead"><span>{e.role || 'Title'}{e.company ? `, ${e.company}` : ''}</span><span>{e.dates}</span></div>
-        <Bullets str={e.bullets || ""} />
-      </div>
-    ))}</>
-  );
+  const projItems = () => data.projects.map((p, i) => (
+    <div key={i} className="doc-job">
+      <div className="doc-jobhead"><span>{p.name || 'Project Name'}</span></div>
+      <div className="doc-bul" style={{ marginLeft: 0 }}>{p.desc}</div>
+    </div>
+  ));
 
-  const ProjList = () => (
-    <>{data.projects.map((p, i) => (
-      <div key={i} className="doc-job">
-        <div className="doc-jobhead"><span>{p.name || 'Project Name'}</span></div>
-        <div className="doc-bul" style={{ marginLeft: 0 }}>{p.desc}</div>
-      </div>
-    ))}</>
-  );
+  const eduItems = () => data.education.map((ed, i) => (
+    <div key={i} className="doc-jobhead" style={{ marginBottom: '8px' }}>
+      <span>{ed.degree}{ed.degree && ed.school ? ', ' : ''}{ed.school}</span><span>{ed.dates}</span>
+    </div>
+  ));
 
-  const EduList = () => (
-    <>{data.education.map((ed, i) => (
-      <div key={i} className="doc-jobhead"><span>{ed.degree}{ed.degree && ed.school ? ', ' : ''}{ed.school}</span><span>{ed.dates}</span></div>
-    ))}</>
-  );
+  const eduSideItems = () => data.education.map((ed, i) => (
+    <div key={i} className="doc-sideline"><b>{ed.degree}</b><br />{ed.school}<br />{ed.dates}</div>
+  ));
 
-  const EduSideList = () => (
-    <>{data.education.map((ed, i) => (
-      <div key={i} className="doc-sideline"><b>{ed.degree}</b><br />{ed.school}<br />{ed.dates}</div>
-    ))}</>
-  );
+  const skillsItems = (cls?: string) => data.skills.map((s, i) => (
+    <span key={i} className={cls || 'doc-pill'}>{s}</span>
+  ));
 
-  const SkillPills = ({ cls }: { cls?: string }) => (
-    <>{data.skills.map((s, i) => (
-      <span key={i} className={cls || 'doc-pill'}>{s}</span>
-    ))}</>
-  );
-
-  const TimelineList = () => {
+  const timelineItems = () => {
     const items = [
       ...data.experience.map(e => ({ head: `${e.role || 'Title'}${e.company ? ', ' + e.company : ''}`, dates: e.dates, bullets: e.bullets })),
       ...data.education.map(ed => ({ head: `${ed.degree}${ed.degree && ed.school ? ', ' + ed.school : ''}`, dates: ed.dates, bullets: '' })),
     ];
-    return (
-      <div className="doc-tl">
-        {items.map((it, i) => (
-          <div key={i} className="doc-tl-item">
-            <div className="doc-jobhead"><span>{it.head}</span><span>{it.dates}</span></div>
-            <Bullets str={it.bullets || ""} />
-          </div>
-        ))}
+    return items.map((it, i) => (
+      <div key={i} className="doc-tl-item">
+        <div className="doc-jobhead"><span>{it.head}</span><span>{it.dates}</span></div>
+        {bulletsHtml(it.bullets || "")}
       </div>
-    );
+    ));
   };
 
-  const HeaderBasic = () => (
+  const headerBasic = (
     <div className="mb-6">
       <div className="doc-name">{data.name || 'Your Name'}</div>
-      <div className="doc-role">{data.role || 'Target Role'}</div>
-      <div className="doc-contact">{contactLine}</div>
+      <div className="doc-role-badge">{data.role || 'Target Role'}</div>
+      <div className="doc-contact doc-contact-inline">{contactInline()}</div>
       {data.summary && <div className="doc-summary">{data.summary}</div>}
     </div>
   );
 
-  const HeaderAvatar = () => (
+  const headerAvatar = (
     <div className="mb-6">
       <div className="doc-header-row">
-        <div className="doc-avatar">{initials(data.name)}</div>
+        <div className="doc-avatar">{getInitials(data.name)}</div>
         <div>
           <div className="doc-name">{data.name || 'Your Name'}</div>
-          <div className="doc-role">{data.role || 'Target Role'}</div>
+          <div className="doc-role-badge">{data.role || 'Target Role'}</div>
         </div>
       </div>
-      <div className="doc-contact">{contactLine}</div>
+      <div className="doc-contact doc-contact-inline">{contactInline()}</div>
       {data.summary && <div className="doc-summary">{data.summary}</div>}
-    </div>
-  );
-
-  const Section = ({ title, children, style }: { title: string, children: React.ReactNode, style?: React.CSSProperties }) => (
-    <div className="doc-sec" style={style}>
-      <div className="doc-sectitle">{title}</div>
-      {children}
     </div>
   );
 
@@ -997,17 +1000,17 @@ function ResumePreview({ data, theme }: { data: ResumeData, theme: string }) {
         return (
           <div className="shell-sidebar-l">
             <div className="doc-side-dark">
-              <div className="doc-avatar" style={{ marginBottom: '14px' }}>{initials(data.name)}</div>
-              <div className="doc-name" style={{ color: '#fff', fontSize: '18px' }}>{data.name || 'Your Name'}</div>
-              <div className="doc-role" style={{ marginTop: '3px' }}>{data.role || 'Target Role'}</div>
-              <Section title="Contact"><div className="doc-sideline">{data.email}</div><div className="doc-sideline">{data.phone}</div><div className="doc-sideline">{data.loc}</div></Section>
-              <Section title="Skills"><SkillPills cls="doc-sidepill" /></Section>
-              <Section title="Education"><EduSideList /></Section>
+              <div className="doc-avatar doc-avatar-lg">{getInitials(data.name)}</div>
+              <div className="doc-name" style={{ color: '#fff', fontSize: '19px', textAlign: 'center' }}>{data.name || 'Your Name'}</div>
+              <div className="doc-role-badge" style={{ margin: '6px auto 0', display: 'block', textAlign: 'center' }}>{data.role || 'Target Role'}</div>
+              <div className="doc-sec"><div className="doc-sidetitle">Contact</div>{contactRows('doc-sideline-ic')}</div>
+              <div className="doc-sec"><div className="doc-sidetitle">Skills</div>{skillsItems('doc-sidepill')}</div>
+              <div className="doc-sec"><div className="doc-sidetitle">Education</div>{eduSideItems()}</div>
             </div>
             <div className="doc-main">
-              {data.summary && <Section title="Summary"><div className="doc-summary" style={{ marginTop: 0 }}>{data.summary}</div></Section>}
-              <Section title="Experience"><ExpList /></Section>
-              {data.projects.length > 0 && <Section title="Projects"><ProjList /></Section>}
+              {data.summary && <div className="doc-sec" style={{ marginTop: 0 }}><div className="doc-sectitle">Summary</div><div className="doc-summary" style={{ marginTop: 0 }}>{data.summary}</div></div>}
+              <div className="doc-sec"><div className="doc-sectitle">Experience</div>{expItems()}</div>
+              {data.projects.length > 0 && <div className="doc-sec"><div className="doc-sectitle">Projects</div>{projItems()}</div>}
             </div>
           </div>
         );
@@ -1015,13 +1018,14 @@ function ResumePreview({ data, theme }: { data: ResumeData, theme: string }) {
         return (
           <div className="shell-sidebar-r">
             <div className="doc-main">
-              <HeaderBasic />
-              <Section title="Experience"><ExpList /></Section>
-              {data.projects.length > 0 && <Section title="Projects"><ProjList /></Section>}
+              {headerBasic}
+              <div className="doc-sec"><div className="doc-sectitle">Experience</div>{expItems()}</div>
+              {data.projects.length > 0 && <div className="doc-sec"><div className="doc-sectitle">Projects</div>{projItems()}</div>}
             </div>
             <div className="doc-side-light">
-              <Section title="Skills" style={{ marginTop: 0 }}><SkillPills cls="doc-sidepill" /></Section>
-              <Section title="Education"><EduSideList /></Section>
+              <div className="doc-avatar doc-avatar-lg">{getInitials(data.name)}</div>
+              <div className="doc-sec" style={{ marginTop: 0 }}><div className="doc-sidetitle">Skills</div>{skillsItems('doc-sidepill')}</div>
+              <div className="doc-sec"><div className="doc-sidetitle">Education</div>{eduSideItems()}</div>
             </div>
           </div>
         );
@@ -1029,19 +1033,22 @@ function ResumePreview({ data, theme }: { data: ResumeData, theme: string }) {
         return (
           <div className="shell-band">
             <div className="doc-band">
-              <div className="doc-name">{data.name || 'Your Name'}</div>
-              <div className="doc-role">{data.role || 'Target Role'}</div>
-              <div className="doc-contact">{contactLine}</div>
+              <div className="doc-avatar doc-avatar-band">{getInitials(data.name)}</div>
+              <div>
+                <div className="doc-name">{data.name || 'Your Name'}</div>
+                <div className="doc-role-badge doc-role-badge-inv">{data.role || 'Target Role'}</div>
+                <div className="doc-contact doc-contact-inline" style={{ color: '#c9c2b0' }}>{contactInline()}</div>
+              </div>
             </div>
             <div className="doc-body">
               <div>
-                {data.summary && <Section title="Summary"><div className="doc-summary" style={{ marginTop: 0 }}>{data.summary}</div></Section>}
-                <Section title="Experience"><ExpList /></Section>
+                {data.summary && <div className="doc-sec" style={{ marginTop: 0 }}><div className="doc-sectitle">Summary</div><div className="doc-summary" style={{ marginTop: 0 }}>{data.summary}</div></div>}
+                <div className="doc-sec"><div className="doc-sectitle">Experience</div>{expItems()}</div>
               </div>
               <div>
-                <Section title="Skills" style={{ marginTop: 0 }}><SkillPills /></Section>
-                <Section title="Education"><EduList /></Section>
-                {data.projects.length > 0 && <Section title="Projects"><ProjList /></Section>}
+                <div className="doc-sec" style={{ marginTop: 0 }}><div className="doc-sectitle">Skills</div>{skillsItems()}</div>
+                <div className="doc-sec"><div className="doc-sectitle">Education</div>{eduItems()}</div>
+                {data.projects.length > 0 && <div className="doc-sec"><div className="doc-sectitle">Projects</div>{projItems()}</div>}
               </div>
             </div>
           </div>
@@ -1049,44 +1056,46 @@ function ResumePreview({ data, theme }: { data: ResumeData, theme: string }) {
       case 'timeline':
         return (
           <div className="shell-timeline">
-            {variant === 'v-avatar' ? <HeaderAvatar /> : <HeaderBasic />}
-            <Section title="Experience & Education"><TimelineList /></Section>
-            <Section title="Skills"><SkillPills /></Section>
+            {variant === 'v-avatar' ? headerAvatar : headerBasic}
+            <div className="doc-sectitle" style={{ marginTop: '20px' }}>Experience & Education</div>
+            <div className="doc-tl">{timelineItems()}</div>
+            <div className="doc-sec"><div className="doc-sectitle">Skills</div>{skillsItems()}</div>
           </div>
         );
       case 'twocol':
         return (
           <div className="shell-twocol">
             <div className="doc-side-light">
-              <div className="doc-name" style={{ fontSize: '20px' }}>{data.name || 'Your Name'}</div>
-              <div className="doc-role">{data.role || 'Target Role'}</div>
-              <Section title="Contact"><div className="doc-sideline">{data.email}</div><div className="doc-sideline">{data.phone}</div><div className="doc-sideline">{data.loc}</div></Section>
-              <Section title="Skills"><SkillPills cls="doc-sidepill" /></Section>
-              <Section title="Education"><EduSideList /></Section>
+              <div className="doc-avatar doc-avatar-lg">{getInitials(data.name)}</div>
+              <div className="doc-name" style={{ fontSize: '19px', textAlign: 'center' }}>{data.name || 'Your Name'}</div>
+              <div className="doc-role-badge" style={{ margin: '6px auto 0', display: 'block', textAlign: 'center' }}>{data.role || 'Target Role'}</div>
+              <div className="doc-sec"><div className="doc-sidetitle">Contact</div>{contactRows('doc-sideline-ic')}</div>
+              <div className="doc-sec"><div className="doc-sidetitle">Skills</div>{skillsItems('doc-sidepill')}</div>
+              <div className="doc-sec"><div className="doc-sidetitle">Education</div>{eduSideItems()}</div>
             </div>
             <div className="doc-main">
-              {data.summary && <Section title="Summary"><div className="doc-summary" style={{ marginTop: 0 }}>{data.summary}</div></Section>}
-              <Section title="Experience"><ExpList /></Section>
-              {data.projects.length > 0 && <Section title="Projects"><ProjList /></Section>}
+              {data.summary && <div className="doc-sec" style={{ marginTop: 0 }}><div className="doc-sectitle">Summary</div><div className="doc-summary" style={{ marginTop: 0 }}>{data.summary}</div></div>}
+              <div className="doc-sec"><div className="doc-sectitle">Experience</div>{expItems()}</div>
+              {data.projects.length > 0 && <div className="doc-sec"><div className="doc-sectitle">Projects</div>{projItems()}</div>}
             </div>
           </div>
         );
       default:
         return (
-          <div className="shell-single">
-            {variant === 'v-avatar' ? <HeaderAvatar /> : <HeaderBasic />}
-            {variant === 'v-tagcloud' && <div className="doc-sec" style={{ marginTop: '12px' }}><SkillPills /></div>}
-            <Section title="Experience"><ExpList /></Section>
-            {data.projects.length > 0 && <Section title="Projects"><ProjList /></Section>}
-            <Section title="Education"><EduList /></Section>
-            {variant !== 'v-tagcloud' && <Section title="Skills"><SkillPills /></Section>}
+          <div className={cn("shell-single", variant)}>
+            {variant === 'v-avatar' ? headerAvatar : headerBasic}
+            {variant === 'v-tagcloud' && <div className="doc-sec" style={{ marginTop: '12px' }}>{skillsItems()}</div>}
+            <div className="doc-sec"><div className="doc-sectitle">Experience</div>{expItems()}</div>
+            {data.projects.length > 0 && <div className="doc-sec"><div className="doc-sectitle">Projects</div>{projItems()}</div>}
+            <div className="doc-sec"><div className="doc-sectitle">Education</div>{eduItems()}</div>
+            {variant !== 'v-tagcloud' && <div className="doc-sec"><div className="doc-sectitle">Skills</div>{skillsItems()}</div>}
           </div>
         );
     }
   };
 
   return (
-    <div className={cn("resume-content", variant)} style={vars}>
+    <div className="resume-content" style={vars}>
       {renderShell()}
     </div>
   );
