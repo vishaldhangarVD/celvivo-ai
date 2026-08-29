@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
@@ -84,6 +85,9 @@ export default function SpecialHRInterview() {
   const connectionReadyRef = useRef(false);
   const didConnectionStateRef = useRef<string>("disconnected");
   
+  const userVideoRef = useRef<HTMLVideoElement>(null);
+  const userStreamRef = useRef<MediaStream | null>(null);
+
   const recognitionRef = useRef<SpeechRecognition | null>(null);
   const silenceTimerRef = useRef<NodeJS.Timeout | null>(null);
   const transcriptRef = useRef("");
@@ -464,6 +468,34 @@ export default function SpecialHRInterview() {
     };
   }, []);
 
+  useEffect(() => {
+    let stream: MediaStream | null = null;
+
+    const startUserCamera = async () => {
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({
+          video: { width: 320, height: 240 },
+          audio: false
+        });
+        userStreamRef.current = stream;
+        if (userVideoRef.current) {
+          userVideoRef.current.srcObject = stream;
+          await userVideoRef.current.play().catch(() => {});
+        }
+      } catch (err) {
+        console.error("[User Camera] Access denied or unavailable:", err);
+      }
+    };
+
+    startUserCamera();
+
+    return () => {
+      if (stream) {
+        stream.getTracks().forEach(track => track.stop());
+      }
+    };
+  }, []);
+
   return (
     <div className={cn(
       "min-h-screen bg-[#050816] flex flex-col relative overflow-hidden",
@@ -493,6 +525,21 @@ export default function SpecialHRInterview() {
             preload="auto"
             className="w-full h-full object-contain bg-black z-10"
           />
+
+          {interviewStarted && (
+            <div className="fixed bottom-8 left-8 z-40 w-[220px] h-[160px] rounded-2xl overflow-hidden border-2 border-white/10 shadow-2xl bg-black">
+              <video
+                ref={userVideoRef}
+                autoPlay
+                playsInline
+                muted
+                className="w-full h-full object-cover scale-x-[-1]"
+              />
+              <div className="absolute bottom-2 left-2 px-2 py-1 rounded-full bg-black/60 backdrop-blur-sm text-[8px] font-black uppercase tracking-widest text-white/70">
+                You
+              </div>
+            </div>
+          )}
           
           {!interviewStarted && (
             <div className="absolute inset-0 z-20 flex flex-col items-center justify-center p-12 text-center bg-[#050816]/40 backdrop-blur-sm">
@@ -518,7 +565,7 @@ export default function SpecialHRInterview() {
                      {isAudioBlocked ? (
                         <Button onClick={handleEnableAudio} className="h-16 px-10 btn-premium rounded-2xl text-[10px] font-black uppercase tracking-[0.2em]">
                           <Volume2 className="w-4 h-4 mr-2" /> Unlock Vocal Matrix
-                        </Button>
+                        </Volume2>
                      ) : (
                         <Button onClick={startInterview} className="h-20 px-12 btn-premium rounded-3xl text-xs font-black uppercase tracking-[0.3em] shadow-2xl hover:scale-105 transition-transform">
                           Enter Neural Arena <Play className="ml-3 w-5 h-5 fill-current" />
@@ -576,7 +623,7 @@ export default function SpecialHRInterview() {
                 )}
               </div>
 
-              <div className="w-[450px] h-full flex flex-col pointer-events-auto overflow-hidden">
+              <div className="w-[360px] h-full flex flex-col pointer-events-auto overflow-hidden">
                 <motion.div 
                   initial={{ x: 50, opacity: 0 }}
                   animate={{ x: 0, opacity: 1 }}
@@ -599,7 +646,7 @@ export default function SpecialHRInterview() {
                      </Button>
                   </div>
 
-                  <div className="flex-1 p-8 flex flex-col gap-8 overflow-y-auto custom-scrollbar">
+                  <div className="flex-1 p-8 flex flex-col gap-8 overflow-y-auto scrollbar-none [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
                     <div className="space-y-4">
                       <div className="flex items-center gap-2">
                          <Badge variant="outline" className="border-accent/30 text-accent text-[8px] uppercase tracking-tighter">Turn {questionIndex}</Badge>
