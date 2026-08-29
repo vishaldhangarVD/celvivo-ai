@@ -5,6 +5,7 @@ import '@/ai/flows/ai-interview-feedback.ts';
 import '@/ai/flows/ai-learning-roadmap.ts';
 import '@/ai/flows/ai-resume-analysis.ts';
 import '@/ai/flows/ai-mock-interview-v2.ts';
+import '@/ai/flows/ai-hr-interview-result.ts';
 import '@/ai/flows/ai-skill-gap-analysis.ts';
 import '@/ai/flows/ai-cover-letter.ts';
 import '@/ai/flows/ai-resume-deep-audit.ts';
