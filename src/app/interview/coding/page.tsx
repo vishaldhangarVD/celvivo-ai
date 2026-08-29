@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { AnimatePresence, motion } from 'framer-motion';
 import Editor from '@monaco-editor/react';
@@ -81,6 +81,9 @@ export default function CodingEnginePage() {
   const [activeTerminalTab, setActiveTerminalTab] = useState("output");
   const [countdown, setCountdown] = useState<number | null>(null);
 
+  // Guard to ensure restoration only happens once
+  const hasRestoredRef = useRef(false);
+
   const journeyRef = useMemo(() => {
     if (!db || !user?.uid) return null;
     return doc(db, 'users', user.uid, 'journey', 'active');
@@ -98,8 +101,11 @@ export default function CodingEnginePage() {
 
   const { data: existingResultsData } = useCollection(resultsQuery);
 
+  // Restore session results from archives
   useEffect(() => {
-    if (existingResultsData && existingResultsData.length > 0 && questions.length > 0 && Object.keys(sessionResults).length === 0) {
+    if (hasRestoredRef.current) return;
+
+    if (existingResultsData && existingResultsData.length > 0 && questions.length > 0) {
       const restoredResults: Record<number, any> = {};
       existingResultsData.forEach((res: any) => {
         const qIdx = questions.findIndex(q => q.id === res.questionId);
@@ -114,9 +120,13 @@ export default function CodingEnginePage() {
           };
         }
       });
-      setSessionResults(restoredResults);
+
+      if (Object.keys(restoredResults).length > 0) {
+        setSessionResults(restoredResults);
+        hasRestoredRef.current = true;
+      }
     }
-  }, [existingResultsData, questions, sessionResults]);
+  }, [existingResultsData, questions]);
 
   const currentQ = useMemo(() => {
     if (!questions || questions.length === 0) return null;
