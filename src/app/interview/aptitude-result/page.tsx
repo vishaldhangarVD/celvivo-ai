@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import Navbar from '@/components/layout/Navbar';
@@ -20,7 +20,8 @@ import {
   CircleCheck,
   RotateCcw,
   Zap,
-  ArrowRight
+  ArrowRight,
+  Cpu
 } from 'lucide-react';
 import { useUser, useFirestore, useDoc } from '@/firebase';
 import { doc, updateDoc, serverTimestamp } from 'firebase/firestore';
@@ -31,6 +32,7 @@ export default function AptitudeResultPage() {
   const router = useRouter();
   const { user } = useUser();
   const db = useFirestore();
+  const [showMissingError, setShowMissingError] = useState(false);
 
   const journeyRef = useMemo(() => {
     if (!db || !user?.uid) return null;
@@ -38,6 +40,20 @@ export default function AptitudeResultPage() {
   }, [db, user?.uid]);
 
   const { data: journey, loading } = useDoc(journeyRef);
+
+  // Resilience: Give Firestore a moment to propagate the master audit report
+  // if we just arrived here from a submission.
+  useEffect(() => {
+    let timer: NodeJS.Timeout;
+    if (!loading && journey && !journey.aptitudeReport) {
+      timer = setTimeout(() => {
+        setShowMissingError(true);
+      }, 3000);
+    } else if (journey?.aptitudeReport) {
+      setShowMissingError(false);
+    }
+    return () => clearTimeout(timer);
+  }, [loading, journey]);
 
   const handleProceed = async () => {
     if (!journeyRef) return;
@@ -66,7 +82,22 @@ export default function AptitudeResultPage() {
     router.push(STAGE_ROUTES.APTITUDE);
   };
 
-  if (loading) return <div className="min-h-screen bg-[#050816] flex items-center justify-center"><Loader2 className="w-12 h-12 text-accent animate-spin" /></div>;
+  if (loading || (!journey?.aptitudeReport && !showMissingError)) {
+    return (
+      <div className="h-screen bg-[#050816] flex flex-col items-center justify-center space-y-8">
+        <div className="relative">
+          <div className="w-24 h-24 rounded-full border-2 border-accent/20 border-t-accent animate-spin" />
+          <Cpu className="w-10 h-10 text-accent absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 animate-pulse" />
+        </div>
+        <div className="text-center space-y-2">
+          <h2 className="text-2xl font-bold tracking-tighter text-premium uppercase">Synchronizing Audit Report</h2>
+          <p className="text-[10px] font-black uppercase tracking-[0.4em] text-accent animate-pulse">
+            Fetching master performance dossier
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   const result = journey?.aptitudeReport;
 
@@ -75,6 +106,7 @@ export default function AptitudeResultPage() {
       <div className="min-h-screen bg-[#050816] flex flex-col items-center justify-center p-12 text-center">
         <AlertCircle className="w-16 h-16 text-red-500 mb-6" />
         <h2 className="text-2xl font-bold">Report Missing</h2>
+        <p className="text-muted-foreground mt-2 max-w-sm">System node failed to retrieve performance dossier. Try refreshing or resuming the journey.</p>
         <Button onClick={() => router.push('/interview?action=resume')} className="mt-8">Resume Journey</Button>
       </div>
     );

@@ -94,11 +94,13 @@ export default function AptitudeEnginePage() {
   const [isInitializing, setIsInitializing] = useState(true);
   const [isEvaluating, setIsEvaluating] = useState(false);
   const [evaluationStep, setEvaluationStep] = useState(0);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   
   const [timeLeft, setTimeLeft] = useState(1800); 
 
   const initGuard = useRef(false);
   const submissionGuard = useRef(false);
+  const justSubmittedRef = useRef(false);
   const submitRef = useRef<() => Promise<void>>(null);
 
   const journeyRef = useMemo(() => {
@@ -110,7 +112,8 @@ export default function AptitudeEnginePage() {
 
   useEffect(() => {
     async function init() {
-      if (!db || !user?.uid || !journeyRef || initGuard.current) return;
+      // GUARD: Prevent re-initialization during submission or after navigation starts
+      if (!db || !user?.uid || !journeyRef || initGuard.current || isSubmitting || justSubmittedRef.current) return;
       initGuard.current = true;
       
       const snap = await getDoc(journeyRef);
@@ -120,6 +123,13 @@ export default function AptitudeEnginePage() {
       }
       
       const data = snap.data();
+      
+      // GUARD: If the test is already completed, do not initialize the test UI
+      if (data.aptitudeStatus === "completed" || data.currentStage === INTERVIEW_STAGES.APTITUDE_RESULT) {
+        router.replace(STAGE_ROUTES.APTITUDE_RESULT);
+        return;
+      }
+
       const existingQuestions = data.aptitudeQuestions || [];
       const isValidSet = existingQuestions.length === 20 && existingQuestions.every(validateAptitudeQuestion);
 
@@ -158,7 +168,7 @@ export default function AptitudeEnginePage() {
         const userSnap = await getDoc(userRef);
         const fullHistory = userSnap.data()?.aptitudeQuestionHistory || [];
         
-        // FIX 1: Only send the most recent 150 fingerprints to Gemini
+        // Only send the most recent 150 fingerprints to Gemini
         const history = fullHistory.slice(-150);
 
         const response = await generateAptitudeTest({
@@ -188,7 +198,7 @@ export default function AptitudeEnginePage() {
           currentStage: INTERVIEW_STAGES.APTITUDE
         });
 
-        // FIX 1: Cap the stored history in Firestore at 300 to prevent document bloat
+        // Cap stored history at 300 to prevent document bloat
         const updatedHistory = [...fullHistory, ...newFingerprints].slice(-300);
         await updateDoc(userRef, {
           aptitudeQuestionHistory: updatedHistory
@@ -207,11 +217,12 @@ export default function AptitudeEnginePage() {
     if (!journeyLoading && journey) {
       init();
     }
-  }, [db, user?.uid, journey, journeyLoading, journeyRef, router, toast]);
+  }, [db, user?.uid, journey, journeyLoading, journeyRef, router, toast, isSubmitting]);
 
   const handleSubmit = useCallback(async () => {
     if (submissionGuard.current || isEvaluating || !journey || !journeyRef) return;
     submissionGuard.current = true;
+    setIsSubmitting(true);
     setIsEvaluating(true);
 
     if (user?.uid) {
@@ -279,12 +290,15 @@ export default function AptitudeEnginePage() {
         updatedAt: serverTimestamp()
       });
 
+      // Mark as submitted to prevent local initialization effects from interrupting navigation
+      justSubmittedRef.current = true;
       router.push(STAGE_ROUTES.APTITUDE_RESULT);
     } catch (e) {
       console.error("[APTITUDE SESSION] Submission fault:", e);
       toast({ variant: "destructive", title: "Audit Protocol Fault" });
-    } finally {
+      setIsSubmitting(false);
       setIsEvaluating(false);
+      submissionGuard.current = false;
     }
   }, [isEvaluating, journey, journeyRef, questions, answers, toast, user?.uid, timeLeft, router]);
 
@@ -293,7 +307,7 @@ export default function AptitudeEnginePage() {
   }, [handleSubmit]);
 
   useEffect(() => {
-    if (isInitializing || isEvaluating) return;
+    if (isInitializing || isEvaluating || isSubmitting) return;
     
     const tick = () => {
       const localEndAt = localStorage.getItem(`aptitude_timer_end_${user?.uid}`);
@@ -312,10 +326,10 @@ export default function AptitudeEnginePage() {
     tick(); 
     
     return () => clearInterval(timerInterval);
-  }, [isInitializing, isEvaluating, user?.uid]);
+  }, [isInitializing, isEvaluating, user?.uid, isSubmitting]);
 
   const handleOptionSelect = async (optIdx: number) => {
-    if (!journeyRef) return;
+    if (!journeyRef || isSubmitting) return;
     const newAnswers = { ...answers, [currentIdx]: optIdx };
     setAnswers(newAnswers);
     
@@ -331,13 +345,13 @@ export default function AptitudeEnginePage() {
   };
 
   const handleNav = (newIdx: number) => {
-    if (!journeyRef) return;
+    if (!journeyRef || isSubmitting) return;
     setCurrentIdx(newIdx);
     updateDoc(journeyRef, { aptitudeCurrentIndex: newIdx });
   };
 
   const handleReviewLater = () => {
-    if (!journeyRef) return;
+    if (!journeyRef || isSubmitting) return;
     
     setMarkedForReview(prev => {
       const n = new Set(prev);
@@ -452,6 +466,7 @@ export default function AptitudeEnginePage() {
                     <button 
                       key={i} 
                       onClick={() => handleOptionSelect(i)} 
+                      disabled={isSubmitting}
                       className={cn("p-6 rounded-2xl border text-left transition-all group flex items-center gap-6", 
                       answers[currentIdx] === i ? "bg-accent/20 border-accent text-accent shadow-[0_0_30px_rgba(34,211,238,0.1)]" : "glass border-white/5 hover:border-white/20 text-white/60")}
                     >
@@ -469,10 +484,11 @@ export default function AptitudeEnginePage() {
 
             <div className="h-24 glass rounded-[2.5rem] border-white/5 p-4 flex items-center justify-between shadow-2xl">
               <div className="flex gap-4">
-                <Button variant="ghost" onClick={() => handleNav(Math.max(0, currentIdx - 1))} disabled={currentIdx === 0} className="h-16 px-8 rounded-2xl glass border-white/10 text-[10px] font-black uppercase"><ChevronLeft className="w-4 h-4 mr-2" /> Back</Button>
+                <Button variant="ghost" onClick={() => handleNav(Math.max(0, currentIdx - 1))} disabled={currentIdx === 0 || isSubmitting} className="h-16 px-8 rounded-2xl glass border-white/10 text-[10px] font-black uppercase"><ChevronLeft className="w-4 h-4 mr-2" /> Back</Button>
                 <Button 
                   variant="ghost" 
                   onClick={handleReviewLater} 
+                  disabled={isSubmitting}
                   className={cn("h-16 px-8 rounded-2xl glass border-white/10 text-[10px] font-black uppercase", markedForReview.has(currentIdx) && "bg-orange-500/10 text-orange-400 shadow-[0_0_15px_rgba(249,115,22,0.3)]")}
                 >
                   Review Later
@@ -480,9 +496,11 @@ export default function AptitudeEnginePage() {
               </div>
               <div className="flex gap-4">
                 {currentIdx < questions.length - 1 ? (
-                  <Button onClick={() => handleNav(Math.min(questions.length - 1, currentIdx + 1))} className="h-16 px-12 btn-premium rounded-2xl text-[10px] font-black uppercase">Commit & Next <ChevronRight className="ml-2 w-4 h-4" /></Button>
+                  <Button onClick={() => handleNav(Math.min(questions.length - 1, currentIdx + 1))} disabled={isSubmitting} className="h-16 px-12 btn-premium rounded-2xl text-[10px] font-black uppercase">Commit & Next <ChevronRight className="ml-2 w-4 h-4" /></Button>
                 ) : (
-                  <Button onClick={handleSubmit} className="h-16 px-12 bg-green-600 hover:bg-green-500 text-white rounded-2xl text-[10px] font-black uppercase shadow-lg group">Submit Audit <ShieldCheck className="ml-2 w-4 h-4 group-hover:scale-110 transition-transform" /></Button>
+                  <Button onClick={handleSubmit} disabled={isSubmitting} className="h-16 px-12 bg-green-600 hover:bg-green-500 text-white rounded-2xl text-[10px] font-black uppercase shadow-lg group">
+                    {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <>Submit Audit <ShieldCheck className="ml-2 w-4 h-4 group-hover:scale-110 transition-transform" /></>}
+                  </Button>
                 )}
               </div>
             </div>
@@ -496,6 +514,7 @@ export default function AptitudeEnginePage() {
                   <button 
                     key={i} 
                     onClick={() => handleNav(i)} 
+                    disabled={isSubmitting}
                     className={cn(
                       "w-full aspect-square rounded-xl border text-[10px] font-black transition-all duration-300", 
                       currentIdx === i ? "bg-accent border-accent text-black scale-110 shadow-[0_0_15px_rgba(34,211,238,0.5)]" : 
