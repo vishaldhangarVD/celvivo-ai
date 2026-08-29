@@ -20,6 +20,12 @@ import {
   DialogTitle, 
   DialogTrigger 
 } from '@/components/ui/dialog';
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from "@/components/ui/tabs";
 import { useToast } from '@/hooks/use-toast';
 import { 
   FileText, 
@@ -40,7 +46,10 @@ import {
   Check,
   User,
   MoreVertical,
-  ArrowRight
+  ArrowRight,
+  Upload,
+  FileUp,
+  X
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { runAtsCheck } from '@/ai/flows/ai-resume-ats-check';
@@ -220,13 +229,15 @@ export default function ResumeAtelierPage() {
   const [isAtsLoading, setIsAtsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
 
-  // Quick ATS Modal State
-  const [isQuickAtsOpen, setIsQuickAtsOpen] = useState(false);
-  const [isPickerOpen, setIsPickerOpen] = useState(false);
-  const [quickAtsResume, setQuickAtsResume] = useState<ResumeData | null>(null);
-  const [quickAtsJd, setQuickAtsJd] = useState("");
-  const [quickAtsResult, setQuickAtsResult] = useState<any>(null);
-  const [isQuickAtsLoading, setIsQuickAtsLoading] = useState(false);
+  // Unified ATS Modal State
+  const [isAtsModalOpen, setIsAtsModalOpen] = useState(false);
+  const [atsTab, setAtsTab] = useState<'saved' | 'upload'>('saved');
+  const [selectedSavedResume, setSelectedSavedResume] = useState<ResumeData | null>(null);
+  const [uploadedFile, setUploadedFile] = useState<File | null>(null);
+  const [uploadedFileUri, setUploadedFileUri] = useState<string | null>(null);
+  const [atsModalJd, setAtsModalJd] = useState("");
+  const [atsModalResult, setAtsModalResult] = useState<any>(null);
+  const [isAtsModalLoading, setIsAtsModalLoading] = useState(false);
 
   // Firestore Queries
   const resumesQuery = useMemo(() => {
@@ -294,28 +305,83 @@ export default function ResumeAtelierPage() {
     }
   };
 
-  const handleGlobalAtsAction = () => {
-    if (!savedResumes || savedResumes.length === 0) {
-      toast({ title: "Archival Record Missing", description: "Please create at least one career blueprint to initialize the neural audit." });
+  const resetAtsModal = () => {
+    setAtsTab(savedResumes && savedResumes.length > 0 ? 'saved' : 'upload');
+    setSelectedSavedResume(savedResumes && savedResumes.length === 1 ? savedResumes[0] as ResumeData : null);
+    setUploadedFile(null);
+    setUploadedFileUri(null);
+    setAtsModalJd("");
+    setAtsModalResult(null);
+    setIsAtsModalLoading(false);
+  };
+
+  const handleOpenAtsModal = () => {
+    resetAtsModal();
+    setIsAtsModalOpen(true);
+  };
+
+  const handleAtsFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > 5 * 1024 * 1024) {
+      toast({ variant: "destructive", title: "File Too Large", description: "Limit: 5MB" });
       return;
     }
 
-    if (savedResumes.length === 1) {
-      setQuickAtsResume(savedResumes[0] as ResumeData);
-      setQuickAtsJd("");
-      setQuickAtsResult(null);
-      setIsQuickAtsOpen(true);
-    } else {
-      setIsPickerOpen(true);
-    }
+    const reader = new FileReader();
+    reader.onload = () => {
+      setUploadedFile(file);
+      setUploadedFileUri(reader.result as string);
+    };
+    reader.readAsDataURL(file);
   };
 
-  const handlePickResume = (resume: any) => {
-    setQuickAtsResume(resume);
-    setQuickAtsJd("");
-    setQuickAtsResult(null);
-    setIsPickerOpen(false);
-    setIsQuickAtsOpen(true);
+  const handleRunAtsAudit = async () => {
+    const isSavedMode = atsTab === 'saved';
+    const resumeSource = isSavedMode ? selectedSavedResume : null;
+    const fileUri = !isSavedMode ? uploadedFileUri : null;
+
+    if (isSavedMode && !resumeSource) {
+      toast({ variant: "destructive", title: "Selection Missing", description: "Please pick a saved blueprint." });
+      return;
+    }
+    if (!isSavedMode && !fileUri) {
+      toast({ variant: "destructive", title: "File Missing", description: "Please upload a resume file." });
+      return;
+    }
+    if (!atsModalJd.trim()) {
+      toast({ variant: "destructive", title: "JD Missing", description: "Please provide the job description protocol." });
+      return;
+    }
+
+    setIsAtsModalLoading(true);
+    setAtsModalResult(null);
+
+    try {
+      const result = await runAtsCheck({
+        resumeData: isSavedMode ? {
+          name: resumeSource!.name,
+          role: resumeSource!.role,
+          summary: resumeSource!.summary,
+          skills: resumeSource!.skills,
+          experience: resumeSource!.experience,
+          projects: resumeSource!.projects,
+          education: resumeSource!.education,
+        } : undefined,
+        resumeDataUri: !isSavedMode ? fileUri! : undefined,
+        jobDescription: atsModalJd
+      });
+      setAtsModalResult(result);
+    } catch (e: any) {
+      toast({ 
+        variant: "destructive", 
+        title: "Neural Fault", 
+        description: e.message || "Couldn't complete the ATS check — please try again." 
+      });
+    } finally {
+      setIsAtsModalLoading(false);
+    }
   };
 
   const handleRunAts = async (resume: ResumeData, jdText: string, setResults: any, setLoading: any) => {
@@ -505,7 +571,7 @@ export default function ResumeAtelierPage() {
               </div>
               <div className="flex gap-4">
                 <Button 
-                  onClick={handleGlobalAtsAction}
+                  onClick={handleOpenAtsModal}
                   className="h-16 px-10 rounded-2xl glass border-[#c9a24d]/20 text-[#c9a24d] hover:bg-[#c9a24d]/10 hover:border-[#c9a24d]/50 flex gap-3 text-[10px] tracking-widest uppercase transition-all shadow-2xl"
                 >
                   <Target className="w-5 h-5" />
@@ -558,139 +624,176 @@ export default function ResumeAtelierPage() {
               ))}
             </div>
 
-            {/* Resume Picker Modal */}
-            <Dialog open={isPickerOpen} onOpenChange={setIsPickerOpen}>
-              <DialogContent className="bg-[#0b0e1a] border-[#332c22] text-[#ece7db] max-w-xl rounded-[2.5rem] overflow-hidden">
-                <DialogHeader className="mb-8">
-                  <DialogTitle className="font-disp text-3xl">Pick a Blueprint</DialogTitle>
-                  <p className="text-sm text-[#cfc7b4] font-light">Select the career track you wish to benchmark against current job protocols.</p>
-                </DialogHeader>
-                <div className="space-y-3 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
-                  {savedResumes?.map((resume: any) => (
-                    <button 
-                      key={resume.id} 
-                      onClick={() => handlePickResume(resume)}
-                      className="w-full p-6 glass border-white/5 hover:border-[#c9a24d]/40 rounded-2xl flex items-center justify-between group transition-all"
-                    >
-                      <div className="flex items-center gap-6">
-                        <div className="w-12 h-12 rounded-xl bg-[#c9a24d]/10 flex items-center justify-center text-[#c9a24d]">
-                          <FileText className="w-6 h-6" />
-                        </div>
-                        <div className="text-left">
-                          <p className="font-disp text-lg text-white group-hover:text-[#c9a24d] transition-colors">{resume.title || "Untitled"}</p>
-                          <p className="text-[10px] font-mono uppercase text-[#8a723a] tracking-widest">{resume.role}</p>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-4">
-                        <span className="text-[9px] font-mono uppercase text-white/20">{resume.updatedAt?.seconds ? new Date(resume.updatedAt.seconds * 1000).toLocaleDateString() : "Recent"}</span>
-                        <ChevronRight className="w-5 h-5 text-white/10 group-hover:text-[#c9a24d] transition-all" />
-                      </div>
-                    </button>
-                  ))}
-                </div>
-              </DialogContent>
-            </Dialog>
-
-            {/* Global Quick ATS Modal */}
-            <Dialog open={isQuickAtsOpen} onOpenChange={setIsQuickAtsOpen}>
+            {/* ATS Analysis Modal */}
+            <Dialog open={isAtsModalOpen} onOpenChange={setIsAtsModalOpen}>
               <DialogContent className="bg-[#0b0e1a] border-[#332c22] text-[#ece7db] max-w-2xl rounded-[2.5rem] overflow-hidden custom-scrollbar max-h-[90vh] overflow-y-auto">
-                <DialogHeader className="mb-8">
+                <DialogHeader className="mb-6">
                   <div className="flex items-center gap-6 mb-2">
                     <div className="w-10 h-10 rounded-xl bg-[#c9a24d]/10 flex items-center justify-center text-[#c9a24d]">
                        <Target className="w-6 h-6" />
                     </div>
-                    <DialogTitle className="font-disp text-3xl">Neural ATS Check</DialogTitle>
+                    <DialogTitle className="font-disp text-3xl">Neural ATS Audit</DialogTitle>
                   </div>
-                  {quickAtsResume && (
-                    <div className="flex items-center gap-3 px-1">
-                      <Badge variant="outline" className="border-[#c9a24d]/30 text-[#c9a24d] text-[8px] uppercase tracking-widest font-black">Active Blueprint: {quickAtsResume.title}</Badge>
-                      {savedResumes && savedResumes.length > 1 && (
-                        <button onClick={() => { setIsQuickAtsOpen(false); setIsPickerOpen(true); }} className="text-[8px] uppercase font-bold text-white/30 hover:text-white transition-colors underline decoration-white/10">Switch Track</button>
-                      )}
-                    </div>
-                  )}
+                  <p className="text-sm text-[#cfc7b4] font-light">Calibrate your career blueprint against specific hiring protocols.</p>
                 </DialogHeader>
 
-                <div className="space-y-8">
-                  {!quickAtsResult && (
+                <Tabs value={atsTab} onValueChange={(v: any) => setAtsTab(v)} className="w-full">
+                  <TabsList className="grid grid-cols-2 mb-8 glass border-white/5 p-1 rounded-2xl h-14 bg-white/5">
+                    <TabsTrigger value="saved" disabled={!savedResumes || savedResumes.length === 0} className="rounded-xl data-[state=active]:bg-[#c9a24d] data-[state=active]:text-black text-[10px] font-bold uppercase tracking-widest transition-all">Use Saved Blueprint</TabsTrigger>
+                    <TabsTrigger value="upload" className="rounded-xl data-[state=active]:bg-[#c9a24d] data-[state=active]:text-black text-[10px] font-bold uppercase tracking-widest transition-all">Upload External File</TabsTrigger>
+                  </TabsList>
+
+                  <TabsContent value="saved" className="space-y-6">
+                    {savedResumes && savedResumes.length === 1 ? (
+                      <div className="p-6 glass border-[#c9a24d]/20 bg-[#c9a24d]/5 rounded-2xl flex items-center justify-between">
+                         <div className="flex items-center gap-6">
+                            <div className="w-10 h-10 rounded-full bg-[#c9a24d]/20 flex items-center justify-center text-[#c9a24d]">
+                              <CheckCircle2 className="w-6 h-6" />
+                            </div>
+                            <div>
+                               <p className="text-[10px] font-mono text-[#8a723a] uppercase tracking-widest">Active Blueprint</p>
+                               <p className="text-lg font-disp text-white">{(savedResumes[0] as any).title}</p>
+                            </div>
+                         </div>
+                         <Badge variant="outline" className="border-[#c9a24d]/20 text-[#c9a24d] text-[8px] uppercase tracking-widest">Pre-Selected</Badge>
+                      </div>
+                    ) : (
+                      <div className="space-y-3 max-h-[300px] overflow-y-auto pr-2 custom-scrollbar">
+                        {savedResumes?.map((resume: any) => (
+                          <button 
+                            key={resume.id} 
+                            onClick={() => setSelectedSavedResume(resume as ResumeData)}
+                            className={cn(
+                              "w-full p-5 glass border-white/5 rounded-2xl flex items-center justify-between group transition-all",
+                              selectedSavedResume?.id === resume.id ? "border-[#c9a24d] bg-[#c9a24d]/5" : "hover:bg-white/5"
+                            )}
+                          >
+                            <div className="flex items-center gap-5">
+                              <div className={cn(
+                                "w-10 h-10 rounded-xl flex items-center justify-center transition-colors",
+                                selectedSavedResume?.id === resume.id ? "bg-[#c9a24d] text-black" : "bg-white/5 text-[#cfc7b4]/40 group-hover:text-[#c9a24d]"
+                              )}>
+                                <FileText className="w-5 h-5" />
+                              </div>
+                              <div className="text-left">
+                                <p className="font-disp text-base text-white">{resume.title || "Untitled"}</p>
+                                <p className="text-[9px] font-mono uppercase text-[#8a723a] tracking-widest">{resume.role}</p>
+                              </div>
+                            </div>
+                            {selectedSavedResume?.id === resume.id && <Check className="w-4 h-4 text-[#c9a24d]" />}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </TabsContent>
+
+                  <TabsContent value="upload" className="space-y-6">
+                    <div 
+                      onClick={() => document.getElementById('ats-file-input')?.click()}
+                      className={cn(
+                        "relative group glass rounded-[2rem] border-dashed border-2 p-10 transition-all duration-500 cursor-pointer flex flex-col items-center justify-center text-center",
+                        uploadedFile ? "border-[#c9a24d] bg-[#c9a24d]/5" : "border-white/10 hover:border-[#c9a24d]/30 hover:bg-white/[0.02]"
+                      )}
+                    >
+                      <input type="file" id="ats-file-input" className="hidden" accept=".pdf,.docx" onChange={handleAtsFileChange} />
+                      
+                      {uploadedFile ? (
+                        <div className="space-y-6 animate-in fade-in zoom-in duration-300 w-full">
+                          <div className="w-16 h-16 rounded-full bg-green-500/10 flex items-center justify-center mx-auto border border-green-500/20 shadow-[0_0_30px_rgba(34,197,94,0.2)]">
+                            <CheckCircle2 className="w-8 h-8 text-green-400" />
+                          </div>
+                          <div className="space-y-1">
+                            <p className="text-[9px] font-mono uppercase text-green-400/60 tracking-widest">File Identity Verified</p>
+                            <p className="text-lg font-disp text-white/90 truncate max-w-[300px] mx-auto">{uploadedFile.name}</p>
+                          </div>
+                          <button onClick={(e) => { e.stopPropagation(); setUploadedFile(null); setUploadedFileUri(null); }} className="text-[9px] font-mono uppercase tracking-widest text-white/20 hover:text-red-400 transition-colors flex items-center gap-2 mx-auto">
+                            <X className="w-3 h-3" /> Remove File
+                          </button>
+                        </div>
+                      ) : (
+                        <>
+                          <div className="w-16 h-16 rounded-2xl bg-white/5 flex items-center justify-center mb-6 border border-white/10 group-hover:scale-110 group-hover:border-[#c9a24d]/40 transition-all">
+                            <FileUp className="w-8 h-8 text-white/20 group-hover:text-[#c9a24d]" />
+                          </div>
+                          <div className="space-y-1">
+                            <p className="text-base font-bold text-white/90">Select Resume File</p>
+                            <p className="text-[9px] font-mono uppercase tracking-widest text-[#8a723a]">PDF / DOCX &middot; MAX 5MB</p>
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  </TabsContent>
+                </Tabs>
+
+                {!atsModalResult && (
+                  <div className="space-y-8 mt-8 border-t border-white/5 pt-8">
                     <div className="space-y-4">
                       <Label className="text-[10px] font-mono uppercase text-[#8a723a] tracking-widest ml-1">Job Description Protocol</Label>
                       <Textarea 
-                        value={quickAtsJd}
-                        onChange={e => setQuickAtsJd(e.target.value)}
-                        placeholder="Paste the job requirements here..."
+                        value={atsModalJd}
+                        onChange={e => setAtsModalJd(e.target.value)}
+                        placeholder="Paste the target job requirements here to calibrate the audit..."
                         className="atelier-textarea h-40"
                       />
                       <Button 
-                        onClick={() => handleRunAts(quickAtsResume!, quickAtsJd, setQuickAtsResult, setIsQuickAtsLoading)}
-                        disabled={isQuickAtsLoading || !quickAtsJd.trim()}
-                        className="w-full h-14 bg-[#c9a24d] text-[#0c0b09] hover:bg-[#f7f2e6] rounded-none font-mono text-[11px] uppercase tracking-widest shadow-xl"
+                        onClick={handleAtsAudit}
+                        disabled={isAtsModalLoading || (atsTab === 'saved' ? !selectedSavedResume : !uploadedFileUri) || !atsModalJd.trim()}
+                        className="w-full h-16 bg-[#c9a24d] text-black hover:bg-[#f7f2e6] rounded-none font-mono text-[11px] uppercase tracking-[0.2em] transition-all shadow-[0_20px_50px_rgba(0,0,0,0.3)]"
                       >
-                        {isQuickAtsLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : "Run Neural Audit →"}
+                        {isAtsModalLoading ? <><Loader2 className="w-5 h-5 animate-spin mr-3" /> Running Neural Audit...</> : "Initialize Audit Sequence →"}
                       </Button>
                     </div>
-                  )}
+                  </div>
+                )}
 
-                  {quickAtsResult && (
-                    <div className="space-y-10 animate-in fade-in slide-in-from-bottom-4 duration-500">
-                      <div className="p-8 border border-[#332c22] bg-[#1c1814] space-y-10">
-                        <div className="flex items-center gap-8">
-                          <div className="fit-ring" style={{ '--pct': `${quickAtsResult.score}%` } as any}>
-                            <div className="fit-ring-inner">{quickAtsResult.score}%</div>
-                          </div>
-                          <div className="space-y-1">
-                            <p className="text-[10px] font-mono text-[#8a723a] uppercase tracking-widest">Match Verdict</p>
-                            <h4 className="font-disp text-2xl text-[#f7f2e6]">{quickAtsResult.verdict}</h4>
-                          </div>
+                {atsModalResult && (
+                  <div className="space-y-10 mt-8 border-t border-white/5 pt-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                    <div className="p-8 border border-[#332c22] bg-[#1c1814] space-y-10">
+                      <div className="flex items-center gap-8">
+                        <div className="fit-ring" style={{ '--pct': `${atsModalResult.score}%` } as any}>
+                          <div className="fit-ring-inner">{atsModalResult.score}%</div>
                         </div>
-
-                        <div className="grid md:grid-cols-2 gap-10">
-                          <div className="space-y-6">
-                             <div className="space-y-3">
-                               <p className="text-[9px] font-mono uppercase text-green-400/60 tracking-widest">Matched Keywords</p>
-                               <div className="flex flex-wrap gap-2">
-                                 {quickAtsResult.matchedKeywords?.map((w: string) => <span key={w} className="px-3 py-1 bg-green-500/10 text-green-400 text-[10px] border border-green-500/20">{w}</span>)}
-                               </div>
-                             </div>
-                             <div className="space-y-3">
-                               <p className="text-[9px] font-mono uppercase text-red-400/60 tracking-widest">Missing Requirements</p>
-                               <div className="flex flex-wrap gap-2">
-                                 {quickAtsResult.missingKeywords?.map((w: string) => <span key={w} className="px-3 py-1 bg-red-500/10 text-red-400 text-[10px] border border-red-500/20">{w}</span>)}
-                               </div>
-                             </div>
-                          </div>
-                          <div className="space-y-6">
-                             <p className="text-[9px] font-mono uppercase text-[#c9a24d] tracking-widest">Strategic Recommendations</p>
-                             <div className="space-y-4">
-                               {quickAtsResult.suggestions?.map((s: string, i: number) => (
-                                 <div key={i} className="flex gap-4 items-start group">
-                                   <div className="w-1.5 h-1.5 rounded-full bg-[#c9a24d] mt-1.5 shrink-0" />
-                                   <p className="text-xs font-light text-[#cfc7b4] leading-relaxed italic">"{s}"</p>
-                                 </div>
-                               ))}
-                             </div>
-                          </div>
+                        <div className="space-y-1">
+                          <p className="text-[10px] font-mono text-[#8a723a] uppercase tracking-widest">Neural Match Verdict</p>
+                          <h4 className="font-disp text-3xl text-[#f7f2e6] tracking-tight">{atsModalResult.verdict}</h4>
                         </div>
                       </div>
-                      
-                      <div className="flex gap-4">
-                        <Button 
-                          variant="ghost" 
-                          onClick={() => { setQuickAtsResult(null); setQuickAtsJd(""); }}
-                          className="flex-1 h-12 rounded-xl border border-white/10 text-[10px] font-bold uppercase tracking-widest hover:bg-white/5"
-                        >
-                          New Audit
-                        </Button>
-                        <Button 
-                          onClick={() => handleEdit(quickAtsResume)}
-                          className="flex-1 h-12 bg-[#c9a24d] text-black hover:bg-[#f7f2e6] rounded-xl text-[10px] font-bold uppercase tracking-widest"
-                        >
-                          Refine Blueprint
-                        </Button>
+
+                      <div className="grid md:grid-cols-2 gap-10">
+                        <div className="space-y-6">
+                           <div className="space-y-3">
+                             <p className="text-[9px] font-mono uppercase text-green-400/60 tracking-widest">Matched Keywords</p>
+                             <div className="flex flex-wrap gap-2">
+                               {atsModalResult.matchedKeywords?.map((w: string) => <span key={w} className="px-3 py-1 bg-green-500/10 text-green-400 text-[10px] border border-green-500/20">{w}</span>)}
+                             </div>
+                           </div>
+                           <div className="space-y-3">
+                             <p className="text-[9px] font-mono uppercase text-red-400/60 tracking-widest">Critical Missing Nodes</p>
+                             <div className="flex flex-wrap gap-2">
+                               {atsModalResult.missingKeywords?.map((w: string) => <span key={w} className="px-3 py-1 bg-red-500/10 text-red-400 text-[10px] border border-red-500/20">{w}</span>)}
+                             </div>
+                           </div>
+                        </div>
+                        <div className="space-y-6">
+                           <p className="text-[9px] font-mono uppercase text-[#c9a24d] tracking-widest">Strategic Remediation</p>
+                           <div className="space-y-4">
+                             {atsModalResult.suggestions?.map((s: string, i: number) => (
+                               <div key={i} className="flex gap-4 items-start group">
+                                 <div className="w-1.5 h-1.5 rounded-full bg-[#c9a24d] mt-1.5 shrink-0" />
+                                 <p className="text-xs font-light text-[#cfc7b4] leading-relaxed italic">"{s}"</p>
+                               </div>
+                             ))}
+                           </div>
+                        </div>
                       </div>
                     </div>
-                  )}
-                </div>
+                    
+                    <div className="flex gap-4">
+                      <Button variant="ghost" onClick={resetAtsModal} className="flex-1 h-14 rounded-xl border border-white/10 text-[10px] font-bold uppercase tracking-widest hover:bg-white/5">New Audit Protocol</Button>
+                      <Button onClick={() => setIsAtsModalOpen(false)} className="flex-1 h-14 bg-white/5 hover:bg-white/10 border border-white/10 text-white rounded-xl text-[10px] font-bold uppercase tracking-widest transition-all">Dismiss</Button>
+                    </div>
+                  </div>
+                )}
               </DialogContent>
             </Dialog>
           </motion.div>
