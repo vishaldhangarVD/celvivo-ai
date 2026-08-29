@@ -28,8 +28,10 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import { aiMockInterview, type AiMockInterviewOutput } from "@/ai/flows/ai-mock-interview-v2";
+import { analyzeHRInterviewResult } from "@/ai/flows/ai-hr-interview-result";
 import { useUser, useFirestore, useDoc } from "@/firebase";
-import { doc } from "firebase/firestore";
+import { doc, updateDoc, serverTimestamp } from "firebase/firestore";
+import { useRouter } from "next/navigation";
 
 interface SpeechRecognitionEvent extends Event {
   results: SpeechRecognitionResultList;
@@ -54,6 +56,7 @@ interface SpeechRecognition extends EventTarget {
 }
 
 export default function SpecialHRInterview() {
+  const router = useRouter();
   const { toast } = useToast();
   const { user } = useUser();
   const db = useFirestore();
@@ -300,7 +303,7 @@ export default function SpecialHRInterview() {
         currentStage: interviewStage,
         currentDifficulty: interviewDifficulty,
         hintUsed: false,
-        round1Context: round1Context // PASSING ROUND 1 CONTEXT HERE
+        round1Context: round1Context 
       });
 
       setCurrentQuestion(result.nextQuestion);
@@ -314,6 +317,43 @@ export default function SpecialHRInterview() {
       if (result.isInterviewComplete) {
         setIsComplete(true);
         isCompleteRef.current = true;
+
+        // Fire-and-forget: analyze the full transcript and persist the real result,
+        // then navigate to the result page once ready. Do not block the closing
+        // statement from being spoken by the agent while this runs.
+        (async () => {
+          try {
+            const fullTranscript = history.map(h => ({
+              stage: interviewStage,
+              question: h.question,
+              answer: h.answer,
+            }));
+
+            const resultData = await analyzeHRInterviewResult({
+              candidateName: resumeAnalysis?.personalInfo?.fullName || user?.displayName || "Candidate",
+              role: journey?.role || "Software Engineer",
+              targetCompany: journey?.company || "Nexvoro AI",
+              resumeSummary: resumeAnalysis?.summary || "",
+              transcript: fullTranscript,
+            });
+
+            if (journeyRef) {
+              await updateDoc(journeyRef, {
+                specialHRResult: resultData,
+                specialHRResultAt: serverTimestamp(),
+              });
+            }
+
+            router.push('/special-hr-interview-result');
+          } catch (err) {
+            console.error("[HR Result] Analysis failed:", err);
+            toast({
+              variant: "destructive",
+              title: "Result Synthesis Failed",
+              description: "Your interview was recorded, but the report couldn't be generated. Please contact support.",
+            });
+          }
+        })();
       }
 
       if (isSpeakingRequestRef.current) return;
