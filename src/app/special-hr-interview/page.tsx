@@ -531,6 +531,9 @@ export default function SpecialHRInterview() {
             preload="auto"
             className="w-full h-full object-contain bg-black z-10"
           />
+          {status !== "READY" && (
+            <div className="absolute inset-0 z-[15] bg-[#050816] pointer-events-none" />
+          )}
 
           {interviewStarted && (
             <div className="fixed bottom-8 left-8 z-40 w-[220px] h-[160px] rounded-2xl overflow-hidden border-2 border-white/10 shadow-2xl bg-black">
