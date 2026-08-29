@@ -20,6 +20,7 @@ import { useUser, useFirestore, useDoc } from '@/firebase';
 import { doc, setDoc } from 'firebase/firestore';
 import { ROADMAP_DEFINITIONS } from '@/lib/roadmap-data';
 import { useToast } from '@/hooks/use-toast';
+import { cn } from "@/lib/utils";
 
 export default function CareerRoadmapDetail() {
   const params = useParams();
@@ -161,11 +162,12 @@ export default function CareerRoadmapDetail() {
                         boxShadow: ["0 0 0px rgba(34,211,238,0)", "0 0 20px rgba(34,211,238,0.3)", "0 0 0px rgba(34,211,238,0)"] 
                       } : {}}
                       transition={{ duration: 2, repeat: Infinity }}
-                      className={`w-16 h-16 rounded-2xl flex items-center justify-center border transition-all duration-500 ${
+                      className={cn(
+                        "w-16 h-16 rounded-2xl flex items-center justify-center border transition-all duration-500",
                         completed ? 'bg-green-500/20 border-green-500/50 text-green-400' :
                         unlocked ? 'bg-white/5 border-accent/40 text-accent' :
                         'bg-black/40 border-white/5 text-white/10'
-                      }`}
+                      )}
                     >
                       {completed ? <CheckCircle2 className="w-8 h-8" /> : 
                        unlocked ? <Zap className={`w-7 h-7 ${isCurrent ? 'animate-pulse' : ''}`} /> : 
@@ -173,15 +175,16 @@ export default function CareerRoadmapDetail() {
                     </motion.div>
                   </div>
 
-                  <Card className={`flex-1 premium-card p-10 transition-all duration-500 ${
+                  <Card className={cn(
+                    "flex-1 premium-card p-10 transition-all duration-500",
                     !unlocked ? 'opacity-30 grayscale' : 
                     completed ? 'border-green-500/10 bg-green-500/[0.01]' : 
                     'hover:bg-white/[0.02] border-white/10 bg-white/[0.01]'
-                  }`}>
+                  )}>
                     <div className="flex flex-col md:flex-row justify-between gap-8">
                       <div className="space-y-4">
                         <div className="flex items-center gap-4">
-                          <span className={`text-[10px] font-bold uppercase tracking-widest ${unlocked ? 'text-accent' : 'text-white/20'}`}>Node 0{i + 1}</span>
+                          <span className={cn("text-[10px] font-bold uppercase tracking-widest", unlocked ? 'text-accent' : 'text-white/20')}>Node 0{i + 1}</span>
                           {completed && (
                             <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }}>
                               <Badge className="bg-green-500/20 text-green-400 border-none text-[8px] uppercase font-bold tracking-widest">Protocol Mastered</Badge>
@@ -191,8 +194,8 @@ export default function CareerRoadmapDetail() {
                             <Badge className="bg-purple-500/20 text-purple-400 border-none text-[8px] uppercase font-bold tracking-widest animate-pulse">Active Focus</Badge>
                           )}
                         </div>
-                        <h3 className={`text-2xl font-bold tracking-tight transition-colors ${unlocked ? 'text-white' : 'text-white/20'}`}>{step.title}</h3>
-                        <p className={`text-lg font-light leading-relaxed max-w-2xl transition-colors ${unlocked ? 'text-muted-foreground' : 'text-white/10'}`}>
+                        <h3 className={cn("text-2xl font-bold tracking-tight transition-colors", unlocked ? 'text-white' : 'text-white/20')}>{step.title}</h3>
+                        <p className={cn("text-lg font-light leading-relaxed max-w-2xl transition-colors", unlocked ? 'text-muted-foreground' : 'text-white/10')}>
                           {step.description}
                         </p>
                       </div>

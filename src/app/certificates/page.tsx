@@ -31,6 +31,7 @@ import { useMemo } from 'react';
 import Link from 'next/link';
 import { generateCertificatePDF } from '@/lib/certificate-generator';
 import { useToast } from '@/hooks/use-toast';
+import { cn } from "@/lib/utils";
 import {
   Radar,
   RadarChart,
