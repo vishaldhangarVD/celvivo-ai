@@ -62,11 +62,21 @@ interface ResumeData {
 const STEPS = ["Design", "Details", "Experience", "Skills", "Finish"];
 const ROMAN_NUMERALS = ['I', 'II', 'III', 'IV', 'V'];
 
-const THEMES = [
-  { id: 'windsor', name: 'The Windsor', tag: 'Centered · Serif · Timeless', accent: '#7a2531' },
-  { id: 'savile', name: 'The Savile', tag: 'Dark bureau · Two columns', accent: '#3a5a40' },
-  { id: 'regent', name: 'The Regent', tag: 'Ink band · Executive split', accent: '#8a723a' },
-  { id: 'bond', name: 'The Bond', tag: 'Chronological thread', accent: '#4a4e69' },
+const TEMPLATES = [
+  {id:'windsor',    name:'The Windsor',    tag:'Centered · Serif · Timeless',        accent:'#7a2531', family:'single'},
+  {id:'savile',     name:'The Savile',     tag:'Dark bureau · Two columns',          accent:'#3a5a40', family:'sidebar-l'},
+  {id:'regent',     name:'The Regent',     tag:'Ink band · Executive split',         accent:'#8a723a', family:'band'},
+  {id:'bond',       name:'The Bond',       tag:'Chronological thread',               accent:'#4a4e69', family:'timeline'},
+  {id:'harrow',     name:'The Harrow',     tag:'Minimal · ATS-safest',               accent:'#4a4438', family:'single', variant:'v-minimal'},
+  {id:'kensington', name:'The Kensington', tag:'Light sidebar · Right column',       accent:'#2f6f6f', family:'sidebar-r'},
+  {id:'oxford',     name:'The Oxford',     tag:'Equal split · Light aside',          accent:'#2f4f6f', family:'twocol'},
+  {id:'piccadilly', name:'The Piccadilly', tag:'Skills up top · Tag cloud',          accent:'#b5542f', family:'single', variant:'v-tagcloud'},
+  {id:'highgate',   name:'The Highgate',   tag:'Compact one-pager',                 accent:'#6b2d3c', family:'single', variant:'v-dense'},
+  {id:'camden',     name:'The Camden',     tag:'Avatar · Timeline',                 accent:'#5b4a8a', family:'timeline', variant:'v-avatar'},
+  {id:'ashford',    name:'The Ashford',    tag:'Avatar header · Single column',      accent:'#2d5f8a', family:'single', variant:'v-avatar'},
+  {id:'belgrave',   name:'The Belgrave',   tag:'Pill section headers',               accent:'#2f7a5e', family:'single', variant:'v-pillheaders'},
+  {id:'mayfair',    name:'The Mayfair',    tag:'Accent border sections',             accent:'#7a3f6b', family:'single', variant:'v-accentborder'},
+  {id:'chelsea',    name:'The Chelsea',    tag:'Boxed sections',                     accent:'#8a5a2f', family:'single', variant:'v-boxed'},
 ];
 
 const INITIAL_DATA: ResumeData = {
@@ -95,57 +105,159 @@ function tokenize(str: string) {
   return (str || '').toLowerCase().match(/[a-z0-9+.#]+/g)?.filter(w => w.length > 2 && !STOP_WORDS.has(w)) || [];
 }
 
+function initials(name: string) {
+  const parts = (name || '').trim().split(/\s+/).filter(Boolean);
+  return parts.length ? parts.map(w => w[0]).slice(0, 2).join('').toUpperCase() : '?';
+}
+
 /* ---------- MINIATURE PREVIEW COMPONENT ---------- */
-const CutThumbnail = ({ themeId, accent }: { themeId: string, accent: string }) => {
-  if (themeId === 'savile') {
+const CutThumbnail = ({ template }: { template: any }) => {
+  const a = template.accent;
+  
+  if (template.family === 'sidebar-l' || template.family === 'sidebar-r') {
+    const sideBlock = <div style={{ background: template.family === 'sidebar-l' ? '#1c1811' : '#f6f3ea' }} />;
+    const mainBlock = (
+      <div style={{ padding: '12px 10px' }}>
+        <div style={{ width: '55%', height: '5px', background: a, marginBottom: '7px' }} />
+        <div style={{ width: '80%', height: '2.5px', background: '#e4dcc6', marginBottom: '5px' }} />
+        <div style={{ width: '65%', height: '2.5px', background: '#e4dcc6' }} />
+      </div>
+    );
     return (
-      <div className="grid grid-cols-[35%_65%] h-full">
-        <div className="bg-[#1c1811]" />
-        <div className="p-3">
-          <div className="w-[55%] h-1 mb-2" style={{ backgroundColor: accent }} />
-          <div className="w-[80%] h-0.5 bg-[#e4dcc6] mb-1" />
-          <div className="w-[65%] h-0.5 bg-[#e4dcc6]" />
-        </div>
+      <div style={{ display: 'grid', gridTemplateColumns: template.family === 'sidebar-l' ? '35% 65%' : '65% 35%', height: '100%' }}>
+        {template.family === 'sidebar-l' ? <>{sideBlock}{mainBlock}</> : <>{mainBlock}{sideBlock}</>}
       </div>
     );
   }
-  if (themeId === 'regent') {
+
+  if (template.family === 'band') {
     return (
-      <div className="h-full">
-        <div className="h-[32%] bg-[#1c1811] border-b-2" style={{ borderColor: accent }} />
-        <div className="p-2.5 grid grid-cols-[60%_40%] gap-2">
+      <div style={{ height: '100%' }}>
+        <div style={{ height: '32%', background: '#1c1811', borderBottom: `2px solid ${a}` }} />
+        <div style={{ padding: '10px', display: 'grid', gridTemplateColumns: '60% 40%', gap: '8px' }}>
           <div>
-            <div className="w-[85%] h-0.5 bg-[#e4dcc6] mb-1" />
-            <div className="w-[65%] h-0.5 bg-[#e4dcc6]" />
+            <div style={{ width: '85%', height: '2.5px', background: '#e4dcc6', marginBottom: '5px' }} />
+            <div style={{ width: '65%', height: '2.5px', background: '#e4dcc6' }} />
           </div>
-          <div className="border-l-2 pl-1.5" style={{ borderColor: accent }}>
-            <div className="w-[80%] h-0.5 bg-[#e4dcc6]" />
+          <div style={{ borderLeft: `2px solid ${a}`, paddingLeft: '6px' }}>
+            <div style={{ width: '80%', height: '2.5px', background: '#e4dcc6' }} />
           </div>
         </div>
       </div>
     );
   }
-  if (themeId === 'bond') {
+
+  if (template.family === 'timeline') {
     return (
-      <div className="p-3">
-        <div className="w-[45%] h-1.5 bg-[#1c1811] mb-2.5" />
-        <div className="border-l-[1.5px] border-[#ddd3ba] pl-3 ml-0.5">
-          <div className="w-1.5 h-1.5 rounded-full mb-1 -ml-[16.5px]" style={{ backgroundColor: accent }} />
-          <div className="w-[75%] h-0.5 bg-[#e4dcc6] mb-2" />
-          <div className="w-1.5 h-1.5 rounded-full mb-1 -ml-[16.5px]" style={{ backgroundColor: accent }} />
-          <div className="w-[55%] h-0.5 bg-[#e4dcc6]" />
+      <div style={{ padding: '12px 10px' }}>
+        {template.variant === 'v-avatar'
+          ? <div style={{ width: '14px', height: '14px', borderRadius: '50%', background: a, marginBottom: '8px' }} />
+          : <div style={{ width: '45%', height: '6px', background: '#1c1811', marginBottom: '10px' }} />}
+        <div style={{ borderLeft: '1.5px solid #ddd3ba', paddingLeft: '12px', marginLeft: '2px' }}>
+          <div style={{ width: '7px', height: '7px', borderRadius: '50%', background: a, marginLeft: '-16.5px', marginBottom: '5px' }} />
+          <div style={{ width: '75%', height: '2.5px', background: '#e4dcc6', marginBottom: '9px' }} />
+          <div style={{ width: '7px', height: '7px', borderRadius: '50%', background: a, marginLeft: '-16.5px', marginBottom: '5px' }} />
+          <div style={{ width: '55%', height: '2.5px', background: '#e4dcc6' }} />
         </div>
       </div>
     );
   }
+
+  if (template.family === 'twocol') {
+    return (
+      <div style={{ display: 'grid', gridTemplateColumns: '50% 50%', height: '100%' }}>
+        <div style={{ background: '#f6f3ea', padding: '10px' }}>
+          <div style={{ width: '60%', height: '2.5px', background: a, marginBottom: '6px' }} />
+          <div style={{ width: '70%', height: '2px', background: '#ddd3ba' }} />
+        </div>
+        <div style={{ padding: '10px' }}>
+          <div style={{ width: '80%', height: '2.5px', background: '#e4dcc6', marginBottom: '5px' }} />
+          <div style={{ width: '65%', height: '2.5px', background: '#e4dcc6' }} />
+        </div>
+      </div>
+    );
+  }
+
+  if (template.variant === 'v-avatar') {
+    return (
+      <div style={{ padding: '14px', textAlign: 'center' }}>
+        <div style={{ width: '22px', height: '22px', borderRadius: '50%', background: a, margin: '0 auto 8px' }} />
+        <div style={{ width: '60%', height: '2.5px', background: '#e4dcc6', margin: '0 auto 5px' }} />
+        <div style={{ width: '88%', height: '1px', background: '#e4dcc6', margin: '8px auto' }} />
+        <div style={{ width: '78%', height: '2.5px', background: '#e4dcc6', margin: '0 auto 5px' }} />
+      </div>
+    );
+  }
+
+  if (template.variant === 'v-tagcloud') {
+    return (
+      <div style={{ padding: '14px', textAlign: 'center' }}>
+        <div style={{ width: '48%', height: '6px', background: '#1c1811', margin: '0 auto 8px' }} />
+        <div style={{ display: 'flex', justifyContent: 'center', gap: '4px', marginBottom: '9px' }}>
+          <div style={{ width: '16px', height: '6px', borderRadius: '3px', border: `1px solid ${a}` }} />
+          <div style={{ width: '16px', height: '6px', borderRadius: '3px', border: `1px solid ${a}` }} />
+          <div style={{ width: '16px', height: '6px', borderRadius: '3px', border: `1px solid ${a}` }} />
+        </div>
+        <div style={{ width: '80%', height: '2.5px', background: '#e4dcc6', margin: '0 auto 5px' }} />
+      </div>
+    );
+  }
+
+  if (template.variant === 'v-pillheaders') {
+    return (
+      <div style={{ padding: '14px', textAlign: 'center' }}>
+        <div style={{ width: '48%', height: '6px', background: '#1c1811', margin: '0 auto 9px' }} />
+        <div style={{ width: '34%', height: '8px', borderRadius: '100px', background: a, margin: '0 auto 8px' }} />
+        <div style={{ width: '78%', height: '2.5px', background: '#e4dcc6', margin: '0 auto 5px' }} />
+      </div>
+    );
+  }
+
+  if (template.variant === 'v-accentborder') {
+    return (
+      <div style={{ padding: '14px' }}>
+        <div style={{ width: '48%', height: '6px', background: '#1c1811', marginBottom: '10px' }} />
+        <div style={{ borderLeft: `2px solid ${a}`, paddingLeft: '8px' }}>
+          <div style={{ width: '70%', height: '2.5px', background: '#e4dcc6', marginBottom: '5px' }} />
+          <div style={{ width: '55%', height: '2.5px', background: '#e4dcc6' }} />
+        </div>
+      </div>
+    );
+  }
+
+  if (template.variant === 'v-boxed') {
+    return (
+      <div style={{ padding: '14px' }}>
+        <div style={{ width: '48%', height: '6px', background: '#1c1811', marginBottom: '9px' }} />
+        <div style={{ background: '#f6f3ea', borderRadius: '4px', padding: '6px' }}>
+          <div style={{ width: '70%', height: '2.5px', background: a, marginBottom: '5px' }} />
+          <div style={{ width: '55%', height: '2.5px', background: '#ddd3ba' }} />
+        </div>
+      </div>
+    );
+  }
+
+  if (template.variant === 'v-dense') {
+    return (
+      <div style={{ padding: '10px' }}>
+        <div style={{ width: '40%', height: '5px', background: '#1c1811', marginBottom: '5px' }} />
+        <div style={{ width: '30%', height: '2px', background: a, marginBottom: '8px' }} />
+        <div style={{ width: '85%', height: '2px', background: '#e4dcc6', marginBottom: '3px' }} />
+        <div style={{ width: '80%', height: '2px', background: '#e4dcc6', marginBottom: '3px' }} />
+        <div style={{ width: '75%', height: '2px', background: '#e4dcc6', marginBottom: '3px' }} />
+        <div style={{ width: '82%', height: '2px', background: '#e4dcc6' }} />
+      </div>
+    );
+  }
+
   return (
-    <div className="p-3.5 text-center">
-      <div className="w-[48%] h-1.5 bg-[#1c1811] mx-auto mb-2" />
-      <div className="w-[65%] h-0.5 bg-[#e4dcc6] mx-auto mb-1" />
-      <div className="w-[40%] h-0.5 mx-auto mb-3" style={{ backgroundColor: accent }} />
-      <div className="w-[88%] h-[1px] bg-[#e4dcc6] mx-auto mb-2" />
-      <div className="w-[78%] h-0.5 bg-[#e4dcc6] mx-auto mb-1" />
-      <div className="w-[60%] h-0.5 bg-[#e4dcc6] mx-auto" />
+    <div style={{ padding: '14px', textAlign: 'center' }}>
+      <div style={{ width: '48%', height: '6px', background: '#1c1811', margin: '0 auto 9px' }} />
+      <div style={{ width: '65%', height: '2.5px', background: '#e4dcc6', margin: '0 auto 5px' }} />
+      <div style={{ width: '40%', height: '2.5px', background: a, margin: '0 auto 11px' }} />
+      <div style={{ width: '88%', height: '1px', background: '#e4dcc6', margin: '0 auto 9px' }} />
+      <div style={{ width: '78%', height: '2.5px', background: '#e4dcc6', margin: '0 auto 5px' }} />
+      <div style={{ width: '60%', height: '2.5px', background: '#e4dcc6', margin: '0 auto' }} />
     </div>
   );
 };
@@ -278,19 +390,57 @@ export default function ResumeAtelierPage() {
           position: relative; transform-origin: top center;
         }
 
-        .rs-windsor { padding: 46px 42px; color: #241f18; }
-        .rs-windsor .name { font-family: var(--disp); font-size: 29px; font-weight: 600; color: #1c1811; text-align: center; }
-        .rs-windsor .role { font-size: 11.5px; color: var(--c-accent); font-weight: 600; letter-spacing: 1px; text-transform: uppercase; margin-top: 5px; text-align: center; }
-        .rs-windsor .contact { font-size: 10.5px; color: #8a8072; margin-top: 10px; text-align: center; }
-        .rs-windsor .summary { font-size: 11.5px; color: #4a4438; line-height: 1.75; margin-top: 16px; font-style: italic; text-align: center; }
-        .rs-windsor .sec-title { font-family: var(--disp); font-size: 12px; font-weight: 600; color: #1c1811; border-bottom: 1px solid var(--c-accent); padding-bottom: 4px; margin: 22px 0 11px; text-transform: uppercase; }
-        .rs-windsor .job-head { display: flex; justify-content: space-between; font-size: 12px; font-weight: 700; color: #241f18; }
-        .rs-windsor .bul { font-size: 11px; color: #4a4438; line-height: 1.6; margin-left: 14px; margin-top: 2px; }
+        .doc-name{font-family:var(--disp); font-size:27px; font-weight:600; color:#1c1811;}
+        .doc-role{font-size:11.5px; color:var(--c-accent); font-weight:600; letter-spacing:1px; text-transform:uppercase; margin-top:4px;}
+        .doc-contact{font-size:10.5px; color:#8a8072; margin-top:9px;}
+        .doc-summary{font-size:11.5px; color:#4a4438; line-height:1.75; margin-top:14px; font-style:italic;}
+        .doc-sec{margin-top:20px;}
+        .doc-sectitle{font-family:var(--disp); font-size:12px; font-weight:600; letter-spacing:.4px; color:#1c1811; border-bottom:1px solid var(--c-accent); padding-bottom:6px; margin-bottom:10px;}
+        .doc-job{margin-bottom:12px;}
+        .doc-jobhead{display:flex; justify-content:space-between; font-size:12px; font-weight:700; color:#241f18;}
+        .doc-jobsub{font-size:10.5px; color:#8a8072; font-style:italic; margin-bottom:5px;}
+        .doc-bul{font-size:11px; color:#4a4438; line-height:1.65; margin-left:14px;}
+        .doc-pill{display:inline-block; border:1px solid #ddd3ba; color:#4a4438; font-size:9.5px; font-weight:600; padding:4px 10px; margin:2px 5px 2px 0;}
+        .doc-avatar{width:52px; height:52px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-family:var(--disp); font-weight:600; font-size:18px; color:#fff; background:var(--c-accent); flex-shrink:0;}
+        .doc-header-row{display:flex; align-items:center; gap:16px; margin-bottom:4px;}
 
-        .rs-savile { display: grid; grid-template-columns: 33% 67%; min-height: 842px; }
-        .rs-savile .side { background: #1c1811; color: #e8e2d3; padding: 36px 24px; }
-        .rs-savile .main { padding: 36px 32px; color: #241f18; }
-        .rs-savile .crest2 { width: 44px; height: 44px; border: 1px solid var(--c-accent); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-family: var(--disp); font-weight: 600; font-size: 16px; color: var(--c-accent); margin-bottom: 18px; }
+        .doc-side-dark{background:#1c1811; color:#e8e2d3; padding:36px 24px;}
+        .doc-side-dark .doc-sidetitle{font-size:9px; letter-spacing:2px; text-transform:uppercase; color:var(--c-accent); font-weight:700; margin-bottom:9px;}
+        .doc-side-dark .doc-sideline{font-size:10.5px; color:#b5ac98; margin-bottom:7px; line-height:1.55;}
+        .doc-side-dark .doc-sidepill{display:inline-block; border:1px solid #4a4234; font-size:9.5px; padding:4px 10px; margin:2px 5px 2px 0; color:#d9d2c1;}
+
+        .doc-side-light{background:#f6f3ea; padding:30px 26px;}
+        .doc-side-light .doc-sidetitle{font-size:9px; letter-spacing:2px; text-transform:uppercase; color:var(--c-accent); font-weight:700; margin-bottom:9px;}
+        .doc-side-light .doc-sideline{font-size:10.5px; color:#4a4438; margin-bottom:7px; line-height:1.55;}
+        .doc-side-light .doc-sidepill{display:inline-block; border:1px solid #ddd3ba; color:#4a4438; font-size:9.5px; padding:4px 10px; margin:2px 5px 2px 0;}
+
+        .shell-single{padding:44px 40px; font-family:'Inter',sans-serif; color:#241f18;}
+        .shell-sidebar-l{display:grid; grid-template-columns:33% 67%; min-height:640px; font-family:'Inter',sans-serif; color:#241f18;}
+        .shell-sidebar-l .doc-main{padding:36px 32px;}
+        .shell-sidebar-r{display:grid; grid-template-columns:67% 33%; min-height:640px; font-family:'Inter',sans-serif; color:#241f18;}
+        .shell-sidebar-r .doc-main{padding:36px 32px;}
+        .shell-band{font-family:'Inter',sans-serif; color:#241f18;}
+        .shell-band .doc-band{background:#1c1811; padding:30px 38px; color:var(--ivory); border-bottom:3px solid var(--c-accent);}
+        .shell-band .doc-band .doc-name{color:var(--ivory);}
+        .shell-band .doc-band .doc-contact{color:#a89f8c;}
+        .shell-band .doc-body{display:grid; grid-template-columns:63% 37%; padding:28px 38px; gap:28px;}
+        .shell-timeline{padding:44px 40px; font-family:'Inter',sans-serif; color:#241f18;}
+        .shell-timeline .doc-tl{position:relative; padding-left:22px; border-left:1px solid #ddd3ba; margin-top:6px;}
+        .shell-timeline .doc-tl-item{position:relative; margin-bottom:18px;}
+        .shell-timeline .doc-tl-item::before{content:''; position:absolute; left:-27px; top:4px; width:8px; height:8px; border-radius:50%; background:var(--c-accent); border:2px solid var(--ivory); box-shadow:0 0 0 1px var(--c-accent);}
+        .shell-twocol{display:grid; grid-template-columns:50% 50%; min-height:640px; font-family:'Inter',sans-serif; color:#241f18;}
+        .shell-twocol .doc-side-light{padding:36px 32px;}
+        .shell-twocol .doc-main{padding:36px 32px;}
+
+        .v-minimal .doc-name{font-family:'Inter',sans-serif; letter-spacing:.3px;}
+        .v-minimal .doc-sectitle{border-bottom:1px solid #ddd3ba; color:#1c1811;}
+        .v-dense{padding:30px 30px !important;}
+        .v-dense .doc-sec{margin-top:12px;}
+        .v-dense .doc-name{font-size:21px;}
+        .v-dense .doc-bul, .v-dense .doc-jobhead, .v-dense .doc-jobsub, .v-dense .doc-contact{font-size:10px;}
+        .v-pillheaders .doc-sectitle{display:inline-block; background:var(--c-accent); color:#fff; border:none; padding:5px 14px; border-radius:100px; font-size:9.5px; letter-spacing:1px;}
+        .v-accentborder .doc-sec{border-left:2px solid var(--c-accent); padding-left:14px;}
+        .v-boxed .doc-sec{background:#f6f3ea; padding:14px 16px; border-radius:6px;}
 
         .atelier-input {
           background: transparent; border: none; border-bottom: 1px solid var(--hair);
@@ -441,8 +591,8 @@ export default function ResumeAtelierPage() {
                           <p className="text-[#cfc7b4] text-sm font-light italic">Pick a resume layout before you add your details. Four house styles — each a genuinely different structure, not just a different colour.</p>
                         </div>
 
-                        <div className="grid grid-cols-2 gap-4">
-                          {THEMES.map(t => (
+                        <div className="grid grid-cols-2 gap-4 max-h-[500px] overflow-y-auto pr-2 custom-scrollbar">
+                          {TEMPLATES.map(t => (
                             <div 
                               key={t.id} 
                               onClick={() => setData({...data, theme: t.id})}
@@ -452,7 +602,7 @@ export default function ResumeAtelierPage() {
                               )}
                             >
                               <div className="h-[100px] bg-white mb-4 relative overflow-hidden">
-                                <CutThumbnail themeId={t.id} accent={t.accent} />
+                                <CutThumbnail template={t} />
                               </div>
                               <h4 className="font-disp text-sm text-[#f7f2e6]">{t.name}</h4>
                               <p className="text-[9px] font-mono text-[#8a723a] uppercase mt-1">{t.tag}</p>
@@ -724,7 +874,7 @@ export default function ResumeAtelierPage() {
               <div className="preview-side sticky top-[100px]">
                 <div className="flex justify-between items-end mb-4 px-2">
                   <span className="font-mono text-[9px] uppercase tracking-[0.3em] text-[#8a723a]">Live Preview</span>
-                  <span className="font-mono text-[9px] uppercase tracking-[0.1em] text-[#c9a24d]">{THEMES.find(t=>t.id===data.theme)?.name.toUpperCase()}</span>
+                  <span className="font-mono text-[9px] uppercase tracking-[0.1em] text-[#c9a24d]">{TEMPLATES.find(t=>t.id===data.theme)?.name.toUpperCase()}</span>
                 </div>
                 <div id="resume-paper" className="paper-shell overflow-hidden">
                    <ResumePreview data={data} theme={data.theme} />
@@ -742,248 +892,202 @@ export default function ResumeAtelierPage() {
   );
 }
 
-/* ---------- PREVIEW RENDERER ---------- */
+/* ---------- PREVIEW RENDERER (Clean, Generic Engine) ---------- */
 function ResumePreview({ data, theme }: { data: ResumeData, theme: string }) {
-  const accent = THEMES.find(t => t.id === theme)?.accent || '#c9a24d';
+  const t = TEMPLATES.find(x => x.id === theme) || TEMPLATES[0];
+  const accent = t.accent;
   const vars = { '--c-accent': accent } as React.CSSProperties;
+  const variant = t.variant || '';
+  const contactLine = [data.email, data.phone, data.loc].filter(Boolean).join(' · ');
 
   const Bullets = ({ str }: { str: string }) => (
-    <div className="space-y-1 mt-1">
+    <div className="space-y-1">
       {(str || '').split('\n').filter(x => x.trim()).map((b, i) => (
-        <div key={i} className="bul flex gap-2 text-[#4a4438] leading-tight">
-          <span className="shrink-0">—</span> <span>{b}</span>
-        </div>
+        <div key={i} className="doc-bul">— {b}</div>
       ))}
     </div>
   );
 
-  const name = data.name || "";
-  const role = data.role || "";
+  const ExpList = () => (
+    <>{data.experience.map((e, i) => (
+      <div key={i} className="doc-job">
+        <div className="doc-jobhead"><span>{e.role || 'Title'}{e.company ? `, ${e.company}` : ''}</span><span>{e.dates}</span></div>
+        <Bullets str={e.bullets || ""} />
+      </div>
+    ))}</>
+  );
 
-  if (theme === 'windsor') {
+  const ProjList = () => (
+    <>{data.projects.map((p, i) => (
+      <div key={i} className="doc-job">
+        <div className="doc-jobhead"><span>{p.name || 'Project Name'}</span></div>
+        <div className="doc-bul" style={{ marginLeft: 0 }}>{p.desc}</div>
+      </div>
+    ))}</>
+  );
+
+  const EduList = () => (
+    <>{data.education.map((ed, i) => (
+      <div key={i} className="doc-jobhead"><span>{ed.degree}{ed.degree && ed.school ? ', ' : ''}{ed.school}</span><span>{ed.dates}</span></div>
+    ))}</>
+  );
+
+  const EduSideList = () => (
+    <>{data.education.map((ed, i) => (
+      <div key={i} className="doc-sideline"><b>{ed.degree}</b><br />{ed.school}<br />{ed.dates}</div>
+    ))}</>
+  );
+
+  const SkillPills = ({ cls }: { cls?: string }) => (
+    <>{data.skills.map((s, i) => (
+      <span key={i} className={cls || 'doc-pill'}>{s}</span>
+    ))}</>
+  );
+
+  const TimelineList = () => {
+    const items = [
+      ...data.experience.map(e => ({ head: `${e.role || 'Title'}${e.company ? ', ' + e.company : ''}`, dates: e.dates, bullets: e.bullets })),
+      ...data.education.map(ed => ({ head: `${ed.degree}${ed.degree && ed.school ? ', ' + ed.school : ''}`, dates: ed.dates, bullets: '' })),
+    ];
     return (
-      <div className="rs-windsor h-full" style={vars}>
-        <div className="name">{name}</div>
-        <div className="role">{role}</div>
-        <div className="contact">
-          {[data.email, data.phone, data.loc].filter(Boolean).join(' · ')}
-        </div>
-        <div className="summary">{data.summary}</div>
-        
-        {data.experience.some(e => e.role || e.company) && (
-          <div className="sec">
-            <div className="sec-title">Experience</div>
-            {data.experience.map((e, i) => (
-              <div key={i} className="mb-4">
-                <div className="job-head"><span>{[e.role, e.company].filter(Boolean).join(', ')}</span><span>{e.dates}</span></div>
-                <Bullets str={e.bullets || ""} />
-              </div>
-            ))}
+      <div className="doc-tl">
+        {items.map((it, i) => (
+          <div key={i} className="doc-tl-item">
+            <div className="doc-jobhead"><span>{it.head}</span><span>{it.dates}</span></div>
+            <Bullets str={it.bullets || ""} />
           </div>
-        )}
-
-        {data.projects.length > 0 && (
-          <div className="sec">
-            <div className="sec-title">Projects</div>
-            {data.projects.map((p, i) => (
-              <div key={i} className="mb-4">
-                <div className="job-head"><span>{p.name}</span></div>
-                <div className="bul" style={{ marginLeft: 0 }}>{p.desc}</div>
-              </div>
-            ))}
-          </div>
-        )}
-
-        {data.education.some(ed => ed.school || ed.degree) && (
-          <div className="sec">
-            <div className="sec-title">Education</div>
-            {data.education.map((ed, i) => (
-              <div key={i} className="job-head"><span>{[ed.degree, ed.school].filter(Boolean).join(', ')}</span><span>{ed.dates}</span></div>
-            ))}
-          </div>
-        )}
-
-        {data.skills.length > 0 && (
-          <div className="sec">
-            <div className="sec-title">Skills</div>
-            <div className="flex flex-wrap gap-2">
-              {data.skills.map((s, i) => (
-                <span key={i} className="pill">{s}</span>
-              ))}
-            </div>
-          </div>
-        )}
+        ))}
       </div>
     );
-  }
+  };
 
-  if (theme === 'savile') {
-    return (
-      <div className="rs-savile h-full" style={vars}>
-        <div className="side flex flex-col">
-          <div className="crest2">{(name || "?").split(' ').map(w => w[0]).slice(0, 2).join('')}</div>
-          <div className="side-name">{name}</div>
-          <div className="side-role">{role}</div>
-          
-          {(data.email || data.phone || data.loc) && (
-            <div className="side-sec">
-              <div className="side-title">Contact</div>
-              {[data.email, data.phone, data.loc].filter(Boolean).map((l, idx) => (
-                <div key={idx} className="side-line">{l}</div>
-              ))}
-            </div>
-          )}
+  const HeaderBasic = () => (
+    <div className="mb-6">
+      <div className="doc-name">{data.name || 'Your Name'}</div>
+      <div className="doc-role">{data.role || 'Target Role'}</div>
+      <div className="doc-contact">{contactLine}</div>
+      {data.summary && <div className="doc-summary">{data.summary}</div>}
+    </div>
+  );
 
-          {data.skills.length > 0 && (
-            <div className="side-sec">
-              <div className="side-title">Skills</div>
-              <div className="flex flex-wrap gap-1">
-                {data.skills.map(s => <span key={s} className="side-pill">{s}</span>)}
-              </div>
-            </div>
-          )}
-
-          {data.education.some(ed => ed.school || ed.degree) && (
-            <div className="side-sec">
-              <div className="side-title">Education</div>
-              {data.education.map((ed, i) => (
-                <div key={i} className="side-line"><b>{ed.degree}</b><br />{ed.school}<br />{ed.dates}</div>
-              ))}
-            </div>
-          )}
-        </div>
-        <div className="main">
-           {data.summary && (
-             <div className="main-sec">
-               <div className="main-title">Summary</div>
-               <div className="summary">{data.summary}</div>
-             </div>
-           )}
-           {data.experience.some(e => e.role || e.company) && (
-             <div className="main-sec">
-               <div className="main-title">Experience</div>
-               {data.experience.map((e, i) => (
-                  <div key={i} className="mb-4">
-                    <div className="flex justify-between font-bold text-[12px]"><span>{e.role}</span><span>{e.dates}</span></div>
-                    <div className="text-[10.5px] text-[#8a8072] italic mb-1">{e.company}</div>
-                    <Bullets str={e.bullets || ""} />
-                  </div>
-               ))}
-             </div>
-           )}
-           {data.projects.length > 0 && (
-             <div className="main-sec">
-               <div className="main-title">Projects</div>
-               {data.projects.map((p, i) => (
-                 <div key={i} style={{ marginBottom: 8 }}>
-                   <div className="job-head"><span>{p.name}</span></div>
-                   <div className="bul" style={{ marginLeft: 0 }}>{p.desc}</div>
-                 </div>
-               ))}
-             </div>
-           )}
+  const HeaderAvatar = () => (
+    <div className="mb-6">
+      <div className="doc-header-row">
+        <div className="doc-avatar">{initials(data.name)}</div>
+        <div>
+          <div className="doc-name">{data.name || 'Your Name'}</div>
+          <div className="doc-role">{data.role || 'Target Role'}</div>
         </div>
       </div>
-    );
-  }
+      <div className="doc-contact">{contactLine}</div>
+      {data.summary && <div className="doc-summary">{data.summary}</div>}
+    </div>
+  );
 
-  if (theme === 'regent') {
-    return (
-      <div className="rs-regent h-full" style={vars}>
-        <div className="band">
-          <div className="name">{name}</div>
-          <div className="role">{role}</div>
-          <div className="contact">{[data.email, data.phone, data.loc].filter(Boolean).join(' · ')}</div>
-        </div>
-        <div className="body">
-          <div>
-            {data.summary && (
-              <>
-                <div className="sec-title">Summary</div>
-                <div className="summary">{data.summary}</div>
-              </>
-            )}
-            {data.experience.some(e => e.role || e.company) && (
-              <>
-                <div className="sec-title">Experience</div>
-                {data.experience.map((e, i) => (
-                  <div key={i} className="mb-4">
-                    <div className="job-head"><span>{[e.role, e.company].filter(Boolean).join(', ')}</span><span>{e.dates}</span></div>
-                    <Bullets str={e.bullets || ""} />
-                  </div>
-                ))}
-              </>
-            )}
+  const Section = ({ title, children, style }: { title: string, children: React.ReactNode, style?: React.CSSProperties }) => (
+    <div className="doc-sec" style={style}>
+      <div className="doc-sectitle">{title}</div>
+      {children}
+    </div>
+  );
+
+  const renderShell = () => {
+    switch (t.family) {
+      case 'sidebar-l':
+        return (
+          <div className="shell-sidebar-l">
+            <div className="doc-side-dark">
+              <div className="doc-avatar" style={{ marginBottom: '14px' }}>{initials(data.name)}</div>
+              <div className="doc-name" style={{ color: '#fff', fontSize: '18px' }}>{data.name || 'Your Name'}</div>
+              <div className="doc-role" style={{ marginTop: '3px' }}>{data.role || 'Target Role'}</div>
+              <Section title="Contact"><div className="doc-sideline">{data.email}</div><div className="doc-sideline">{data.phone}</div><div className="doc-sideline">{data.loc}</div></Section>
+              <Section title="Skills"><SkillPills cls="doc-sidepill" /></Section>
+              <Section title="Education"><EduSideList /></Section>
+            </div>
+            <div className="doc-main">
+              {data.summary && <Section title="Summary"><div className="doc-summary" style={{ marginTop: 0 }}>{data.summary}</div></Section>}
+              <Section title="Experience"><ExpList /></Section>
+              {data.projects.length > 0 && <Section title="Projects"><ProjList /></Section>}
+            </div>
           </div>
-          <div>
-            {data.skills.length > 0 && (
-              <div className="aside-box">
-                <div className="sec-title">Skills</div>
-                <div className="flex flex-wrap gap-1">
-                  {data.skills.map(s => <span key={s} className="side-pill">{s}</span>)}
-                </div>
-              </div>
-            )}
-            {data.education.some(ed => ed.school || ed.degree) && (
-              <div className="aside-box">
-                <div className="sec-title">Education</div>
-                {data.education.map((ed, i) => (
-                  <div key={i} className="side-line"><b>{ed.degree}</b><br />{ed.school}, {ed.dates}</div>
-                ))}
-              </div>
-            )}
-            {data.projects.length > 0 && (
-              <div className="aside-box">
-                <div className="sec-title">Projects</div>
-                {data.projects.map((p, i) => (
-                  <div key={i} className="side-line"><b>{p.name}</b><br />{p.desc}</div>
-                ))}
-              </div>
-            )}
+        );
+      case 'sidebar-r':
+        return (
+          <div className="shell-sidebar-r">
+            <div className="doc-main">
+              <HeaderBasic />
+              <Section title="Experience"><ExpList /></Section>
+              {data.projects.length > 0 && <Section title="Projects"><ProjList /></Section>}
+            </div>
+            <div className="doc-side-light">
+              <Section title="Skills" style={{ marginTop: 0 }}><SkillPills cls="doc-sidepill" /></Section>
+              <Section title="Education"><EduSideList /></Section>
+            </div>
           </div>
-        </div>
-      </div>
-    );
-  }
-
-  if (theme === 'bond') {
-    return (
-      <div className="rs-bond h-full" style={vars}>
-        <div className="name">{name}</div>
-        <div className="role">{role}</div>
-        <div className="contact">{[data.email, data.phone].filter(Boolean).join(' · ')}</div>
-        <div className="summary">{data.summary}</div>
-        
-        {data.experience.some(e => e.role || e.company) && (
-          <>
-            <div className="sec-title uppercase">Experience</div>
-            <div className="tl">
-              {data.experience.map((e, i) => (
-                <div key={i} className="tl-item">
-                  <div className="job-head"><span>{[e.role, e.company].filter(Boolean).join(', ')}</span><span>{e.dates}</span></div>
-                  <Bullets str={e.bullets || ""} />
-                </div>
-              ))}
-              {data.education.map((ed, i) => (
-                <div key={i} className="tl-item">
-                  <div className="job-head"><span>{[ed.degree, ed.school].filter(Boolean).join(', ')}</span><span>{ed.dates}</span></div>
-                </div>
-              ))}
+        );
+      case 'band':
+        return (
+          <div className="shell-band">
+            <div className="doc-band">
+              <div className="doc-name">{data.name || 'Your Name'}</div>
+              <div className="doc-role">{data.role || 'Target Role'}</div>
+              <div className="doc-contact">{contactLine}</div>
             </div>
-          </>
-        )}
-
-        {data.skills.length > 0 && (
-          <>
-            <div className="sec-title uppercase">Skills</div>
-            <div className="flex flex-wrap gap-2">
-              {data.skills.map(s => <span key={s} className="pill">{s}</span>)}
+            <div className="doc-body">
+              <div>
+                {data.summary && <Section title="Summary"><div className="doc-summary" style={{ marginTop: 0 }}>{data.summary}</div></Section>}
+                <Section title="Experience"><ExpList /></Section>
+              </div>
+              <div>
+                <Section title="Skills" style={{ marginTop: 0 }}><SkillPills /></Section>
+                <Section title="Education"><EduList /></Section>
+                {data.projects.length > 0 && <Section title="Projects"><ProjList /></Section>}
+              </div>
             </div>
-          </>
-        )}
-      </div>
-    );
-  }
+          </div>
+        );
+      case 'timeline':
+        return (
+          <div className="shell-timeline">
+            {variant === 'v-avatar' ? <HeaderAvatar /> : <HeaderBasic />}
+            <Section title="Experience & Education"><TimelineList /></Section>
+            <Section title="Skills"><SkillPills /></Section>
+          </div>
+        );
+      case 'twocol':
+        return (
+          <div className="shell-twocol">
+            <div className="doc-side-light">
+              <div className="doc-name" style={{ fontSize: '20px' }}>{data.name || 'Your Name'}</div>
+              <div className="doc-role">{data.role || 'Target Role'}</div>
+              <Section title="Contact"><div className="doc-sideline">{data.email}</div><div className="doc-sideline">{data.phone}</div><div className="doc-sideline">{data.loc}</div></Section>
+              <Section title="Skills"><SkillPills cls="doc-sidepill" /></Section>
+              <Section title="Education"><EduSideList /></Section>
+            </div>
+            <div className="doc-main">
+              {data.summary && <Section title="Summary"><div className="doc-summary" style={{ marginTop: 0 }}>{data.summary}</div></Section>}
+              <Section title="Experience"><ExpList /></Section>
+              {data.projects.length > 0 && <Section title="Projects"><ProjList /></Section>}
+            </div>
+          </div>
+        );
+      default:
+        return (
+          <div className="shell-single">
+            {variant === 'v-avatar' ? <HeaderAvatar /> : <HeaderBasic />}
+            {variant === 'v-tagcloud' && <div className="doc-sec" style={{ marginTop: '12px' }}><SkillPills /></div>}
+            <Section title="Experience"><ExpList /></Section>
+            {data.projects.length > 0 && <Section title="Projects"><ProjList /></Section>}
+            <Section title="Education"><EduList /></Section>
+            {variant !== 'v-tagcloud' && <Section title="Skills"><SkillPills /></Section>}
+          </div>
+        );
+    }
+  };
 
-  return null;
+  return (
+    <div className={cn("resume-content", variant)} style={vars}>
+      {renderShell()}
+    </div>
+  );
 }
