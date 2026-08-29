@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
@@ -565,7 +564,7 @@ export default function SpecialHRInterview() {
                      {isAudioBlocked ? (
                         <Button onClick={handleEnableAudio} className="h-16 px-10 btn-premium rounded-2xl text-[10px] font-black uppercase tracking-[0.2em]">
                           <Volume2 className="w-4 h-4 mr-2" /> Unlock Vocal Matrix
-                        </Volume2>
+                        </Button>
                      ) : (
                         <Button onClick={startInterview} className="h-20 px-12 btn-premium rounded-3xl text-xs font-black uppercase tracking-[0.3em] shadow-2xl hover:scale-105 transition-transform">
                           Enter Neural Arena <Play className="ml-3 w-5 h-5 fill-current" />
