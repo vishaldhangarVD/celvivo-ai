@@ -25,7 +25,8 @@ import {
   AlertCircle,
   ChevronRight,
   RotateCcw,
-  Linkedin
+  Linkedin,
+  Sparkles
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useUser, useFirestore, useCollection } from '@/firebase';
