@@ -20,19 +20,19 @@ const CodingProblemSchema = z.object({
   sampleOutput: z.string(),
   explanation: z.string(),
   starterCode: z.object({
-    java: z.string().describe("Full Main.java boilerplate with imports and Scanner."),
-    python: z.string().describe("Full script with sys.stdin.read()."),
-    javascript: z.string().describe("Node.js script with fs.readFileSync(0)."),
-    typescript: z.string().describe("TypeScript script with imports and fs."),
-    cpp: z.string().describe("C++ boilerplate with #include <iostream> and main."),
-    c: z.string().describe("C boilerplate with #include <stdio.h> and main."),
-    csharp: z.string().describe("C# boilerplate with using System and static void Main."),
-    go: z.string().describe("Go boilerplate with package main and fmt."),
-    rust: z.string().describe("Rust boilerplate with use std::io and fn main."),
-    kotlin: z.string().describe("Kotlin boilerplate with java.util.Scanner."),
-    php: z.string().describe("PHP boilerplate with file_get_contents('php://stdin')."),
-    swift: z.string().describe("Swift boilerplate with import Foundation and readLine()."),
-    ruby: z.string().describe("Ruby boilerplate with STDIN.read."),
+    java: z.string().describe("Full Main.java boilerplate with imports and Scanner. Must be multi-line and properly indented."),
+    python: z.string().describe("Full Python script with sys.stdin.read(). Must be multi-line with proper indentation. DO NOT use semicolons for line breaks."),
+    javascript: z.string().describe("Node.js script with fs.readFileSync(0). Must be multi-line and properly indented."),
+    typescript: z.string().describe("TypeScript script with imports and fs. Must be multi-line and properly indented."),
+    cpp: z.string().describe("C++ boilerplate with #include <iostream> and main. Must be multi-line and properly indented."),
+    c: z.string().describe("C boilerplate with #include <stdio.h> and main. Must be multi-line and properly indented."),
+    csharp: z.string().describe("C# boilerplate with using System and static void Main. Must be multi-line and properly indented."),
+    go: z.string().describe("Go boilerplate with package main and fmt. Must be multi-line and properly indented."),
+    rust: z.string().describe("Rust boilerplate with use std::io and fn main. Must be multi-line and properly indented."),
+    kotlin: z.string().describe("Kotlin boilerplate with java.util.Scanner. Must be multi-line and properly indented."),
+    php: z.string().describe("PHP boilerplate with file_get_contents('php://stdin'). Must be multi-line and properly indented."),
+    swift: z.string().describe("Swift boilerplate with import Foundation and readLine(). Must be multi-line and properly indented."),
+    ruby: z.string().describe("Ruby boilerplate with STDIN.read. Must be multi-line and properly indented."),
   }),
   hiddenTestCases: z.array(z.object({
     input: z.string(),
@@ -85,6 +85,8 @@ Your objective is to architect a set of {{{count}}} UNIQUE, high-fidelity algori
    - It must include necessary imports, a primary logic function, and a main driver block.
    - The logic function should be empty except for a default return value and a comment "// Write your logic here".
    - DO NOT include the solution logic.
+   - FORMATTING: Every starterCode string MUST use actual newline characters (\\n) and standard indentation. 
+   - NEVER return code as a single-line or condensed string using semicolons.
 3. HIDDEN VERIFICATION: Provide exactly 5 hidden test cases with expected outputs.
 
 Return a strictly structured JSON matching the output schema. No conversational text.`,
