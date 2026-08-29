@@ -287,14 +287,15 @@ export default function LandingPage() {
                 <div className="relative w-full md:w-[40%] min-h-[400px] md:min-h-full overflow-hidden rounded-r-[3rem] bg-black">
                   <div className="absolute inset-0 bg-gradient-to-br from-accent/10 via-transparent to-transparent opacity-50 z-10" />
                   <div className="absolute inset-0">
-                    <Image
-                      src="https://picsum.photos/seed/nexvoro_hr/800/1000"
-                      alt="AI HR Manager"
-                      fill
-                      priority
-                      sizes="(max-width:768px)100vw,40vw"
-                      className="object-cover object-center scale-[1.10]"
-                      data-ai-hint="professional businessman"
+                    <video
+                      src="/home.mp4"
+                      autoPlay
+                      muted
+                      loop
+                      playsInline
+                      controls={false}
+                      preload="auto"
+                      className="h-full w-full object-cover"
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-[#050816]/30 via-transparent to-transparent z-20" />
                     <div className="absolute inset-0 bg-gradient-to-r from-transparent via-cyan-500/5 to-blue-500/10 z-20" />
