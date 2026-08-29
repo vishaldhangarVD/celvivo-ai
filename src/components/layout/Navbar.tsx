@@ -20,7 +20,7 @@ import {
   Clock
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useState, useMemo, Suspense } from 'react';
+import { useState, useMemo, Suspense, useCallback } from 'react';
 import { useUser, useAuth, useDoc, useFirestore, useCollection } from '@/firebase';
 import { signOut } from 'firebase/auth';
 import { useRouter, usePathname, useSearchParams } from 'next/navigation';
@@ -86,7 +86,7 @@ function NavbarContent() {
     notifications?.filter((n: any) => !n.read).length || 0, 
   [notifications]);
 
-  const handleMarkAsRead = async (id: string) => {
+  const handleMarkAsRead = useCallback(async (id: string) => {
     if (!db || !user?.uid) return;
     try {
       const ref = doc(db, 'users', user.uid, 'notifications', id);
@@ -94,7 +94,7 @@ function NavbarContent() {
     } catch (e) {
       console.error("[Notifications] Failed to update node:", e);
     }
-  };
+  }, [db, user?.uid]);
 
   const handleSignOut = async () => {
     if (!auth) return;
