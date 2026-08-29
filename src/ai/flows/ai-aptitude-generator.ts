@@ -3,6 +3,7 @@
  * @fileOverview Nexvoro AI Master Aptitude Generator v30.0.
  * Dynamically synthesizes high-fidelity logic nodes using Google Gemini.
  * Implements persistent history awareness and semantic duplicate prevention.
+ * Features a safety net to ensure 20 unique questions even under fallback conditions.
  */
 
 import { ai, runWithResilience } from '@/ai/genkit';
@@ -226,18 +227,39 @@ const aptitudeFlow = ai.defineFlow(
       attempts++;
     }
 
-    if (validQuestions.length >= 20) {
-      return { questions: validQuestions.slice(0, 20) };
+    // FIX 2: Safety net for fallback injection
+    if (validQuestions.length < 20) {
+      console.warn("[Aptitude Flow] Insufficient dynamic nodes. Injecting unique fallback nodes.");
+      const filteredFallback = FALLBACK_BANK.filter(q => {
+        const { fingerprint, pattern } = normalizeQuestion(q.question);
+        // Ensure not in history AND not already in validQuestions (to avoid duplicating Gemini's work)
+        return !historySet.has(fingerprint) && !historySet.has(pattern) && !validQuestions.some(vq => vq.id === q.id);
+      });
+      
+      const needed = 20 - validQuestions.length;
+      validQuestions.push(...filteredFallback.slice(0, needed));
     }
 
-    console.warn("[Aptitude Flow] Insufficient dynamic nodes. Injecting unique fallback nodes.");
-    const filteredFallback = FALLBACK_BANK.filter(q => {
-      const { fingerprint, pattern } = normalizeQuestion(q.question);
-      return !historySet.has(fingerprint) && !historySet.has(pattern);
-    });
-    
-    const needed = 20 - validQuestions.length;
-    validQuestions.push(...filteredFallback.slice(0, needed));
+    // FIX 2: Final safety net - reuse older fallback questions if user has exhausted all unique content
+    if (validQuestions.length < 20) {
+      console.warn("[Aptitude] Reusing older fallback questions to complete test - user has exhausted available unique questions");
+      
+      const historyArr = input.usedQuestionFingerprints || [];
+      const remainingSlots = 20 - validQuestions.length;
+      
+      const reuseCandidates = FALLBACK_BANK
+        .filter(q => !validQuestions.some(vq => vq.id === q.id))
+        .map(q => {
+          const { fingerprint } = normalizeQuestion(q.question);
+          // Find the last index in the provided history array
+          const lastSeenIndex = historyArr.lastIndexOf(fingerprint);
+          return { question: q, lastSeenIndex };
+        })
+        // Sort by lastSeenIndex ascending (oldest first)
+        .sort((a, b) => a.lastSeenIndex - b.lastSeenIndex);
+      
+      validQuestions.push(...reuseCandidates.slice(0, remainingSlots).map(c => c.question));
+    }
 
     return { questions: validQuestions.slice(0, 20) };
   }

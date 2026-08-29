@@ -156,7 +156,10 @@ export default function AptitudeEnginePage() {
         localStorage.removeItem(`aptitude_timer_end_${user.uid}`); 
         const userRef = doc(db, 'users', user.uid);
         const userSnap = await getDoc(userRef);
-        const history = userSnap.data()?.aptitudeQuestionHistory || [];
+        const fullHistory = userSnap.data()?.aptitudeQuestionHistory || [];
+        
+        // FIX 1: Only send the most recent 150 fingerprints to Gemini
+        const history = fullHistory.slice(-150);
 
         const response = await generateAptitudeTest({
           role: data.role,
@@ -166,7 +169,7 @@ export default function AptitudeEnginePage() {
         });
         
         const freshQuestions = response.questions;
-        const newEncounterData = freshQuestions.map(q => {
+        const newFingerprints = freshQuestions.map(q => {
           const norm = normalizeQuestion(q.question);
           return norm.fingerprint;
         });
@@ -185,8 +188,10 @@ export default function AptitudeEnginePage() {
           currentStage: INTERVIEW_STAGES.APTITUDE
         });
 
+        // FIX 1: Cap the stored history in Firestore at 300 to prevent document bloat
+        const updatedHistory = [...fullHistory, ...newFingerprints].slice(-300);
         await updateDoc(userRef, {
-          aptitudeQuestionHistory: arrayUnion(...newEncounterData)
+          aptitudeQuestionHistory: updatedHistory
         });
 
         setQuestions(freshQuestions);
