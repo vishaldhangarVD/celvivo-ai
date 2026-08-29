@@ -65,7 +65,7 @@ export default function Dashboard() {
     return name.charAt(0).toUpperCase() + name.slice(1);
   }, [user]);
 
-  // High-Fidelity Data Queries
+  // High-Fidelity Data Queries for BOTH Interview Setups
   const interviewsQuery = useMemo(() => {
     if (!db || !user?.uid) return null;
     return query(
@@ -74,16 +74,35 @@ export default function Dashboard() {
     );
   }, [db, user?.uid]);
 
-  const appsQuery = useMemo(() => {
+  const specialHRQuery = useMemo(() => {
     if (!db || !user?.uid) return null;
     return query(
-      collection(db, 'users', user.uid, 'job_applications'),
+      collection(db, 'users', user.uid, 'specialHRInterviews'),
       orderBy('createdAt', 'desc')
     );
   }, [db, user?.uid]);
 
-  const { data: interviews, loading: interviewsLoading } = useCollection(interviewsQuery);
-  const { data: applications } = useCollection(appsQuery);
+  const { data: standardInterviews, loading: interviewsLoading } = useCollection(interviewsQuery);
+  const { data: specialHRInterviews, loading: specialLoading } = useCollection(specialHRQuery);
+
+  // Combine both sources into a unified session stream
+  const allSessions = useMemo(() => {
+    const combined = [
+      ...(standardInterviews || []).map(i => ({ ...i, type: 'standard' })),
+      ...(specialHRInterviews || []).map(i => ({ 
+        ...i, 
+        type: 'special',
+        role: i.role || 'Special HR Interview',
+        overallScore: i.overallScore || 0 // Account for pending audits
+      }))
+    ];
+
+    return combined.sort((a: any, b: any) => {
+      const dateA = a.createdAt?.seconds || 0;
+      const dateB = b.createdAt?.seconds || 0;
+      return dateB - dateA;
+    });
+  }, [standardInterviews, specialHRInterviews]);
 
   useEffect(() => {
     if (!user && !authLoading) router.push('/login');
@@ -118,24 +137,27 @@ export default function Dashboard() {
     }
   };
 
-  // Strategic Metrics Calculation - Fully Wired to Real Firestore Nodes
+  // Strategic Metrics Calculation - Aggregated across ALL sessions
   const stats = useMemo(() => {
-    const data = interviews || [];
-    const total = data.length;
+    const total = allSessions.length;
     
-    const scores = data.map((i: any) => i.overallScore || 0);
-    const avg = total > 0 ? Math.round(scores.reduce((a, b) => a + b, 0) / total) : 0;
-    const best = total > 0 ? Math.max(...scores) : 0;
+    // Only average scores for sessions that have been audited (score > 0)
+    const scoredSessions = allSessions.filter((i: any) => (i.overallScore || 0) > 0);
+    const avg = scoredSessions.length > 0 
+      ? Math.round(scoredSessions.reduce((a, b) => a + (b.overallScore || 0), 0) / scoredSessions.length) 
+      : 0;
     
-    // Certificates Earned (Real threshold: Score >= 70)
-    const certsEarned = data.filter((i: any) => i.overallScore >= 70).length;
+    const best = total > 0 ? Math.max(...allSessions.map((i: any) => i.overallScore || 0)) : 0;
+    
+    // Certificates Earned (Threshold: Score >= 70)
+    const certsEarned = allSessions.filter((i: any) => (i.overallScore || 0) >= 70).length;
 
-    // Dimension Scores averaged from AI Auditor results
+    // Dimension Scores aggregated from available Virtual Interview Results
     const extractSubScore = (i: any, key: string) => i.feedback?.virtualInterviewResult?.[key] || 0;
     
-    const confidenceScores = data.map(i => extractSubScore(i, 'confidence')).filter(s => s > 0);
-    const commScores = data.map(i => extractSubScore(i, 'communication')).filter(s => s > 0);
-    const techScores = data.map(i => extractSubScore(i, 'technicalKnowledge')).filter(s => s > 0);
+    const confidenceScores = allSessions.map(i => extractSubScore(i, 'confidence')).filter(s => s > 0);
+    const commScores = allSessions.map(i => extractSubScore(i, 'communication')).filter(s => s > 0);
+    const techScores = allSessions.map(i => extractSubScore(i, 'technicalKnowledge')).filter(s => s > 0);
 
     const avgConf = confidenceScores.length > 0 ? Math.round(confidenceScores.reduce((a, b) => a + b, 0) / confidenceScores.length) : 0;
     const avgComm = commScores.length > 0 ? Math.round(commScores.reduce((a, b) => a + b, 0) / commScores.length) : 0;
@@ -150,7 +172,7 @@ export default function Dashboard() {
       communication: `${avgComm}%`,
       technical: `${avgTech}%`
     };
-  }, [interviews]);
+  }, [allSessions]);
 
   if (authLoading) return (
     <div className="min-h-screen bg-[#050816] flex items-center justify-center">
@@ -185,7 +207,7 @@ export default function Dashboard() {
                 </Button>
               </div>
               <h1 className="text-5xl font-bold tracking-tighter text-premium">Welcome back, {formattedName}</h1>
-              <p className="text-muted-foreground font-light mt-2">Neural synchronization complete. Your career metrics are live.</p>
+              <p className="text-muted-foreground font-light mt-2">Neural synchronization complete. Your combined career metrics are live.</p>
             </div>
             <div className="flex gap-4">
               <FeedbackDialog />
@@ -278,6 +300,7 @@ export default function Dashboard() {
                 <div className="grid gap-4">
                   {[
                     { title: "Start AI Interview", icon: Mic, color: "text-accent", href: "/interview/setup" },
+                    { title: "Special HR Interview", icon: Sparkles, color: "text-purple-400", href: "/special-hr-resume-upload" },
                     { title: "Certificates", icon: Award, color: "text-orange-300", href: "/certificates" }
                   ].map((action, i) => (
                     <Link href={action.href} key={i}>
@@ -302,30 +325,39 @@ export default function Dashboard() {
                   <CardTitle className="text-xl font-bold flex items-center gap-3">
                     <Zap className="w-5 h-5 text-accent" /> Recent Interviews
                   </CardTitle>
-                  {interviews && interviews.length > 0 && (
+                  {allSessions.length > 0 && (
                     <Link href="/user-dashboard">
-                      <Button variant="ghost" className="text-[10px] uppercase font-bold tracking-widest text-accent hover:text-accent/80">View History</Button>
+                      <Button variant="ghost" className="text-[10px] uppercase font-bold tracking-widest text-accent hover:text-accent/80">View Full History</Button>
                     </Link>
                   )}
                 </CardHeader>
                 <CardContent className="p-0 space-y-4">
-                  {interviewsLoading ? (
+                  {interviewsLoading || specialLoading ? (
                     <div className="py-12 flex justify-center"><Loader2 className="w-8 h-8 animate-spin text-accent" /></div>
-                  ) : interviews && interviews.length > 0 ? (
-                    interviews.slice(0, 3).map((session: any, i: number) => (
+                  ) : allSessions.length > 0 ? (
+                    allSessions.slice(0, 3).map((session: any, i: number) => (
                       <div key={i} className="flex items-center justify-between p-5 glass rounded-2xl border-white/5 group hover:bg-white/[0.03] transition-all">
                         <div className="flex items-center gap-4">
-                          <div className="w-10 h-10 rounded-xl bg-accent/10 flex items-center justify-center text-accent">
-                            <Mic className="w-5 h-5" />
+                          <div className={cn(
+                            "w-10 h-10 rounded-xl flex items-center justify-center",
+                            session.type === 'special' ? "bg-purple-500/10 text-purple-400" : "bg-accent/10 text-accent"
+                          )}>
+                            {session.type === 'special' ? <Sparkles className="w-5 h-5" /> : <Mic className="w-5 h-5" />}
                           </div>
                           <div>
                             <p className="font-bold text-sm">{session.role}</p>
-                            <p className="text-[10px] text-muted-foreground uppercase tracking-widest">{session.createdAt?.seconds ? new Date(session.createdAt.seconds * 1000).toLocaleDateString() : 'Recent'}</p>
+                            <p className="text-[10px] text-muted-foreground uppercase tracking-widest">
+                              {session.type === 'special' ? 'Executive HR' : 'Technical Simulation'} • {session.createdAt?.seconds ? new Date(session.createdAt.seconds * 1000).toLocaleDateString() : 'Recent'}
+                            </p>
                           </div>
                         </div>
                         <div className="flex items-center gap-4">
-                          <Badge className="bg-accent/20 text-accent border-none font-bold tabular-nums">{session.overallScore}%</Badge>
-                          <Link href={`/feedback/${session.id}`}>
+                          {session.overallScore > 0 ? (
+                            <Badge className="bg-accent/20 text-accent border-none font-bold tabular-nums">{session.overallScore}%</Badge>
+                          ) : (
+                            <Badge variant="outline" className="border-white/10 text-white/20 text-[8px]">PENDING</Badge>
+                          )}
+                          <Link href={session.type === 'special' ? `/special-hr-interview/result?sessionId=${session.id}` : `/feedback/${session.id}`}>
                             <Button size="icon" variant="ghost" className="h-8 w-8 rounded-lg group-hover:text-accent transition-colors">
                               <ChevronRight className="w-4 h-4" />
                             </Button>
@@ -338,9 +370,14 @@ export default function Dashboard() {
                       <History className="w-12 h-12 text-white/5 mx-auto mb-6" />
                       <h3 className="text-xl font-bold mb-2">No interviews yet</h3>
                       <p className="text-muted-foreground font-light text-sm mb-8">Initialize your first simulation to start tracking performance metrics.</p>
-                      <Link href="/interview/setup">
-                        <Button className="btn-premium px-8">Start Your First Interview</Button>
-                      </Link>
+                      <div className="flex justify-center gap-4">
+                        <Link href="/interview/setup">
+                          <Button className="btn-premium px-8">Technical Track</Button>
+                        </Link>
+                        <Link href="/special-hr-resume-upload">
+                          <Button variant="outline" className="px-8 rounded-xl glass border-white/10">Special HR</Button>
+                        </Link>
+                      </div>
                     </div>
                   )}
                 </CardContent>
