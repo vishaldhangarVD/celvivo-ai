@@ -65,7 +65,6 @@ const ROLES = [
 
 const EXPERIENCE_LEVELS = ["Fresher", "0–1 Years", "1–3 Years", "3–5 Years", "5+ Years"];
 
-// Local SVG Brand Logos to ensure reliability and offline support
 const CompanyLogo = ({ name, className }: { name: string, className?: string }) => {
   const size = "100%";
   
@@ -221,6 +220,8 @@ export default function InterviewSetupPage() {
       const finalStage = targetPath === 'aptitude' ? INTERVIEW_STAGES.APTITUDE : INTERVIEW_STAGES.HR_INTERVIEW;
       const step = targetPath === 'aptitude' ? 4 : 8;
 
+      // PROTOCOL: When explicitly starting or updating the interview configuration,
+      // we must reset assessment status fields to ensure a fresh session.
       await setDoc(journeyRef!, {
         sessionId,
         role,
@@ -231,6 +232,14 @@ export default function InterviewSetupPage() {
         resumeAnalysis: analysisResult,
         currentStage: finalStage,
         step,
+        // RESET FIELDS FOR NEW JOURNEY
+        aptitudeStatus: "not_started",
+        aptitudeReport: null,
+        aptitudeQuestions: null,
+        aptitudeAnswers: null,
+        codingReport: null,
+        codingUnlocked: false,
+        codingQuestions: null,
         updatedAt: serverTimestamp(),
         createdAt: journey?.createdAt || serverTimestamp()
       }, { merge: true });
