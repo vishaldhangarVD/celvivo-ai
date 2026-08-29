@@ -37,7 +37,10 @@ import {
   ShieldCheck,
   Search,
   CheckCircle2,
-  Check
+  Check,
+  User,
+  MoreVertical,
+  ArrowRight
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { runAtsCheck } from '@/ai/flows/ai-resume-ats-check';
@@ -219,6 +222,7 @@ export default function ResumeAtelierPage() {
 
   // Quick ATS Modal State
   const [isQuickAtsOpen, setIsQuickAtsOpen] = useState(false);
+  const [isPickerOpen, setIsPickerOpen] = useState(false);
   const [quickAtsResume, setQuickAtsResume] = useState<ResumeData | null>(null);
   const [quickAtsJd, setQuickAtsJd] = useState("");
   const [quickAtsResult, setQuickAtsResult] = useState<any>(null);
@@ -290,9 +294,33 @@ export default function ResumeAtelierPage() {
     }
   };
 
+  const handleGlobalAtsAction = () => {
+    if (!savedResumes || savedResumes.length === 0) {
+      toast({ title: "Archival Record Missing", description: "Please create at least one career blueprint to initialize the neural audit." });
+      return;
+    }
+
+    if (savedResumes.length === 1) {
+      setQuickAtsResume(savedResumes[0] as ResumeData);
+      setQuickAtsJd("");
+      setQuickAtsResult(null);
+      setIsQuickAtsOpen(true);
+    } else {
+      setIsPickerOpen(true);
+    }
+  };
+
+  const handlePickResume = (resume: any) => {
+    setQuickAtsResume(resume);
+    setQuickAtsJd("");
+    setQuickAtsResult(null);
+    setIsPickerOpen(false);
+    setIsQuickAtsOpen(true);
+  };
+
   const handleRunAts = async (resume: ResumeData, jdText: string, setResults: any, setLoading: any) => {
     if (!jdText.trim()) {
-      toast({ variant: "destructive", title: "Missing Input", description: "Please paste a job description first." });
+      toast({ variant: "destructive", title: "Intelligence Gap", description: "Please provide a job description protocol to calibrate the audit." });
       return;
     }
 
@@ -316,7 +344,7 @@ export default function ResumeAtelierPage() {
     } catch (e: any) {
       toast({ 
         variant: "destructive", 
-        title: "Audit Failed", 
+        title: "Neural Sync Failure", 
         description: e.message || "Couldn't complete the ATS check — please try again." 
       });
     } finally {
@@ -469,16 +497,27 @@ export default function ResumeAtelierPage() {
       <div className="max-w-[1220px] mx-auto px-6 pt-24 pb-32">
         {view === 'list' ? (
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-12">
-            <header className="text-center space-y-4">
-              <Badge className="bg-[#c9a24d]/20 text-[#c9a24d] border-none px-6 py-1 font-mono text-[10px] tracking-[0.4em] uppercase">Private Collection</Badge>
-              <h1 className="font-disp text-6xl font-medium text-[#f7f2e6] tracking-tight">The Atelier Archive</h1>
-              <p className="text-[#cfc7b4] font-light max-w-xl mx-auto">Access your bespoke career blueprints. Every document is cut to measure and preserved in the cloud matrix.</p>
+            <header className="flex flex-col md:flex-row justify-between items-end gap-8">
+              <div className="space-y-4">
+                <Badge className="bg-[#c9a24d]/20 text-[#c9a24d] border-none px-6 py-1 font-mono text-[10px] tracking-[0.4em] uppercase">Private Collection</Badge>
+                <h1 className="font-disp text-6xl font-medium text-[#f7f2e6] tracking-tight">The Atelier Archive</h1>
+                <p className="text-[#cfc7b4] font-light max-w-xl">Access your bespoke career blueprints. Every document is cut to measure and preserved in the cloud matrix.</p>
+              </div>
+              <div className="flex gap-4">
+                <Button 
+                  onClick={handleGlobalAtsAction}
+                  className="h-16 px-10 rounded-2xl glass border-[#c9a24d]/20 text-[#c9a24d] hover:bg-[#c9a24d]/10 hover:border-[#c9a24d]/50 flex gap-3 text-[10px] tracking-widest uppercase transition-all shadow-2xl"
+                >
+                  <Target className="w-5 h-5" />
+                  Check ATS Score
+                </Button>
+              </div>
             </header>
 
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
               <Card 
                 onClick={handleCreateNew}
-                className="h-[280px] bg-transparent border-dashed border-2 border-[#332c22] hover:border-[#c9a24d]/40 transition-all flex flex-col items-center justify-center cursor-pointer group"
+                className="h-[320px] bg-transparent border-dashed border-2 border-[#332c22] hover:border-[#c9a24d]/40 transition-all flex flex-col items-center justify-center cursor-pointer group"
               >
                 <div className="w-16 h-16 rounded-full bg-[#c9a24d]/10 flex items-center justify-center group-hover:scale-110 transition-transform">
                   <Plus className="w-8 h-8 text-[#c9a24d]" />
@@ -492,18 +531,8 @@ export default function ResumeAtelierPage() {
                   onClick={() => handleEdit(resume)}
                   className="h-[320px] bg-[#151210] border-[#332c22] p-8 flex flex-col justify-between hover:border-[#c9a24d]/30 transition-all cursor-pointer group relative overflow-hidden"
                 >
-                  <div className="absolute top-0 right-0 p-6 opacity-0 group-hover:opacity-100 transition-opacity flex gap-4">
-                    <button 
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setQuickAtsResume(resume);
-                        setIsQuickAtsOpen(true);
-                      }}
-                      className="text-[#c9a24d] hover:text-[#f7f2e6]"
-                    >
-                      <Target className="w-5 h-5" />
-                    </button>
-                    <button onClick={(e) => handleDelete(e, resume.id)} className="text-[#7a2531] hover:text-red-400">
+                  <div className="absolute top-0 right-0 p-6 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <button onClick={(e) => handleDelete(e, resume.id)} className="text-[#7a2531] hover:text-red-400 p-2">
                       <Trash2 className="w-5 h-5" />
                     </button>
                   </div>
@@ -517,17 +546,6 @@ export default function ResumeAtelierPage() {
                     </div>
                   </div>
                   <div className="space-y-4">
-                    <Button 
-                      variant="outline" 
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setQuickAtsResume(resume);
-                        setIsQuickAtsOpen(true);
-                      }}
-                      className="w-full h-10 border-[#c9a24d]/20 text-[#c9a24d] hover:bg-[#c9a24d]/10 rounded-none text-[9px] uppercase tracking-widest font-black"
-                    >
-                      Check ATS Score
-                    </Button>
                     <div className="flex items-center justify-between border-t border-[#332c22] pt-4">
                       <div className="flex items-center gap-2 text-[#cfc7b4]/40 text-[9px] font-mono uppercase">
                         <Clock className="w-3 h-3" /> 
@@ -540,71 +558,135 @@ export default function ResumeAtelierPage() {
               ))}
             </div>
 
-            {/* Quick ATS Modal */}
+            {/* Resume Picker Modal */}
+            <Dialog open={isPickerOpen} onOpenChange={setIsPickerOpen}>
+              <DialogContent className="bg-[#0b0e1a] border-[#332c22] text-[#ece7db] max-w-xl rounded-[2.5rem] overflow-hidden">
+                <DialogHeader className="mb-8">
+                  <DialogTitle className="font-disp text-3xl">Pick a Blueprint</DialogTitle>
+                  <p className="text-sm text-[#cfc7b4] font-light">Select the career track you wish to benchmark against current job protocols.</p>
+                </DialogHeader>
+                <div className="space-y-3 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
+                  {savedResumes?.map((resume: any) => (
+                    <button 
+                      key={resume.id} 
+                      onClick={() => handlePickResume(resume)}
+                      className="w-full p-6 glass border-white/5 hover:border-[#c9a24d]/40 rounded-2xl flex items-center justify-between group transition-all"
+                    >
+                      <div className="flex items-center gap-6">
+                        <div className="w-12 h-12 rounded-xl bg-[#c9a24d]/10 flex items-center justify-center text-[#c9a24d]">
+                          <FileText className="w-6 h-6" />
+                        </div>
+                        <div className="text-left">
+                          <p className="font-disp text-lg text-white group-hover:text-[#c9a24d] transition-colors">{resume.title || "Untitled"}</p>
+                          <p className="text-[10px] font-mono uppercase text-[#8a723a] tracking-widest">{resume.role}</p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-4">
+                        <span className="text-[9px] font-mono uppercase text-white/20">{resume.updatedAt?.seconds ? new Date(resume.updatedAt.seconds * 1000).toLocaleDateString() : "Recent"}</span>
+                        <ChevronRight className="w-5 h-5 text-white/10 group-hover:text-[#c9a24d] transition-all" />
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              </DialogContent>
+            </Dialog>
+
+            {/* Global Quick ATS Modal */}
             <Dialog open={isQuickAtsOpen} onOpenChange={setIsQuickAtsOpen}>
               <DialogContent className="bg-[#0b0e1a] border-[#332c22] text-[#ece7db] max-w-2xl rounded-[2.5rem] overflow-hidden custom-scrollbar max-h-[90vh] overflow-y-auto">
                 <DialogHeader className="mb-8">
-                  <DialogTitle className="font-disp text-3xl flex items-center gap-4">
-                    <Target className="w-8 h-8 text-[#c9a24d]" /> Quick ATS Check
-                  </DialogTitle>
+                  <div className="flex items-center gap-6 mb-2">
+                    <div className="w-10 h-10 rounded-xl bg-[#c9a24d]/10 flex items-center justify-center text-[#c9a24d]">
+                       <Target className="w-6 h-6" />
+                    </div>
+                    <DialogTitle className="font-disp text-3xl">Neural ATS Check</DialogTitle>
+                  </div>
+                  {quickAtsResume && (
+                    <div className="flex items-center gap-3 px-1">
+                      <Badge variant="outline" className="border-[#c9a24d]/30 text-[#c9a24d] text-[8px] uppercase tracking-widest font-black">Active Blueprint: {quickAtsResume.title}</Badge>
+                      {savedResumes && savedResumes.length > 1 && (
+                        <button onClick={() => { setIsQuickAtsOpen(false); setIsPickerOpen(true); }} className="text-[8px] uppercase font-bold text-white/30 hover:text-white transition-colors underline decoration-white/10">Switch Track</button>
+                      )}
+                    </div>
+                  )}
                 </DialogHeader>
 
                 <div className="space-y-8">
-                  <div className="space-y-4">
-                    <Label className="text-[10px] font-mono uppercase text-[#8a723a] tracking-widest ml-1">Job Description</Label>
-                    <Textarea 
-                      value={quickAtsJd}
-                      onChange={e => setQuickAtsJd(e.target.value)}
-                      placeholder="Paste the job requirements here..."
-                      className="atelier-textarea h-40"
-                    />
-                    <Button 
-                      onClick={() => handleRunAts(quickAtsResume!, quickAtsJd, setQuickAtsResult, setIsQuickAtsLoading)}
-                      disabled={isQuickAtsLoading || !quickAtsJd.trim()}
-                      className="w-full h-14 bg-[#c9a24d] text-[#0c0b09] hover:bg-[#f7f2e6] rounded-none font-mono text-[11px] uppercase tracking-widest shadow-xl"
-                    >
-                      {isQuickAtsLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : "Run Neural Audit →"}
-                    </Button>
-                  </div>
+                  {!quickAtsResult && (
+                    <div className="space-y-4">
+                      <Label className="text-[10px] font-mono uppercase text-[#8a723a] tracking-widest ml-1">Job Description Protocol</Label>
+                      <Textarea 
+                        value={quickAtsJd}
+                        onChange={e => setQuickAtsJd(e.target.value)}
+                        placeholder="Paste the job requirements here..."
+                        className="atelier-textarea h-40"
+                      />
+                      <Button 
+                        onClick={() => handleRunAts(quickAtsResume!, quickAtsJd, setQuickAtsResult, setIsQuickAtsLoading)}
+                        disabled={isQuickAtsLoading || !quickAtsJd.trim()}
+                        className="w-full h-14 bg-[#c9a24d] text-[#0c0b09] hover:bg-[#f7f2e6] rounded-none font-mono text-[11px] uppercase tracking-widest shadow-xl"
+                      >
+                        {isQuickAtsLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : "Run Neural Audit →"}
+                      </Button>
+                    </div>
+                  )}
 
                   {quickAtsResult && (
-                    <div className="p-8 border border-[#332c22] bg-[#1c1814] space-y-10 animate-in fade-in slide-in-from-bottom-4 duration-500">
-                      <div className="flex items-center gap-8">
-                        <div className="fit-ring" style={{ '--pct': `${quickAtsResult.score}%` } as any}>
-                          <div className="fit-ring-inner">{quickAtsResult.score}%</div>
+                    <div className="space-y-10 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                      <div className="p-8 border border-[#332c22] bg-[#1c1814] space-y-10">
+                        <div className="flex items-center gap-8">
+                          <div className="fit-ring" style={{ '--pct': `${quickAtsResult.score}%` } as any}>
+                            <div className="fit-ring-inner">{quickAtsResult.score}%</div>
+                          </div>
+                          <div className="space-y-1">
+                            <p className="text-[10px] font-mono text-[#8a723a] uppercase tracking-widest">Match Verdict</p>
+                            <h4 className="font-disp text-2xl text-[#f7f2e6]">{quickAtsResult.verdict}</h4>
+                          </div>
                         </div>
-                        <div className="space-y-1">
-                          <p className="text-[10px] font-mono text-[#8a723a] uppercase tracking-widest">Match Verdict</p>
-                          <h4 className="font-disp text-2xl text-[#f7f2e6]">{quickAtsResult.verdict}</h4>
+
+                        <div className="grid md:grid-cols-2 gap-10">
+                          <div className="space-y-6">
+                             <div className="space-y-3">
+                               <p className="text-[9px] font-mono uppercase text-green-400/60 tracking-widest">Matched Keywords</p>
+                               <div className="flex flex-wrap gap-2">
+                                 {quickAtsResult.matchedKeywords?.map((w: string) => <span key={w} className="px-3 py-1 bg-green-500/10 text-green-400 text-[10px] border border-green-500/20">{w}</span>)}
+                               </div>
+                             </div>
+                             <div className="space-y-3">
+                               <p className="text-[9px] font-mono uppercase text-red-400/60 tracking-widest">Missing Requirements</p>
+                               <div className="flex flex-wrap gap-2">
+                                 {quickAtsResult.missingKeywords?.map((w: string) => <span key={w} className="px-3 py-1 bg-red-500/10 text-red-400 text-[10px] border border-red-500/20">{w}</span>)}
+                               </div>
+                             </div>
+                          </div>
+                          <div className="space-y-6">
+                             <p className="text-[9px] font-mono uppercase text-[#c9a24d] tracking-widest">Strategic Recommendations</p>
+                             <div className="space-y-4">
+                               {quickAtsResult.suggestions?.map((s: string, i: number) => (
+                                 <div key={i} className="flex gap-4 items-start group">
+                                   <div className="w-1.5 h-1.5 rounded-full bg-[#c9a24d] mt-1.5 shrink-0" />
+                                   <p className="text-xs font-light text-[#cfc7b4] leading-relaxed italic">"{s}"</p>
+                                 </div>
+                               ))}
+                             </div>
+                          </div>
                         </div>
                       </div>
-
-                      <div className="grid md:grid-cols-2 gap-10">
-                        <div className="space-y-6">
-                           <div className="space-y-3">
-                             <p className="text-[9px] font-mono uppercase text-green-400/60 tracking-widest">Matched Keywords</p>
-                             <div className="flex flex-wrap gap-2">
-                               {quickAtsResult.matchedKeywords?.map((w: string) => <span key={w} className="px-3 py-1 bg-green-500/10 text-green-400 text-[10px] border border-green-500/20">{w}</span>)}
-                             </div>
-                           </div>
-                           <div className="space-y-3">
-                             <p className="text-[9px] font-mono uppercase text-red-400/60 tracking-widest">Missing Requirements</p>
-                             <div className="flex flex-wrap gap-2">
-                               {quickAtsResult.missingKeywords?.map((w: string) => <span key={w} className="px-3 py-1 bg-red-500/10 text-red-400 text-[10px] border border-red-500/20">{w}</span>)}
-                             </div>
-                           </div>
-                        </div>
-                        <div className="space-y-6">
-                           <p className="text-[9px] font-mono uppercase text-[#c9a24d] tracking-widest">Strategic Recommendations</p>
-                           <div className="space-y-4">
-                             {quickAtsResult.suggestions?.map((s: string, i: number) => (
-                               <div key={i} className="flex gap-4 items-start group">
-                                 <div className="w-1.5 h-1.5 rounded-full bg-[#c9a24d] mt-1.5 shrink-0" />
-                                 <p className="text-xs font-light text-[#cfc7b4] leading-relaxed italic">"{s}"</p>
-                               </div>
-                             ))}
-                           </div>
-                        </div>
+                      
+                      <div className="flex gap-4">
+                        <Button 
+                          variant="ghost" 
+                          onClick={() => { setQuickAtsResult(null); setQuickAtsJd(""); }}
+                          className="flex-1 h-12 rounded-xl border border-white/10 text-[10px] font-bold uppercase tracking-widest hover:bg-white/5"
+                        >
+                          New Audit
+                        </Button>
+                        <Button 
+                          onClick={() => handleEdit(quickAtsResume)}
+                          className="flex-1 h-12 bg-[#c9a24d] text-black hover:bg-[#f7f2e6] rounded-xl text-[10px] font-bold uppercase tracking-widest"
+                        >
+                          Refine Blueprint
+                        </Button>
                       </div>
                     </div>
                   )}
@@ -802,7 +884,7 @@ export default function ResumeAtelierPage() {
                         </div>
                         <div className="flex gap-4">
                           <Button onClick={() => setCurrentStep(2)} variant="outline" className="flex-1 h-14 border-[#332c22] text-[#cfc7b4] rounded-none font-mono text-[11px] uppercase tracking-widest">← Back</Button>
-                          <Button onClick={() => setCurrentStep(3)} className="flex-[2] h-14 bg-[#c9a24d] text-[#0c0b09] hover:bg-[#f7f2e6] rounded-none font-mono text-[11px] uppercase tracking-widest">Continue to Experience →</Button>
+                          <Button onClick={() => setCurrentStep(4)} className="flex-[2] h-14 bg-[#c9a24d] text-[#0c0b09] hover:bg-[#f7f2e6] rounded-none font-mono text-[11px] uppercase tracking-widest">Continue to Skills →</Button>
                         </div>
                       </motion.div>
                     )}
