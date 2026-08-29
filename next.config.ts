@@ -9,6 +9,9 @@ const nextConfig: NextConfig = {
     ignoreDuringBuilds: true,
   },
   experimental: {
+    serverActions: {
+      bodySizeLimit: '10mb',
+    },
     // Allows Hot Module Replacement and dev resources to work correctly within Firebase Studio's proxied environment
     allowedDevOrigins: [
       '*.cloudworkstations.dev',
