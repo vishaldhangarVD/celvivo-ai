@@ -57,18 +57,24 @@ export default function SpecialHRResumeUpload() {
       setFile(selected);
       setIsUploaded(true);
       toast({ title: "Blueprint Detected", description: "Identity file loaded successfully." });
+
+      // Auto-proceed to analysis shortly after upload, so the user briefly sees
+      // the "Dossier Loaded" confirmation before moving on automatically.
+      setTimeout(() => {
+        handleProceedWithFile(selected);
+      }, 900);
     }
   };
 
-  const handleProceed = async () => {
-    if (!file || !user || !db || !journeyRef) return;
+  const handleProceedWithFile = async (fileToProcess: File) => {
+    if (!fileToProcess || !user || !db || !journeyRef) return;
     
     setIsVerifying(true);
     try {
       const base64 = await new Promise<string>((res) => {
         const reader = new FileReader();
         reader.onload = () => res(reader.result as string);
-        reader.readAsDataURL(file);
+        reader.readAsDataURL(fileToProcess);
       });
 
       // Background Analysis specifically for HR context
@@ -79,7 +85,7 @@ export default function SpecialHRResumeUpload() {
 
       // SAVE TO SEPARATE FIELDS TO PRESERVE ROUND-1 DATA
       await updateDoc(journeyRef, {
-        specialHRResumeName: file.name,
+        specialHRResumeName: fileToProcess.name,
         specialHRResumeBase64: base64,
         specialHRResumeAnalysis: analysisResult,
         updatedAt: serverTimestamp(),
@@ -96,6 +102,11 @@ export default function SpecialHRResumeUpload() {
     } finally {
       setIsVerifying(false);
     }
+  };
+
+  const handleProceed = () => {
+    if (!file) return;
+    handleProceedWithFile(file);
   };
 
   return (
@@ -122,7 +133,7 @@ export default function SpecialHRResumeUpload() {
           </header>
 
           <Card 
-            onClick={() => !isVerifying && document.getElementById('resume-input')?.click()}
+            onClick={() => !isVerifying && !isUploaded && document.getElementById('resume-input')?.click()}
             className={cn(
               "premium-card bg-white/[0.015] border-white/5 p-16 flex flex-col items-center justify-center text-center cursor-pointer group transition-all duration-500 min-h-[400px] relative overflow-hidden rounded-[2.5rem]",
               isUploaded 
