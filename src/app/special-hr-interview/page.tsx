@@ -33,6 +33,8 @@ import { useUser, useFirestore, useDoc } from "@/firebase";
 import { doc, updateDoc, serverTimestamp } from "firebase/firestore";
 import { useRouter } from "next/navigation";
 
+const MIN_QUESTIONS_BEFORE_COMPLETE = 8;
+
 interface SpeechRecognitionEvent extends Event {
   results: SpeechRecognitionResultList;
   resultIndex: number;
@@ -314,7 +316,7 @@ export default function SpecialHRInterview() {
       setTranscript("");
       transcriptRef.current = "";
 
-      if (result.isInterviewComplete) {
+      if (result.isInterviewComplete && nextIndex >= MIN_QUESTIONS_BEFORE_COMPLETE) {
         setIsComplete(true);
         isCompleteRef.current = true;
 
@@ -354,6 +356,8 @@ export default function SpecialHRInterview() {
             });
           }
         })();
+      } else if (result.isInterviewComplete) {
+        console.warn(`[Interview] AI signaled completion at turn ${nextIndex}, but protocol requires minimum ${MIN_QUESTIONS_BEFORE_COMPLETE}. Continuing.`);
       }
 
       if (isSpeakingRequestRef.current) return;
