@@ -101,15 +101,19 @@ export default function SpecialHRResumeUpload() {
   return (
     <div className="min-h-screen bg-[#050816] flex flex-col overflow-hidden relative">
       <div className="particles-bg" />
+      <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-[600px] h-[600px] bg-purple-500/10 rounded-full blur-[120px] pointer-events-none" />
+      <div className="absolute bottom-0 right-1/4 w-[400px] h-[400px] bg-accent/10 rounded-full blur-[100px] pointer-events-none" />
+      
       <Navbar />
       <NavigationControls />
 
-      <main className="flex-1 container mx-auto px-6 flex flex-col items-center justify-center pt-16">
+      <main className="flex-1 container mx-auto px-6 flex flex-col items-center justify-center pt-16 relative z-10">
         <div className="max-w-4xl w-full">
           <header className="text-center mb-16 space-y-4">
-            <div className="inline-flex items-center gap-3 px-4 py-1.5 rounded-full glass border-purple-500/20 mb-4">
-              <Sparkles className="w-3.5 h-3.5 text-purple-400 animate-pulse" />
-              <span className="text-[9px] font-black tracking-[0.5em] uppercase text-purple-300">Phase 02 Calibration</span>
+            <div className="inline-flex items-center gap-3 px-5 py-2 rounded-full glass border-purple-500/30 mb-4 relative overflow-hidden shadow-[0_0_20px_rgba(168,85,247,0.15)]">
+              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-purple-500/10 to-transparent -translate-x-full animate-[shimmer_3s_infinite]" />
+              <Sparkles className="w-3.5 h-3.5 text-purple-400 animate-pulse relative z-10" />
+              <span className="text-[9px] font-black tracking-[0.5em] uppercase text-purple-300 relative z-10">Phase 02 Calibration</span>
             </div>
             <h1 className="text-6xl font-bold tracking-tighter text-premium">Special HR <span className="text-gradient-purple">Setup.</span></h1>
             <p className="text-xl text-muted-foreground font-light leading-relaxed max-w-xl mx-auto">
@@ -120,20 +124,28 @@ export default function SpecialHRResumeUpload() {
           <Card 
             onClick={() => !isVerifying && document.getElementById('resume-input')?.click()}
             className={cn(
-              "premium-card bg-white/[0.01] border-white/5 p-16 flex flex-col items-center justify-center text-center cursor-pointer group transition-all duration-500 min-h-[400px] relative overflow-hidden",
-              isUploaded ? "border-purple-500/20 bg-purple-500/[0.02]" : "hover:border-accent/20 hover:bg-white/[0.03]"
+              "premium-card bg-white/[0.015] border-white/5 p-16 flex flex-col items-center justify-center text-center cursor-pointer group transition-all duration-500 min-h-[400px] relative overflow-hidden rounded-[2.5rem]",
+              isUploaded 
+                ? "border-purple-500/30 bg-purple-500/[0.03] shadow-[0_0_60px_rgba(168,85,247,0.08)]" 
+                : "hover:border-accent/30 hover:bg-white/[0.03] hover:shadow-[0_0_60px_rgba(34,211,238,0.06)]"
             )}
           >
+            <div className="absolute top-6 left-6 w-8 h-8 border-t-2 border-l-2 border-accent/30 rounded-tl-2xl pointer-events-none" />
+            <div className="absolute top-6 right-6 w-8 h-8 border-t-2 border-r-2 border-accent/30 rounded-tr-2xl pointer-events-none" />
+            <div className="absolute bottom-6 left-6 w-8 h-8 border-b-2 border-l-2 border-accent/30 rounded-bl-2xl pointer-events-none" />
+            <div className="absolute bottom-6 right-6 w-8 h-8 border-b-2 border-r-2 border-accent/30 rounded-br-2xl pointer-events-none" />
+            
             <input type="file" id="resume-input" className="hidden" accept=".pdf" onChange={handleFileChange} />
             
             <AnimatePresence mode="wait">
               {isVerifying ? (
-                <motion.div key="verifying" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-6">
-                  <div className="relative w-24 h-24 mx-auto">
+                <motion.div key="verifying" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-8">
+                  <div className="relative w-28 h-28 mx-auto">
                     <div className="absolute inset-0 border-2 border-purple-500/10 rounded-full animate-ping" />
-                    <div className="absolute inset-0 border-b-2 border-purple-500 rounded-full animate-spin duration-[3s]" />
-                    <div className="absolute inset-4 glass rounded-full flex items-center justify-center">
-                      <Cpu className="w-10 h-10 text-purple-400 animate-pulse" />
+                    <div className="absolute inset-0 border-b-2 border-r-2 border-purple-500 rounded-full animate-spin duration-[2.5s]" />
+                    <div className="absolute inset-2 border-t-2 border-accent/40 rounded-full animate-spin duration-[1.8s] [animation-direction:reverse]" />
+                    <div className="absolute inset-6 glass rounded-full flex items-center justify-center shadow-[0_0_30px_rgba(168,85,247,0.2)]">
+                      <Cpu className="w-9 h-9 text-purple-400 animate-pulse" />
                     </div>
                   </div>
                   <div className="space-y-2">
@@ -143,25 +155,35 @@ export default function SpecialHRResumeUpload() {
                 </motion.div>
               ) : !isUploaded ? (
                 <motion.div key="upload" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-8">
-                  <div className="w-24 h-24 rounded-[2.5rem] bg-purple-500/10 flex items-center justify-center mx-auto border border-purple-500/20 group-hover:scale-110 transition-transform">
-                    <Upload className="w-12 h-12 text-purple-400" />
+                  <div className="relative w-28 h-28 mx-auto">
+                    <div className="absolute inset-0 rounded-[2.5rem] bg-gradient-to-br from-purple-500/20 to-accent/10 blur-xl opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+                    <div className="relative w-28 h-28 rounded-[2.5rem] bg-purple-500/10 flex items-center justify-center border border-purple-500/20 group-hover:scale-105 group-hover:border-purple-400/40 transition-all duration-500">
+                      <Upload className="w-12 h-12 text-purple-400 group-hover:text-purple-300 transition-colors" />
+                    </div>
                   </div>
-                  <div className="space-y-2">
-                    <h3 className="text-3xl font-bold">Select PDF Blueprint</h3>
-                    <p className="text-[10px] text-muted-foreground uppercase tracking-widest font-black">Drag & Drop Resume area</p>
+                  <div className="space-y-3">
+                    <h3 className="text-3xl font-bold tracking-tight">Select PDF Blueprint</h3>
+                    <p className="text-[10px] text-muted-foreground uppercase tracking-widest font-black">Drag & Drop Resume Area</p>
+                    <p className="text-xs text-white/30 font-light">PDF only &middot; Max 10MB</p>
                   </div>
                 </motion.div>
               ) : (
                 <motion.div key="ready" initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="space-y-10 w-full">
-                  <div className="w-24 h-24 rounded-full bg-green-500/20 flex items-center justify-center mx-auto border border-green-500/30 shadow-[0_0_30px_rgba(34,197,94,0.2)]">
-                    <CheckCircle2 className="w-12 h-12 text-green-400" />
+                  <div className="relative w-24 h-24 mx-auto">
+                    <div className="absolute inset-0 rounded-full bg-green-500/20 blur-2xl opacity-60" />
+                    <div className="relative w-24 h-24 rounded-full bg-green-500/20 flex items-center justify-center mx-auto border border-green-500/30 shadow-[0_0_30px_rgba(34,197,94,0.2)]">
+                      <CheckCircle2 className="w-12 h-12 text-green-400" />
+                    </div>
                   </div>
-                  <div className="space-y-2">
+                  <div className="space-y-3">
                     <p className="text-[10px] font-black text-green-400 uppercase tracking-widest">Dossier Loaded</p>
-                    <p className="text-2xl font-bold text-white truncate max-w-[400px] mx-auto">{file?.name}</p>
+                    <div className="flex items-center justify-center gap-2 max-w-[420px] mx-auto">
+                      <FileText className="w-4 h-4 text-white/40 flex-shrink-0" />
+                      <p className="text-xl font-bold text-white truncate">{file?.name}</p>
+                    </div>
                   </div>
                   <div className="flex gap-4 justify-center">
-                    <Button variant="ghost" onClick={(e) => { e.stopPropagation(); setIsUploaded(false); setFile(null); }} className="h-12 px-6 rounded-xl glass border-white/10 text-[10px] font-black uppercase tracking-widest hover:bg-accent/10 hover:text-accent">
+                    <Button variant="ghost" onClick={(e) => { e.stopPropagation(); setIsUploaded(false); setFile(null); }} className="h-12 px-6 rounded-xl glass border-white/10 text-[10px] font-black uppercase tracking-widest hover:bg-accent/10 hover:text-accent transition-colors">
                       <RotateCcw className="w-4 h-4 mr-2" /> Replace
                     </Button>
                     <Button onClick={handleProceed} className="h-12 px-10 btn-premium rounded-xl text-[10px] font-black uppercase tracking-widest shadow-2xl group">
@@ -172,6 +194,11 @@ export default function SpecialHRResumeUpload() {
               )}
             </AnimatePresence>
           </Card>
+          
+          <div className="flex items-center justify-center gap-2 mt-8 text-white/20">
+            <ShieldCheck className="w-3.5 h-3.5" />
+            <span className="text-[9px] uppercase tracking-widest font-bold">End-to-end encrypted &middot; Processed by neural engine only</span>
+          </div>
         </div>
       </main>
     </div>

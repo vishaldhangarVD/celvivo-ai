@@ -124,6 +124,10 @@
   50% { transform: translateY(-20px); }
 }
 
+@keyframes shimmer {
+  100% { transform: translateX(100%); }
+}
+
 .particles-bg {
   position: fixed;
   top: 0;
