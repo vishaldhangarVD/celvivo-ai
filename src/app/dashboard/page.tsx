@@ -30,17 +30,14 @@ import {
   LayoutGrid,
   Mic,
   Brain,
-  Map,
-  FileEdit,
   ShieldCheck,
   AlertCircle,
-  Clock,
   Wifi
 } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useUser, useFirestore, useCollection, useDoc } from '@/firebase';
-import { collection, query, orderBy, doc, limit } from 'firebase/firestore';
+import { collection, query, orderBy, doc } from 'firebase/firestore';
 import { runGeminiTest } from '@/ai/flows/test-gemini';
 
 export default function Dashboard() {
@@ -85,18 +82,8 @@ export default function Dashboard() {
     );
   }, [db, user?.uid]);
 
-  const lettersQuery = useMemo(() => {
-    if (!db || !user?.uid) return null;
-    return query(
-      collection(db, 'users', user.uid, 'cover_letters'),
-      orderBy('createdAt', 'desc'),
-      limit(3)
-    );
-  }, [db, user?.uid]);
-
   const { data: interviews, loading: interviewsLoading } = useCollection(interviewsQuery);
-  const { data: applications, loading: appsLoading } = useCollection(appsQuery);
-  const { data: letters, loading: lettersLoading } = useCollection(lettersQuery);
+  const { data: applications } = useCollection(appsQuery);
 
   useEffect(() => {
     if (!user && !authLoading) router.push('/login');
@@ -108,7 +95,6 @@ export default function Dashboard() {
     setTestError(null);
     setTestStep(0);
 
-    // Staggered loading messages
     const steps = ["Connecting to Gemini...", "Authenticating API...", "Waiting for AI Response..."];
     for (let i = 0; i < steps.length; i++) {
       setTestStep(i);
@@ -132,28 +118,28 @@ export default function Dashboard() {
     }
   };
 
-  // Strategic Metrics Calculation
+  // Strategic Metrics Calculation - Fully Wired to Real Firestore Nodes
   const stats = useMemo(() => {
-    const total = interviews?.length || 0;
-    const scores = interviews?.map((i: any) => i.overallScore || 0) || [];
+    const data = interviews || [];
+    const total = data.length;
+    
+    const scores = data.map((i: any) => i.overallScore || 0);
     const avg = total > 0 ? Math.round(scores.reduce((a, b) => a + b, 0) / total) : 0;
     const best = total > 0 ? Math.max(...scores) : 0;
     
-    // Certificates Earned (Score >= 70)
-    const certsEarned = interviews?.filter((i: any) => i.overallScore >= 70).length || 0;
+    // Certificates Earned (Real threshold: Score >= 70)
+    const certsEarned = data.filter((i: any) => i.overallScore >= 70).length;
 
-    const confScores = interviews?.map((i: any) => i.feedback?.confidenceScore || 0).filter(s => s > 0) || [];
-    const commScores = interviews?.map((i: any) => i.feedback?.communicationScore || 0).filter(s => s > 0) || [];
-    const techScores = interviews?.map((i: any) => i.feedback?.technicalKnowledgeScore || 0).filter(s => s > 0) || [];
+    // Dimension Scores averaged from AI Auditor results
+    const extractSubScore = (i: any, key: string) => i.feedback?.virtualInterviewResult?.[key] || 0;
+    
+    const confidenceScores = data.map(i => extractSubScore(i, 'confidence')).filter(s => s > 0);
+    const commScores = data.map(i => extractSubScore(i, 'communication')).filter(s => s > 0);
+    const techScores = data.map(i => extractSubScore(i, 'technicalKnowledge')).filter(s => s > 0);
 
-    const avgConf = confScores.length > 0 ? Math.round(confScores.reduce((a, b) => a + b, 0) / confScores.length) : 0;
+    const avgConf = confidenceScores.length > 0 ? Math.round(confidenceScores.reduce((a, b) => a + b, 0) / confidenceScores.length) : 0;
     const avgComm = commScores.length > 0 ? Math.round(commScores.reduce((a, b) => a + b, 0) / commScores.length) : 0;
     const avgTech = techScores.length > 0 ? Math.round(techScores.reduce((a, b) => a + b, 0) / techScores.length) : 0;
-
-    // Job Tracker Stats
-    const totalApps = applications?.length || 0;
-    const selected = applications?.filter((a: any) => a.status === 'Selected').length || 0;
-    const successRate = totalApps > 0 ? Math.round((selected / totalApps) * 100) : 0;
 
     return {
       total,
@@ -162,13 +148,9 @@ export default function Dashboard() {
       certsEarned,
       confidence: `${avgConf}%`,
       communication: `${avgComm}%`,
-      technical: `${avgTech}%`,
-      tracker: {
-        total: totalApps,
-        successRate: `${successRate}%`
-      }
+      technical: `${avgTech}%`
     };
-  }, [interviews, applications]);
+  }, [interviews]);
 
   if (authLoading) return (
     <div className="min-h-screen bg-[#050816] flex items-center justify-center">
@@ -295,11 +277,8 @@ export default function Dashboard() {
                 <h3 className="text-xs font-bold uppercase tracking-[0.3em] text-white/30 ml-2">AI Career Tools</h3>
                 <div className="grid gap-4">
                   {[
-                    { title: "Start AI Interview", icon: Mic, color: "text-accent", href: "/interview?action=resume" },
-                    { title: "Certificates", icon: Award, color: "text-orange-300", href: "/certificates" },
-                    { title: "Skill Gap Analysis", icon: Brain, color: "text-yellow-400", href: "/skill-gap" },
-                    { title: "Career Roadmap", icon: Map, color: "text-blue-400", href: "/roadmap" },
-                    { title: "Cover Letter Architect", icon: FileEdit, color: "text-green-400", href: "/cover-letter" }
+                    { title: "Start AI Interview", icon: Mic, color: "text-accent", href: "/interview/setup" },
+                    { title: "Certificates", icon: Award, color: "text-orange-300", href: "/certificates" }
                   ].map((action, i) => (
                     <Link href={action.href} key={i}>
                       <div className="p-5 glass rounded-2xl border-white/5 group hover:bg-white/[0.05] transition-all flex items-center justify-between">
@@ -359,7 +338,7 @@ export default function Dashboard() {
                       <History className="w-12 h-12 text-white/5 mx-auto mb-6" />
                       <h3 className="text-xl font-bold mb-2">No interviews yet</h3>
                       <p className="text-muted-foreground font-light text-sm mb-8">Initialize your first simulation to start tracking performance metrics.</p>
-                      <Link href="/interview?action=start">
+                      <Link href="/interview/setup">
                         <Button className="btn-premium px-8">Start Your First Interview</Button>
                       </Link>
                     </div>
