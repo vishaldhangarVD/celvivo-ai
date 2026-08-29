@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useUser, useFirestore, useCollection } from '@/firebase';
 import { collection, query, orderBy, doc, setDoc, deleteDoc, addDoc, serverTimestamp } from 'firebase/firestore';
@@ -49,10 +49,13 @@ import {
   ArrowRight,
   Upload,
   FileUp,
-  X
+  X,
+  Download
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { runAtsCheck } from '@/ai/flows/ai-resume-ats-check';
+import { jsPDF } from 'jspdf';
+import html2canvas from 'html2canvas';
 
 /* ---------- TYPES ---------- */
 interface ResumeEntry {
@@ -228,6 +231,7 @@ export default function ResumeAtelierPage() {
   const [atsResult, setAtsResult] = useState<any>(null);
   const [isAtsLoading, setIsAtsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
 
   // Unified ATS Modal State
   const [isAtsModalOpen, setIsAtsModalOpen] = useState(false);
@@ -238,6 +242,8 @@ export default function ResumeAtelierPage() {
   const [atsModalJd, setAtsModalJd] = useState("");
   const [atsModalResult, setAtsModalResult] = useState<any>(null);
   const [isAtsModalLoading, setIsAtsModalLoading] = useState(false);
+
+  const resumePaperRef = useRef<HTMLDivElement>(null);
 
   // Firestore Queries
   const resumesQuery = useMemo(() => {
@@ -418,6 +424,63 @@ export default function ResumeAtelierPage() {
     }
   };
 
+  const handleDownloadPdf = async () => {
+    if (!resumePaperRef.current || isExporting) return;
+    setIsExporting(true);
+    
+    try {
+      const element = resumePaperRef.current;
+      
+      // Temporarily remove print-unfriendly styles
+      const originalBoxShadow = element.style.boxShadow;
+      element.style.boxShadow = 'none';
+
+      const canvas = await html2canvas(element, {
+        scale: 2,
+        useCORS: true,
+        logging: false,
+        backgroundColor: '#f7f2e6', // var(--ivory)
+        windowWidth: 794, // Standard A4 width at 96 DPI
+      });
+
+      element.style.boxShadow = originalBoxShadow;
+
+      const imgData = canvas.toDataURL('image/png');
+      const pdf = new jsPDF({
+        orientation: 'portrait',
+        unit: 'mm',
+        format: 'a4',
+      });
+
+      const imgWidth = 210; // A4 width in mm
+      const pageHeight = 297; // A4 height in mm
+      const imgHeight = (canvas.height * imgWidth) / canvas.width;
+      
+      let heightLeft = imgHeight;
+      let position = 0;
+
+      pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight, undefined, 'FAST');
+      heightLeft -= pageHeight;
+
+      while (heightLeft >= 0) {
+        position = heightLeft - imgHeight;
+        pdf.addPage();
+        pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight, undefined, 'FAST');
+        heightLeft -= pageHeight;
+      }
+
+      const safeName = (data.name || 'Resume').replace(/[^a-z0-9]/gi, '_');
+      pdf.save(`${safeName}-Atelier.pdf`);
+
+      toast({ title: "Blueprint Exported", description: "High-fidelity PDF synthesized successfully." });
+    } catch (e) {
+      console.error("[PDF Export Error]", e);
+      toast({ variant: "destructive", title: "Synthesis Error", description: "Failed to generate professional PDF." });
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
   if (authLoading || resumesLoading) return (
     <div className="min-h-screen bg-[#0c0b09] flex items-center justify-center">
       <Loader2 className="w-12 h-12 text-[#c9a24d] animate-spin" />
@@ -548,12 +611,6 @@ export default function ResumeAtelierPage() {
           width: 60px; height: 60px; border-radius: 50%; background: var(--panel-2);
           display: flex; align-items: center; justify-content: center; font-family: var(--disp);
           font-size: 16px; font-weight: 500; color: var(--gold);
-        }
-
-        @media print {
-          body * { visibility: hidden; }
-          #resume-paper, #resume-paper * { visibility: visible; }
-          #resume-paper { position: absolute; top: 0; left: 0; width: 100%; transform: scale(1) !important; }
         }
       `}</style>
 
@@ -852,7 +909,7 @@ export default function ResumeAtelierPage() {
                         <div className="space-y-1">
                           <p className="font-mono text-[9px] tracking-[0.3em] text-[#c9a24d] uppercase">Step 1 of 5</p>
                           <h3 className="font-disp text-3xl font-medium">Choose Your Design</h3>
-                          <p className="text-[#cfc7b4] text-sm font-light italic">Pick a resume layout before you add your details. Four house styles — each a genuinely different structure, not just a different colour.</p>
+                          <p className="text-[#cfc7b4] text-sm font-light italic">Pick a resume layout before you add your details. House styles — each a unique structure for elite professional standards.</p>
                         </div>
 
                         <div className="grid grid-cols-2 gap-4 max-h-[500px] overflow-y-auto pr-2 custom-scrollbar">
@@ -1129,7 +1186,13 @@ export default function ResumeAtelierPage() {
 
                         <div className="flex gap-4 pt-4">
                           <Button onClick={() => setCurrentStep(4)} variant="outline" className="flex-1 h-14 border-[#332c22] rounded-none font-mono text-[11px] uppercase">← Back</Button>
-                          <Button onClick={() => window.print()} className="flex-[2] h-14 bg-[#7a2531] text-white hover:bg-red-800 rounded-none font-mono text-[11px] uppercase tracking-widest shadow-xl">Download PDF →</Button>
+                          <Button 
+                            onClick={handleDownloadPdf} 
+                            disabled={isExporting}
+                            className="flex-[2] h-14 bg-[#7a2531] text-white hover:bg-red-800 rounded-none font-mono text-[11px] uppercase tracking-widest shadow-xl flex items-center justify-center gap-3"
+                          >
+                            {isExporting ? <><Loader2 className="w-4 h-4 animate-spin" /> Synthesizing PDF...</> : <><Download className="w-4 h-4" /> Download PDF →</>}
+                          </Button>
                         </div>
                       </motion.div>
                     )}
@@ -1142,7 +1205,7 @@ export default function ResumeAtelierPage() {
                   <span className="font-mono text-[9px] uppercase tracking-[0.3em] text-[#8a723a]">Live Preview</span>
                   <span className="font-mono text-[9px] uppercase tracking-[0.1em] text-[#c9a24d]">{TEMPLATES.find(t=>t.id===data.theme)?.name.toUpperCase()}</span>
                 </div>
-                <div id="resume-paper" className="paper-shell overflow-hidden">
+                <div id="resume-paper" ref={resumePaperRef} className="paper-shell overflow-hidden">
                    <ResumePreview data={data} theme={data.theme} />
                 </div>
               </div>
@@ -1193,38 +1256,38 @@ function ResumePreview({ data, theme }: { data: ResumeData, theme: string }) {
     ));
   };
 
-  const expItems = () => data.experience.map((e, i) => (
+  const expItems = () => (data.experience || []).map((e, i) => (
     <div key={i} className="doc-job">
       <div className="doc-jobhead"><span>{e.role || 'Title'}{e.company ? `, ${e.company}` : ''}</span><span>{e.dates}</span></div>
       {bulletsHtml(e.bullets || '')}
     </div>
   ));
 
-  const projItems = () => data.projects.map((p, i) => (
+  const projItems = () => (data.projects || []).map((p, i) => (
     <div key={i} className="doc-job">
       <div className="doc-jobhead"><span>{p.name || 'Project Name'}</span></div>
       <div className="doc-bul" style={{ marginLeft: 0 }}>{p.desc}</div>
     </div>
   ));
 
-  const eduItems = () => data.education.map((ed, i) => (
+  const eduItems = () => (data.education || []).map((ed, i) => (
     <div key={i} className="doc-jobhead" style={{ marginBottom: '8px' }}>
       <span>{ed.degree}{ed.degree && ed.school ? ', ' : ''}{ed.school}</span><span>{ed.dates}</span>
     </div>
   ));
 
-  const eduSideItems = () => data.education.map((ed, i) => (
+  const eduSideItems = () => (data.education || []).map((ed, i) => (
     <div key={i} className="doc-sideline"><b>{ed.degree}</b><br />{ed.school}<br />{ed.dates}</div>
   ));
 
-  const skillsItems = (cls?: string) => data.skills.map((s, i) => (
+  const skillsItems = (cls?: string) => (data.skills || []).map((s, i) => (
     <span key={i} className={cls || 'doc-pill'}>{s}</span>
   ));
 
   const timelineItems = () => {
     const items = [
-      ...data.experience.map(e => ({ head: `${e.role || 'Title'}${e.company ? ', ' + e.company : ''}`, dates: e.dates, bullets: e.bullets })),
-      ...data.education.map(ed => ({ head: `${ed.degree}${ed.degree && ed.school ? ', ' + ed.school : ''}`, dates: ed.dates, bullets: '' })),
+      ...(data.experience || []).map(e => ({ head: `${e.role || 'Title'}${e.company ? ', ' + e.company : ''}`, dates: e.dates, bullets: e.bullets })),
+      ...(data.education || []).map(ed => ({ head: `${ed.degree}${ed.degree && ed.school ? ', ' + ed.school : ''}`, dates: ed.dates, bullets: '' })),
     ];
     return items.map((it, i) => (
       <div key={i} className="doc-tl-item">
@@ -1273,7 +1336,7 @@ function ResumePreview({ data, theme }: { data: ResumeData, theme: string }) {
             <div className="doc-main">
               {data.summary && <div className="doc-sec" style={{ marginTop: 0 }}><div className="doc-sectitle">Summary</div><div className="doc-summary" style={{ marginTop: 0 }}>{data.summary}</div></div>}
               <div className="doc-sec"><div className="doc-sectitle">Experience</div>{expItems()}</div>
-              {data.projects.length > 0 && <div className="doc-sec"><div className="doc-sectitle">Projects</div>{projItems()}</div>}
+              {data.projects && data.projects.length > 0 && <div className="doc-sec"><div className="doc-sectitle">Projects</div>{projItems()}</div>}
             </div>
           </div>
         );
@@ -1283,7 +1346,7 @@ function ResumePreview({ data, theme }: { data: ResumeData, theme: string }) {
             <div className="doc-main">
               {headerBasic}
               <div className="doc-sec"><div className="doc-sectitle">Experience</div>{expItems()}</div>
-              {data.projects.length > 0 && <div className="doc-sec"><div className="doc-sectitle">Projects</div>{projItems()}</div>}
+              {data.projects && data.projects.length > 0 && <div className="doc-sec"><div className="doc-sectitle">Projects</div>{projItems()}</div>}
             </div>
             <div className="doc-side-light">
               <div className="doc-avatar doc-avatar-lg" style={{ margin: '0 auto 14px' }}>{getInitials(data.name)}</div>
@@ -1300,7 +1363,7 @@ function ResumePreview({ data, theme }: { data: ResumeData, theme: string }) {
               <div>
                 <div className="doc-name">{data.name || 'Your Name'}</div>
                 <div className="doc-role-badge doc-role-badge-inv">{data.role || 'Target Role'}</div>
-                <div className="doc-contact doc-contact-inline" style={{ color: '#c9c2b0' }}>{contactInline()}</div>
+                <div className="doc-contact doc-contact-inline" style={{ color: '#a89f8c' }}>{contactInline()}</div>
               </div>
             </div>
             <div className="doc-body">
@@ -1311,7 +1374,7 @@ function ResumePreview({ data, theme }: { data: ResumeData, theme: string }) {
               <div>
                 <div className="doc-sec" style={{ marginTop: 0 }}><div className="doc-sectitle">Skills</div>{skillsItems()}</div>
                 <div className="doc-sec"><div className="doc-sectitle">Education</div>{eduItems()}</div>
-                {data.projects.length > 0 && <div className="doc-sec"><div className="doc-sectitle">Projects</div>{projItems()}</div>}
+                {data.projects && data.projects.length > 0 && <div className="doc-sec"><div className="doc-sectitle">Projects</div>{projItems()}</div>}
               </div>
             </div>
           </div>
@@ -1339,7 +1402,7 @@ function ResumePreview({ data, theme }: { data: ResumeData, theme: string }) {
             <div className="doc-main">
               {data.summary && <div className="doc-sec" style={{ marginTop: 0 }}><div className="doc-sectitle">Summary</div><div className="doc-summary" style={{ marginTop: 0 }}>{data.summary}</div></div>}
               <div className="doc-sec"><div className="doc-sectitle">Experience</div>{expItems()}</div>
-              {data.projects.length > 0 && <div className="doc-sec"><div className="doc-sectitle">Projects</div>{projItems()}</div>}
+              {data.projects && data.projects.length > 0 && <div className="doc-sec"><div className="doc-sectitle">Projects</div>{projItems()}</div>}
             </div>
           </div>
         );
@@ -1349,7 +1412,7 @@ function ResumePreview({ data, theme }: { data: ResumeData, theme: string }) {
             {variant === 'v-avatar' ? headerAvatar : headerBasic}
             {variant === 'v-tagcloud' && <div className="doc-sec" style={{ marginTop: '12px' }}>{skillsItems()}</div>}
             <div className="doc-sec"><div className="doc-sectitle">Experience</div>{expItems()}</div>
-            {data.projects.length > 0 && <div className="doc-sec"><div className="doc-sectitle">Projects</div>{projItems()}</div>}
+            {data.projects && data.projects.length > 0 && <div className="doc-sec"><div className="doc-sectitle">Projects</div>{projItems()}</div>}
             <div className="doc-sec"><div className="doc-sectitle">Education</div>{eduItems()}</div>
             {variant !== 'v-tagcloud' && <div className="doc-sec"><div className="doc-sectitle">Skills</div>{skillsItems()}</div>}
           </div>
