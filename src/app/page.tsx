@@ -317,7 +317,6 @@ export default function LandingPage() {
                       ref={videoRef}
                       src="/home.mp4"
                       autoPlay
-                      defaultMuted
                       playsInline
                       controls={false}
                       preload="auto"
