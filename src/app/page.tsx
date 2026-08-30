@@ -113,30 +113,55 @@ export default function LandingPage() {
   const { user, loading: authLoading } = useUser();
   const [isScrollingPaused, setIsScrollingPaused] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
+  const hasAttemptedPlay = useRef(false);
 
   useEffect(() => {
-    if (videoRef.current) {
-      const video = videoRef.current;
-      
+    const video = videoRef.current;
+    if (!video || hasAttemptedPlay.current) return;
+    hasAttemptedPlay.current = true;
+
+    const attemptPlay = () => {
       // SECURE AUTOPLAY PROTOCOL
-      // We set muted imperatively to allow autoplay, but React won't re-apply it on every render.
+      // We set muted imperatively to allow autoplay, then attempt to unmute.
       video.muted = true;
-      
       video.play().then(() => {
         // Once playback is confirmed, attempt to unlock audio imperatively.
-        // Because 'muted' is not in the JSX, React won't overwrite this on re-renders.
         if (videoRef.current) {
           videoRef.current.muted = false;
         }
-      }).catch(err => {
-        console.warn("[Autoplay Protocol] Unmuted playback restricted. Reverting to silent introduce.", err);
-        // Fallback to muted playback if blocked by browser policy
-        if (videoRef.current) {
-          videoRef.current.muted = true;
-          videoRef.current.play().catch(e => console.error("[Video Node] Critical failure:", e));
+      }).catch((err) => {
+        // AbortError can occur if play() is interrupted by a pause call or secondary play request (React StrictMode)
+        if (err.name === 'AbortError') {
+          setTimeout(() => {
+            if (videoRef.current) {
+              videoRef.current.muted = true;
+              videoRef.current.play().then(() => {
+                if (videoRef.current) videoRef.current.muted = false;
+              }).catch((e) => console.warn("[Video Node] Retry failed, staying muted:", e));
+            }
+          }, 150);
+        } else {
+          console.warn("[Autoplay Protocol] Unmuted playback restricted, staying muted:", err);
+          if (videoRef.current) {
+            videoRef.current.muted = true;
+            videoRef.current.play().catch((e) => console.error("[Video Node] Critical failure:", e));
+          }
         }
       });
+    };
+
+    if (video.readyState >= 3) {
+      // Already have enough data to play
+      attemptPlay();
+    } else {
+      video.addEventListener('canplay', attemptPlay, { once: true });
     }
+
+    return () => {
+      if (video) {
+        video.removeEventListener('canplay', attemptPlay);
+      }
+    };
   }, []);
 
   // Fetch approved community feedback
@@ -316,7 +341,6 @@ export default function LandingPage() {
                     <video
                       ref={videoRef}
                       src="/home.mp4"
-                      autoPlay
                       playsInline
                       controls={false}
                       preload="auto"
