@@ -20,8 +20,8 @@ import {
   Sparkles
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { useUser, useFirestore, useCollection } from '@/firebase';
-import { collection, query, orderBy } from 'firebase/firestore';
+import { useUser, useFirestore, useCollection, useDoc } from '@/firebase';
+import { collection, query, orderBy, doc } from 'firebase/firestore';
 import { useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useToast } from '@/hooks/use-toast';
@@ -53,7 +53,7 @@ const CertificateTemplate = ({ data }: { data: any }) => {
   );
 
   return (
-    <div className="certificate-container" style={{ padding: '40px 20px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+    <div className="certificate-container" style={{ padding: '0', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
       <div className="cert relative w-[1100px] aspect-[1.7/1] bg-gradient-to-br from-[#0c0f1a] via-[#070911] to-[#0a0c16] rounded-sm shadow-2xl overflow-hidden p-[30px]"
            style={{ fontFamily: "'Inter', sans-serif" }}>
         
@@ -154,6 +154,17 @@ export default function CertificatesPage() {
   const { toast } = useToast();
   const [isExporting, setIsExporting] = useState(false);
 
+  // Fetch Full Name from Profile
+  const profileRef = useMemo(() => {
+    if (!db || !user?.uid) return null;
+    return doc(db, 'users', user.uid);
+  }, [db, user?.uid]);
+  const { data: profile } = useDoc(profileRef);
+
+  const fullName = useMemo(() => {
+    return profile?.displayName || user?.displayName || 'Elite Candidate';
+  }, [profile, user]);
+
   // Unified data sources
   const standardInterviewsQuery = useMemo(() => {
     if (!db || !user?.uid) return null;
@@ -188,7 +199,7 @@ export default function CertificatesPage() {
     
     try {
       await generateCertificatePDF({
-        userName: user?.displayName || 'Elite Candidate',
+        userName: fullName,
         role: cert.role,
         score: cert.overallScore,
         date: cert.createdAt?.seconds 
@@ -224,7 +235,7 @@ export default function CertificatesPage() {
       <NavigationControls />
       
       <main className="container mx-auto px-6 pt-40">
-        <div className="max-w-6xl mx-auto space-y-20">
+        <div className="max-w-7xl mx-auto space-y-20">
           
           <header className="text-center relative">
             <div className="absolute inset-0 bg-gradient-to-r from-accent/10 via-purple-500/10 to-accent/10 blur-[100px] opacity-50 -z-10 animate-pulse" />
@@ -258,15 +269,17 @@ export default function CertificatesPage() {
                 {bestCertified ? (
                   <motion.div initial={{ opacity: 0, scale: 0.98 }} animate={{ opacity: 1, scale: 1 }}>
                     <div className="flex flex-col items-center gap-10">
-                      <div className="scale-75 md:scale-100 origin-top">
-                        <CertificateTemplate data={{
-                          userName: user?.displayName || 'Elite Candidate',
-                          role: bestCertified.role,
-                          date: bestCertified.createdAt?.seconds 
-                            ? new Date(bestCertified.createdAt.seconds * 1000).toLocaleDateString() 
-                            : new Date().toLocaleDateString(),
-                          certId: bestCertified.id?.substring(0, 20).toUpperCase() || 'NEX-PROTO-IDENTITY-X'
-                        }} />
+                      <div className="w-full flex justify-center overflow-visible py-10 min-h-[300px] sm:min-h-[500px] md:min-h-[647px]">
+                        <div className="scale-[0.3] min-[480px]:scale-[0.45] sm:scale-[0.6] md:scale-[0.8] lg:scale-[0.9] xl:scale-100 origin-top transform-gpu transition-transform duration-700">
+                          <CertificateTemplate data={{
+                            userName: fullName,
+                            role: bestCertified.role,
+                            date: bestCertified.createdAt?.seconds 
+                              ? new Date(bestCertified.createdAt.seconds * 1000).toLocaleDateString() 
+                              : new Date().toLocaleDateString(),
+                            certId: bestCertified.id?.substring(0, 20).toUpperCase() || 'NEX-PROTO-IDENTITY-X'
+                          }} />
+                        </div>
                       </div>
                       
                       <div className="flex flex-wrap justify-center gap-4">
@@ -281,7 +294,7 @@ export default function CertificatesPage() {
                   </motion.div>
                 ) : (
                   <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
-                    <div className="py-24 text-center glass rounded-[3rem] border-white/5 border-dashed bg-white/[0.01] max-w-4xl mx-auto space-y-8 shadow-[0_0_50px_rgba(255,255,255,0.01)]">
+                    <div className="py-24 text-center glass rounded-[3rem] border-white/5 border-dashed bg-white/[0.01] max-w-5xl mx-auto space-y-8 shadow-[0_0_50px_rgba(255,255,255,0.01)]">
                       <div className="w-20 h-20 rounded-[2rem] bg-white/5 flex items-center justify-center mx-auto relative overflow-hidden group">
                         <Trophy className="w-10 h-10 text-white/10 group-hover:text-accent/40 transition-colors" />
                       </div>
