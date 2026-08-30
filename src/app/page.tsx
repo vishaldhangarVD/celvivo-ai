@@ -118,15 +118,19 @@ export default function LandingPage() {
     if (videoRef.current) {
       const video = videoRef.current;
       
-      // Attempt unmuted autoplay handshake
+      // SECURE AUTOPLAY PROTOCOL
+      // We set muted imperatively to allow autoplay, but React won't re-apply it on every render.
+      video.muted = true;
+      
       video.play().then(() => {
-        // Once playback is confirmed (start muted via attribute), attempt to unlock audio
+        // Once playback is confirmed, attempt to unlock audio imperatively.
+        // Because 'muted' is not in the JSX, React won't overwrite this on re-renders.
         if (videoRef.current) {
           videoRef.current.muted = false;
         }
       }).catch(err => {
         console.warn("[Autoplay Protocol] Unmuted playback restricted. Reverting to silent introduce.", err);
-        // Fallback to muted playback if blocked
+        // Fallback to muted playback if blocked by browser policy
         if (videoRef.current) {
           videoRef.current.muted = true;
           videoRef.current.play().catch(e => console.error("[Video Node] Critical failure:", e));
@@ -313,7 +317,7 @@ export default function LandingPage() {
                       ref={videoRef}
                       src="/home.mp4"
                       autoPlay
-                      muted
+                      defaultMuted
                       playsInline
                       controls={false}
                       preload="auto"
