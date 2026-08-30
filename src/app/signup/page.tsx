@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Command, ArrowLeft, ShieldCheck, Loader2 } from 'lucide-react';
+import { Command, ArrowLeft, ShieldCheck, Loader2, AlertCircle } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth, useFirestore } from '@/firebase';
@@ -24,6 +24,7 @@ function SignupContent() {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [nameError, setNameError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
   const redirectTo = searchParams.get('redirectTo') || '/dashboard';
@@ -32,7 +33,15 @@ function SignupContent() {
     e.preventDefault();
     if (!auth || !db || !email || !password || !name) return;
 
+    // VALIDATION PROTOCOL: Require full name (at least two words)
+    const nameParts = name.trim().split(/\s+/).filter(Boolean);
+    if (nameParts.length < 2) {
+      setNameError("Please enter your full name (First and Last name).");
+      return;
+    }
+
     setIsLoading(true);
+    setNameError(null);
     try {
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       await updateProfile(userCredential.user, { displayName: name });
@@ -104,13 +113,26 @@ function SignupContent() {
             <form onSubmit={handleSignup} className="grid md:grid-cols-2 gap-8">
               <div className="space-y-2">
                 <Label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Full Name</Label>
-                <Input 
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  placeholder="Kunal Dhangar" 
-                  className="h-14 rounded-2xl glass border-white/10 bg-transparent focus:border-accent transition-all text-white px-6" 
-                  required
-                />
+                <div className="space-y-1">
+                  <Input 
+                    value={name}
+                    onChange={(e) => {
+                      setName(e.target.value);
+                      if (nameError) setNameError(null);
+                    }}
+                    placeholder="e.g. Kunal Dhangar" 
+                    className={cn(
+                      "h-14 rounded-2xl glass border-white/10 bg-transparent focus:border-accent transition-all text-white px-6",
+                      nameError && "border-red-400/50"
+                    )} 
+                    required
+                  />
+                  {nameError && (
+                    <p className="text-[9px] text-red-400 font-bold uppercase tracking-wider ml-2 flex items-center gap-1">
+                      <AlertCircle className="w-3 h-3" /> {nameError}
+                    </p>
+                  )}
+                </div>
               </div>
               <div className="space-y-2">
                 <Label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Email address</Label>
@@ -154,7 +176,7 @@ function SignupContent() {
                 disabled={isLoading}
                 className="md:col-span-2 h-16 btn-premium text-xs font-bold tracking-[0.2em] uppercase mt-4"
               >
-                {isLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : "Sign In"}
+                {isLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : "Sign Up"}
               </Button>
             </form>
             <p className="text-center text-[10px] font-bold tracking-widest uppercase text-muted-foreground">
@@ -174,3 +196,5 @@ export default function SignupPage() {
     </Suspense>
   );
 }
+
+import { cn } from '@/lib/utils';

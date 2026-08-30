@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Command, ArrowLeft, Chrome, Loader2, AlertCircle, Zap, ShieldCheck, Mail, Lock } from 'lucide-react';
+import { Command, ArrowLeft, Chrome, Loader2, AlertCircle, Zap, ShieldCheck, Mail, Lock, UserCheck } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth, useUser, useFirestore } from '@/firebase';
@@ -33,6 +33,10 @@ function LoginContent() {
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [isResetting, setIsResetting] = useState(false);
+  const [confirmNameMode, setConfirmNameMode] = useState(false);
+  const [socialUser, setSocialUser] = useState<any>(null);
+  const [newName, setNewName] = useState('');
+  
   const redirectProcessed = useRef(false);
 
   const redirectTo = searchParams.get('redirectTo') || '/dashboard';
@@ -41,7 +45,7 @@ function LoginContent() {
    * Profile Synchronization Protocol
    * Ensures the user has a consistent dossier in Firestore.
    */
-  const ensureUserProfile = useCallback(async (authUser: any) => {
+  const ensureUserProfile = useCallback(async (authUser: any, customName?: string) => {
     if (!db) return;
     try {
       const userDocRef = doc(db, 'users', authUser.uid);
@@ -50,7 +54,7 @@ function LoginContent() {
       if (!userDocSnap.exists()) {
         await setDoc(userDocRef, {
           uid: authUser.uid,
-          displayName: authUser.displayName || "Operator",
+          displayName: customName || authUser.displayName || "Operator",
           email: authUser.email || "",
           photoURL: authUser.photoURL || null,
           jobReadinessScore: 0,
@@ -73,21 +77,28 @@ function LoginContent() {
 
   /**
    * Redirect Result Handler
-   * Crucial for workstation environments where popups are often blocked or automatically closed.
    */
   useEffect(() => {
     if (!auth || !db || redirectProcessed.current) return;
     
     async function handleRedirect() {
-      if (!auth) return; // narrows type for TypeScript inside this closure
+      if (!auth) return;
       try {
         const result = await getRedirectResult(auth);
         redirectProcessed.current = true;
         
         if (result?.user) {
           setIsLoading(true);
-          await ensureUserProfile(result.user);
-          setIsLoading(false);
+          const name = result.user.displayName || "";
+          if (name.trim().split(/\s+/).filter(Boolean).length < 2) {
+            setSocialUser(result.user);
+            setNewName(name);
+            setConfirmNameMode(true);
+            setIsLoading(false);
+          } else {
+            await ensureUserProfile(result.user);
+            setIsLoading(false);
+          }
         }
       } catch (error: any) {
         console.error("[Auth] Redirect Result Error:", error);
@@ -108,13 +119,12 @@ function LoginContent() {
 
   /**
    * Redirection Protocol
-   * Monitors auth state and transitions to destination.
    */
   useEffect(() => {
-    if (user && !authLoading && !isLoading) {
+    if (user && !authLoading && !isLoading && !confirmNameMode) {
       router.replace(redirectTo);
     }
-  }, [user, authLoading, isLoading, router, redirectTo]);
+  }, [user, authLoading, isLoading, router, redirectTo, confirmNameMode]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -137,8 +147,6 @@ function LoginContent() {
 
   /**
    * Google Authentication Protocol
-   * Primary: Popup
-   * Fallback: Redirect (triggered on block or automatic close in proxied environments)
    */
   const handleGoogleLogin = async () => {
     if (!auth) return;
@@ -150,8 +158,17 @@ function LoginContent() {
     try {
       const result = await signInWithPopup(auth, provider);
       if (result.user) {
-        await ensureUserProfile(result.user);
-        setIsLoading(false); // Resolve loading state to trigger redirect effect
+        const name = result.user.displayName || "";
+        // VALIDATION: If social provider name is incomplete, force confirmation
+        if (name.trim().split(/\s+/).filter(Boolean).length < 2) {
+          setSocialUser(result.user);
+          setNewName(name);
+          setConfirmNameMode(true);
+          setIsLoading(false);
+        } else {
+          await ensureUserProfile(result.user);
+          setIsLoading(false);
+        }
       }
     } catch (error: any) {
       console.error("[Auth] Google Login Attempt Error:", error.code, error.message);
@@ -182,6 +199,32 @@ function LoginContent() {
     }
   };
 
+  const handleConfirmName = async () => {
+    if (!socialUser || !auth?.currentUser) return;
+    
+    if (newName.trim().split(/\s+/).filter(Boolean).length < 2) {
+      toast({
+        variant: "destructive",
+        title: "Full Name Required",
+        description: "Please provide both your first and last name to proceed.",
+      });
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      const { updateProfile: fbUpdateProfile } = await import('firebase/auth');
+      await fbUpdateProfile(auth.currentUser, { displayName: newName });
+      await ensureUserProfile(socialUser, newName);
+      setConfirmNameMode(false);
+      // Redirection useEffect will handle navigation now
+    } catch (e: any) {
+      toast({ variant: "destructive", title: "Setup Failed", description: e.message });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const handleForgotPassword = async () => {
     if (!auth || !email) {
       toast({
@@ -202,7 +245,7 @@ function LoginContent() {
     }
   };
 
-  if (authLoading || (isLoading && !user)) {
+  if (authLoading || (isLoading && !user && !confirmNameMode)) {
     return (
       <div className="min-h-screen bg-[#050816] flex items-center justify-center">
         <div className="flex flex-col items-center gap-6">
@@ -247,9 +290,11 @@ function LoginContent() {
             className="space-y-2"
           >
             <h1 className="text-5xl font-bold tracking-tighter text-premium">
-              Welcome to <span className="text-gradient-purple">Nexvoro AI.</span>
+              {confirmNameMode ? "Final Calibration." : <>Welcome to <span className="text-gradient-purple">Nexvoro AI.</span></>}
             </h1>
-            <p className="text-muted-foreground font-light text-sm uppercase tracking-[0.3em]">Your Intelligent Career Companion</p>
+            <p className="text-muted-foreground font-light text-sm uppercase tracking-[0.3em]">
+              {confirmNameMode ? "Complete your professional identity" : "Your Intelligent Career Companion"}
+            </p>
           </motion.div>
         </header>
 
@@ -264,87 +309,132 @@ function LoginContent() {
             </div>
 
             <CardContent className="space-y-10 p-0 relative z-10">
-              <Button 
-                variant="outline" 
-                onClick={handleGoogleLogin}
-                disabled={isLoading}
-                className="w-full h-16 rounded-2xl glass border-white/10 hover:bg-white/[0.05] hover:shadow-[0_0_30px_rgba(34,211,238,0.15)] flex gap-4 transition-all duration-500 group/btn overflow-hidden relative"
-              >
-                <div className="flex items-center gap-4">
-                  <Chrome className="w-5 h-5 text-accent transition-transform group-hover/btn:scale-110" />
-                  <span className="text-[10px] font-black uppercase tracking-[0.3em] text-white/90">Continue with Google</span>
-                </div>
-              </Button>
-
-              <div className="relative">
-                <div className="absolute inset-0 flex items-center"><span className="w-full border-t border-white/5"></span></div>
-                <div className="relative flex justify-center text-[8px] uppercase font-black tracking-[0.5em] text-white/20">
-                  <span className="bg-[#050816] px-6">OR CONTINUE WITH EMAIL</span>
-                </div>
-              </div>
-
-              <form onSubmit={handleLogin} className="space-y-6">
-                <div className="space-y-3">
-                  <Label className="text-[9px] font-bold uppercase tracking-[0.4em] text-white/30 ml-2">Identification</Label>
-                  <div className="relative group">
-                    <Mail className="absolute left-5 top-1/2 -translate-y-1/2 w-4 h-4 text-white/20 group-focus-within:text-accent transition-colors" />
-                    <Input 
-                      type="email"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      placeholder="email@nexus.ai" 
-                      className="h-14 rounded-2xl glass border-white/10 bg-transparent focus:border-accent transition-all text-white font-light" 
-                      required
-                    />
-                  </div>
-                </div>
-
-                <div className="space-y-3">
-                  <div className="flex justify-between items-center ml-2">
-                    <Label className="text-[9px] font-bold uppercase tracking-[0.4em] text-white/30">Encryption Key</Label>
-                    <button 
-                      type="button" 
-                      onClick={handleForgotPassword}
-                      disabled={isResetting}
-                      className="text-[9px] font-bold uppercase tracking-widest text-accent hover:text-white transition-colors"
-                    >
-                      {isResetting ? "Requesting..." : "Recover?"}
-                    </button>
-                  </div>
-                  <div className="relative group">
-                    <Lock className="absolute left-5 top-1/2 -translate-y-1/2 w-4 h-4 text-white/20 group-focus-within:text-accent transition-colors" />
-                    <Input 
-                      type="password" 
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      placeholder="••••••••" 
-                      className="h-14 pl-14 rounded-2xl glass border-white/10 bg-transparent focus:border-accent transition-all text-white font-light" 
-                      required
-                    />
-                  </div>
-                </div>
-
-                <Button 
-                  type="submit" 
-                  disabled={isLoading}
-                  className="w-full h-18 btn-premium text-[11px] font-black tracking-[0.4em] uppercase mt-4 shadow-[0_20px_50px_rgba(147,51,234,0.2)] group/submit"
-                >
-                  {isLoading ? (
-                    <Loader2 className="w-5 h-5 animate-spin" />
-                  ) : (
-                    <div className="flex items-center justify-center gap-3">
-                      <span>Access System</span>
-                      <Zap className="w-4 h-4 transition-transform group-hover/submit:scale-110 fill-current" />
+              <AnimatePresence mode="wait">
+                {confirmNameMode ? (
+                  <motion.div 
+                    key="confirm-name"
+                    initial={{ opacity: 0, x: 20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, x: -20 }}
+                    className="space-y-8"
+                  >
+                    <div className="p-6 glass rounded-2xl border-accent/20 bg-accent/5 flex items-start gap-4">
+                      <UserCheck className="w-6 h-6 text-accent shrink-0" />
+                      <p className="text-xs text-white/70 leading-relaxed font-light">
+                        To ensure your simulation reports and certificates are properly architected, please confirm your full professional name.
+                      </p>
                     </div>
-                  )}
-                </Button>
-              </form>
 
-              <div className="pt-4 text-center">
-                <p className="text-[10px] font-bold tracking-widest uppercase text-white/30">
-                  New operator? <Link href="/signup" className="text-accent hover:text-white transition-colors underline decoration-accent/20 underline-offset-4">Register Session</Link>
-                </p>
-              </div>
+                    <div className="space-y-3">
+                      <Label className="text-[9px] font-bold uppercase tracking-[0.4em] text-white/30 ml-2">Full Identity Name</Label>
+                      <Input 
+                        value={newName}
+                        onChange={(e) => setNewName(e.target.value)}
+                        placeholder="e.g. Kunal Dhangar" 
+                        className="h-14 rounded-2xl glass border-white/10 bg-transparent focus:border-accent transition-all text-white px-6 font-light" 
+                        required
+                      />
+                    </div>
+
+                    <Button 
+                      onClick={handleConfirmName}
+                      disabled={isLoading}
+                      className="w-full h-18 btn-premium text-[11px] font-black tracking-[0.4em] uppercase shadow-[0_20px_50px_rgba(147,51,234,0.2)]"
+                    >
+                      {isLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : "Complete Session Setup"}
+                    </Button>
+                  </motion.div>
+                ) : (
+                  <motion.div 
+                    key="login-form"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    className="space-y-10"
+                  >
+                    <Button 
+                      variant="outline" 
+                      onClick={handleGoogleLogin}
+                      disabled={isLoading}
+                      className="w-full h-16 rounded-2xl glass border-white/10 hover:bg-white/[0.05] hover:shadow-[0_0_30px_rgba(34,211,238,0.15)] flex gap-4 transition-all duration-500 group/btn overflow-hidden relative"
+                    >
+                      <div className="flex items-center gap-4">
+                        <Chrome className="w-5 h-5 text-accent transition-transform group-hover/btn:scale-110" />
+                        <span className="text-[10px] font-black uppercase tracking-[0.3em] text-white/90">Continue with Google</span>
+                      </div>
+                    </Button>
+
+                    <div className="relative">
+                      <div className="absolute inset-0 flex items-center"><span className="w-full border-t border-white/5"></span></div>
+                      <div className="relative flex justify-center text-[8px] uppercase font-black tracking-[0.5em] text-white/20">
+                        <span className="bg-[#050816] px-6">OR CONTINUE WITH EMAIL</span>
+                      </div>
+                    </div>
+
+                    <form onSubmit={handleLogin} className="space-y-6">
+                      <div className="space-y-3">
+                        <Label className="text-[9px] font-bold uppercase tracking-[0.4em] text-white/30 ml-2">Identification</Label>
+                        <div className="relative group">
+                          <Mail className="absolute left-5 top-1/2 -translate-y-1/2 w-4 h-4 text-white/20 group-focus-within:text-accent transition-colors" />
+                          <Input 
+                            type="email"
+                            value={email}
+                            onChange={(e) => setEmail(e.target.value)}
+                            placeholder="email@nexus.ai" 
+                            className="h-14 rounded-2xl glass border-white/10 bg-transparent focus:border-accent transition-all text-white font-light" 
+                            required
+                          />
+                        </div>
+                      </div>
+
+                      <div className="space-y-3">
+                        <div className="flex justify-between items-center ml-2">
+                          <Label className="text-[9px] font-bold uppercase tracking-[0.4em] text-white/30">Encryption Key</Label>
+                          <button 
+                            type="button" 
+                            onClick={handleForgotPassword}
+                            disabled={isResetting}
+                            className="text-[9px] font-bold uppercase tracking-widest text-accent hover:text-white transition-colors"
+                          >
+                            {isResetting ? "Requesting..." : "Recover?"}
+                          </button>
+                        </div>
+                        <div className="relative group">
+                          <Lock className="absolute left-5 top-1/2 -translate-y-1/2 w-4 h-4 text-white/20 group-focus-within:text-accent transition-colors" />
+                          <Input 
+                            type="password" 
+                            value={password}
+                            onChange={(e) => setPassword(e.target.value)}
+                            placeholder="••••••••" 
+                            className="h-14 pl-14 rounded-2xl glass border-white/10 bg-transparent focus:border-accent transition-all text-white font-light" 
+                            required
+                          />
+                        </div>
+                      </div>
+
+                      <Button 
+                        type="submit" 
+                        disabled={isLoading}
+                        className="w-full h-18 btn-premium text-[11px] font-black tracking-[0.4em] uppercase mt-4 shadow-[0_20px_50px_rgba(147,51,234,0.2)] group/submit"
+                      >
+                        {isLoading ? (
+                          <Loader2 className="w-5 h-5 animate-spin" />
+                        ) : (
+                          <div className="flex items-center justify-center gap-3">
+                            <span>Access System</span>
+                            <Zap className="w-4 h-4 transition-transform group-hover/submit:scale-110 fill-current" />
+                          </div>
+                        )}
+                      </Button>
+                    </form>
+
+                    <div className="pt-4 text-center">
+                      <p className="text-[10px] font-bold tracking-widest uppercase text-white/30">
+                        New operator? <Link href="/signup" className="text-accent hover:text-white transition-colors underline decoration-accent/20 underline-offset-4">Register Session</Link>
+                      </p>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </CardContent>
           </Card>
         </motion.div>
