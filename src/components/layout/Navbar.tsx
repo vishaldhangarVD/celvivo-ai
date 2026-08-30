@@ -17,7 +17,8 @@ import {
   Briefcase,
   Info,
   MessageSquare,
-  Clock
+  Clock,
+  Home
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useState, useMemo, Suspense, useCallback } from 'react';
@@ -136,11 +137,22 @@ function NavbarContent() {
           {user && (
             <>
               <Link 
+                href="/" 
+                className={cn(pillClasses, pillHoverClasses, pathname === '/' && pillActiveClasses)}
+              >
+                <div className={cn(pillIconWrapperClasses, pathname === '/' && pillActiveIconWrapperClasses)}>
+                  <Home className="w-2.5 h-2.5" />
+                </div>
+                HOME
+                <span className={pillUnderlineClasses} />
+              </Link>
+
+              <Link 
                 href="/special-hr-resume-upload" 
                 className={cn(
                   pillClasses, 
                   "border-purple-500/30 bg-purple-500/5 hover:border-purple-400 hover:bg-purple-500/10 hover:-translate-y-[3px] hover:scale-[1.05] hover:shadow-[0_0_30px_rgba(168,85,247,0.25)]", 
-                  pathname.startsWith('/special-hr') && "bg-purple-500/20 border-purple-500/50 shadow-[0_0_20px_rgba(168,85,247,0.3)]"
+                  pathname.startsWith('/special-hr') && "bg-purple-500 border-purple-400 text-white"
                 )}
               >
                 <div className={cn(
@@ -356,6 +368,9 @@ function NavbarContent() {
           >
             {user && (
               <>
+                <Link href="/" onClick={() => setIsOpen(false)} className="text-2xl font-bold tracking-tighter uppercase text-white hover:text-accent flex items-center gap-4">
+                  <Home className="w-6 h-6" /> Home
+                </Link>
                 <Link href="/special-hr-resume-upload" onClick={() => setIsOpen(false)} className="text-2xl font-bold tracking-tighter uppercase text-purple-400 hover:text-purple-300 flex items-center gap-4">
                   <Sparkles className="w-6 h-6" /> Special HR Interview
                 </Link>
