@@ -622,7 +622,7 @@ export default function SpecialHRInterview() {
                         <div className="absolute inset-0 border-2 border-accent/20 rounded-full animate-ping" />
                         <Loader2 className="w-full h-full text-accent animate-spin" />
                      </div>
-                     <p className="text-[10px] font-black uppercase tracking-[0.5em] text-accent animate-pulse">Initializing Neural Link</p>
+                     <p className="text-[10px] font-black uppercase tracking-[0.5em] text-accent animate-pulse">Connecting to Interviewer</p>
                   </motion.div>
                 ) : status === "READY" ? (
                   <motion.div key="ready" initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} className="space-y-10">
@@ -630,17 +630,17 @@ export default function SpecialHRInterview() {
                         <ShieldCheck className="w-10 h-10 text-accent" />
                      </div>
                      <div className="space-y-4">
-                       <h3 className="text-3xl font-bold tracking-tighter text-white">Simulation Arena Ready</h3>
-                       <p className="text-muted-foreground font-light max-w-xs mx-auto">High-fidelity WebRTC node established for the IT executive simulation.</p>
+                       <h3 className="text-3xl font-bold tracking-tighter text-white">You're All Set</h3>
+                       <p className="text-muted-foreground font-light max-w-xs mx-auto">Your camera and microphone are ready. This interview will feel like a real video call.</p>
                      </div>
 
                      {isAudioBlocked ? (
                         <Button onClick={handleEnableAudio} className="h-16 px-10 btn-premium rounded-2xl text-[10px] font-black uppercase tracking-[0.2em]">
-                          <Volume2 className="w-4 h-4 mr-2" /> Unlock Vocal Matrix
+                          <Volume2 className="w-4 h-4 mr-2" /> Enable Sound
                         </Button>
                      ) : (
                         <Button onClick={startInterview} className="h-20 px-12 btn-premium rounded-3xl text-xs font-black uppercase tracking-[0.3em] shadow-2xl hover:scale-105 transition-transform">
-                          Enter Neural Arena <Play className="ml-3 w-5 h-5 fill-current" />
+                          Enter HR Interview <Play className="ml-3 w-5 h-5 fill-current" />
                         </Button>
                      )}
                   </motion.div>
