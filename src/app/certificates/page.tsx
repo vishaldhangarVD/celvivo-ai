@@ -8,7 +8,6 @@ import { Badge } from '@/components/ui/badge';
 import { 
   Download, 
   ShieldCheck, 
-  ExternalLink,
   Loader2,
   Trophy,
   History,
@@ -55,7 +54,7 @@ const CertificateTemplate = ({ data }: { data: any }) => {
 
   return (
     <div className="certificate-container" style={{ padding: '40px 20px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-      <div id="capture-cert" className="cert relative w-[1100px] aspect-[1.7/1] bg-gradient-to-br from-[#0c0f1a] via-[#070911] to-[#0a0c16] rounded-sm shadow-2xl overflow-hidden p-[30px]"
+      <div className="cert relative w-[1100px] aspect-[1.7/1] bg-gradient-to-br from-[#0c0f1a] via-[#070911] to-[#0a0c16] rounded-sm shadow-2xl overflow-hidden p-[30px]"
            style={{ fontFamily: "'Inter', sans-serif" }}>
         
         {/* Watermark Grid */}
