@@ -98,6 +98,14 @@ const STATIC_TESTIMONIALS = [
     rating: 5
   },
   {
+    name: "SHUBHAM SOMWANSHI",
+    role: "FOUNDER & CEO",
+    company: "GOLDWINGS IT",
+    image: "https://picsum.photos/seed/person2/200/200",
+    text: "As a Founder & CEO, I use NexVoroAI’s with my students for aptitude and coding practice, resume analysis, and mock interviews. It has helped them overcome interview anxiety, improve their confidence and communication, and prepare better for real-world placements. It’s been incredibly valuable for their growth.",
+    rating: 5
+  },
+  {
     name: "ABHINAY CHAUHAN",
     role: "Full-Stack Software Engineer with AI/ML experience",
     company: "Microsoft",
@@ -298,6 +306,11 @@ export default function LandingPage() {
                       onPlaying={() => {
                         // Video has started playing natively (muted). Unmute shortly after confirmation.
                         setTimeout(() => setIsVideoMuted(false), 100);
+                      }}
+                      onEnded={(e) => {
+                        const video = e.currentTarget;
+                        video.currentTime = 0;
+                        video.pause();
                       }}
                       className="h-full w-full object-cover"
                     />
