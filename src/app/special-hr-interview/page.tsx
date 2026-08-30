@@ -103,6 +103,12 @@ export default function SpecialHRInterview() {
   const isSpeakingRequestRef = useRef(false);
   const isTypeModeRef = useRef(false);
 
+  // Completion Refs
+  const finalTranscriptRef = useRef<{ question: string; answer: string }[] | null>(null);
+  const finalStageRef = useRef<string>("CLOSING");
+  const resultProcessedRef = useRef(false);
+  const finalizeInterviewResultRef = useRef<() => Promise<void>>(async () => {});
+
   const agentId = "v2_agt_5A5V9r-C";
   const clientKey = "ck_0T9vL02nSJmsHMLHMYLsB";
 
@@ -253,6 +259,47 @@ export default function SpecialHRInterview() {
     stopListeningRef.current = stopListening;
   }, [startListening, stopListening]);
 
+  const finalizeInterviewResult = useCallback(async () => {
+    if (resultProcessedRef.current || !finalTranscriptRef.current) return;
+    resultProcessedRef.current = true;
+
+    try {
+      const fullTranscript = finalTranscriptRef.current.map(h => ({
+        stage: finalStageRef.current,
+        question: h.question,
+        answer: h.answer,
+      }));
+
+      const resultData = await analyzeHRInterviewResult({
+        candidateName: resumeAnalysis?.personalInfo?.fullName || user?.displayName || "Candidate",
+        role: journey?.role || "Software Engineer",
+        targetCompany: journey?.company || "Nexvoro AI",
+        resumeSummary: resumeAnalysis?.summary || "",
+        transcript: fullTranscript,
+      });
+
+      if (journeyRef) {
+        await updateDoc(journeyRef, {
+          specialHRResult: resultData,
+          specialHRResultAt: serverTimestamp(),
+        });
+      }
+
+      router.push('/special-hr-interview-result');
+    } catch (err) {
+      console.error("[HR Result] Analysis failed:", err);
+      toast({
+        variant: "destructive",
+        title: "Result Synthesis Failed",
+        description: "Your interview was recorded, but the report couldn't be generated. Please contact support.",
+      });
+    }
+  }, [resumeAnalysis, journey, journeyRef, user, router, toast]);
+
+  useEffect(() => {
+    finalizeInterviewResultRef.current = finalizeInterviewResult;
+  }, [finalizeInterviewResult]);
+
   const waitForDIdConnection = async (maxWaitMs = 15000) => {
     if (agentManagerRef.current && didConnectionStateRef.current === "connected") return true;
     const start = Date.now();
@@ -320,44 +367,12 @@ export default function SpecialHRInterview() {
         setIsComplete(true);
         isCompleteRef.current = true;
 
-        // Fire-and-forget: analyze the full transcript and persist the real result,
-        // then navigate to the result page once ready. Do not block the closing
-        // statement from being spoken by the agent while this runs.
-        (async () => {
-          try {
-            const fullTranscript = history.map(h => ({
-              stage: interviewStage,
-              question: h.question,
-              answer: h.answer,
-            }));
-
-            const resultData = await analyzeHRInterviewResult({
-              candidateName: resumeAnalysis?.personalInfo?.fullName || user?.displayName || "Candidate",
-              role: journey?.role || "Software Engineer",
-              targetCompany: journey?.company || "Nexvoro AI",
-              resumeSummary: resumeAnalysis?.summary || "",
-              transcript: fullTranscript,
-            });
-
-            if (journeyRef) {
-              await updateDoc(journeyRef, {
-                specialHRResult: resultData,
-                specialHRResultAt: serverTimestamp(),
-              });
-            }
-
-            router.push('/special-hr-interview-result');
-          } catch (err) {
-            console.error("[HR Result] Analysis failed:", err);
-            toast({
-              variant: "destructive",
-              title: "Result Synthesis Failed",
-              description: "Your interview was recorded, but the report couldn't be generated. Please contact support.",
-            });
-          }
-        })();
-      } else if (result.isInterviewComplete) {
-        console.warn(`[Interview] AI signaled completion at turn ${nextIndex}, but protocol requires minimum ${MIN_QUESTIONS_BEFORE_COMPLETE}. Continuing.`);
+        // Do NOT analyze or redirect yet — just record what's needed.
+        // The actual analysis + redirect is triggered from onVideoStateChange's
+        // "STOP" handler, once the agent has fully finished speaking the closing line.
+        finalTranscriptRef.current = history;
+        finalStageRef.current = result.stage;
+        resultProcessedRef.current = false;
       }
 
       if (isSpeakingRequestRef.current) return;
@@ -482,7 +497,11 @@ export default function SpecialHRInterview() {
               } else if (state === "STOP") {
                 setIsAiSpeaking(false);
                 isAiSpeakingRef.current = false;
-                if (interviewStartedRef.current && !isProcessingRef.current && !isCompleteRef.current && !isTypeModeRef.current) {
+                if (isCompleteRef.current) {
+                  // Agent just finished speaking the closing line — now it's safe
+                  // to analyze the transcript and navigate to the result page.
+                  finalizeInterviewResultRef.current();
+                } else if (interviewStartedRef.current && !isProcessingRef.current && !isCompleteRef.current && !isTypeModeRef.current) {
                   startListeningRef.current();
                 }
               }
