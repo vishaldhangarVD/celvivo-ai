@@ -161,6 +161,7 @@ export default function CertificatesPage() {
   }, [db, user?.uid]);
   const { data: profile } = useDoc(profileRef);
 
+  // RESOLUTION FIX: Ensure full displayName is used without truncation
   const fullName = useMemo(() => {
     return profile?.displayName || user?.displayName || 'Elite Candidate';
   }, [profile, user]);
@@ -270,7 +271,8 @@ export default function CertificatesPage() {
                   <motion.div initial={{ opacity: 0, scale: 0.98 }} animate={{ opacity: 1, scale: 1 }}>
                     <div className="flex flex-col items-center gap-10">
                       <div className="w-full flex justify-center overflow-visible py-10 min-h-[300px] sm:min-h-[500px] md:min-h-[647px]">
-                        <div className="scale-[0.3] min-[480px]:scale-[0.45] sm:scale-[0.6] md:scale-[0.8] lg:scale-[0.9] xl:scale-100 origin-top transform-gpu transition-transform duration-700">
+                        {/* VISUAL SCALING FIX: Increased scale factors to ensure 1100px native width on desktop screens */}
+                        <div className="scale-[0.4] min-[480px]:scale-[0.55] sm:scale-[0.7] md:scale-[0.85] lg:scale-100 origin-top transform-gpu transition-transform duration-700">
                           <CertificateTemplate data={{
                             userName: fullName,
                             role: bestCertified.role,
