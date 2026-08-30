@@ -33,7 +33,7 @@ import { useUser, useFirestore, useDoc } from "@/firebase";
 import { doc, updateDoc, serverTimestamp } from "firebase/firestore";
 import { useRouter } from "next/navigation";
 
-const MIN_QUESTIONS_BEFORE_COMPLETE = 8;
+const MIN_QUESTIONS_BEFORE_COMPLETE = 12;
 
 interface SpeechRecognitionEvent extends Event {
   results: SpeechRecognitionResultList;
