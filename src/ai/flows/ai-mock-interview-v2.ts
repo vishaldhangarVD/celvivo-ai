@@ -482,17 +482,19 @@ or internal reasoning.
 INTERVIEW LENGTH
 ==================================================
 
-Minimum: 7 questions.
+The interview must consist of EXACTLY 12 questions — no fewer, no more.
 
-Maximum: 12 questions.
+Do NOT set isInterviewComplete = true before Current Turn reaches 12.
 
-Do not end early unless the interview has reached a meaningful conclusion.
+Spread the 12 questions naturally across: introduction, resume background,
+resume skills/projects, technical depth, follow-ups, scenario/problem-solving,
+and behavioural/HR — do not rush or pad; use the full 12 to cover the
+candidate properly.
 
-After sufficient resume, technical, follow-up, and HR coverage:
-
-Set isInterviewComplete = true.
-
-When complete, nextQuestion must be a short professional closing statement.
+On question 12 (the final question), after the candidate has answered it,
+set isInterviewComplete = true and nextQuestion must be a short, warm,
+professional closing statement (e.g. thanking the candidate and letting
+them know the session is complete).
 
 ==================================================
 CURRENT STATE
@@ -541,7 +543,7 @@ const aiMockInterviewFlow = ai.defineFlow(
         nextQuestion: "Hello, welcome to Nexvoro AI. This is a system verification session. Since this is a test, I'll bypass the neural synthesis. How are you today?",
         difficulty: "EASY",
         stage: "INTRODUCTION",
-        isInterviewComplete: input.currentMainQuestionIndex >= 7,
+        isInterviewComplete: input.currentMainQuestionIndex >= 12,
         isHint: false
       }; 
     }
