@@ -79,7 +79,7 @@ function LoginContent() {
     if (!auth || !db || redirectProcessed.current) return;
     
     async function handleRedirect() {
-      if (!auth) return; // Narrowing for TS inside closure
+      if (!auth) return; // narrows type for TypeScript inside this closure
       try {
         const result = await getRedirectResult(auth);
         redirectProcessed.current = true;
@@ -151,6 +151,7 @@ function LoginContent() {
       const result = await signInWithPopup(auth, provider);
       if (result.user) {
         await ensureUserProfile(result.user);
+        setIsLoading(false); // Resolve loading state to trigger redirect effect
       }
     } catch (error: any) {
       console.error("[Auth] Google Login Attempt Error:", error.code, error.message);
@@ -292,7 +293,7 @@ function LoginContent() {
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
                       placeholder="email@nexus.ai" 
-                      className="h-14 pl-14 rounded-2xl glass border-white/10 bg-transparent focus:border-accent transition-all text-white font-light" 
+                      className="h-14 rounded-2xl glass border-white/10 bg-transparent focus:border-accent transition-all text-white font-light" 
                       required
                     />
                   </div>
