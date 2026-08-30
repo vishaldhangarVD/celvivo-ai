@@ -26,7 +26,7 @@ import {
   ArrowUpRight
 } from 'lucide-react';
 import { useUser, useFirestore, useCollection } from '@/firebase';
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useRef, useEffect } from 'react';
 import { collection, query, where } from 'firebase/firestore';
 import FeedbackDialog from '@/components/feedback/FeedbackDialog';
 
@@ -112,6 +112,28 @@ export default function LandingPage() {
   const db = useFirestore();
   const { user, loading: authLoading } = useUser();
   const [isScrollingPaused, setIsScrollingPaused] = useState(false);
+  const videoRef = useRef<HTMLVideoElement>(null);
+
+  useEffect(() => {
+    if (videoRef.current) {
+      const video = videoRef.current;
+      
+      // Attempt unmuted autoplay handshake
+      video.play().then(() => {
+        // Once playback is confirmed (start muted via attribute), attempt to unlock audio
+        if (videoRef.current) {
+          videoRef.current.muted = false;
+        }
+      }).catch(err => {
+        console.warn("[Autoplay Protocol] Unmuted playback restricted. Reverting to silent introduce.", err);
+        // Fallback to muted playback if blocked
+        if (videoRef.current) {
+          videoRef.current.muted = true;
+          videoRef.current.play().catch(e => console.error("[Video Node] Critical failure:", e));
+        }
+      });
+    }
+  }, []);
 
   // Fetch approved community feedback
   const feedbackQuery = useMemo(() => {
@@ -235,7 +257,7 @@ export default function LandingPage() {
               <div className="absolute inset-0 bg-accent/20 rounded-[3rem] blur-[80px] opacity-0 group-hover:opacity-20 transition-opacity duration-1000" />
               
               <Card className="premium-card overflow-hidden rounded-[3rem] border border-cyan-500/20 bg-[#0B0F1D] backdrop-blur-xl shadow-[0_0_80px_rgba(0,255,255,0.08)] transition-all duration-500 hover:shadow-[0_0_120px_rgba(59,130,246,0.18)] flex flex-col md:flex-row min-h-[500px]">
-                <div className="md:w-[60%] p-10 flex flex-col justify-between relative z-10">
+                <div className="md:w-[50%] p-10 flex flex-col justify-between relative z-10">
                   <div className="space-y-8">
                     <div className="space-y-1">
                       <h2 className="text-3xl font-bold tracking-tighter text-premium">Simulation Protocol</h2>
@@ -284,14 +306,14 @@ export default function LandingPage() {
                   </button>
                 </div>
                 
-                <div className="relative w-full md:w-[40%] min-h-[400px] md:min-h-full overflow-hidden rounded-r-[3rem] bg-black">
+                <div className="relative w-full md:w-[50%] min-h-[400px] md:min-h-full overflow-hidden rounded-r-[3rem] bg-black">
                   <div className="absolute inset-0 bg-gradient-to-br from-accent/10 via-transparent to-transparent opacity-50 z-10" />
                   <div className="absolute inset-0">
                     <video
+                      ref={videoRef}
                       src="/home.mp4"
                       autoPlay
                       muted
-                      loop
                       playsInline
                       controls={false}
                       preload="auto"
