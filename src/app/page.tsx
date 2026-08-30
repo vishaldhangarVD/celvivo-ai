@@ -112,57 +112,7 @@ export default function LandingPage() {
   const db = useFirestore();
   const { user, loading: authLoading } = useUser();
   const [isScrollingPaused, setIsScrollingPaused] = useState(false);
-  const videoRef = useRef<HTMLVideoElement>(null);
-  const hasAttemptedPlay = useRef(false);
-
-  useEffect(() => {
-    const video = videoRef.current;
-    if (!video || hasAttemptedPlay.current) return;
-    hasAttemptedPlay.current = true;
-
-    const attemptPlay = () => {
-      // SECURE AUTOPLAY PROTOCOL
-      // We set muted imperatively to allow autoplay, then attempt to unmute.
-      video.muted = true;
-      video.play().then(() => {
-        // Once playback is confirmed, attempt to unlock audio imperatively.
-        if (videoRef.current) {
-          videoRef.current.muted = false;
-        }
-      }).catch((err) => {
-        // AbortError can occur if play() is interrupted by a pause call or secondary play request (React StrictMode)
-        if (err.name === 'AbortError') {
-          setTimeout(() => {
-            if (videoRef.current) {
-              videoRef.current.muted = true;
-              videoRef.current.play().then(() => {
-                if (videoRef.current) videoRef.current.muted = false;
-              }).catch((e) => console.warn("[Video Node] Retry failed, staying muted:", e));
-            }
-          }, 150);
-        } else {
-          console.warn("[Autoplay Protocol] Unmuted playback restricted, staying muted:", err);
-          if (videoRef.current) {
-            videoRef.current.muted = true;
-            videoRef.current.play().catch((e) => console.error("[Video Node] Critical failure:", e));
-          }
-        }
-      });
-    };
-
-    if (video.readyState >= 3) {
-      // Already have enough data to play
-      attemptPlay();
-    } else {
-      video.addEventListener('canplay', attemptPlay, { once: true });
-    }
-
-    return () => {
-      if (video) {
-        video.removeEventListener('canplay', attemptPlay);
-      }
-    };
-  }, []);
+  const [isVideoMuted, setIsVideoMuted] = useState(true);
 
   // Fetch approved community feedback
   const feedbackQuery = useMemo(() => {
@@ -339,11 +289,16 @@ export default function LandingPage() {
                   <div className="absolute inset-0 bg-gradient-to-br from-accent/10 via-transparent to-transparent opacity-50 z-10" />
                   <div className="absolute inset-0">
                     <video
-                      ref={videoRef}
                       src="/home.mp4"
+                      autoPlay
+                      muted={isVideoMuted}
                       playsInline
                       controls={false}
                       preload="auto"
+                      onPlaying={() => {
+                        // Video has started playing natively (muted). Unmute shortly after confirmation.
+                        setTimeout(() => setIsVideoMuted(false), 100);
+                      }}
                       className="h-full w-full object-cover"
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-[#050816]/30 via-transparent to-transparent z-20" />
