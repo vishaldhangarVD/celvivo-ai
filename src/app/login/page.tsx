@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useEffect, Suspense, useCallback, useRef } from 'react';
@@ -80,6 +79,7 @@ function LoginContent() {
     if (!auth || !db || redirectProcessed.current) return;
     
     async function handleRedirect() {
+      if (!auth) return; // Narrowing for TS inside closure
       try {
         const result = await getRedirectResult(auth);
         redirectProcessed.current = true;
@@ -87,7 +87,6 @@ function LoginContent() {
         if (result?.user) {
           setIsLoading(true);
           await ensureUserProfile(result.user);
-          // Redirect handled by the user-watch effect below
           setIsLoading(false);
         }
       } catch (error: any) {
@@ -152,17 +151,13 @@ function LoginContent() {
       const result = await signInWithPopup(auth, provider);
       if (result.user) {
         await ensureUserProfile(result.user);
-        // router.replace will be handled by the user-watch effect
       }
     } catch (error: any) {
       console.error("[Auth] Google Login Attempt Error:", error.code, error.message);
       
-      // auth/popup-closed-by-user can occur automatically in some proxied workstation browsers
-      // if they detect a popup attempt but suppress it silently.
       if (error.code === 'auth/popup-blocked' || error.code === 'auth/popup-closed-by-user') {
         try {
           await signInWithRedirect(auth, provider);
-          // Execution stops here as page redirects
           return;
         } catch (redirectError: any) {
           console.error("[Auth] Redirect Fallback Failed:", redirectError);
@@ -174,7 +169,6 @@ function LoginContent() {
           setIsLoading(false);
         }
       } else if (error.code === 'auth/cancelled-popup-request') {
-        // Just reset loading, another request is already in progress
         setIsLoading(false);
       } else {
         toast({
@@ -231,7 +225,7 @@ function LoginContent() {
       <div className="absolute bottom-[-10%] left-[-10%] w-[500px] h-[500px] bg-accent/10 rounded-full blur-[120px] pointer-events-none" />
 
       <Link href="/" className="absolute top-12 left-12 z-50 flex items-center gap-3 text-[10px] font-bold tracking-[0.4em] uppercase text-white/40 hover:text-white transition-all group">
-        <ArrowLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" />
+        <ArrowLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform text-white/70" />
         Back to Nexus
       </Link>
 
