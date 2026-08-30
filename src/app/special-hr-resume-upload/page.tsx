@@ -17,7 +17,8 @@ import {
   ArrowRight,
   RotateCcw,
   Sparkles,
-  Cpu
+  Cpu,
+  Trash2
 } from 'lucide-react';
 import { useUser, useFirestore } from '@/firebase';
 import { doc, updateDoc, serverTimestamp } from 'firebase/firestore';
@@ -116,7 +117,7 @@ export default function SpecialHRResumeUpload() {
       <div className="absolute bottom-0 right-1/4 w-[400px] h-[400px] bg-accent/10 rounded-full blur-[100px] pointer-events-none" />
       
       <Navbar />
-      <NavigationControls />
+      <NavigationControls onHome={() => router.push('/')} />
 
       <main className="flex-1 container mx-auto px-6 flex flex-col items-center justify-center pt-16 relative z-10">
         <div className="max-w-4xl w-full">
@@ -182,7 +183,7 @@ export default function SpecialHRResumeUpload() {
                 <motion.div key="ready" initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="space-y-10 w-full">
                   <div className="relative w-24 h-24 mx-auto">
                     <div className="absolute inset-0 rounded-full bg-green-500/20 blur-2xl opacity-60" />
-                    <div className="relative w-24 h-24 rounded-full bg-green-500/20 flex items-center justify-center mx-auto border border-green-500/30 shadow-[0_0_30px_rgba(34,197,94,0.2)]">
+                    <div className="relative w-24 h-24 rounded-full bg-green-500/20 flex items-center justify-center mx-auto border border-green-500/30 shadow-[0_0_30px_rgba(34,211,238,0.2)]">
                       <CheckCircle2 className="w-12 h-12 text-green-400" />
                     </div>
                   </div>
