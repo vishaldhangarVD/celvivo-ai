@@ -40,6 +40,7 @@ export default function FinalReportPage() {
   const { toast } = useToast();
   
   const docId = params.id as string;
+  const [isExporting, setIsExporting] = useState(false);
 
   const interviewRef = useMemo(() => {
     if (!db || !user?.uid || !docId) return null;
@@ -70,6 +71,25 @@ export default function FinalReportPage() {
 
     await deleteDoc(doc(db, 'users', user.uid, 'journey', 'active'));
     router.push('/interview');
+  };
+
+  const handleExport = async () => {
+    if (isExporting || !interviewDoc || !feedback) return;
+    setIsExporting(true);
+    try {
+      await generateCertificatePDF({ 
+        userName: user?.displayName || 'Elite Candidate', 
+        role: (interviewDoc as any).role, 
+        score: feedback.overallScore, 
+        date: new Date().toLocaleDateString(),
+        certId: interviewDoc.id?.substring(0, 20).toUpperCase()
+      });
+      toast({ title: "Report Exported", description: "Your PDF dossier is ready." });
+    } catch (e) {
+      toast({ variant: "destructive", title: "Synthesis Error" });
+    } finally {
+      setIsExporting(false);
+    }
   };
 
   const getScoreColor = (score: number) => {
@@ -144,15 +164,11 @@ export default function FinalReportPage() {
               <Card className="premium-card bg-accent/5 border-accent/20 p-8 text-center space-y-6">
                 <Award className="w-10 h-10 text-accent mx-auto" />
                 <Button 
-                  onClick={() => generateCertificatePDF({ 
-                    userName: user?.displayName || 'Elite Candidate', 
-                    role: (interviewDoc as any).role, 
-                    score: feedback.overallScore, 
-                    date: new Date().toLocaleDateString() 
-                  })}
+                  onClick={handleExport}
+                  disabled={isExporting}
                   className="w-full h-16 rounded-2xl bg-white text-[#050816] font-bold hover:bg-white/90"
                 >
-                  <Download className="w-5 h-5 mr-3" /> Export PDF Report
+                  {isExporting ? <Loader2 className="w-5 h-5 animate-spin mr-3" /> : <Download className="w-5 h-5 mr-3" />} Export PDF Report
                 </Button>
               </Card>
 

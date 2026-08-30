@@ -54,8 +54,6 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { runAtsCheck } from '@/ai/flows/ai-resume-ats-check';
-import { jsPDF } from 'jspdf';
-import html2canvas from 'html2canvas';
 
 /* ---------- TYPES ---------- */
 interface ResumeEntry {
@@ -425,52 +423,27 @@ export default function ResumeAtelierPage() {
   };
 
   const handleDownloadPdf = async () => {
-    if (!resumePaperRef.current || isExporting) return;
+    if (isExporting) return;
     setIsExporting(true);
     
     try {
-      const element = resumePaperRef.current;
-      
-      // Temporarily remove print-unfriendly styles
-      const originalBoxShadow = element.style.boxShadow;
-      element.style.boxShadow = 'none';
-
-      const canvas = await html2canvas(element, {
-        scale: 2,
-        useCORS: true,
-        logging: false,
-        backgroundColor: '#f7f2e6', // var(--ivory)
-        windowWidth: 794, // Standard A4 width at 96 DPI
+      const response = await fetch('/api/generate-resume', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
       });
 
-      element.style.boxShadow = originalBoxShadow;
+      if (!response.ok) throw new Error("Synthesis failed.");
 
-      const imgData = canvas.toDataURL('image/png');
-      const pdf = new jsPDF({
-        orientation: 'portrait',
-        unit: 'mm',
-        format: 'a4',
-      });
-
-      const imgWidth = 210; // A4 width in mm
-      const pageHeight = 297; // A4 height in mm
-      const imgHeight = (canvas.height * imgWidth) / canvas.width;
-      
-      let heightLeft = imgHeight;
-      let position = 0;
-
-      pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight, undefined, 'FAST');
-      heightLeft -= pageHeight;
-
-      while (heightLeft >= 0) {
-        position = heightLeft - imgHeight;
-        pdf.addPage();
-        pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight, undefined, 'FAST');
-        heightLeft -= pageHeight;
-      }
-
-      const safeName = (data.name || 'Resume').replace(/[^a-z0-9]/gi, '_');
-      pdf.save(`${safeName}-Atelier.pdf`);
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `Resume_${data.name.replace(/\s+/g, '_')}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
 
       toast({ title: "Blueprint Exported", description: "High-fidelity PDF synthesized successfully." });
     } catch (e) {
@@ -827,7 +800,7 @@ export default function ResumeAtelierPage() {
                            <div className="space-y-3">
                              <p className="text-[9px] font-mono uppercase text-red-400/60 tracking-widest">Critical Missing Nodes</p>
                              <div className="flex flex-wrap gap-2">
-                               {atsModalResult.missingKeywords?.map((w: string) => <span key={w} className="px-3 py-1 bg-red-500/10 text-red-400 text-[10px] border border-red-500/20">{w}</span>)}
+                               {atsModalResult.missingKeywords?.map((w: string) => <span key={w} className="px-3 py-1 bg-red-500/10 text-red-400 text-[10px] border border-green-500/20">{w}</span>)}
                              </div>
                            </div>
                         </div>
