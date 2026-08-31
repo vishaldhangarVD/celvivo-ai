@@ -39,7 +39,7 @@ const MASTERY_THRESHOLD = 70;
 // Reusable Certificate Template Component (For Preview)
 const CertificateTemplate = ({ data }: { data: any }) => {
   const logoMark = (
-    <svg width="32" height="32" viewBox="0 0 40 40" fill="none">
+    <svg width="40" height="40" viewBox="0 0 40 40" fill="none">
       <defs>
         <linearGradient id="lgGrad" x1="0" y1="0" x2="40" y2="40">
           <stop offset="0%" stopColor="#7c5cff"/>
@@ -54,7 +54,7 @@ const CertificateTemplate = ({ data }: { data: any }) => {
 
   return (
     <div className="certificate-container" style={{ padding: '0', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-      <div className="cert relative w-[1100px] aspect-[1.7/1] bg-gradient-to-br from-[#0c0f1a] via-[#070911] to-[#0a0c16] rounded-sm shadow-2xl overflow-hidden p-[30px]"
+      <div className="cert relative w-[1180px] aspect-[1.62/1] bg-gradient-to-br from-[#0c0f1a] via-[#070911] to-[#0a0c16] rounded-sm shadow-2xl overflow-hidden p-[30px]"
            style={{ fontFamily: "'Inter', sans-serif" }}>
         
         {/* Watermark Grid */}
@@ -78,28 +78,28 @@ const CertificateTemplate = ({ data }: { data: any }) => {
           {/* Header */}
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[#171a2e] to-[#0d0f1c] border border-[#d8b374]/25 flex items-center justify-center shrink-0">
+              <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-[#171a2e] to-[#0d0f1c] border border-[#d8b374]/25 flex items-center justify-center shrink-0">
                 {logoMark}
               </div>
               <div className="brand-text">
-                <div className="font-headline font-bold text-[13px] tracking-widest text-[#f1eee4]">NEXVORO<span className="text-[#d8b374]">AI</span></div>
-                <div className="text-[7.5px] tracking-[2.5px] text-[#8b8a94] uppercase mt-0.5">AI Career Tools</div>
+                <div className="font-headline font-bold text-[16px] tracking-widest text-[#f1eee4]">NEXVORO<span className="text-[#d8b374]">AI</span></div>
+                <div className="text-[9px] tracking-[2.5px] text-[#8b8a94] uppercase mt-0.5">AI Career Tools</div>
               </div>
             </div>
-            <div className="font-mono text-[8.5px] tracking-[2.5px] text-[#d8b374] uppercase border border-[#d8b374]/30 px-4 py-1.5 rounded-[1px]">
+            <div className="font-mono text-[10px] tracking-[2.5px] text-[#d8b374] uppercase border border-[#d8b374]/30 px-4 py-1.5 rounded-[1px]">
               Neural Performance Verification
             </div>
           </div>
 
           {/* Body Content */}
           <div className="flex flex-col items-center text-center">
-            <div className="text-[11px] text-[#8b8a94] italic tracking-tight">This credential certifies that</div>
-            <div className="font-serif font-semibold text-[38px] text-[#f0d9a8] tracking-tight mt-3 leading-none">
+            <div className="text-[13px] text-[#8b8a94] italic tracking-tight">This credential certifies that</div>
+            <div className="font-serif font-semibold text-[50px] text-[#f0d9a8] tracking-tight mt-3 leading-none">
               {data.userName}
             </div>
             <div className="w-[120px] h-[1px] bg-gradient-to-r from-transparent via-[#d8b374] to-transparent my-4" />
-            <div className="text-[11px] text-[#8b8a94]">has demonstrated mastery in the simulation for</div>
-            <div className="font-serif font-semibold text-[21px] text-[#f1eee4] mt-1.5 tracking-tight">
+            <div className="text-[13px] text-[#8b8a94]">has demonstrated mastery in the simulation for</div>
+            <div className="font-serif font-semibold text-[26px] text-[#f1eee4] mt-1.5 tracking-tight">
               {data.role} Mastery
             </div>
           </div>
@@ -108,37 +108,37 @@ const CertificateTemplate = ({ data }: { data: any }) => {
           <div className="flex flex-col items-center gap-4">
             <div className="flex items-center justify-center gap-12 w-full">
               <div className="flex flex-col items-center gap-1">
-                <span className="text-[7.5px] tracking-widest text-[#8b8a94] uppercase font-mono">Date of Issue</span>
-                <span className="text-[10.5px] text-[#f1eee4] font-mono">{data.date}</span>
+                <span className="text-[9px] tracking-widest text-[#8b8a94] uppercase font-mono">Date of Issue</span>
+                <span className="text-[13px] text-[#f1eee4] font-mono">{data.date}</span>
               </div>
               <div className="flex flex-col items-center gap-1">
-                <span className="text-[7.5px] tracking-widest text-[#8b8a94] uppercase font-mono">Verification ID</span>
-                <span className="text-[10.5px] text-[#f1eee4] font-mono uppercase">{data.certId}</span>
+                <span className="text-[9px] tracking-widest text-[#8b8a94] uppercase font-mono">Verification ID</span>
+                <span className="text-[13px] text-[#f1eee4] font-mono uppercase">{data.certId}</span>
               </div>
               <div className="flex flex-col items-center gap-1">
-                <span className="text-[7.5px] tracking-widest text-[#8b8a94] uppercase font-mono">Verify at</span>
-                <span className="text-[10.5px] text-[#d8b374] font-mono">nexvoro.ai</span>
+                <span className="text-[9px] tracking-widest text-[#8b8a94] uppercase font-mono">Verify at</span>
+                <span className="text-[13px] text-[#d8b374] font-mono">nexvoro.ai</span>
               </div>
             </div>
 
             <div className="flex items-center justify-center gap-8 pt-4 border-t border-[#d8b374]/15 w-full max-w-[500px]">
               {/* Seal */}
               <div className="seal w-24 text-center shrink-0">
-                <div className="w-[70px] h-[70px] mx-auto rounded-full bg-radial-at-tl from-[#2a2210] to-[#0a0c16] border-[1.5px] border-[#d8b374] flex items-center justify-center relative">
+                <div className="w-[86px] h-[86px] mx-auto rounded-full bg-radial-at-tl from-[#2a2210] to-[#0a0c16] border-[2px] border-[#d8b374] flex items-center justify-center relative">
                   <div className="absolute inset-[5px] border border-dashed border-[#d8b374]/50 rounded-full" />
-                  <span className="text-[19px] text-[#d8b374]">★</span>
+                  <span className="text-[24px] text-[#d8b374]">★</span>
                 </div>
                 <div className="flex justify-center -mt-1">
-                  <div className="w-0 h-0 border-l-[12px] border-l-transparent border-r-[12px] border-r-transparent border-t-[15px] border-t-[#8a7146] mr-[-2px]" />
-                  <div className="w-0 h-0 border-l-[12px] border-l-transparent border-r-[12px] border-r-transparent border-t-[15px] border-t-[#8a7146]" />
+                  <div className="w-0 h-0 border-l-[15px] border-l-transparent border-r-[15px] border-r-transparent border-t-[18px] border-t-[#8a7146] mr-[-2px]" />
+                  <div className="w-0 h-0 border-l-[15px] border-l-transparent border-r-[15px] border-r-transparent border-t-[18px] border-t-[#8a7146]" />
                 </div>
               </div>
               
               {/* Signature Block */}
-              <div className="w-[210px] text-center">
-                <img src="/certificate-signature.png" alt="Signature" className="h-11 w-auto mx-auto object-contain block" />
+              <div className="w-[250px] text-center">
+                <img src="/certificate-signature.png" alt="Signature" className="h-14 w-auto mx-auto object-contain block" />
                 <div className="w-full h-[1px] bg-[#d8b374]/35 mt-2" />
-                <div className="text-[7.5px] tracking-widest text-[#8b8a94] uppercase mt-1.5 font-mono">Founder & CEO, Nexvoro AI</div>
+                <div className="text-[9px] tracking-widest text-[#8b8a94] uppercase mt-1.5 font-mono">Founder & CEO, Nexvoro AI</div>
               </div>
             </div>
           </div>
@@ -270,9 +270,8 @@ export default function CertificatesPage() {
                 {bestCertified ? (
                   <motion.div initial={{ opacity: 0, scale: 0.98 }} animate={{ opacity: 1, scale: 1 }}>
                     <div className="flex flex-col items-center gap-10">
-                      <div className="w-full flex justify-center overflow-visible py-10 min-h-[300px] sm:min-h-[500px] md:min-h-[647px]">
-                        {/* VISUAL SCALING FIX: Increased scale factors to ensure 1100px native width on desktop screens */}
-                        <div className="scale-[0.4] min-[480px]:scale-[0.55] sm:scale-[0.7] md:scale-[0.85] lg:scale-100 origin-top transform-gpu transition-transform duration-700">
+                      <div className="w-full flex justify-center overflow-visible py-10 min-h-[300px] sm:min-h-[500px] md:min-h-[728px]">
+                        <div className="scale-[0.35] sm:scale-[0.6] md:scale-[0.8] lg:scale-100 origin-top transform-gpu transition-transform duration-700">
                           <CertificateTemplate data={{
                             userName: fullName,
                             role: bestCertified.role,
