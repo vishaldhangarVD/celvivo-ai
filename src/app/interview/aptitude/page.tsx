@@ -406,7 +406,7 @@ export default function AptitudeEnginePage() {
   const currentQ = questions[currentIdx];
 
   return (
-    <div className="h-screen bg-[#050816] flex flex-col overflow-hidden pt-[72px] relative">
+    <div className="h-screen bg-[#050816] flex flex-col overflow-hidden relative pt-[72px]">
       <div className="particles-bg" />
       <Navbar />
 
@@ -435,9 +435,9 @@ export default function AptitudeEnginePage() {
           </div>
         </header>
 
-        <main className="flex-1 min-h-0 container mx-auto px-6 py-6 overflow-hidden">
-          <div className="grid h-full lg:grid-cols-12 gap-8">
-            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="lg:col-span-9 flex flex-col h-full gap-6">
+        <main className="flex-1 min-h-0 container-fluid flex flex-col max-w-7xl mx-auto w-full px-6 py-4 overflow-hidden">
+          <div className="grid flex-1 min-h-0 lg:grid-cols-12 gap-8 overflow-hidden">
+            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="lg:col-span-9 flex flex-col h-full min-h-0 gap-4">
               <div className="space-y-2 shrink-0">
                 <div className="flex justify-between items-end px-2 text-[10px] font-black uppercase tracking-widest text-white/30">
                   <span>Question {currentIdx + 1} of {questions.length}</span>
@@ -446,15 +446,15 @@ export default function AptitudeEnginePage() {
                 <Progress value={((currentIdx + 1) / questions.length) * 100} className="h-1 bg-white/5" />
               </div>
 
-              <Card className="flex-1 min-h-0 overflow-y-auto premium-card bg-white/[0.01] border-white/5 p-12 relative flex flex-col justify-start custom-scrollbar">
-                <div className="absolute top-0 right-0 p-8">
+              <Card className="flex-1 min-h-0 overflow-y-auto premium-card bg-white/[0.01] border-white/5 p-8 relative flex flex-col justify-start custom-scrollbar">
+                <div className="absolute top-0 right-0 p-6">
                   <Badge variant="outline" className="border-accent/20 text-accent text-[9px] font-black uppercase px-3">{currentQ?.difficulty || "Medium"}</Badge>
                 </div>
                 
-                <div className="max-w-3xl mx-auto w-full space-y-10 pt-4">
+                <div className="max-w-3xl mx-auto w-full space-y-8 pt-2">
                   <div className="space-y-4">
                     <Badge className="bg-purple-500/10 text-purple-400 border-none text-[9px] font-black uppercase tracking-widest">{currentQ?.category || "Category"}</Badge>
-                    <h2 className="text-3xl font-bold tracking-tight text-white/90 leading-tight whitespace-pre-wrap">{currentQ?.question}</h2>
+                    <h2 className="text-2xl font-bold tracking-tight text-white/90 leading-tight whitespace-pre-wrap">{currentQ?.question}</h2>
                   </div>
 
                   <div className="grid md:grid-cols-2 gap-4 pb-4">
@@ -478,23 +478,23 @@ export default function AptitudeEnginePage() {
                 </div>
               </Card>
 
-              <div className="h-24 shrink-0 glass rounded-[2.5rem] border-white/5 p-4 flex items-center justify-between shadow-2xl">
+              <div className="h-20 shrink-0 glass rounded-[2rem] border-white/5 px-8 flex items-center justify-between shadow-2xl">
                 <div className="flex gap-4">
-                  <Button variant="ghost" onClick={() => handleNav(Math.max(0, currentIdx - 1))} disabled={currentIdx === 0 || isSubmitting} className="h-16 px-8 rounded-2xl glass border-white/10 text-[10px] font-black uppercase"><ChevronLeft className="w-4 h-4 mr-2" /> Back</Button>
+                  <Button variant="ghost" onClick={() => handleNav(Math.max(0, currentIdx - 1))} disabled={currentIdx === 0 || isSubmitting} className="h-12 px-8 rounded-xl glass border-white/10 text-[10px] font-black uppercase"><ChevronLeft className="w-4 h-4 mr-2" /> Back</Button>
                   <Button 
                     variant="ghost" 
                     onClick={handleReviewLater} 
                     disabled={isSubmitting}
-                    className={cn("h-16 px-8 rounded-2xl glass border-white/10 text-[10px] font-black uppercase", markedForReview.has(currentIdx) && "bg-orange-500/10 text-orange-400 shadow-[0_0_15px_rgba(249,115,22,0.3)]")}
+                    className={cn("h-12 px-8 rounded-xl glass border-white/10 text-[10px] font-black uppercase", markedForReview.has(currentIdx) && "bg-orange-500/10 text-orange-400 shadow-[0_0_15px_rgba(249,115,22,0.3)]")}
                   >
                     Review Later
                   </Button>
                 </div>
                 <div className="flex gap-4">
                   {currentIdx < questions.length - 1 ? (
-                    <Button onClick={() => handleNav(Math.min(questions.length - 1, currentIdx + 1))} disabled={isSubmitting} className="h-16 px-12 btn-premium rounded-2xl text-[10px] font-black uppercase">Next Question <ChevronRight className="ml-2 w-4 h-4" /></Button>
+                    <Button onClick={() => handleNav(Math.min(questions.length - 1, currentIdx + 1))} disabled={isSubmitting} className="h-12 px-12 btn-premium rounded-xl text-[10px] font-black uppercase">Next Question <ChevronRight className="ml-2 w-4 h-4" /></Button>
                   ) : (
-                    <Button onClick={handleSubmit} disabled={isSubmitting} className="h-16 px-12 bg-green-600 hover:bg-green-500 text-white rounded-2xl text-[10px] font-black uppercase shadow-lg group">
+                    <Button onClick={handleSubmit} disabled={isSubmitting} className="h-12 px-12 bg-green-600 hover:bg-green-500 text-white rounded-xl text-[10px] font-black uppercase shadow-lg group">
                       {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <>Finish Test <ShieldCheck className="ml-2 w-4 h-4 group-hover:scale-110 transition-transform" /></>}
                     </Button>
                   )}
@@ -503,8 +503,8 @@ export default function AptitudeEnginePage() {
             </motion.div>
 
             <div className="lg:col-span-3 h-full overflow-hidden">
-              <Card className="h-full overflow-y-auto premium-card bg-white/[0.01] border-white/5 p-8 space-y-8 custom-scrollbar">
-                <h3 className="text-xs font-black uppercase tracking-[0.3em] text-accent flex items-center gap-3"><LayoutGrid className="w-4 h-4" /> Questions</h3>
+              <Card className="h-full overflow-y-auto premium-card bg-white/[0.01] border-white/5 p-8 space-y-6 custom-scrollbar">
+                <h3 className="text-xs font-black uppercase tracking-[0.3em] text-accent flex items-center gap-3 shrink-0"><LayoutGrid className="w-4 h-4" /> Questions</h3>
                 <div className="grid grid-cols-5 gap-3">
                   {questions.map((_, i) => (
                     <button 
