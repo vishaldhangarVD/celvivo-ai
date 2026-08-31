@@ -1,206 +1,216 @@
 "use client";
 
-import { useEffect, useMemo, useState } from 'react';
-import { useRouter } from 'next/navigation';
-import { useUser, useFirestore, useCollection, useDoc } from '@/firebase';
-import { 
-  collection, 
-  query, 
-  doc, 
-  updateDoc, 
-  deleteDoc, 
-  where 
-} from 'firebase/firestore';
-import { motion, AnimatePresence } from 'framer-motion';
-import Navbar from '@/components/layout/Navbar';
-import NavigationControls from '@/components/NavigationControls';
-import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { 
-  CheckCircle2, 
-  XCircle, 
-  Trash2, 
-  Loader2, 
-  Star, 
-  ShieldAlert,
-  MessageSquare,
-  Filter,
-  User,
-  Clock
-} from 'lucide-react';
-import { useToast } from '@/hooks/use-toast';
-import { cn } from '@/lib/utils';
+import { useState, useMemo } from "react";
+import { useRouter } from "next/navigation";
+import { motion } from "framer-motion";
+import Navbar from "@/components/layout/Navbar";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import {
+  Loader2, CheckCircle2, XCircle, Star, ShieldAlert,
+  Clock, Check, X, User
+} from "lucide-react";
+import { useUser, useFirestore, useCollection } from "@/firebase";
+import { collection, query, where, doc, updateDoc } from "firebase/firestore";
+import { cn } from "@/lib/utils";
+
+const ADMIN_EMAIL = "kunaldhangar1316@gmail.com";
+
+type StatusTab = "pending" | "approved" | "rejected";
 
 export default function AdminFeedbackPage() {
   const router = useRouter();
   const { user, loading: authLoading } = useUser();
   const db = useFirestore();
-  const { toast } = useToast();
+  const [activeTab, setActiveTab] = useState<StatusTab>("pending");
+  const [processingId, setProcessingId] = useState<string | null>(null);
 
-  const profileRef = useMemo(() => {
-    if (!db || !user?.uid) return null;
-    return doc(db, 'users', user.uid);
-  }, [db, user?.uid]);
+  const isAdmin = user?.email === ADMIN_EMAIL;
 
-  const { data: profile, loading: profileLoading } = useDoc(profileRef);
-
-  const [filter, setFilter] = useState<'pending' | 'approved' | 'rejected'>('pending');
-
-  // Removed orderBy to ensure it works without requiring a composite index
   const feedbackQuery = useMemo(() => {
-    if (!db) return null;
-    return query(
-      collection(db, 'userFeedback'),
-      where('status', '==', filter)
-    );
-  }, [db, filter]);
+    if (!db || !isAdmin) return null;
+    return query(collection(db, "userFeedback"), where("status", "==", activeTab));
+  }, [db, isAdmin, activeTab]);
 
-  const { data: feedbacks, loading: feedbacksLoading } = useCollection(feedbackQuery);
+  const { data: feedbackList, loading: feedbackLoading } = useCollection(feedbackQuery);
 
-  useEffect(() => {
-    if (!authLoading && !user) router.push('/login');
-    if (!profileLoading && profile && profile.role !== 'founder') router.push('/dashboard');
-  }, [user, authLoading, profile, profileLoading, router]);
+  const sortedFeedback = useMemo(() => {
+    if (!feedbackList) return [];
+    return [...feedbackList].sort((a: any, b: any) => {
+      const aTime = a.createdAt?.toMillis?.() || 0;
+      const bTime = b.createdAt?.toMillis?.() || 0;
+      return bTime - aTime;
+    });
+  }, [feedbackList]);
 
-  const updateStatus = async (id: string, status: string) => {
-    if (!db) return;
+  const handleUpdateStatus = async (id: string, newStatus: "approved" | "rejected") => {
+    if (!db || processingId) return;
+    setProcessingId(id);
     try {
-      await updateDoc(doc(db, 'userFeedback', id), { status });
-      toast({ title: "Node Updated", description: `Feedback status changed to ${status}.` });
-    } catch (e) {
-      toast({ variant: "destructive", title: "Write Error", description: "Failed to update feedback status." });
+      await updateDoc(doc(db, "userFeedback", id), { status: newStatus });
+    } catch (err) {
+      console.error("[Admin Feedback] Failed to update status:", err);
+    } finally {
+      setProcessingId(null);
     }
   };
 
-  const deleteFeedback = async (id: string) => {
-    if (!db) return;
-    try {
-      await deleteDoc(doc(db, 'userFeedback', id));
-      toast({ title: "Node Purged", description: "Feedback removed from archives." });
-    } catch (e) {
-      toast({ variant: "destructive", title: "Write Error", description: "Failed to delete feedback." });
-    }
-  };
-
-  if (authLoading || profileLoading || (user && profile?.role !== 'founder')) {
+  if (authLoading) {
     return (
       <div className="min-h-screen bg-[#050816] flex items-center justify-center">
-        <Loader2 className="w-12 h-12 text-accent animate-spin" />
+        <Loader2 className="w-10 h-10 text-accent animate-spin" />
+      </div>
+    );
+  }
+
+  if (!user) {
+    router.push("/login?redirectTo=/admin/feedback");
+    return null;
+  }
+
+  if (!isAdmin) {
+    return (
+      <div className="min-h-screen bg-[#050816] flex flex-col items-center justify-center gap-6 p-12 text-center">
+        <ShieldAlert className="w-16 h-16 text-red-500" />
+        <h2 className="text-2xl font-bold text-white">Not Authorized</h2>
+        <p className="text-white/40 max-w-sm">
+          This page is restricted to administrators only.
+        </p>
+        <Button onClick={() => router.push("/")} className="mt-4">
+          Return Home
+        </Button>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-[#050816] pb-32">
+    <div className="min-h-screen bg-[#050816]">
       <div className="particles-bg" />
       <Navbar />
-      <NavigationControls />
 
-      <main className="container mx-auto px-6 pt-40">
-        <div className="max-w-6xl auto space-y-12">
-          
-          <header className="flex flex-col md:flex-row justify-between items-end gap-8">
+      <main className="container mx-auto px-6 pt-32 pb-24">
+        <div className="max-w-5xl mx-auto space-y-10">
+          <div className="space-y-2">
+            <Badge className="bg-purple-500/20 text-purple-400 border-none px-4 py-1 text-[10px] tracking-widest font-bold uppercase">
+              Admin Only
+            </Badge>
+            <h1 className="text-4xl font-bold tracking-tighter text-white">
+              Feedback <span className="text-gradient-purple">Approval.</span>
+            </h1>
+            <p className="text-white/40 font-light">
+              Review and approve community feedback before it appears in Success Stories.
+            </p>
+          </div>
+
+          <div className="flex gap-3">
+            {([
+              { key: "pending", label: "Pending", icon: Clock },
+              { key: "approved", label: "Approved", icon: CheckCircle2 },
+              { key: "rejected", label: "Rejected", icon: XCircle },
+            ] as const).map((tab) => (
+              <button
+                key={tab.key}
+                onClick={() => setActiveTab(tab.key)}
+                className={cn(
+                  "h-11 px-5 rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center gap-2 transition-all",
+                  activeTab === tab.key
+                    ? "bg-accent/20 text-accent border border-accent/40"
+                    : "glass border-white/10 text-white/40 hover:text-white/70"
+                )}
+              >
+                <tab.icon className="w-3.5 h-3.5" /> {tab.label}
+              </button>
+            ))}
+          </div>
+
+          {feedbackLoading ? (
+            <div className="py-24 flex justify-center">
+              <Loader2 className="w-8 h-8 text-accent animate-spin" />
+            </div>
+          ) : sortedFeedback.length === 0 ? (
+            <div className="py-24 text-center text-white/20">
+              <User className="w-12 h-12 mx-auto mb-4" />
+              <p className="text-sm font-bold uppercase tracking-widest">
+                No {activeTab} feedback
+              </p>
+            </div>
+          ) : (
             <div className="space-y-4">
-              <Badge className="bg-purple-500/20 text-purple-400 border-none px-4 py-1 text-[10px] tracking-widest font-bold uppercase">Restricted: Founder Intel</Badge>
-              <h1 className="text-5xl font-bold tracking-tighter text-premium">Feedback <span className="text-gradient-purple">Moderation.</span></h1>
-              <p className="text-muted-foreground font-light max-w-xl">Review and authorize community feedback for public deployment.</p>
-            </div>
-
-            <div className="flex p-1 glass rounded-2xl border-white/5 gap-2">
-              {(['pending', 'approved', 'rejected'] as const).map(f => (
-                <Button
-                  key={f}
-                  onClick={() => setFilter(f)}
-                  variant="ghost"
-                  className={cn(
-                    "h-10 px-6 rounded-xl text-[10px] font-bold uppercase tracking-widest transition-all",
-                    filter === f ? "bg-accent/20 text-accent" : "text-white/20 hover:text-white"
-                  )}
+              {sortedFeedback.map((f: any) => (
+                <motion.div
+                  key={f.id}
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
                 >
-                  {f}
-                </Button>
-              ))}
-            </div>
-          </header>
-
-          {feedbacksLoading ? (
-            <div className="py-32 flex justify-center"><Loader2 className="w-12 h-12 text-accent animate-spin" /></div>
-          ) : feedbacks && feedbacks.length > 0 ? (
-            <div className="grid gap-6">
-              {feedbacks.map((f: any) => (
-                <motion.div layout key={f.id}>
-                  <Card className="glass p-8 rounded-[2rem] border-white/5 hover:border-white/10 transition-all flex flex-col md:flex-row gap-8 items-start">
-                    <div className="flex-1 space-y-6">
-                      <div className="flex justify-between items-start">
-                        <div className="space-y-1">
-                          <div className="flex items-center gap-3">
-                            <div className="flex text-yellow-500">
-                              {[...Array(5)].map((_, i) => (
-                                <Star key={i} className={cn("w-3.5 h-3.5", i < f.rating ? "fill-current" : "opacity-20")} />
-                              ))}
-                            </div>
-                            <Badge variant="outline" className="border-white/10 text-white/40 text-[8px] uppercase">{f.status}</Badge>
-                          </div>
-                          <h3 className="text-xl font-bold text-white/90 leading-tight">"{f.feedback}"</h3>
+                  <Card className="glass border-white/10 bg-white/[0.02] p-6 rounded-2xl">
+                    <div className="flex items-start justify-between gap-6">
+                      <div className="flex-1 space-y-3">
+                        <div className="flex items-center gap-3">
+                          <p className="text-sm font-bold text-white uppercase tracking-wide">{f.name}</p>
+                          <span className="text-[10px] text-accent font-bold uppercase tracking-widest">
+                            {f.role} {f.company ? `@ ${f.company}` : ""}
+                          </span>
                         </div>
+                        <div className="flex gap-1">
+                          {Array.from({ length: f.rating || 0 }).map((_, i) => (
+                            <Star key={i} className="w-3.5 h-3.5 text-yellow-500 fill-current" />
+                          ))}
+                        </div>
+                        <p className="text-sm text-white/70 font-light leading-relaxed">{f.feedback}</p>
+                        {f.photoURL && (
+                          <img
+                            src={f.photoURL}
+                            alt={f.name}
+                            className="w-14 h-14 rounded-full object-cover border border-white/10 mt-2"
+                          />
+                        )}
                       </div>
 
-                      <div className="grid grid-cols-2 md:grid-cols-4 gap-6 pt-6 border-t border-white/5">
-                        <div className="space-y-1">
-                           <p className="text-[8px] font-bold text-white/20 uppercase tracking-widest">Author</p>
-                           <p className="text-xs font-bold text-white/70 flex items-center gap-2"><User className="w-3 h-3" /> {f.name}</p>
+                      {activeTab === "pending" && (
+                        <div className="flex flex-col gap-2 flex-shrink-0">
+                          <Button
+                            size="sm"
+                            disabled={processingId === f.id}
+                            onClick={() => handleUpdateStatus(f.id, "approved")}
+                            className="h-9 px-4 bg-green-500/20 text-green-400 hover:bg-green-500/30 border border-green-500/30 text-[9px] font-bold uppercase tracking-widest"
+                          >
+                            {processingId === f.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <><Check className="w-3.5 h-3.5 mr-1" /> Approve</>}
+                          </Button>
+                          <Button
+                            size="sm"
+                            disabled={processingId === f.id}
+                            onClick={() => handleUpdateStatus(f.id, "rejected")}
+                            className="h-9 px-4 bg-red-500/20 text-red-400 hover:bg-red-500/30 border border-red-500/30 text-[9px] font-bold uppercase tracking-widest"
+                          >
+                            <X className="w-3.5 h-3.5 mr-1" /> Reject
+                          </Button>
                         </div>
-                        <div className="space-y-1">
-                           <p className="text-[8px] font-bold text-white/20 uppercase tracking-widest">Role</p>
-                           <p className="text-xs font-bold text-accent">{f.role}</p>
-                        </div>
-                        <div className="space-y-1">
-                           <p className="text-[8px] font-bold text-white/20 uppercase tracking-widest">Target Org</p>
-                           <p className="text-xs font-bold text-white/70">{f.company || 'N/A'}</p>
-                        </div>
-                        <div className="space-y-1">
-                           <p className="text-[8px] font-bold text-white/20 uppercase tracking-widest">Date</p>
-                           <p className="text-xs font-bold text-white/70 flex items-center gap-2"><Clock className="w-3 h-3" /> {f.createdAt?.seconds ? new Date(f.createdAt.seconds * 1000).toLocaleDateString() : 'Recent'}</p>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="flex md:flex-col gap-3 shrink-0">
-                      {f.status !== 'approved' && (
-                        <Button 
-                          onClick={() => updateStatus(f.id, 'approved')}
-                          className="h-12 w-12 rounded-2xl bg-green-500/10 text-green-400 hover:bg-green-500 hover:text-white border border-green-500/20"
+                      )}
+                      {activeTab === "approved" && (
+                        <Button
+                          size="sm"
+                          disabled={processingId === f.id}
+                          onClick={() => handleUpdateStatus(f.id, "rejected")}
+                          className="h-9 px-4 bg-white/5 text-white/40 hover:bg-white/10 border border-white/10 text-[9px] font-bold uppercase tracking-widest flex-shrink-0"
                         >
-                          <CheckCircle2 className="w-5 h-5" />
+                          Revoke
                         </Button>
                       )}
-                      {f.status !== 'rejected' && (
-                        <Button 
-                          onClick={() => updateStatus(f.id, 'rejected')}
-                          className="h-12 w-12 rounded-2xl bg-orange-500/10 text-orange-400 hover:bg-orange-500 hover:text-white border border-orange-500/20"
+                      {activeTab === "rejected" && (
+                        <Button
+                          size="sm"
+                          disabled={processingId === f.id}
+                          onClick={() => handleUpdateStatus(f.id, "approved")}
+                          className="h-9 px-4 bg-white/5 text-white/40 hover:bg-white/10 border border-white/10 text-[9px] font-bold uppercase tracking-widest flex-shrink-0"
                         >
-                          <XCircle className="w-5 h-5" />
+                          Approve
                         </Button>
                       )}
-                      <Button 
-                        onClick={() => deleteFeedback(f.id)}
-                        className="h-12 w-12 rounded-2xl bg-red-500/10 text-red-400 hover:bg-red-500 hover:text-white border border-red-500/20"
-                      >
-                        <Trash2 className="w-5 h-5" />
-                      </Button>
                     </div>
                   </Card>
                 </motion.div>
               ))}
-            </div>
-          ) : (
-            <div className="py-32 text-center glass rounded-[3rem] border-white/5 border-dashed">
-              <MessageSquare className="w-16 h-16 text-white/5 mx-auto mb-6" />
-              <h3 className="text-2xl font-bold mb-2">No Intel in Archive</h3>
-              <p className="text-muted-foreground font-light max-w-sm mx-auto">
-                The moderation pipeline is currently clear of any pending community feedback nodes.
-              </p>
             </div>
           )}
         </div>
