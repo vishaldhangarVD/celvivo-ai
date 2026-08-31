@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState, useEffect, useMemo, useCallback, useRef, Suspense } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { AnimatePresence, motion } from 'framer-motion';
 import Editor from '@monaco-editor/react';
 import Navbar from '@/components/layout/Navbar';
@@ -57,8 +57,9 @@ const LANGUAGES = [
   { id: 'ruby', label: 'Ruby', monaco: 'ruby' }
 ];
 
-export default function CodingEnginePage() {
+function CodingEngineContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { user } = useUser();
   const db = useFirestore();
   const { toast } = useToast();
@@ -86,8 +87,10 @@ export default function CodingEnginePage() {
   const [activeTerminalTab, setActiveTerminalTab] = useState("output");
   const [countdown, setCountdown] = useState<number | null>(null);
 
-  // Guard to ensure restoration only happens once
   const hasRestoredRef = useRef(false);
+
+  // Fast-Unlock Override via URL Protocol
+  const isUnlockedParam = searchParams.get('unlocked') === 'true';
 
   const journeyRef = useMemo(() => {
     if (!db || !user?.uid) return null;
@@ -109,7 +112,6 @@ export default function CodingEnginePage() {
   // Restore session results from archives
   useEffect(() => {
     if (hasRestoredRef.current) return;
-
     if (existingResultsData && existingResultsData.length > 0 && questions.length > 0) {
       const restoredResults: Record<number, any> = {};
       existingResultsData.forEach((res: any) => {
@@ -125,7 +127,6 @@ export default function CodingEnginePage() {
           };
         }
       });
-
       if (Object.keys(restoredResults).length > 0) {
         setSessionResults(restoredResults);
         hasRestoredRef.current = true;
@@ -146,7 +147,7 @@ export default function CodingEnginePage() {
     try {
       for (let i = 0; i < 4; i++) {
         setSubmitStep(i);
-        await new Promise(r => setTimeout(r, 800));
+        await new Promise(r => setTimeout(r, 600));
       }
       
       const total = 8;
@@ -240,7 +241,7 @@ export default function CodingEnginePage() {
       : 0;
 
     try {
-      await addDoc(collection(db, 'users', user.uid, 'coding_results'), {
+      addDoc(collection(db, 'users', user.uid, 'coding_results'), {
         interviewId: journey.sessionId || "unknown",
         userId: user.uid,
         questionId: q.id || "unknown",
@@ -342,7 +343,7 @@ export default function CodingEnginePage() {
       };
 
       setSessionResults(prev => ({ ...prev, [currentIdx]: submissionReport }));
-      await saveQuestionResult(currentIdx, submissionReport);
+      saveQuestionResult(currentIdx, submissionReport);
 
       if (allPassed) {
         setCountdown(3);
@@ -382,7 +383,7 @@ export default function CodingEnginePage() {
     };
 
     setSessionResults(prev => ({ ...prev, [currentIdx]: skipReport }));
-    await saveQuestionResult(currentIdx, skipReport);
+    saveQuestionResult(currentIdx, skipReport);
     await goToNextQuestion();
   };
 
@@ -390,18 +391,18 @@ export default function CodingEnginePage() {
     async function initEnvironment() {
       if (!db || !user || !journey || !journeyRef) return;
 
-      // Restoration Protocol: Check if questions already exist in the cloud archive for this session
+      // FAST TRACK: Instant check for existing data in current journey
       if (Array.isArray(journey.codingQuestions) && journey.codingQuestions.length === 8 && journey.questionsSessionId === journey.sessionId) {
         setQuestions(journey.codingQuestions);
         setIsInitializing(false);
-        initLoadingRef.current = false;
         return;
       }
 
-      // If we are already in the process of generating/initializing, wait for it to complete or fail
+      // Concurrency Guard: Prevent duplicate setup sequences
       if (initLoadingRef.current) return;
 
-      if (journey.codingUnlocked !== true) {
+      // Access Check: Verify unlock status (accept URL override for high-speed transition)
+      if (journey.codingUnlocked !== true && !isUnlockedParam) {
         toast({ variant: "destructive", title: "Access Restricted", description: "Complete previous nodes to unlock syntax matrix." });
         router.push(STAGE_ROUTES.APTITUDE_RESULT);
         return;
@@ -410,9 +411,8 @@ export default function CodingEnginePage() {
       initLoadingRef.current = true;
       setInitError(null);
 
-      // Gatekeeper: 45s safety timeout for the entire initialization loop
       const timeoutId = setTimeout(() => {
-        if (initLoadingRef.current) {
+        if (initLoadingRef.current && isInitializing) {
           setInitError("Environment setup timed out. The neural link is experiencing high latency.");
           initLoadingRef.current = false;
         }
@@ -448,30 +448,35 @@ export default function CodingEnginePage() {
 
         const newTitles = finalQuestions.map(q => q.title);
         
-        await updateDoc(journeyRef!, {
+        // PERFORMANCE OPTIMIZATION: Render first, persist in background
+        setQuestions(finalQuestions);
+        setIsInitializing(false);
+        initLoadingRef.current = false;
+        clearTimeout(timeoutId);
+
+        // PERSISTENCE (Non-blocking)
+        updateDoc(journeyRef!, {
           codingQuestions: finalQuestions,
           questionsSessionId: journey.sessionId || "unknown",
           currentStage: INTERVIEW_STAGES.CODING,
           updatedAt: serverTimestamp(),
         });
 
-        await updateDoc(userRef, {
+        updateDoc(userRef, {
           codingQuestionHistory: arrayUnion(...newTitles)
         });
 
-        clearTimeout(timeoutId);
-        setQuestions(finalQuestions);
-        setIsInitializing(false);
-        initLoadingRef.current = false;
       } catch (e: any) {
         console.error("[CODING ROUND] Environment Sync Fault:", e);
         clearTimeout(timeoutId);
-        setInitError(e.message || "A neural link fault occurred while preparing the coding matrix.");
-        initLoadingRef.current = false;
+        if (initLoadingRef.current) {
+          setInitError(e.message || "A neural link fault occurred while preparing the coding matrix.");
+          initLoadingRef.current = false;
+        }
       }
     }
     initEnvironment();
-  }, [db, user, journey, journeyRef, toast, router, retryKey]);
+  }, [db, user, journey, journeyRef, toast, router, retryKey, isUnlockedParam, isInitializing]);
 
   useEffect(() => {
     if (currentQ) {
@@ -719,5 +724,13 @@ export default function CodingEnginePage() {
         )}
       </AnimatePresence>
     </div>
+  );
+}
+
+export default function CodingEnginePage() {
+  return (
+    <Suspense fallback={<div className="h-screen bg-[#050816] flex items-center justify-center"><Loader2 className="w-12 h-12 text-accent animate-spin" /></div>}>
+      <CodingEngineContent />
+    </Suspense>
   );
 }

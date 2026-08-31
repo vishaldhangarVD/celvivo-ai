@@ -82,13 +82,17 @@ export default function AptitudeResultPage() {
 
   const handleProceed = async () => {
     if (!journeyRef) return;
-    await updateDoc(journeyRef, {
+    
+    // PROTOCOL: Fire and forget the update to initiate immediate transition
+    // Passing ?unlocked=true allows the next page to skip waiting for Firestore sync propagation
+    updateDoc(journeyRef, {
       currentStage: INTERVIEW_STAGES.CODING,
       step: 6,
       codingUnlocked: true,
       updatedAt: serverTimestamp(),
     });
-    router.push(STAGE_ROUTES.CODING);
+    
+    router.push(`${STAGE_ROUTES.CODING}?unlocked=true`);
   };
 
   const handleRetry = async () => {
@@ -209,7 +213,7 @@ export default function AptitudeResultPage() {
               <div className="flex flex-col gap-6 w-full">
                 <Button 
                   onClick={handleProceed} 
-                  className="w-full h-20 btn-premium rounded-[2rem] text-[10px] font-black uppercase tracking-[0.3em] shadow-2xl group px-8"
+                  className="w-full h-20 btn-premium rounded-2xl text-[10px] font-black uppercase tracking-[0.3em] shadow-2xl group px-8"
                 >
                   PROCEED TO CODING ROUND <ArrowRight className="ml-3 w-5 h-5 transition-transform group-hover:translate-x-1" />
                 </Button>
