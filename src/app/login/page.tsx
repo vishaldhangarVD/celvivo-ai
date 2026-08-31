@@ -20,6 +20,7 @@ import {
 } from 'firebase/auth';
 import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
+import { cn } from '@/lib/utils';
 
 function LoginContent() {
   const router = useRouter();
@@ -134,6 +135,7 @@ function LoginContent() {
     setIsLoading(true);
     try {
       await signInWithEmailAndPassword(auth, email, password);
+      setIsLoading(false);
     } catch (error: any) {
       console.error("[Auth] Password Login Error:", error);
       toast({
