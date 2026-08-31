@@ -1,0 +1,22 @@
+{
+  "placeholderImages": [
+    {
+      "id": "ai-hr-interviewer",
+      "description": "Professional AI HR Interviewer in a sharp business suit",
+      "imageUrl": "https://picsum.photos/seed/nexvoro_hr/800/1000",
+      "imageHint": "professional interview"
+    },
+    {
+      "id": "hero-dashboard",
+      "description": "Premium Analytics Dashboard",
+      "imageUrl": "https://picsum.photos/seed/nexvoro_dash/1200/800",
+      "imageHint": "modern dashboard"
+    },
+    {
+      "id": "demo-preview",
+      "description": "Live Interview Demo Interface",
+      "imageUrl": "https://picsum.photos/seed/nexvoro_demo/1000/600",
+      "imageHint": "interface UI"
+    }
+  ]
+}
