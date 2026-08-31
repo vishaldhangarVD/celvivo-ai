@@ -6,12 +6,18 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Command, ArrowLeft, ShieldCheck, Loader2, AlertCircle, Eye, EyeOff } from 'lucide-react';
+import { Command, ArrowLeft, ShieldCheck, Loader2, AlertCircle, Eye, EyeOff, Chrome } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth, useUser, useFirestore } from '@/firebase';
-import { createUserWithEmailAndPassword, updateProfile } from 'firebase/auth';
-import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
+import { 
+  createUserWithEmailAndPassword, 
+  updateProfile,
+  signInWithPopup,
+  signInWithRedirect,
+  GoogleAuthProvider
+} from 'firebase/auth';
+import { doc, setDoc, serverTimestamp, getDoc } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 
@@ -33,6 +39,77 @@ function SignupContent() {
   const [isLoading, setIsLoading] = useState(false);
 
   const redirectTo = searchParams.get('redirectTo') || '/dashboard';
+
+  const ensureUserProfile = async (authUser: any) => {
+    if (!db) return;
+    try {
+      const userDocRef = doc(db, 'users', authUser.uid);
+      const userDocSnap = await getDoc(userDocRef);
+      if (!userDocSnap.exists()) {
+        await setDoc(userDocRef, {
+          uid: authUser.uid,
+          displayName: authUser.displayName || "Operator",
+          email: authUser.email || "",
+          photoURL: authUser.photoURL || null,
+          jobReadinessScore: 0,
+          totalInterviews: 0,
+          plan: "free",
+          subscriptionStatus: "active",
+          freeJourneyUsed: false,
+          isFreeAccess: false,
+          subscriptionId: null,
+          paymentId: null,
+          subscriptionStart: null,
+          subscriptionEnd: null,
+          createdAt: serverTimestamp(),
+        });
+      }
+    } catch (e) {
+      console.error("[Profile Sync] Failed to reconcile user dossier:", e);
+    }
+  };
+
+  const handleGoogleSignup = async () => {
+    if (!auth) return;
+    const provider = new GoogleAuthProvider();
+    provider.setCustomParameters({ prompt: 'select_account' });
+    
+    setIsLoading(true);
+    try {
+      const result = await signInWithPopup(auth, provider);
+      if (result.user) {
+        await ensureUserProfile(result.user);
+        setIsLoading(false);
+        router.push(redirectTo);
+      }
+    } catch (error: any) {
+      console.error("[Auth] Google Signup Attempt Error:", error.code, error.message);
+      
+      if (error.code === 'auth/popup-blocked' || error.code === 'auth/popup-closed-by-user') {
+        try {
+          await signInWithRedirect(auth, provider);
+          return;
+        } catch (redirectError: any) {
+          console.error("[Auth] Redirect Fallback Failed:", redirectError);
+          toast({
+            variant: "destructive",
+            title: "Protocol Failure",
+            description: "System could not initialize redirect handshake.",
+          });
+          setIsLoading(false);
+        }
+      } else if (error.code === 'auth/cancelled-popup-request') {
+        setIsLoading(false);
+      } else {
+        toast({
+          variant: "destructive",
+          title: "Handshake Failed",
+          description: error.message || "Google authentication encountered a critical fault.",
+        });
+        setIsLoading(false);
+      }
+    }
+  };
 
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -145,6 +222,25 @@ function SignupContent() {
 
         <Card className="premium-card bg-white/[0.02] border-white/5 p-12">
           <CardContent className="space-y-10 p-0">
+            <Button 
+              variant="outline" 
+              onClick={handleGoogleSignup}
+              disabled={isLoading}
+              className="w-full h-16 rounded-2xl glass border-white/10 hover:bg-white/[0.05] hover:shadow-[0_0_30px_rgba(34,211,238,0.15)] flex gap-4 transition-all duration-500 group/btn overflow-hidden relative mb-8"
+            >
+              <div className="flex items-center gap-4">
+                <Chrome className="w-5 h-5 text-accent transition-transform group-hover/btn:scale-110" />
+                <span className="text-[10px] font-black uppercase tracking-[0.3em] text-white/90">Continue with Google</span>
+              </div>
+            </Button>
+
+            <div className="relative mb-8">
+              <div className="absolute inset-0 flex items-center"><span className="w-full border-t border-white/5"></span></div>
+              <div className="relative flex justify-center text-[8px] uppercase font-black tracking-[0.5em] text-white/20">
+                <span className="bg-[#050816] px-6">OR CONTINUE WITH EMAIL</span>
+              </div>
+            </div>
+
             <form onSubmit={handleSignup} className="grid md:grid-cols-2 gap-8">
               <div className="space-y-2">
                 <Label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Full Name</Label>
