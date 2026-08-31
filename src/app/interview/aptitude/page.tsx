@@ -435,7 +435,7 @@ export default function AptitudeEnginePage() {
           </div>
         </header>
 
-        <main className="flex-1 min-h-0 container-fluid flex flex-col max-w-7xl mx-auto w-full px-6 py-4 overflow-hidden">
+        <main className="flex-1 min-h-0 container-fluid flex flex-col w-full px-8 py-4 overflow-hidden">
           <div className="grid flex-1 min-h-0 lg:grid-cols-12 gap-8 overflow-hidden">
             <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="lg:col-span-9 flex flex-col h-full min-h-0 gap-4">
               <div className="space-y-2 shrink-0">
