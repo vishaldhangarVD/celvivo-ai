@@ -207,14 +207,20 @@ export default function AptitudeResultPage() {
                 </div>
               </Card>
 
-              {/* ACTION BUTTONS REPOSITIONED HERE */}
+              {/* ACTION BUTTONS: RESIZED TO FIT COLUMN */}
               <div className="flex flex-col gap-6 w-full">
-                <Button onClick={handleProceed} className="w-full h-20 btn-premium rounded-[2.5rem] text-xl font-black uppercase tracking-[0.2em] shadow-2xl group">
-                  Proceed to Coding Round <ArrowRight className="ml-4 w-8 h-8 transition-transform group-hover:translate-x-2" />
+                <Button 
+                  onClick={handleProceed} 
+                  className="w-full h-20 btn-premium rounded-[2rem] text-[10px] font-black uppercase tracking-[0.3em] shadow-2xl group px-8"
+                >
+                  PROCEED TO CODING ROUND <ArrowRight className="ml-3 w-5 h-5 transition-transform group-hover:translate-x-1" />
                 </Button>
                 {!isPassed && (
-                  <Button onClick={handleRetry} className="w-full h-20 glass border-white/10 rounded-[2.5rem] text-xl font-black uppercase tracking-widest hover:bg-white/5 transition-all">
-                    <RotateCcw className="mr-4 w-8 h-8" /> Retake Assessment
+                  <Button 
+                    onClick={handleRetry} 
+                    className="w-full h-20 glass border-white/10 rounded-[2rem] text-[10px] font-black uppercase tracking-[0.3em] hover:bg-white/5 transition-all px-8"
+                  >
+                    <RotateCcw className="mr-3 w-5 h-5" /> Retake Assessment
                   </Button>
                 )}
               </div>
