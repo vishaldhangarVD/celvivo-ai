@@ -155,7 +155,6 @@ export default function AptitudeResultPage() {
 
           <div className="grid lg:grid-cols-12 gap-8 items-start">
             
-            {/* LEFT COLUMN: HERO SCORE, TIME & ACTIONS */}
             <motion.div 
               initial={{ opacity: 0, scale: 0.95 }} 
               animate={{ opacity: 1, scale: 1 }} 
@@ -207,7 +206,6 @@ export default function AptitudeResultPage() {
                 </div>
               </Card>
 
-              {/* ACTION BUTTONS: RESIZED TO FIT COLUMN */}
               <div className="flex flex-col gap-6 w-full">
                 <Button 
                   onClick={handleProceed} 
@@ -220,13 +218,12 @@ export default function AptitudeResultPage() {
                     onClick={handleRetry} 
                     className="w-full h-20 glass border-white/10 rounded-[2rem] text-[10px] font-black uppercase tracking-[0.3em] hover:bg-white/5 transition-all px-8"
                   >
-                    <RotateCcw className="mr-3 w-5 h-5" /> Retake Assessment
+                    <RotateCcw className="mr-3 w-5 h-5" /> RETRY APTITUDE TEST
                   </Button>
                 )}
               </div>
             </motion.div>
 
-            {/* PERFORMANCE ANALYSIS */}
             <motion.div 
               initial={{ opacity: 0, x: 20 }} 
               animate={{ opacity: 1, x: 0 }} 
@@ -265,7 +262,6 @@ export default function AptitudeResultPage() {
                 </Card>
               </div>
 
-              {/* AI INSIGHTS */}
               <Card className="premium-card bg-accent/[0.02] border-accent/20 p-10 space-y-10">
                 <div className="flex items-center gap-4">
                   <Target className="w-10 h-10 text-accent" />
