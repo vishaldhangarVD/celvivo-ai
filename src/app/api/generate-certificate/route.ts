@@ -71,6 +71,29 @@ export async function POST(req: Request) {
       });
     };
 
+    const drawStar = (page: any, cx: number, cy: number, outerRadius: number, innerRadius: number, color: any) => {
+      const points: string[] = [];
+      const spikes = 5;
+      const step = Math.PI / spikes;
+      let rot = -Math.PI / 2; // start pointing up
+      for (let i = 0; i < spikes; i++) {
+        const xOuter = cx + Math.cos(rot) * outerRadius;
+        const yOuter = cy + Math.sin(rot) * outerRadius;
+        points.push(`${i === 0 ? 'M' : 'L'} ${xOuter} ${yOuter}`);
+        rot += step;
+        const xInner = cx + Math.cos(rot) * innerRadius;
+        const yInner = cy + Math.sin(rot) * innerRadius;
+        points.push(`L ${xInner} ${yInner}`);
+        rot += step;
+      }
+      points.push('Z');
+      page.drawSvgPath(points.join(' '), {
+        x: 0,
+        y: 0,
+        color: color,
+      });
+    };
+
     drawDiamond(12.5, 12.5); // Bottom Left
     drawDiamond(pageWidth - 12.5 - 9, 12.5); // Bottom Right
     drawDiamond(12.5, pageHeight - 12.5 - 9); // Top Left
@@ -171,20 +194,19 @@ export async function POST(req: Request) {
 
     // 10. Seal & Signature
     // Circular Seal
+    const sealCenterX = (pageWidth / 2) - 160;
+    const sealCenterY = 80;
+    
     page.drawCircle({
-      x: (pageWidth / 2) - 160,
-      y: 80,
+      x: sealCenterX,
+      y: sealCenterY,
       size: 43,
       borderColor: colorGold,
       borderWidth: 2,
     });
-    page.drawText('★', {
-      x: (pageWidth / 2) - 173,
-      y: 68,
-      size: 24,
-      font: helveticaBold,
-      color: colorGold,
-    });
+    
+    // Draw Star as vector shape
+    drawStar(page, sealCenterX, sealCenterY, 12, 5, colorGold);
 
     // Signature Area
     try {
