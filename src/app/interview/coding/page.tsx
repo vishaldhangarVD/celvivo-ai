@@ -30,7 +30,8 @@ import {
   Timer,
   Rocket,
   FastForward,
-  ArrowRight
+  ArrowRight,
+  AlertCircle
 } from 'lucide-react';
 import { useUser, useFirestore, useDoc, useCollection } from '@/firebase';
 import { doc, updateDoc, serverTimestamp, collection, addDoc, getDoc, query, where, setDoc, arrayUnion } from 'firebase/firestore';
@@ -72,6 +73,10 @@ export default function CodingEnginePage() {
   const [sessionResults, setSessionResults] = useState<Record<number, any>>({});
   
   const [isInitializing, setIsInitializing] = useState(true);
+  const [initError, setInitError] = useState<string | null>(null);
+  const [retryKey, setRetryKey] = useState(0);
+  const initLoadingRef = useRef(false);
+
   const [isRunning, setIsRunning] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isFinalizing, setIsFinalizing] = useState(false);
@@ -383,7 +388,18 @@ export default function CodingEnginePage() {
 
   useEffect(() => {
     async function initEnvironment() {
-      if (!db || !user || !journey) return;
+      if (!db || !user || !journey || !journeyRef) return;
+
+      // Restoration Protocol: Check if questions already exist in the cloud archive for this session
+      if (Array.isArray(journey.codingQuestions) && journey.codingQuestions.length === 8 && journey.questionsSessionId === journey.sessionId) {
+        setQuestions(journey.codingQuestions);
+        setIsInitializing(false);
+        initLoadingRef.current = false;
+        return;
+      }
+
+      // If we are already in the process of generating/initializing, wait for it to complete or fail
+      if (initLoadingRef.current) return;
 
       if (journey.codingUnlocked !== true) {
         toast({ variant: "destructive", title: "Access Restricted", description: "Complete previous nodes to unlock syntax matrix." });
@@ -391,13 +407,16 @@ export default function CodingEnginePage() {
         return;
       }
 
-      if (Array.isArray(journey.codingQuestions) && journey.codingQuestions.length === 8 && journey.questionsSessionId === journey.sessionId) {
-        setQuestions(journey.codingQuestions);
-        setIsInitializing(false);
-        return;
-      }
+      initLoadingRef.current = true;
+      setInitError(null);
 
-      if (questions && questions.length === 8) return;
+      // Gatekeeper: 45s safety timeout for the entire initialization loop
+      const timeoutId = setTimeout(() => {
+        if (initLoadingRef.current) {
+          setInitError("Environment setup timed out. The neural link is experiencing high latency.");
+          initLoadingRef.current = false;
+        }
+      }, 45000);
       
       try {
         const userRef = doc(db, 'users', user.uid);
@@ -415,6 +434,7 @@ export default function CodingEnginePage() {
           });
           finalQuestions = response.questions;
         } catch (genError) {
+          console.warn("[Coding Round] AI generation failed, deploying failsafe master bank.");
           const pickQuestions = (difficulty: string, count: number) => {
             const pool = [...MASTER_QUESTIONS].filter(q => q.difficulty === difficulty);
             return pool.sort(() => Math.random() - 0.5).slice(0, count);
@@ -422,7 +442,7 @@ export default function CodingEnginePage() {
           finalQuestions = [...pickQuestions('Easy', 3), ...pickQuestions('Medium', 3), ...pickQuestions('Hard', 2)];
         }
 
-        if (finalQuestions.length < 8) {
+        if (!finalQuestions || finalQuestions.length < 8) {
           finalQuestions = [...MASTER_QUESTIONS].sort(() => Math.random() - 0.5).slice(0, 8);
         }
 
@@ -439,16 +459,19 @@ export default function CodingEnginePage() {
           codingQuestionHistory: arrayUnion(...newTitles)
         });
 
+        clearTimeout(timeoutId);
         setQuestions(finalQuestions);
+        setIsInitializing(false);
+        initLoadingRef.current = false;
       } catch (e: any) {
         console.error("[CODING ROUND] Environment Sync Fault:", e);
-        toast({ variant: "destructive", title: "Matrix Sync Fault" });
-      } finally {
-        setIsInitializing(false);
+        clearTimeout(timeoutId);
+        setInitError(e.message || "A neural link fault occurred while preparing the coding matrix.");
+        initLoadingRef.current = false;
       }
     }
     initEnvironment();
-  }, [db, user, journey, journeyRef, questions, toast, router]);
+  }, [db, user, journey, journeyRef, toast, router, retryKey]);
 
   useEffect(() => {
     if (currentQ) {
@@ -494,12 +517,55 @@ export default function CodingEnginePage() {
   };
 
   if (isInitializing || journeyLoading) return (
-    <div className="h-screen bg-[#050816] flex flex-col items-center justify-center space-y-12">
-      <div className="relative">
-         <div className="w-24 h-24 rounded-full border-2 border-accent/20 border-t-accent animate-spin" />
-         <Brain className="w-10 h-10 text-accent absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 animate-pulse" />
-      </div>
-      <p className="text-[10px] font-black uppercase tracking-[0.5em] text-accent animate-pulse">Neural Core Synchronizing...</p>
+    <div className="h-screen bg-[#050816] flex flex-col items-center justify-center p-12 text-center overflow-hidden">
+      <div className="particles-bg" />
+      <AnimatePresence mode="wait">
+        {initError ? (
+          <motion.div 
+            key="error"
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.95 }}
+            className="space-y-8 max-w-lg"
+          >
+            <div className="w-20 h-20 rounded-full bg-red-500/20 border border-red-500/30 flex items-center justify-center mx-auto">
+              <AlertCircle className="w-10 h-10 text-red-500" />
+            </div>
+            <div className="space-y-4">
+              <h2 className="text-3xl font-bold tracking-tight text-white">Coding Round Setup Timed Out</h2>
+              <p className="text-muted-foreground font-light leading-relaxed">
+                We couldn't prepare your coding round right now. Please try again.
+              </p>
+              <p className="text-[10px] text-white/20 uppercase tracking-widest">{typeof initError === 'string' ? initError : "Neural link fault"}</p>
+            </div>
+            <Button 
+              onClick={() => { setInitError(null); initLoadingRef.current = false; setRetryKey(k => k + 1); }} 
+              className="btn-premium px-12 h-14 uppercase tracking-widest text-[10px] rounded-xl"
+            >
+              <RotateCcw className="w-4 h-4 mr-2" /> Retry Protocol
+            </Button>
+          </motion.div>
+        ) : (
+          <motion.div 
+            key="loading"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="flex flex-col items-center gap-12"
+          >
+            <div className="relative">
+              <div className="w-24 h-24 rounded-full border-2 border-accent/20 border-t-accent animate-spin" />
+              <Brain className="w-10 h-10 text-accent absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 animate-pulse" />
+            </div>
+            <div className="space-y-4">
+              <h2 className="text-4xl font-bold tracking-tighter text-premium uppercase">Preparing Your Coding Round</h2>
+              <p className="text-[10px] font-black uppercase tracking-[0.4em] text-accent animate-pulse">
+                Generating coding questions and preparing your coding environment...
+              </p>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 
