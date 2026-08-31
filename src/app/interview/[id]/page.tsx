@@ -1,4 +1,3 @@
-
 "use client";
 import { Suspense, useEffect, useState, useRef, useMemo, useCallback } from "react";
 import { useRouter, useParams } from "next/navigation";
@@ -422,7 +421,7 @@ function VirtualArenaContent() {
            <div className="w-9 h-9 rounded-xl bg-blue-500/10 flex items-center justify-center text-blue-500 font-black">N</div>
            <div><h1 className="text-xs font-black uppercase text-white">NEXVOROAI</h1><p className="text-[9px] text-white/40 uppercase font-black">{formattedName}</p></div>
         </div>
-        <div className="px-3 py-1 glass rounded-lg border-accent/20 font-mono text-accent flex items-center gap-2"><Timer className="w-3.5 h-3.5" /> {timeLeft}s</div>
+        
         <div className="flex items-center gap-4">
           <Button onClick={() => finalizeSession(transcript)} className="h-9 px-4 rounded-xl bg-red-500/10 text-red-500 border border-red-500/20 text-[9px] uppercase font-bold">End Interview</Button>
         </div>
@@ -492,7 +491,7 @@ function VirtualArenaContent() {
           <div className="flex-1 p-3 flex flex-col space-y-3 overflow-hidden h-full">
              <div className="flex justify-between items-end px-1 shrink-0">
                <h3 className="text-[9px] font-black uppercase text-white/30 tracking-widest">Question {currentIdx} OF {MAX_QUESTIONS}</h3>
-               <Badge variant="outline" className="border-accent/30 text-accent text-[8px] uppercase tracking-tighter">AI Node Active</Badge>
+               <Badge variant="outline" className="border-accent/30 text-accent text-[8px] uppercase tracking-tighter">INTERVIEWER ACTIVE</Badge>
              </div>
 
              <Card className="glass border-white/10 bg-[#08090D]/95 p-4 rounded-2xl relative overflow-hidden shrink-0 shadow-lg">
