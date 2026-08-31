@@ -381,9 +381,12 @@ export default function AptitudeEnginePage() {
           <Brain className="w-10 h-10 text-accent absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 animate-pulse" />
         </div>
         <div className="text-center space-y-2">
-          <h2 className="text-2xl font-bold tracking-tighter text-premium uppercase">Preparing Your Questions</h2>
+          <h2 className="text-2xl font-bold tracking-tighter text-premium uppercase">PREPARING YOUR APTITUDE ROUND</h2>
           <p className="text-[10px] font-black uppercase tracking-[0.4em] text-accent animate-pulse">
-            Personalizing test for {journey?.company || "Standard Tech"}
+            GENERATING YOUR PERSONALIZED QUESTIONS
+          </p>
+          <p className="text-[8px] font-bold uppercase tracking-[0.2em] text-white/20">
+            PLEASE WAIT A MOMENT
           </p>
         </div>
       </div>
