@@ -41,7 +41,7 @@ function LoginContent() {
   
   const redirectProcessed = useRef(false);
 
-  const redirectTo = searchParams.get('redirectTo') || '/dashboard';
+  const redirectTo = searchParams.get('redirectTo') || '/';
 
   /**
    * Profile Synchronization Protocol

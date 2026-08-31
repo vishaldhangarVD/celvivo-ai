@@ -38,7 +38,7 @@ function SignupContent() {
   const [confirmError, setConfirmError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
-  const redirectTo = searchParams.get('redirectTo') || '/dashboard';
+  const redirectTo = searchParams.get('redirectTo') || '/';
 
   const ensureUserProfile = async (authUser: any) => {
     if (!db) return;
