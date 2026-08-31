@@ -17,6 +17,7 @@ export interface CertificateData {
 /**
  * @fileOverview Nexvoro AI Client-Side PDF Generator.
  * Renders the certificate to a hidden DOM node and captures it via html2canvas.
+ * Uses React.createElement instead of JSX to remain compatible with the .ts extension.
  */
 export const generateCertificatePDF = async (data: CertificateData) => {
   // 1. Create a hidden mount point
@@ -33,17 +34,17 @@ export const generateCertificatePDF = async (data: CertificateData) => {
     // We wrap in a promise to wait for rendering and images to load
     await new Promise<void>((resolve) => {
       root.render(
-        <React.StrictMode>
-          <CertificateTemplate 
-            userName={data.userName}
-            role={data.role}
-            date={data.date}
-            certId={data.certId || 'NEX-CERT-IDENTITY-X'}
-          />
-        </React.StrictMode>
+        React.createElement(React.StrictMode, null,
+          React.createElement(CertificateTemplate, {
+            userName: data.userName,
+            role: data.role,
+            date: data.date,
+            certId: data.certId || 'NEX-CERT-IDENTITY-X'
+          })
+        )
       );
       // Wait for React to finish rendering and for any images/fonts to potentially settle
-      setTimeout(resolve, 500);
+      setTimeout(resolve, 1000);
     });
 
     const target = document.getElementById('certificate-render-node');
