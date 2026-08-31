@@ -2,7 +2,6 @@ import type {NextConfig} from 'next';
 
 const nextConfig: NextConfig = {
   /* config options here */
-  output: 'standalone',
   typescript: {
     ignoreBuildErrors: true,
   },
@@ -16,6 +15,8 @@ const nextConfig: NextConfig = {
     allowedDevOrigins: [
       '*.cloudworkstations.dev',
       '*.firebase-studio.com',
+      '*.web.app',
+      '*.firebaseapp.com'
     ],
   },
   images: {
