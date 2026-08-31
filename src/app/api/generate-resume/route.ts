@@ -5,6 +5,7 @@ import chromium from '@sparticuz/chromium';
 /**
  * @fileOverview Server-side Resume PDF Generator.
  * Uses serverless-optimized Chromium to render high-fidelity professional resumes.
+ * This implementation avoids system shared library dependencies like libnss3.so.
  */
 
 export const maxDuration = 60; // Increase timeout to 60s for PDF rendering
@@ -96,6 +97,7 @@ export async function POST(req: Request) {
       }
     });
   } catch (error: any) {
+    console.error("[API Resume] Fatal fault:", error);
     return NextResponse.json({ error: "Resume Synthesis Failed", details: error.message }, { status: 500 });
   }
 }

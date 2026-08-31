@@ -5,6 +5,7 @@ import chromium from '@sparticuz/chromium';
 /**
  * @fileOverview Server-side Certificate PDF Generator.
  * Uses serverless-optimized Chromium to render high-fidelity certificates.
+ * This implementation avoids system shared library dependencies like libnss3.so.
  */
 
 export const maxDuration = 60; // Increase timeout to 60s for PDF rendering
