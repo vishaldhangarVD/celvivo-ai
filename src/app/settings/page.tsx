@@ -166,7 +166,7 @@ export default function SettingsPage() {
                           <Input 
                             value={newName}
                             onChange={e => setNewName(e.target.value)}
-                            placeholder="e.g. Kunal Dhangar"
+                            placeholder="e.g. Ananya Birla"
                             className="h-14 rounded-2xl glass border-white/10 bg-transparent text-white px-6 focus:border-accent" 
                           />
                           <p className="text-[8px] text-white/30 uppercase tracking-widest ml-2">Required for valid certificate synthesis.</p>

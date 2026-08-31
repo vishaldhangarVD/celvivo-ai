@@ -251,7 +251,7 @@ function SignupContent() {
                       setName(e.target.value);
                       if (nameError) setNameError(null);
                     }}
-                    placeholder="e.g. Kunal Dhangar" 
+                    placeholder="e.g. Ananya Birla" 
                     className={cn(
                       "h-14 rounded-2xl glass border-white/10 bg-transparent focus:border-accent transition-all text-white px-6",
                       nameError && "border-red-400/50"

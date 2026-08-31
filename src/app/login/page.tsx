@@ -367,7 +367,7 @@ function LoginContent() {
                       <Input 
                         value={newName}
                         onChange={(e) => setNewName(e.target.value)}
-                        placeholder="e.g. Kunal Dhangar" 
+                        placeholder="e.g. Ananya Birla" 
                         className="h-14 rounded-2xl glass border-white/10 bg-transparent focus:border-accent transition-all text-white px-6 font-light" 
                         required
                       />
