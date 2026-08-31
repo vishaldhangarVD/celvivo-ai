@@ -130,11 +130,16 @@ function LoginContent() {
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!auth) return;
-    if (!email || !password) return;
+    
+    const trimmedEmail = email.trim().toLowerCase();
+    if (!trimmedEmail || !password) return;
     
     setIsLoading(true);
+    // Diagnostic Telemetry (Temporary)
+    console.log("[Auth Debug] Attempting login with email:", trimmedEmail, "password length:", password.length);
+    
     try {
-      await signInWithEmailAndPassword(auth, email, password);
+      await signInWithEmailAndPassword(auth, trimmedEmail, password);
       setIsLoading(false);
     } catch (error: any) {
       console.error("[Auth] Password Login Error:", error);
