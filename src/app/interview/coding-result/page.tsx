@@ -163,11 +163,11 @@ function CodingResultContent() {
 
               <div className="relative z-10 pt-4 space-y-3">
                 <Button onClick={handleContinueToInterview} className="w-full h-16 btn-premium rounded-2xl text-xs font-black uppercase tracking-[0.3em] shadow-2xl group">
-                  CONTINUE TO HR ARENA <ArrowRight className="ml-3 w-5 h-5 transition-transform group-hover:translate-x-1" />
+                  START INTERVIEW <ArrowRight className="ml-3 w-5 h-5 transition-transform group-hover:translate-x-1" />
                 </Button>
                 {!isPassed && (
                   <Button onClick={() => router.push(STAGE_ROUTES.CODING)} className="w-full h-12 glass border-white/10 hover:bg-white/5 rounded-xl text-[10px] font-bold uppercase tracking-widest">
-                    <RotateCcw className="mr-2 w-4 h-4" /> Re-initialize Assessment
+                    <RotateCcw className="mr-2 w-4 h-4" /> RETAKE CODING ROUND
                   </Button>
                 )}
               </div>
