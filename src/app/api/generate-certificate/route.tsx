@@ -93,7 +93,7 @@ export async function POST(req: Request) {
             transform: 'rotate(45deg)',
             opacity: 0.8,
             ...pos
-          }} />
+          } as any} />
         ))}
 
         <div style={{ 
