@@ -94,6 +94,7 @@ export default function AptitudeEnginePage() {
   const [isEvaluating, setIsEvaluating] = useState(false);
   const [evaluationStep, setEvaluationStep] = useState(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submissionError, setSubmissionError] = useState<string | null>(null);
   
   const [timeLeft, setTimeLeft] = useState(1800); 
 
@@ -209,48 +210,52 @@ export default function AptitudeEnginePage() {
   }, [db, user?.uid, journeyRef, router, toast, isSubmitting]);
 
   const handleSubmit = useCallback(async () => {
-    if (submissionGuard.current || isEvaluating || !journeyRef) return;
-    submissionGuard.current = true;
+    if (isSubmitting || !journeyRef) return;
+    
     setIsSubmitting(true);
     setIsEvaluating(true);
+    setSubmissionError(null);
 
     if (user?.uid) {
       localStorage.removeItem(`aptitude_timer_end_${user.uid}`);
     }
 
-    let correctCount = 0;
-    let notAnsweredCount = 0;
-
-    const formattedResults = questions.map((q, idx) => {
-      const userSelectedIdx = answers[idx];
-      const isAnswered = userSelectedIdx !== undefined;
-      
-      if (!isAnswered) {
-        notAnsweredCount++;
-      }
-      
-      const isCorrect = isAnswered && userSelectedIdx === q.correctOptionIndex;
-      if (isCorrect) correctCount++;
-      
-      return {
-        question: q.question,
-        category: q.category,
-        difficulty: q.difficulty,
-        userAnswer: isAnswered ? q.options[userSelectedIdx] : "Not Answered",
-        correctAnswer: q.options[q.correctOptionIndex],
-        isCorrect: isCorrect,
-      };
-    });
-
-    const finalNumericScore = Math.round((correctCount / questions.length) * 100);
-    const steps = ["Processing Answers...", "Checking Accuracy...", "Generating Analysis...", "Finalizing Result..."];
-    
-    for (let i = 0; i < steps.length; i++) {
-      setEvaluationStep(i);
-      await new Promise(r => setTimeout(r, 800));
-    }
-
     try {
+      // STEP 0: Checking Answers
+      setEvaluationStep(0);
+      await new Promise(r => setTimeout(r, 400));
+      
+      let correctCount = 0;
+      let notAnsweredCount = 0;
+
+      const formattedResults = questions.map((q, idx) => {
+        const userSelectedIdx = answers[idx];
+        const isAnswered = userSelectedIdx !== undefined;
+        
+        if (!isAnswered) {
+          notAnsweredCount++;
+        }
+        
+        const isCorrect = isAnswered && userSelectedIdx === q.correctOptionIndex;
+        if (isCorrect) correctCount++;
+        
+        return {
+          question: q.question,
+          category: q.category,
+          difficulty: q.difficulty,
+          userAnswer: isAnswered ? q.options[userSelectedIdx] : "Not Answered",
+          correctAnswer: q.options[q.correctOptionIndex],
+          isCorrect: isCorrect,
+        };
+      });
+
+      // STEP 1: Calculating Score
+      setEvaluationStep(1);
+      const finalNumericScore = Math.round((correctCount / questions.length) * 100);
+      await new Promise(r => setTimeout(r, 400));
+
+      // STEP 2: Generating Performance Analysis
+      setEvaluationStep(2);
       const journeySnap = await getDoc(journeyRef);
       const data = journeySnap.data();
       const actualTimeTaken = 1800 - timeLeft;
@@ -275,6 +280,8 @@ export default function AptitudeEnginePage() {
         details: formattedResults 
       };
 
+      // STEP 3: Finalizing Result
+      setEvaluationStep(3);
       await updateDoc(journeyRef!, {
         aptitudeReport: finalReport,
         aptitudeStatus: "completed",
@@ -284,15 +291,14 @@ export default function AptitudeEnginePage() {
       });
 
       justSubmittedRef.current = true;
-      router.push(STAGE_ROUTES.APTITUDE_RESULT);
+      router.replace(STAGE_ROUTES.APTITUDE_RESULT);
     } catch (e) {
       console.error("[APTITUDE SESSION] Submission fault:", e);
-      toast({ variant: "destructive", title: "Error submitting results" });
+      setSubmissionError("Failed to synchronize result with assessment node. Please retry.");
       setIsSubmitting(false);
-      setIsEvaluating(false);
       submissionGuard.current = false;
     }
-  }, [isEvaluating, journeyRef, questions, answers, toast, user?.uid, timeLeft, router]);
+  }, [journeyRef, questions, answers, user?.uid, timeLeft, router]);
 
   useEffect(() => {
     submitRef.current = handleSubmit;
@@ -386,19 +392,94 @@ export default function AptitudeEnginePage() {
   }
 
   if (isEvaluating) {
+    const analysisSteps = [
+      { id: 0, label: "Checking Answers" },
+      { id: 1, label: "Calculating Score" },
+      { id: 2, label: "Generating Performance Analysis" },
+      { id: 3, label: "Preparing Your Result" }
+    ];
+
     return (
-      <div className="h-screen bg-[#050816] flex flex-col items-center justify-center p-12 text-center">
-        <div className="relative mb-16">
-          <div className="w-40 h-40 rounded-full border-2 border-accent/20 border-t-accent animate-spin" />
-          <Cpu className="w-12 h-12 text-accent absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 animate-pulse" />
-        </div>
-        <div className="space-y-8 max-w-lg w-full">
-          <h2 className="text-4xl font-bold tracking-tighter text-premium uppercase">Analyzing Performance</h2>
-          <div className="space-y-4">
-             <Progress value={(evaluationStep + 1) * 25} className="h-1.5" />
-             <p className="text-[10px] font-black uppercase tracking-[0.6em] text-accent animate-pulse">{["Processing Answers", "Checking Accuracy", "Generating Analysis", "Finalizing Result"][evaluationStep]}</p>
-          </div>
-        </div>
+      <div className="h-screen bg-[#050816] flex flex-col items-center justify-center p-12 text-center overflow-hidden">
+        <div className="particles-bg" />
+        
+        <AnimatePresence mode="wait">
+          {submissionError ? (
+            <motion.div 
+              key="error"
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              className="space-y-8 max-w-lg"
+            >
+              <div className="w-20 h-20 rounded-full bg-red-500/20 border border-red-500/30 flex items-center justify-center mx-auto">
+                <AlertCircle className="w-10 h-10 text-red-500" />
+              </div>
+              <div className="space-y-4">
+                <h2 className="text-3xl font-bold tracking-tight text-white">Synchronization Error</h2>
+                <p className="text-muted-foreground font-light leading-relaxed">{submissionError}</p>
+              </div>
+              <Button onClick={() => handleSubmit()} className="btn-premium px-12 h-14 uppercase tracking-widest text-[10px]">
+                <RotateCcw className="w-4 h-4 mr-2" /> Retry Transmission
+              </Button>
+            </motion.div>
+          ) : (
+            <motion.div 
+              key="evaluating"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              className="space-y-12 max-w-xl w-full"
+            >
+              <div className="relative mb-16 mx-auto w-40 h-40">
+                <div className="absolute inset-0 rounded-full border-2 border-accent/20 border-t-accent animate-spin" />
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <Cpu className="w-12 h-12 text-accent animate-pulse" />
+                </div>
+              </div>
+              
+              <div className="space-y-6">
+                <div className="space-y-2">
+                  <h2 className="text-4xl font-bold tracking-tighter text-premium uppercase">Analyzing Your Aptitude Performance</h2>
+                  <p className="text-sm text-white/40 font-light">Evaluating your answers and preparing your personalized result…</p>
+                </div>
+                
+                <div className="space-y-4">
+                  <Progress value={(evaluationStep + 1) * 25} className="h-1.5" />
+                </div>
+
+                <div className="grid gap-3 pt-6">
+                  {analysisSteps.map((step) => {
+                    const isActive = evaluationStep === step.id;
+                    const isDone = evaluationStep > step.id;
+                    return (
+                      <div 
+                        key={step.id} 
+                        className={cn(
+                          "flex items-center gap-4 px-6 py-3 rounded-2xl border transition-all duration-500",
+                          isActive ? "bg-accent/10 border-accent/30 translate-x-2" : 
+                          isDone ? "bg-white/5 border-white/10 opacity-50" : "bg-transparent border-transparent opacity-20"
+                        )}
+                      >
+                        <div className={cn(
+                          "w-6 h-6 rounded-full flex items-center justify-center transition-colors duration-500",
+                          isDone ? "bg-green-500 text-black" : isActive ? "bg-accent text-black" : "bg-white/10"
+                        )}>
+                          {isDone ? <Check className="w-3.5 h-3.5" /> : <span className="text-[10px] font-bold">{step.id + 1}</span>}
+                        </div>
+                        <span className={cn(
+                          "text-[10px] font-black uppercase tracking-widest transition-colors duration-500",
+                          isActive ? "text-accent" : isDone ? "text-white/60" : "text-white/20"
+                        )}>
+                          {step.label}
+                        </span>
+                        {isActive && <Loader2 className="w-3.5 h-3.5 ml-auto animate-spin text-accent" />}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
     );
   }
