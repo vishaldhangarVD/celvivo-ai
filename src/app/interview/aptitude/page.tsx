@@ -108,16 +108,14 @@ export default function AptitudeEnginePage() {
     return doc(db, 'users', user.uid, 'journey', 'active');
   }, [db, user?.uid]);
 
-  const { data: journey, loading: journeyLoading } = useDoc(journeyRef);
-
   useEffect(() => {
     async function init() {
       if (!db || !user?.uid || !journeyRef || initGuard.current || isSubmitting || justSubmittedRef.current) return;
       initGuard.current = true;
       
-      // OPTIMIZATION: Use the journey data already provided by useDoc hook
-      // instead of performing a redundant getDoc network request.
-      const data = journey as any;
+      const journeySnap = await getDoc(journeyRef);
+      const data = journeySnap.data();
+      
       if (!data) {
         router.push('/interview');
         return;
@@ -163,11 +161,7 @@ export default function AptitudeEnginePage() {
       try {
         localStorage.removeItem(`aptitude_timer_end_${user.uid}`); 
         const userRef = doc(db, 'users', user.uid);
-        
-        // Start fetching user history early to parallelize network overhead
-        const userSnapPromise = getDoc(userRef);
-
-        const userSnap = await userSnapPromise;
+        const userSnap = await getDoc(userRef);
         const fullHistory = userSnap.data()?.aptitudeQuestionHistory || [];
         const history = fullHistory.slice(-150);
 
@@ -187,7 +181,6 @@ export default function AptitudeEnginePage() {
         const endAt = Date.now() + 30 * 60 * 1000; 
         localStorage.setItem(`aptitude_timer_end_${user.uid}`, endAt.toString());
         
-        // Save the generated questions to the journey
         await updateDoc(journeyRef, {
           aptitudeQuestions: freshQuestions,
           aptitudeAnswers: {},
@@ -199,9 +192,8 @@ export default function AptitudeEnginePage() {
           currentStage: INTERVIEW_STAGES.APTITUDE
         });
 
-        // Non-blocking history update
         const updatedHistory = [...fullHistory, ...newFingerprints].slice(-300);
-        updateDoc(userRef, {
+        await updateDoc(userRef, {
           aptitudeQuestionHistory: updatedHistory
         });
 
@@ -214,14 +206,11 @@ export default function AptitudeEnginePage() {
         setIsInitializing(false);
       }
     }
-    
-    if (!journeyLoading && journey) {
-      init();
-    }
-  }, [db, user?.uid, journey, journeyLoading, journeyRef, router, toast, isSubmitting]);
+    init();
+  }, [db, user?.uid, journeyRef, router, toast, isSubmitting]);
 
   const handleSubmit = useCallback(async () => {
-    if (submissionGuard.current || isEvaluating || !journey || !journeyRef) return;
+    if (submissionGuard.current || isEvaluating || !journeyRef) return;
     submissionGuard.current = true;
     setIsSubmitting(true);
     setIsEvaluating(true);
@@ -233,7 +222,6 @@ export default function AptitudeEnginePage() {
     let correctCount = 0;
     let notAnsweredCount = 0;
 
-    console.log("--- GRADUATION AUDIT TRACE ---");
     const formattedResults = questions.map((q, idx) => {
       const userSelectedIdx = answers[idx];
       const isAnswered = userSelectedIdx !== undefined;
@@ -245,8 +233,6 @@ export default function AptitudeEnginePage() {
       const isCorrect = isAnswered && userSelectedIdx === q.correctOptionIndex;
       if (isCorrect) correctCount++;
       
-      console.log(`Q${idx+1}: Answered: ${isAnswered}, SelectedIdx: ${userSelectedIdx}, CorrectIdx: ${q.correctOptionIndex}, Result: ${isCorrect ? 'SUCCESS' : 'FAIL'}`);
-
       return {
         question: q.question,
         category: q.category,
@@ -256,8 +242,6 @@ export default function AptitudeEnginePage() {
         isCorrect: isCorrect,
       };
     });
-    console.log(`Final Scores: Correct: ${correctCount}, Total: ${questions.length}, Score: ${Math.round((correctCount/questions.length)*100)}%`);
-    console.log("------------------------------");
 
     const finalNumericScore = Math.round((correctCount / questions.length) * 100);
     const steps = ["Processing Answers...", "Checking Accuracy...", "Generating Analysis...", "Finalizing Result..."];
@@ -268,11 +252,14 @@ export default function AptitudeEnginePage() {
     }
 
     try {
+      const journeySnap = await getDoc(journeyRef);
+      const data = journeySnap.data();
       const actualTimeTaken = 1800 - timeLeft;
+
       const report = await evaluateAptitude({
-        role: journey.role,
-        company: journey.company,
-        experienceLevel: journey.experience,
+        role: data?.role || "Software Engineer",
+        company: data?.company || "Standard Tech",
+        experienceLevel: data?.experience || "Senior",
         timeTakenSeconds: Math.max(0, actualTimeTaken),
         totalQuestions: questions.length,
         results: formattedResults
@@ -306,7 +293,7 @@ export default function AptitudeEnginePage() {
       setIsEvaluating(false);
       submissionGuard.current = false;
     }
-  }, [isEvaluating, journey, journeyRef, questions, answers, toast, user?.uid, timeLeft, router]);
+  }, [isEvaluating, journeyRef, questions, answers, toast, user?.uid, timeLeft, router]);
 
   useEffect(() => {
     submitRef.current = handleSubmit;
@@ -379,7 +366,7 @@ export default function AptitudeEnginePage() {
     return `${m}:${s.toString().padStart(2, '0')}`;
   };
 
-  if (isInitializing || journeyLoading) {
+  if (isInitializing) {
     return (
       <div className="h-screen bg-[#050816] flex flex-col items-center justify-center space-y-8">
         <div className="relative">
@@ -431,7 +418,7 @@ export default function AptitudeEnginePage() {
           </div>
           <div>
             <h1 className="text-sm font-black uppercase tracking-widest text-premium">NEXVOROAI</h1>
-            <p className="text-[9px] font-bold text-white/40 uppercase tracking-widest mt-0.5">{journey?.role || "Protocol"} • TEST IN PROGRESS</p>
+            <p className="text-[9px] font-bold text-white/40 uppercase tracking-widest mt-0.5">APTITUDE TEST IN PROGRESS</p>
           </div>
         </div>
 
