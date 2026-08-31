@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { PDFDocument, rgb, StandardFonts } from 'pdf-lib';
+import { PDFDocument, rgb, StandardFonts, degrees } from 'pdf-lib';
 
 /**
  * @fileOverview Pure JS Certificate PDF Generator.
@@ -66,7 +66,7 @@ export async function POST(req: Request) {
         y: cy,
         size: 9,
         color: colorGold,
-        rotate: { angle: 45, type: 'degrees' as const },
+        rotate: degrees(45),
         opacity: 0.8,
       });
     };
@@ -174,7 +174,7 @@ export async function POST(req: Request) {
     page.drawCircle({
       x: (pageWidth / 2) - 160,
       y: 80,
-      radius: 43,
+      size: 43,
       borderColor: colorGold,
       borderWidth: 2,
     });
