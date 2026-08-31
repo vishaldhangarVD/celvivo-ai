@@ -136,18 +136,47 @@ function LoginContent() {
     if (!trimmedEmail || !password) return;
     
     setIsLoading(true);
-    // Diagnostic Telemetry (Temporary)
-    console.log("[Auth Debug] Attempting login with email:", trimmedEmail, "password length:", password.length);
-    
     try {
       await signInWithEmailAndPassword(auth, trimmedEmail, password);
       setIsLoading(false);
     } catch (error: any) {
       console.error("[Auth] Password Login Error:", error);
+      
+      let title = "Login Failed";
+      let description = "Something went wrong. Please try again.";
+      
+      switch (error.code) {
+        case 'auth/invalid-credential':
+        case 'auth/wrong-password':
+        case 'auth/user-not-found':
+          title = "Incorrect Email or Password";
+          description = "The email or password you entered is incorrect. Please check and try again.";
+          break;
+        case 'auth/invalid-email':
+          title = "Invalid Email";
+          description = "Please enter a valid email address.";
+          break;
+        case 'auth/too-many-requests':
+          title = "Too Many Attempts";
+          description = "Too many failed login attempts. Please wait a moment and try again, or reset your password.";
+          break;
+        case 'auth/user-disabled':
+          title = "Account Disabled";
+          description = "This account has been disabled. Please contact support.";
+          break;
+        case 'auth/network-request-failed':
+          title = "Connection Error";
+          description = "Please check your internet connection and try again.";
+          break;
+        default:
+          title = "Login Failed";
+          description = "Something went wrong while signing in. Please try again.";
+      }
+      
       toast({
         variant: "destructive",
-        title: "Access Denied",
-        description: "Invalid identification or security token.",
+        title,
+        description,
       });
       setIsLoading(false);
     }
