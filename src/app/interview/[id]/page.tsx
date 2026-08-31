@@ -575,8 +575,8 @@ function VirtualArenaContent() {
                 <div className="w-40 h-40 rounded-full border-2 border-accent/20 border-t-accent animate-spin" />
                 <Award className="w-12 h-12 text-accent absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 animate-pulse" />
              </div>
-             <h2 className="text-4xl font-bold tracking-tighter text-premium uppercase">Synthesizing Final Master Audit</h2>
-             <p className="text-[10px] font-black uppercase tracking-[0.6em] text-accent animate-pulse mt-4">Calibrating all rounds performance</p>
+             <h2 className="text-4xl font-bold tracking-tighter text-premium uppercase">INTERVIEW COMPLETED</h2>
+             <p className="text-[10px] font-black uppercase tracking-[0.6em] text-accent animate-pulse mt-4">PREPARING YOUR INTERVIEW RESULTS...</p>
           </motion.div>
         )}
       </AnimatePresence>
