@@ -32,6 +32,18 @@ import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { useRouter } from 'next/navigation';
 
+/**
+ * Utility to race a promise against a fixed timeout.
+ */
+function withTimeout<T>(promise: Promise<T>, ms: number, timeoutError = "Upload timed out"): Promise<T> {
+  return Promise.race([
+    promise,
+    new Promise<T>((_, reject) =>
+      setTimeout(() => reject(new Error(timeoutError)), ms)
+    ),
+  ]);
+}
+
 export default function FeedbackDialog() {
   const { user } = useUser();
   const db = useFirestore();
@@ -121,8 +133,8 @@ export default function FeedbackDialog() {
     try {
       let finalPhotoURL = null;
 
-      // 1. Attempt optional image upload.
-      // Failure here does NOT block the rest of the submission.
+      // 1. Attempt optional image upload with timeout guards.
+      // Cap the upload attempt at 8 seconds to prevent indefinite hangs on network/CORS failure.
       if (imageFile && storage) {
         try {
           const fileName = `${Date.now()}_${imageFile.name}`;
@@ -131,11 +143,19 @@ export default function FeedbackDialog() {
             `userFeedback/${user.uid}/${fileName}`
           );
 
-          const uploadResult = await uploadBytes(storageRef, imageFile);
-          finalPhotoURL = await getDownloadURL(uploadResult.ref);
+          const uploadResult = await withTimeout(
+            uploadBytes(storageRef, imageFile),
+            8000,
+            "Image upload timed out"
+          );
+          finalPhotoURL = await withTimeout(
+            getDownloadURL(uploadResult.ref),
+            5000,
+            "Fetching image URL timed out"
+          );
         } catch (uploadError) {
           console.warn(
-            '[Feedback] Optional profile image upload failed. Continuing without photo.',
+            '[Feedback] Optional profile image upload failed or timed out. Continuing without photo.',
             uploadError
           );
           finalPhotoURL = null;
@@ -143,7 +163,6 @@ export default function FeedbackDialog() {
       }
 
       // 2. Save feedback data to Firestore.
-      // This MUST always execute regardless of optional image upload status.
       await addDoc(collection(db, 'userFeedback'), {
         userId: user.uid,
         name: formData.name,
@@ -355,7 +374,7 @@ export default function FeedbackDialog() {
                     className="flex-[2] h-16 btn-premium text-[10px] font-bold tracking-[0.3em] uppercase shadow-2xl"
                   >
                     {isSubmitting ? <Loader2 className="w-5 h-5 animate-spin" /> : (
-                      <div className="flex items-center gap-3">
+                      <div className="flex items-center justify-center gap-3">
                         <ShieldCheck className="w-4 h-4" />
                         Submit Feedback
                       </div>
