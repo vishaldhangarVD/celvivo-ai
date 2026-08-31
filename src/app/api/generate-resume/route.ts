@@ -1,16 +1,15 @@
 import { NextResponse } from 'next/server';
-import puppeteer from 'puppeteer-core';
-import chromium from '@sparticuz/chromium';
+import puppeteer from 'puppeteer';
 
 /**
  * @fileOverview Server-side Resume PDF Generator.
- * Uses serverless-optimized Chromium to render high-fidelity professional resumes.
- * This implementation avoids system shared library dependencies like libnss3.so.
+ * Optimized for Custom Container deployments with system libraries pre-installed.
  */
 
-export const maxDuration = 60; // Increase timeout to 60s for PDF rendering
+export const maxDuration = 60;
 
 export async function POST(req: Request) {
+  let browser = null;
   try {
     const data = await req.json();
     const { name, role, email, phone, loc, summary, skills, experience, projects, education, theme } = data;
@@ -72,11 +71,9 @@ export async function POST(req: Request) {
       </html>
     `;
 
-    const browser = await puppeteer.launch({
-      args: chromium.args,
-      defaultViewport: chromium.defaultViewport,
-      executablePath: await chromium.executablePath(),
-      headless: chromium.headless,
+    browser = await puppeteer.launch({
+      args: ['--no-sandbox', '--disable-setuid-sandbox'],
+      headless: true,
     });
 
     const page = await browser.newPage();
@@ -98,6 +95,7 @@ export async function POST(req: Request) {
     });
   } catch (error: any) {
     console.error("[API Resume] Fatal fault:", error);
+    if (browser) await browser.close();
     return NextResponse.json({ error: "Resume Synthesis Failed", details: error.message }, { status: 500 });
   }
 }

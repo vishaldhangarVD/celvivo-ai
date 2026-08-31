@@ -2,6 +2,7 @@ import type {NextConfig} from 'next';
 
 const nextConfig: NextConfig = {
   /* config options here */
+  output: 'standalone',
   typescript: {
     ignoreBuildErrors: true,
   },
@@ -12,7 +13,6 @@ const nextConfig: NextConfig = {
     serverActions: {
       bodySizeLimit: '10mb',
     },
-    // Allows Hot Module Replacement and dev resources to work correctly within Firebase Studio's proxied environment
     allowedDevOrigins: [
       '*.cloudworkstations.dev',
       '*.firebase-studio.com',
