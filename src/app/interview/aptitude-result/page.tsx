@@ -155,13 +155,13 @@ export default function AptitudeResultPage() {
 
           <div className="grid lg:grid-cols-12 gap-8 items-start">
             
-            {/* HERO SCORE & TIME */}
+            {/* LEFT COLUMN: HERO SCORE, TIME & ACTIONS */}
             <motion.div 
               initial={{ opacity: 0, scale: 0.95 }} 
               animate={{ opacity: 1, scale: 1 }} 
               className="lg:col-span-4 space-y-8"
             >
-              <Card className="premium-card p-12 flex flex-col items-center text-center space-y-8 bg-white/[0.01] border-white/5 relative overflow-hidden h-full">
+              <Card className="premium-card p-12 flex flex-col items-center text-center space-y-8 bg-white/[0.01] border-white/5 relative overflow-hidden">
                 <div className="absolute top-0 right-0 p-8">
                   <Badge className={cn("px-6 py-2 rounded-xl font-black tracking-[0.4em] text-[10px] border-none shadow-xl", 
                     isPassed ? "bg-green-500/20 text-green-400" : "bg-red-500/20 text-red-400")}>
@@ -206,6 +206,18 @@ export default function AptitudeResultPage() {
                   <Progress value={timePct} className="h-1 bg-white/5" />
                 </div>
               </Card>
+
+              {/* ACTION BUTTONS REPOSITIONED HERE */}
+              <div className="flex flex-col gap-6 w-full">
+                <Button onClick={handleProceed} className="w-full h-20 btn-premium rounded-[2.5rem] text-xl font-black uppercase tracking-[0.2em] shadow-2xl group">
+                  Proceed to Coding Round <ArrowRight className="ml-4 w-8 h-8 transition-transform group-hover:translate-x-2" />
+                </Button>
+                {!isPassed && (
+                  <Button onClick={handleRetry} className="w-full h-20 glass border-white/10 rounded-[2.5rem] text-xl font-black uppercase tracking-widest hover:bg-white/5 transition-all">
+                    <RotateCcw className="mr-4 w-8 h-8" /> Retake Assessment
+                  </Button>
+                )}
+              </div>
             </motion.div>
 
             {/* PERFORMANCE ANALYSIS */}
@@ -365,18 +377,6 @@ export default function AptitudeResultPage() {
               ))}
             </div>
           </section>
-
-          {/* NAVIGATION */}
-          <div className="flex justify-center gap-6 pt-12 border-t border-white/5">
-            <Button onClick={handleProceed} className="h-20 px-24 btn-premium rounded-[2.5rem] text-xl font-black uppercase tracking-[0.4em] shadow-2xl group">
-              Proceed to Coding Round <ArrowRight className="ml-4 w-8 h-8 transition-transform group-hover:translate-x-2" />
-            </Button>
-            {!isPassed && (
-              <Button onClick={handleRetry} className="h-20 px-16 glass border-white/10 rounded-[2.5rem] text-xl font-black uppercase tracking-widest hover:bg-white/5 transition-all">
-                <RotateCcw className="mr-4 w-8 h-8" /> Retake Assessment
-              </Button>
-            )}
-          </div>
 
         </div>
       </main>
