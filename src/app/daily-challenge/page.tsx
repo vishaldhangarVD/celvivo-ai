@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
@@ -24,8 +23,9 @@ import {
   Timer
 } from 'lucide-react';
 import { useUser, useFirestore } from '@/firebase';
-import { doc, getDoc, updateDoc, setDoc, collection, addDoc, serverTimestamp, increment } from 'firebase/firestore';
-import { getQuestionOfTheDay, type DailyQuestion } from '@/lib/daily-questions';
+import { doc, getDoc, updateDoc, collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import { getQuestionOfTheDay } from '@/lib/daily-questions';
+import { generateDailyQuestion } from '@/ai/flows/ai-daily-question-generator';
 import { evaluateDailyChallenge, type EvaluationOutput } from '@/ai/flows/ai-daily-challenge-eval';
 import { useToast } from '@/hooks/use-toast';
 import Link from 'next/link';
@@ -35,6 +35,7 @@ export default function DailyChallengePage() {
   const db = useFirestore();
   const { toast } = useToast();
   
+  const [question, setQuestion] = useState<any>(null);
   const [answer, setAnswer] = useState('');
   const [isEvaluating, setIsEvaluating] = useState(false);
   const [result, setResult] = useState<EvaluationOutput | null>(null);
@@ -42,30 +43,53 @@ export default function DailyChallengePage() {
   const [streak, setStreak] = useState(0);
   const [isInitialLoading, setIsInitialLoading] = useState(true);
 
-  const question = useMemo(() => getQuestionOfTheDay(), []);
-  const todayStr = new Date().toISOString().split('T')[0];
+  const todayStr = useMemo(() => new Date().toISOString().split('T')[0], []);
 
   useEffect(() => {
-    async function checkStatus() {
+    async function initializeProtocol() {
       if (!user || !db) return;
       
-      const userRef = doc(db, 'users', user.uid);
-      const userSnap = await getDoc(userRef);
-      
-      if (userSnap.exists()) {
-        const data = userSnap.data();
-        setStreak(data.currentStreak || 0);
-        if (data.lastChallengeDate === todayStr) {
-          setHasCompletedToday(true);
+      try {
+        // 1. Check Completion Status & Streak
+        const userRef = doc(db, 'users', user.uid);
+        const userSnap = await getDoc(userRef);
+        
+        if (userSnap.exists()) {
+          const data = userSnap.data();
+          setStreak(data.currentStreak || 0);
+          if (data.lastChallengeDate === todayStr) {
+            setHasCompletedToday(true);
+          }
         }
+
+        // 2. Fetch/Generate Daily Question
+        const cacheKey = `nexvoro_daily_q_${todayStr}`;
+        const cached = localStorage.getItem(cacheKey);
+
+        if (cached) {
+          setQuestion(JSON.parse(cached));
+        } else {
+          try {
+            const dynamicQuestion = await generateDailyQuestion(todayStr);
+            localStorage.setItem(cacheKey, JSON.stringify(dynamicQuestion));
+            setQuestion(dynamicQuestion);
+          } catch (aiError) {
+            console.warn("[Daily Challenge] AI Generation failed, using static fallback.");
+            const fallback = getQuestionOfTheDay();
+            setQuestion(fallback);
+          }
+        }
+      } catch (err) {
+        console.error("[Daily Challenge] Protocol init error:", err);
+      } finally {
+        setIsInitialLoading(false);
       }
-      setIsInitialLoading(false);
     }
-    checkStatus();
+    initializeProtocol();
   }, [user, db, todayStr]);
 
   const handleSubmit = async () => {
-    if (!answer.trim() || !user || !db) return;
+    if (!answer.trim() || !user || !db || !question) return;
     
     setIsEvaluating(true);
     try {
@@ -116,22 +140,28 @@ export default function DailyChallengePage() {
       setHasCompletedToday(true);
       
       toast({
-        title: "Challenge Synced",
+        title: "Challenge Secured",
         description: `Neural streak active: ${newStreak} days!`,
       });
 
     } catch (e) {
       console.error(e);
-      toast({ variant: "destructive", title: "Protocol Error", description: "Could not evaluate intelligence node." });
+      toast({ variant: "destructive", title: "Evaluation Fault", description: "Could not analyze response node." });
     } finally {
       setIsEvaluating(false);
     }
   };
 
-  if (isInitialLoading) {
+  if (isInitialLoading || !question) {
     return (
       <div className="min-h-screen bg-[#050816] flex items-center justify-center">
-        <Loader2 className="w-12 h-12 text-accent animate-spin" />
+        <div className="flex flex-col items-center gap-6">
+           <div className="relative">
+             <div className="w-16 h-16 rounded-full border-2 border-accent/20 border-t-accent animate-spin" />
+             <BrainCircuit className="w-6 h-6 text-accent absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 animate-pulse" />
+           </div>
+           <p className="text-[10px] font-black uppercase tracking-[0.5em] text-accent animate-pulse">Syncing Daily Node...</p>
+        </div>
       </div>
     );
   }
@@ -234,7 +264,7 @@ export default function DailyChallengePage() {
                           <div className="grid gap-4">
                             {result.improvementTips.map((tip, i) => (
                               <div key={i} className="flex items-start gap-4 p-5 glass rounded-2xl border-white/5">
-                                <div className="w-2 h-2 rounded-full bg-accent mt-2 shrink-0"></div>
+                                <div className="w-2 h-2 rounded-full bg-accent mt-2 shrink-0" />
                                 <p className="text-sm font-light text-white/70">{tip}</p>
                               </div>
                             ))}

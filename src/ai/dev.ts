@@ -14,6 +14,7 @@ import '@/ai/flows/ai-aptitude-evaluator.ts';
 import '@/ai/flows/ai-audio-synthesis.ts';
 import '@/ai/flows/ai-coding-generator.ts';
 import '@/ai/flows/ai-resume-ats-check.ts';
+import '@/ai/flows/ai-daily-question-generator.ts';
 import '@/ai/flows/test-gemini.ts';
 import { ai } from '@/ai/genkit';
 
