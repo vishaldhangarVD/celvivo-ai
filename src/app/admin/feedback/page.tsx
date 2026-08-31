@@ -11,11 +11,9 @@ import {
   Loader2, CheckCircle2, XCircle, Star, ShieldAlert,
   Clock, Check, X, User
 } from "lucide-react";
-import { useUser, useFirestore, useCollection } from "@/firebase";
+import { useUser, useFirestore, useCollection, useDoc } from "@/firebase";
 import { collection, query, where, doc, updateDoc } from "firebase/firestore";
 import { cn } from "@/lib/utils";
-
-const ADMIN_EMAIL = "kunaldhangar1316@gmail.com";
 
 type StatusTab = "pending" | "approved" | "rejected";
 
@@ -26,7 +24,15 @@ export default function AdminFeedbackPage() {
   const [activeTab, setActiveTab] = useState<StatusTab>("pending");
   const [processingId, setProcessingId] = useState<string | null>(null);
 
-  const isAdmin = user?.email === ADMIN_EMAIL;
+  // AUTH PROTOCOL: Fetch user's own profile to check 'founder' role alignment with Firestore Rules
+  const userProfileRef = useMemo(() => {
+    if (!db || !user?.uid) return null;
+    return doc(db, "users", user.uid);
+  }, [db, user?.uid]);
+
+  const { data: userProfile, loading: profileLoading } = useDoc(userProfileRef);
+
+  const isAdmin = (userProfile as any)?.role === "founder";
 
   const feedbackQuery = useMemo(() => {
     if (!db || !isAdmin) return null;
@@ -56,7 +62,7 @@ export default function AdminFeedbackPage() {
     }
   };
 
-  if (authLoading) {
+  if (authLoading || (user && profileLoading)) {
     return (
       <div className="min-h-screen bg-[#050816] flex items-center justify-center">
         <Loader2 className="w-10 h-10 text-accent animate-spin" />
