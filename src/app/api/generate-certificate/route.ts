@@ -1,10 +1,13 @@
 import { NextResponse } from 'next/server';
-import puppeteer from 'puppeteer';
+import puppeteer from 'puppeteer-core';
+import chromium from '@sparticuz/chromium';
 
 /**
  * @fileOverview Server-side Certificate PDF Generator.
- * Uses Puppeteer to render a high-fidelity Navy & Gold certificate design.
+ * Uses serverless-optimized Chromium to render high-fidelity certificates.
  */
+
+export const maxDuration = 60; // Increase timeout to 60s for PDF rendering
 
 export async function POST(req: Request) {
   try {
@@ -129,8 +132,10 @@ export async function POST(req: Request) {
     `;
 
     const browser = await puppeteer.launch({
-      headless: true,
-      args: ['--no-sandbox', '--disable-setuid-sandbox']
+      args: chromium.args,
+      defaultViewport: chromium.defaultViewport,
+      executablePath: await chromium.executablePath(),
+      headless: chromium.headless,
     });
 
     const page = await browser.newPage();

@@ -21,7 +21,16 @@ export const generateCertificatePDF = async (data: CertificateData) => {
       body: JSON.stringify(data),
     });
 
-    if (!response.ok) throw new Error("Synthesis failed.");
+    if (!response.ok) {
+      let errorMessage = "Synthesis failed.";
+      try {
+        const errorData = await response.json();
+        errorMessage = errorData.details || errorData.error || errorMessage;
+      } catch (e) {
+        errorMessage = `Server Error: ${response.status} ${response.statusText}`;
+      }
+      throw new Error(errorMessage);
+    }
 
     const blob = await response.blob();
     const url = window.URL.createObjectURL(blob);
@@ -32,7 +41,7 @@ export const generateCertificatePDF = async (data: CertificateData) => {
     link.click();
     link.remove();
     window.URL.revokeObjectURL(url);
-  } catch (error) {
+  } catch (error: any) {
     console.error("[PDF Gateway] Critical synthesis error:", error);
     throw error;
   }
