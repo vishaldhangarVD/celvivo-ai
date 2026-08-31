@@ -4,7 +4,6 @@ import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import Navbar from '@/components/layout/Navbar';
-import NavigationControls from '@/components/NavigationControls';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -407,127 +406,128 @@ export default function AptitudeEnginePage() {
   const currentQ = questions[currentIdx];
 
   return (
-    <div className="min-h-screen bg-[#050816] flex flex-col relative overflow-y-auto custom-scrollbar">
+    <div className="h-screen bg-[#050816] flex flex-col overflow-hidden relative">
       <div className="particles-bg" />
       <Navbar />
 
-      <header className="h-20 border-b border-white/5 bg-[#0b0e1a]/95 backdrop-blur-xl flex items-center justify-between px-8 sticky top-[72px] z-40 shrink-0">
-        <div className="flex items-center gap-6">
-          <div className="w-10 h-10 rounded-xl bg-accent/10 flex items-center justify-center text-accent border border-accent/20">
-            <Command className="w-5 h-5" />
-          </div>
-          <div>
-            <h1 className="text-sm font-black uppercase tracking-widest text-premium">NEXVOROAI</h1>
-            <p className="text-[9px] font-bold text-white/40 uppercase tracking-widest mt-0.5">APTITUDE TEST IN PROGRESS</p>
-          </div>
-        </div>
-
-        <div className={cn(
-          "px-6 py-2 rounded-xl glass border-white/10 font-mono text-2xl tabular-nums tracking-wider shadow-2xl",
-          timeLeft <= 60 ? "text-red-500 animate-pulse border-red-500/30 bg-red-500/10" : 
-          timeLeft <= 300 ? "text-orange-400 border-orange-500/30 bg-orange-500/10" : 
-          "text-accent border-accent/30 bg-accent/10"
-        )}>
-          <div className="flex items-center gap-3">
-            <Timer className={cn("w-5 h-5", timeLeft <= 60 && "animate-spin-slow")} />
-            <span className="font-black">{formatTime(timeLeft)}</span>
-          </div>
-        </div>
-      </header>
-
-      <main className="flex-1 container mx-auto px-6 pt-12 pb-16">
-        <div className="grid lg:grid-cols-12 gap-8">
-          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="lg:col-span-9 space-y-6">
-            <div className="space-y-2">
-              <div className="flex justify-between items-end px-2 text-[10px] font-black uppercase tracking-widest text-white/30">
-                <span>Question {currentIdx + 1} of {questions.length}</span>
-                <span className="text-accent">{Math.round(((currentIdx + 1) / questions.length) * 100)}%</span>
-              </div>
-              <Progress value={((currentIdx + 1) / questions.length) * 100} className="h-1 bg-white/5" />
+      <div className="mt-[72px] flex-1 flex flex-col min-h-0">
+        <header className="h-20 shrink-0 border-b border-white/5 bg-[#0b0e1a]/95 backdrop-blur-xl flex items-center justify-between px-8 z-40">
+          <div className="flex items-center gap-6">
+            <div className="w-10 h-10 rounded-xl bg-accent/10 flex items-center justify-center text-accent border border-accent/20">
+              <Command className="w-5 h-5" />
             </div>
+            <div>
+              <h1 className="text-sm font-black uppercase tracking-widest text-premium">NEXVOROAI</h1>
+              <p className="text-[9px] font-bold text-white/40 uppercase tracking-widest mt-0.5">APTITUDE TEST IN PROGRESS</p>
+            </div>
+          </div>
 
-            <Card className="premium-card bg-white/[0.01] border-white/5 p-12 min-h-[480px] relative flex flex-col justify-center">
-              <div className="absolute top-0 right-0 p-8">
-                <Badge variant="outline" className="border-accent/20 text-accent text-[9px] font-black uppercase px-3">{currentQ?.difficulty || "Medium"}</Badge>
-              </div>
-              
-              <div className="max-w-3xl mx-auto w-full space-y-10">
-                <div className="space-y-4">
-                  <Badge className="bg-purple-500/10 text-purple-400 border-none text-[9px] font-black uppercase tracking-widest">{currentQ?.category || "Category"}</Badge>
-                  <h2 className="text-3xl font-bold tracking-tight text-white/90 leading-tight whitespace-pre-wrap">{currentQ?.question}</h2>
+          <div className={cn(
+            "px-6 py-2 rounded-xl glass border-white/10 font-mono text-2xl tabular-nums tracking-wider shadow-2xl",
+            timeLeft <= 60 ? "text-red-500 animate-pulse border-red-500/30 bg-red-500/10" : 
+            timeLeft <= 300 ? "text-orange-400 border-orange-500/30 bg-orange-500/10" : 
+            "text-accent border-accent/30 bg-accent/10"
+          )}>
+            <div className="flex items-center gap-3">
+              <Timer className={cn("w-5 h-5", timeLeft <= 60 && "animate-spin-slow")} />
+              <span className="font-black">{formatTime(timeLeft)}</span>
+            </div>
+          </div>
+        </header>
+
+        <main className="flex-1 min-h-0 container mx-auto px-6 py-6 overflow-hidden">
+          <div className="grid h-full lg:grid-cols-12 gap-8">
+            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="lg:col-span-9 flex flex-col h-full gap-6">
+              <div className="space-y-2 shrink-0">
+                <div className="flex justify-between items-end px-2 text-[10px] font-black uppercase tracking-widest text-white/30">
+                  <span>Question {currentIdx + 1} of {questions.length}</span>
+                  <span className="text-accent">{Math.round(((currentIdx + 1) / questions.length) * 100)}%</span>
                 </div>
+                <Progress value={((currentIdx + 1) / questions.length) * 100} className="h-1 bg-white/5" />
+              </div>
 
-                <div className="grid md:grid-cols-2 gap-4">
-                  {currentQ?.options?.map((opt, i) => (
+              <Card className="flex-1 min-h-0 overflow-y-auto premium-card bg-white/[0.01] border-white/5 p-12 relative flex flex-col justify-start custom-scrollbar">
+                <div className="absolute top-0 right-0 p-8">
+                  <Badge variant="outline" className="border-accent/20 text-accent text-[9px] font-black uppercase px-3">{currentQ?.difficulty || "Medium"}</Badge>
+                </div>
+                
+                <div className="max-w-3xl mx-auto w-full space-y-10 pt-4">
+                  <div className="space-y-4">
+                    <Badge className="bg-purple-500/10 text-purple-400 border-none text-[9px] font-black uppercase tracking-widest">{currentQ?.category || "Category"}</Badge>
+                    <h2 className="text-3xl font-bold tracking-tight text-white/90 leading-tight whitespace-pre-wrap">{currentQ?.question}</h2>
+                  </div>
+
+                  <div className="grid md:grid-cols-2 gap-4 pb-4">
+                    {currentQ?.options?.map((opt, i) => (
+                      <button 
+                        key={i} 
+                        onClick={() => handleOptionSelect(i)} 
+                        disabled={isSubmitting}
+                        className={cn("p-6 rounded-2xl border text-left transition-all group flex items-center gap-6", 
+                        answers[currentIdx] === i ? "bg-accent/20 border-accent text-accent shadow-[0_0_30px_rgba(34,211,238,0.1)]" : "glass border-white/5 hover:border-white/20 text-white/60")}
+                      >
+                        <div className={cn("w-10 h-10 rounded-xl border flex items-center justify-center text-xs font-black shrink-0", 
+                          answers[currentIdx] === i ? "bg-accent border-accent text-black" : "border-white/10 group-hover:border-white/30")}
+                        >
+                          {String.fromCharCode(65 + i)}
+                        </div>
+                        <span className="text-sm font-medium leading-relaxed">{opt}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </Card>
+
+              <div className="h-24 shrink-0 glass rounded-[2.5rem] border-white/5 p-4 flex items-center justify-between shadow-2xl">
+                <div className="flex gap-4">
+                  <Button variant="ghost" onClick={() => handleNav(Math.max(0, currentIdx - 1))} disabled={currentIdx === 0 || isSubmitting} className="h-16 px-8 rounded-2xl glass border-white/10 text-[10px] font-black uppercase"><ChevronLeft className="w-4 h-4 mr-2" /> Back</Button>
+                  <Button 
+                    variant="ghost" 
+                    onClick={handleReviewLater} 
+                    disabled={isSubmitting}
+                    className={cn("h-16 px-8 rounded-2xl glass border-white/10 text-[10px] font-black uppercase", markedForReview.has(currentIdx) && "bg-orange-500/10 text-orange-400 shadow-[0_0_15px_rgba(249,115,22,0.3)]")}
+                  >
+                    Review Later
+                  </Button>
+                </div>
+                <div className="flex gap-4">
+                  {currentIdx < questions.length - 1 ? (
+                    <Button onClick={() => handleNav(Math.min(questions.length - 1, currentIdx + 1))} disabled={isSubmitting} className="h-16 px-12 btn-premium rounded-2xl text-[10px] font-black uppercase">Next Question <ChevronRight className="ml-2 w-4 h-4" /></Button>
+                  ) : (
+                    <Button onClick={handleSubmit} disabled={isSubmitting} className="h-16 px-12 bg-green-600 hover:bg-green-500 text-white rounded-2xl text-[10px] font-black uppercase shadow-lg group">
+                      {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <>Finish Test <ShieldCheck className="ml-2 w-4 h-4 group-hover:scale-110 transition-transform" /></>}
+                    </Button>
+                  )}
+                </div>
+              </div>
+            </motion.div>
+
+            <div className="lg:col-span-3 h-full overflow-hidden">
+              <Card className="h-full overflow-y-auto premium-card bg-white/[0.01] border-white/5 p-8 space-y-8 custom-scrollbar">
+                <h3 className="text-xs font-black uppercase tracking-[0.3em] text-accent flex items-center gap-3"><LayoutGrid className="w-4 h-4" /> Questions</h3>
+                <div className="grid grid-cols-5 gap-3">
+                  {questions.map((_, i) => (
                     <button 
                       key={i} 
-                      onClick={() => handleOptionSelect(i)} 
+                      onClick={() => handleNav(i)} 
                       disabled={isSubmitting}
-                      className={cn("p-6 rounded-2xl border text-left transition-all group flex items-center gap-6", 
-                      answers[currentIdx] === i ? "bg-accent/20 border-accent text-accent shadow-[0_0_30px_rgba(34,211,238,0.1)]" : "glass border-white/5 hover:border-white/20 text-white/60")}
+                      className={cn(
+                        "w-full aspect-square rounded-xl border text-[10px] font-black transition-all duration-300", 
+                        currentIdx === i ? "bg-accent border-accent text-black scale-110 shadow-[0_0_15px_rgba(34,211,238,0.5)]" : 
+                        markedForReview.has(i) ? "bg-orange-500/20 border-orange-500/40 text-orange-400" : 
+                        answers[i] !== undefined ? "bg-green-500/20 border-green-500/40 text-green-400" : 
+                        "glass border-white/5 text-white/20"
+                      )}
                     >
-                      <div className={cn("w-10 h-10 rounded-xl border flex items-center justify-center text-xs font-black shrink-0", 
-                        answers[currentIdx] === i ? "bg-accent border-accent text-black" : "border-white/10 group-hover:border-white/30")}
-                      >
-                        {String.fromCharCode(65 + i)}
-                      </div>
-                      <span className="text-sm font-medium leading-relaxed">{opt}</span>
+                      {i + 1}
                     </button>
                   ))}
                 </div>
-              </div>
-            </Card>
-
-            <div className="h-24 glass rounded-[2.5rem] border-white/5 p-4 flex items-center justify-between shadow-2xl">
-              <div className="flex gap-4">
-                <Button variant="ghost" onClick={() => handleNav(Math.max(0, currentIdx - 1))} disabled={currentIdx === 0 || isSubmitting} className="h-16 px-8 rounded-2xl glass border-white/10 text-[10px] font-black uppercase"><ChevronLeft className="w-4 h-4 mr-2" /> Back</Button>
-                <Button 
-                  variant="ghost" 
-                  onClick={handleReviewLater} 
-                  disabled={isSubmitting}
-                  className={cn("h-16 px-8 rounded-2xl glass border-white/10 text-[10px] font-black uppercase", markedForReview.has(currentIdx) && "bg-orange-500/10 text-orange-400 shadow-[0_0_15px_rgba(249,115,22,0.3)]")}
-                >
-                  Review Later
-                </Button>
-              </div>
-              <div className="flex gap-4">
-                {currentIdx < questions.length - 1 ? (
-                  <Button onClick={() => handleNav(Math.min(questions.length - 1, currentIdx + 1))} disabled={isSubmitting} className="h-16 px-12 btn-premium rounded-2xl text-[10px] font-black uppercase">Next Question <ChevronRight className="ml-2 w-4 h-4" /></Button>
-                ) : (
-                  <Button onClick={handleSubmit} disabled={isSubmitting} className="h-16 px-12 bg-green-600 hover:bg-green-500 text-white rounded-2xl text-[10px] font-black uppercase shadow-lg group">
-                    {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <>Finish Test <ShieldCheck className="ml-2 w-4 h-4 group-hover:scale-110 transition-transform" /></>}
-                  </Button>
-                )}
-              </div>
+              </Card>
             </div>
-          </motion.div>
-
-          <div className="lg:col-span-3">
-            <Card className="premium-card bg-white/[0.01] border-white/5 p-8 space-y-8 sticky top-[168px]">
-              <h3 className="text-xs font-black uppercase tracking-[0.3em] text-accent flex items-center gap-3"><LayoutGrid className="w-4 h-4" /> Questions</h3>
-              <div className="grid grid-cols-5 gap-3">
-                {questions.map((_, i) => (
-                  <button 
-                    key={i} 
-                    onClick={() => handleNav(i)} 
-                    disabled={isSubmitting}
-                    className={cn(
-                      "w-full aspect-square rounded-xl border text-[10px] font-black transition-all duration-300", 
-                      currentIdx === i ? "bg-accent border-accent text-black scale-110 shadow-[0_0_15px_rgba(34,211,238,0.5)]" : 
-                      markedForReview.has(i) ? "bg-orange-500/20 border-orange-500/40 text-orange-400" : 
-                      answers[i] !== undefined ? "bg-green-500/20 border-green-500/40 text-green-400" : 
-                      "glass border-white/5 text-white/20"
-                    )}
-                  >
-                    {i + 1}
-                  </button>
-                ))}
-              </div>
-            </Card>
           </div>
-        </div>
-      </main>
-      <NavigationControls onHome={() => router.push('/')} onBack={() => router.push('/dashboard')} />
+        </main>
+      </div>
     </div>
   );
 }
