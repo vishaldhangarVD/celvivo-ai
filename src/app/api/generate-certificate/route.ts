@@ -133,7 +133,7 @@ export async function POST(req: Request) {
 
     browser = await puppeteer.launch({
       headless: true,
-      args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage'],
+      args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage', '--font-render-hinting=none'],
       executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || undefined,
     });
 
