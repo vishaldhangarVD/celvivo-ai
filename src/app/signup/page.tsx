@@ -6,13 +6,14 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Command, ArrowLeft, ShieldCheck, Loader2, AlertCircle } from 'lucide-react';
+import { Command, ArrowLeft, ShieldCheck, Loader2, AlertCircle, Eye, EyeOff } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { useAuth, useFirestore } from '@/firebase';
+import { useAuth, useUser, useFirestore } from '@/firebase';
 import { createUserWithEmailAndPassword, updateProfile } from 'firebase/auth';
 import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
+import { cn } from '@/lib/utils';
 
 function SignupContent() {
   const router = useRouter();
@@ -24,7 +25,11 @@ function SignupContent() {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [nameError, setNameError] = useState<string | null>(null);
+  const [confirmError, setConfirmError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
   const redirectTo = searchParams.get('redirectTo') || '/dashboard';
@@ -40,8 +45,15 @@ function SignupContent() {
       return;
     }
 
+    // VALIDATION PROTOCOL: Password match
+    if (password !== confirmPassword) {
+      setConfirmError("Passwords do not match.");
+      return;
+    }
+
     setIsLoading(true);
     setNameError(null);
+    setConfirmError(null);
     try {
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       await updateProfile(userCredential.user, { displayName: name });
@@ -77,10 +89,33 @@ function SignupContent() {
       
       router.push(redirectTo);
     } catch (error: any) {
+      console.error("[Auth] Signup Error:", error);
+      let title = "Registration Failed";
+      let description = "Something went wrong while creating your account. Please try again.";
+
+      switch (error.code) {
+        case 'auth/email-already-in-use':
+          title = "Email Already Registered";
+          description = "An account with this email already exists. Try logging in instead.";
+          break;
+        case 'auth/weak-password':
+          title = "Password Too Weak";
+          description = "Please choose a password with at least 6 characters.";
+          break;
+        case 'auth/invalid-email':
+          title = "Invalid Email";
+          description = "Please enter a valid email address.";
+          break;
+        case 'auth/network-request-failed':
+          title = "Connection Error";
+          description = "Please check your internet connection and try again.";
+          break;
+      }
+
       toast({
         variant: "destructive",
-        title: "Registration Failed",
-        description: error.message,
+        title,
+        description,
       });
     } finally {
       setIsLoading(false);
@@ -147,23 +182,58 @@ function SignupContent() {
               </div>
               <div className="space-y-2">
                 <Label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Password</Label>
-                <Input 
-                  type="password" 
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="••••••••" 
-                  className="h-14 rounded-2xl glass border-white/10 bg-transparent focus:border-accent transition-all text-white px-6" 
-                  required
-                />
+                <div className="relative group">
+                  <Input 
+                    type={showPassword ? "text" : "password"} 
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder="••••••••" 
+                    className="h-14 rounded-2xl glass border-white/10 bg-transparent focus:border-accent transition-all text-white px-6 pr-14" 
+                    required
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-5 top-1/2 -translate-y-1/2 text-white/20 hover:text-accent transition-colors"
+                    tabIndex={-1}
+                  >
+                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
               </div>
               <div className="space-y-2">
                 <Label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Confirm Password</Label>
-                <Input 
-                  type="password" 
-                  placeholder="••••••••" 
-                  className="h-14 rounded-2xl glass border-white/10 bg-transparent focus:border-accent transition-all text-white px-6" 
-                  required
-                />
+                <div className="space-y-1">
+                  <div className="relative group">
+                    <Input 
+                      type={showConfirmPassword ? "text" : "password"} 
+                      value={confirmPassword}
+                      onChange={(e) => {
+                        setConfirmPassword(e.target.value);
+                        if (confirmError) setConfirmError(null);
+                      }}
+                      placeholder="••••••••" 
+                      className={cn(
+                        "h-14 rounded-2xl glass border-white/10 bg-transparent focus:border-accent transition-all text-white px-6 pr-14",
+                        confirmError && "border-red-400/50"
+                      )} 
+                      required
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                      className="absolute right-5 top-1/2 -translate-y-1/2 text-white/20 hover:text-accent transition-colors"
+                      tabIndex={-1}
+                    >
+                      {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
+                  </div>
+                  {confirmError && (
+                    <p className="text-[9px] text-red-400 font-bold uppercase tracking-wider ml-2 flex items-center gap-1">
+                      <AlertCircle className="w-3 h-3" /> {confirmError}
+                    </p>
+                  )}
+                </div>
               </div>
               <div className="md:col-span-2 flex items-start gap-4 p-6 glass rounded-2xl border-white/5">
                 <ShieldCheck className="w-6 h-6 text-accent shrink-0 mt-1" />
@@ -196,5 +266,3 @@ export default function SignupPage() {
     </Suspense>
   );
 }
-
-import { cn } from '@/lib/utils';
