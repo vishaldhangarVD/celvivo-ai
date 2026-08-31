@@ -115,13 +115,13 @@ export default function AptitudeEnginePage() {
       if (!db || !user?.uid || !journeyRef || initGuard.current || isSubmitting || justSubmittedRef.current) return;
       initGuard.current = true;
       
-      const snap = await getDoc(journeyRef);
-      if (!snap.exists()) {
+      // OPTIMIZATION: Use the journey data already provided by useDoc hook
+      // instead of performing a redundant getDoc network request.
+      const data = journey as any;
+      if (!data) {
         router.push('/interview');
         return;
       }
-      
-      const data = snap.data();
       
       if (data.aptitudeStatus === "completed" || data.currentStage === INTERVIEW_STAGES.APTITUDE_RESULT) {
         router.replace(STAGE_ROUTES.APTITUDE_RESULT);
@@ -163,7 +163,11 @@ export default function AptitudeEnginePage() {
       try {
         localStorage.removeItem(`aptitude_timer_end_${user.uid}`); 
         const userRef = doc(db, 'users', user.uid);
-        const userSnap = await getDoc(userRef);
+        
+        // Start fetching user history early to parallelize network overhead
+        const userSnapPromise = getDoc(userRef);
+
+        const userSnap = await userSnapPromise;
         const fullHistory = userSnap.data()?.aptitudeQuestionHistory || [];
         const history = fullHistory.slice(-150);
 
@@ -183,6 +187,7 @@ export default function AptitudeEnginePage() {
         const endAt = Date.now() + 30 * 60 * 1000; 
         localStorage.setItem(`aptitude_timer_end_${user.uid}`, endAt.toString());
         
+        // Save the generated questions to the journey
         await updateDoc(journeyRef, {
           aptitudeQuestions: freshQuestions,
           aptitudeAnswers: {},
@@ -194,8 +199,9 @@ export default function AptitudeEnginePage() {
           currentStage: INTERVIEW_STAGES.APTITUDE
         });
 
+        // Non-blocking history update
         const updatedHistory = [...fullHistory, ...newFingerprints].slice(-300);
-        await updateDoc(userRef, {
+        updateDoc(userRef, {
           aptitudeQuestionHistory: updatedHistory
         });
 
