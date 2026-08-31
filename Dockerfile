@@ -1,39 +1,28 @@
-FROM node:20-slim
+FROM ghcr.io/puppeteer/puppeteer:23.0.0
 
-# Install system dependencies for Puppeteer/Chromium
-RUN apt-get update && apt-get install -y \
-    libnss3 \
-    libatk1.0-0 \
-    libatk-bridge2.0-0 \
-    libcups2 \
-    libdrm2 \
-    libxkbcommon0 \
-    libxcomposite1 \
-    libxdamage1 \
-    libxfixes3 \
-    libxrandr2 \
-    libgbm1 \
-    libasound2 \
-    libpango-1.0-0 \
-    libcairo2 \
-    libx11-xcb1 \
-    && rm -rf /var/lib/apt/lists/*
+# The official image already includes Chrome + every required system library.
+# We will build and run our Next.js app on top of it.
 
-WORKDIR /app
+WORKDIR /usr/src/app
 
-# Install dependencies based on the preferred package manager
-COPY package.json package-lock.json* ./
+# The base image default user is 'pptruser'. We use root temporarily to install and copy,
+# then switch back to pptruser for execution security.
+USER root
+
+COPY package*.json ./
 RUN npm install
 
-# Copy source code and build
 COPY . .
 RUN npm run build
 
-# Next.js standard production environment
-ENV NODE_ENV production
-ENV PORT 8080
+# Next.js generates the standalone folder in .next/standalone
+# However, to keep it simple with 'npm start', we'll run from the root.
+ENV NODE_ENV=production
+ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
 
-EXPOSE 8080
+EXPOSE 3000
 
-# Start the application
+# Switch back to the non-root user for security
+USER pptruser
+
 CMD ["npm", "start"]

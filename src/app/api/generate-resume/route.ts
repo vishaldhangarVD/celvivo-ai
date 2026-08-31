@@ -3,7 +3,7 @@ import puppeteer from 'puppeteer';
 
 /**
  * @fileOverview Server-side Resume PDF Generator.
- * Optimized for Custom Container deployments with system libraries pre-installed.
+ * Optimized for Custom Container deployments using the official Puppeteer image.
  */
 
 export const maxDuration = 60;
@@ -72,8 +72,9 @@ export async function POST(req: Request) {
     `;
 
     browser = await puppeteer.launch({
-      args: ['--no-sandbox', '--disable-setuid-sandbox'],
       headless: true,
+      args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage'],
+      executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || undefined,
     });
 
     const page = await browser.newPage();
