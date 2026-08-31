@@ -9,13 +9,6 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import FeedbackDialog from '@/components/feedback/FeedbackDialog';
 import { 
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-} from "@/components/ui/dialog";
-import { 
   Zap, 
   Activity, 
   Trophy,
@@ -31,26 +24,18 @@ import {
   Mic,
   Brain,
   ShieldCheck,
-  AlertCircle,
-  Wifi
+  Lock
 } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useUser, useFirestore, useCollection, useDoc } from '@/firebase';
 import { collection, query, orderBy, doc } from 'firebase/firestore';
-import { runGeminiTest } from '@/ai/flows/test-gemini';
 import { cn } from '@/lib/utils';
 
 export default function Dashboard() {
   const router = useRouter();
   const { user, loading: authLoading } = useUser();
   const db = useFirestore();
-
-  // Test Gemini State
-  const [isTestingGemini, setIsTestingGemini] = useState(false);
-  const [testResult, setTestResult] = useState<any>(null);
-  const [testError, setTestError] = useState<any>(null);
-  const [testStep, setTestStep] = useState(0);
 
   // Fetch User Profile for Streaks
   const userProfileRef = useMemo(() => {
@@ -94,7 +79,7 @@ export default function Dashboard() {
         ...i, 
         type: 'special',
         role: i.role || 'Special HR Interview',
-        overallScore: i.overallScore || 0 // Account for pending audits
+        overallScore: i.overallScore || 0 
       }))
     ];
 
@@ -109,40 +94,10 @@ export default function Dashboard() {
     if (!user && !authLoading) router.push('/login');
   }, [user, authLoading, router]);
 
-  const handleTestGemini = async () => {
-    setIsTestingGemini(true);
-    setTestResult(null);
-    setTestError(null);
-    setTestStep(0);
-
-    const steps = ["Connecting to Gemini...", "Authenticating API...", "Waiting for AI Response..."];
-    for (let i = 0; i < steps.length; i++) {
-      setTestStep(i);
-      await new Promise(r => setTimeout(r, 800));
-    }
-
-    try {
-      const result = await runGeminiTest();
-      if (result.success) {
-        setTestResult(result);
-      } else {
-        setTestError(result);
-      }
-    } catch (e: any) {
-      setTestError({
-        status: 'CLIENT_ERROR',
-        error: e.message || 'An unexpected client error occurred.'
-      });
-    } finally {
-      setIsTestingGemini(false);
-    }
-  };
-
   // Strategic Metrics Calculation - Aggregated across ALL sessions
   const stats = useMemo(() => {
     const total = allSessions.length;
     
-    // Only average scores for sessions that have been audited (score > 0)
     const scoredSessions = allSessions.filter((i: any) => (i.overallScore || 0) > 0);
     const avg = scoredSessions.length > 0 
       ? Math.round(scoredSessions.reduce((a, b) => a + (b.overallScore || 0), 0) / scoredSessions.length) 
@@ -150,10 +105,8 @@ export default function Dashboard() {
     
     const best = total > 0 ? Math.max(...allSessions.map((i: any) => i.overallScore || 0)) : 0;
     
-    // Certificates Earned (Threshold: Score >= 70)
     const certsEarned = allSessions.filter((i: any) => (i.overallScore || 0) >= 70).length;
 
-    // Dimension Scores aggregated from available Virtual Interview Results
     const extractSubScore = (i: any, key: string) => i.feedback?.virtualInterviewResult?.[key] || 0;
     
     const confidenceScores = allSessions.map(i => extractSubScore(i, 'confidence')).filter(s => s > 0);
@@ -200,24 +153,19 @@ export default function Dashboard() {
             <div>
               <div className="flex items-center gap-4 mb-4">
                 <Badge className="bg-accent/20 text-accent border-none px-4 py-1 text-[10px] tracking-widest font-bold uppercase">Mission Briefing</Badge>
-                <Button 
-                  onClick={handleTestGemini}
-                  className="h-8 px-4 rounded-full bg-gradient-to-r from-red-600 to-red-400 text-[9px] font-black uppercase tracking-[0.2em] shadow-[0_0_20px_rgba(239,68,68,0.3)] hover:shadow-[0_0_30px_rgba(239,68,68,0.5)] transition-all animate-pulse-glow"
-                >
-                  🔴 Test Gemini Connection
-                </Button>
               </div>
               <h1 className="text-5xl font-bold tracking-tighter text-premium">Welcome back, {formattedName}</h1>
               <p className="text-muted-foreground font-light mt-2">Neural synchronization complete. Your combined career metrics are live.</p>
             </div>
             <div className="flex gap-4">
               <FeedbackDialog />
-              <Link href="/job-tracker">
-                <Button variant="outline" className="h-14 px-8 glass border-white/10 flex gap-3 text-[10px] tracking-widest uppercase">
+              <div className="relative group cursor-not-allowed">
+                <Button disabled variant="outline" className="h-14 px-8 glass border-white/10 flex gap-3 text-[10px] tracking-widest uppercase opacity-50">
                   <LayoutGrid className="w-4 h-4" />
                   Mission Tracker
+                  <Lock className="w-3 h-3 text-white/40 ml-1" />
                 </Button>
-              </Link>
+              </div>
               <Link href="/daily-challenge">
                 <Button className="h-14 px-8 btn-premium flex gap-3">
                   <Flame className="w-5 h-5 text-orange-400" />
@@ -388,115 +336,6 @@ export default function Dashboard() {
 
         </div>
       </main>
-
-      {/* DEV DIAGNOSTIC DIALOGS */}
-      <Dialog open={isTestingGemini} onOpenChange={() => {}}>
-        <DialogContent className="glass border-white/10 bg-[#0b0e1a] text-white max-w-sm rounded-[2rem] p-12 text-center outline-none">
-          <DialogHeader>
-            <DialogTitle>Gemini Connection Test</DialogTitle>
-            <DialogDescription>
-              Testing Gemini API connection.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-8">
-            <div className="relative w-24 h-24 mx-auto">
-              <div className="absolute inset-0 border-2 border-accent/20 rounded-full animate-ping" />
-              <div className="absolute inset-0 border-b-2 border-accent rounded-full animate-spin duration-[3s]" />
-              <div className="absolute inset-4 glass rounded-full flex items-center justify-center">
-                <Brain className="w-10 h-10 text-accent animate-pulse" />
-              </div>
-            </div>
-            <div className="space-y-2">
-              <h3 className="text-xl font-bold tracking-tight">Neural Diagnostic</h3>
-              <p className="text-[10px] font-black uppercase tracking-[0.4em] text-accent animate-pulse">
-                {["Connecting to Gemini...", "Authenticating API...", "Waiting for AI Response..."][testStep]}
-              </p>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
-
-      <Dialog open={!!testResult} onOpenChange={() => setTestResult(null)}>
-        <DialogContent className="glass border-green-500/20 bg-[#0b0e1a] text-white max-w-md rounded-[2.5rem] p-10 outline-none">
-          <DialogHeader className="sr-only">
-            <DialogTitle>Gemini Connection Success</DialogTitle>
-            <DialogDescription>Successfully established neural link with Gemini.</DialogDescription>
-          </DialogHeader>
-          <div className="space-y-8">
-            <div className="flex items-center gap-6">
-              <div className="w-16 h-16 rounded-2xl bg-green-500/10 border border-green-500/20 flex items-center justify-center text-green-400">
-                <ShieldCheck className="w-8 h-8" />
-              </div>
-              <div>
-                <h3 className="text-2xl font-bold">Gemini Connected</h3>
-                <p className="text-[10px] font-black uppercase tracking-widest text-green-400/60">Neural Link Verified</p>
-              </div>
-            </div>
-
-            <div className="p-6 glass rounded-2xl border-white/5 bg-white/[0.01] space-y-4">
-              <p className="text-lg font-light italic text-white/90">"{testResult?.data}"</p>
-              <div className="grid grid-cols-2 gap-4 pt-4 border-t border-white/5">
-                <div className="space-y-1">
-                  <p className="text-[8px] font-bold text-white/20 uppercase tracking-widest">Model</p>
-                  <p className="text-[10px] font-bold text-accent">{testResult?.model}</p>
-                </div>
-                <div className="space-y-1">
-                  <p className="text-[8px] font-bold text-white/20 uppercase tracking-widest">Latency</p>
-                  <p className="text-[10px] font-bold text-accent">{testResult?.latency}</p>
-                </div>
-                <div className="space-y-1">
-                  <p className="text-[8px] font-bold text-white/20 uppercase tracking-widest">Status</p>
-                  <p className="text-[10px] font-bold text-green-400 flex items-center gap-1"><Wifi className="w-3 h-3" /> ONLINE</p>
-                </div>
-              </div>
-            </div>
-
-            <Button onClick={() => setTestResult(null)} className="w-full h-14 btn-premium rounded-xl uppercase text-[10px] font-black tracking-widest">Acknowledge</Button>
-          </div>
-        </DialogContent>
-      </Dialog>
-
-      <Dialog open={!!testError} onOpenChange={() => setTestError(null)}>
-        <DialogContent className="glass border-red-500/20 bg-[#0b0e1a] text-white max-w-md rounded-[2.5rem] p-10 outline-none">
-          <DialogHeader className="sr-only">
-            <DialogTitle>Gemini Connection Failed</DialogTitle>
-            <DialogDescription>System node failed to establish neural bridge.</DialogDescription>
-          </DialogHeader>
-          <div className="space-y-8">
-            <div className="flex items-center gap-6">
-              <div className="w-16 h-16 rounded-2xl bg-red-500/10 border border-red-500/20 flex items-center justify-center text-red-400">
-                <AlertCircle className="w-8 h-8" />
-              </div>
-              <div>
-                <h3 className="text-2xl font-bold">Connection Failed</h3>
-                <p className="text-[10px] font-black uppercase tracking-widest text-red-400/60">Neural Protocol Error</p>
-              </div>
-            </div>
-
-            <div className="space-y-4">
-              <div className="p-5 glass rounded-2xl border-white/5 bg-red-500/[0.02] space-y-3">
-                 <div className="flex justify-between items-center text-[10px] font-bold uppercase tracking-widest text-white/40">
-                   <span>Error Code</span>
-                   <span className="text-red-400">{testError?.status}</span>
-                 </div>
-                 <p className="text-xs font-light text-white/60 leading-relaxed">{testError?.error}</p>
-              </div>
-
-              <div className="p-5 glass rounded-2xl border-white/5 space-y-2">
-                 <p className="text-[9px] font-bold uppercase tracking-widest text-accent">Suggested Resolution</p>
-                 <p className="text-xs font-medium text-white/80">
-                   {testError?.status === '429' ? "Wait 60s for quota recovery or check billing usage." : 
-                    testError?.status === '401' ? "Verify GOOGLE_GENAI_API_KEY in environment configuration." :
-                    testError?.status === '403' ? "Ensure Generative AI API is enabled in Google Cloud Console." :
-                    "Check server logs and network connectivity protocols."}
-                 </p>
-              </div>
-            </div>
-
-            <Button onClick={() => setTestError(null)} variant="outline" className="w-full h-14 glass border-white/10 rounded-xl uppercase text-[10px] font-black tracking-widest">Close</Button>
-          </div>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }
