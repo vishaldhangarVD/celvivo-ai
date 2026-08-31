@@ -123,7 +123,7 @@ function CodingResultContent() {
       <div className="particles-bg" />
       <Navbar />
       
-      <main className="flex-1 container mx-auto px-6 pt-24 pb-8 flex flex-col gap-6 overflow-hidden">
+      <main className="flex-1 container mx-auto px-6 pt-20 pb-4 flex flex-col gap-4 overflow-hidden">
         <header className="flex flex-col md:flex-row justify-between items-end gap-4 shrink-0">
           <div className="space-y-1">
             <Badge className="bg-accent/20 text-accent border-none px-4 py-1 text-[10px] tracking-[0.4em] font-black uppercase">Stage 07: Result</Badge>
@@ -136,22 +136,22 @@ function CodingResultContent() {
           </div>
         </header>
 
-        <div className="flex-1 grid lg:grid-cols-12 gap-6 overflow-hidden">
-          <div className="lg:col-span-4 flex flex-col gap-6 overflow-hidden">
-            <Card className="premium-card bg-white/[0.01] border-white/5 p-8 flex flex-col items-center text-center justify-center relative overflow-hidden">
-              <div className={cn("text-[100px] font-black tracking-tighter tabular-nums drop-shadow-[0_0_50px_rgba(34,211,238,0.2)] leading-none", 
+        <div className="flex-1 grid lg:grid-cols-12 gap-4 overflow-hidden">
+          <div className="lg:col-span-4 flex flex-col gap-4 overflow-hidden">
+            <Card className="premium-card bg-white/[0.01] border-white/5 p-6 flex flex-col items-center text-center justify-center relative overflow-hidden shrink-0">
+              <div className={cn("text-[80px] font-black tracking-tighter tabular-nums drop-shadow-[0_0_50px_rgba(34,211,238,0.2)] leading-none", 
                 isPassed ? "text-accent" : "text-red-400")}>
                 {result?.score}%
               </div>
               <p className="text-[9px] font-bold uppercase tracking-[0.4em] text-white/30 mt-2">Overall Efficiency Index</p>
             </Card>
 
-            <Card className={cn("flex-1 p-8 rounded-[2.5rem] border flex flex-col justify-between relative overflow-hidden", 
+            <Card className={cn("flex-1 p-6 rounded-[2.5rem] border flex flex-col justify-between relative overflow-hidden", 
               isPassed ? "bg-green-500/5 border-green-500/20" : "bg-red-500/5 border-red-500/20")}>
-              <div className="space-y-4 relative z-10">
-                <div className={cn("w-12 h-12 rounded-2xl flex items-center justify-center", 
+              <div className="space-y-3 relative z-10">
+                <div className={cn("w-10 h-10 rounded-2xl flex items-center justify-center", 
                   isPassed ? "bg-green-500/20 text-green-400" : "bg-red-500/20 text-red-400")}>
-                  {isPassed ? <ShieldCheck className="w-6 h-6" /> : <AlertTriangle className="w-6 h-6" />}
+                  {isPassed ? <ShieldCheck className="w-5 h-5" /> : <AlertTriangle className="w-5 h-5" />}
                 </div>
                 <div className="space-y-1">
                   <h3 className="text-xl font-bold tracking-tight">{isPassed ? "🎉 Neural Verification Passed" : "Proficiency Threshold Not Met"}</h3>
@@ -161,7 +161,7 @@ function CodingResultContent() {
                 </div>
               </div>
 
-              <div className="relative z-10 pt-6 space-y-4">
+              <div className="relative z-10 pt-4 space-y-3">
                 <Button onClick={handleContinueToInterview} className="w-full h-16 btn-premium rounded-2xl text-xs font-black uppercase tracking-[0.3em] shadow-2xl group">
                   CONTINUE TO HR ARENA <ArrowRight className="ml-3 w-5 h-5 transition-transform group-hover:translate-x-1" />
                 </Button>
