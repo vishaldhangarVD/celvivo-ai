@@ -503,7 +503,7 @@ export default function AptitudeEnginePage() {
             </motion.div>
 
             <div className="lg:col-span-3 h-full overflow-hidden">
-              <Card className="h-full overflow-y-auto premium-card bg-white/[0.01] border-white/5 p-8 space-y-6 custom-scrollbar">
+              <Card className="h-full overflow-y-auto premium-card bg-white/[0.01] border-white/5 p-8 flex flex-col justify-center gap-10 custom-scrollbar">
                 <h3 className="text-xs font-black uppercase tracking-[0.3em] text-accent flex items-center gap-3 shrink-0"><LayoutGrid className="w-4 h-4" /> Questions</h3>
                 <div className="grid grid-cols-5 gap-3">
                   {questions.map((_, i) => (
