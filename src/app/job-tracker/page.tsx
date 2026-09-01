@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useMemo } from 'react';
@@ -24,6 +23,7 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
+  SelectItemText,
 } from "@/components/ui/select";
 import {
   Building2,
@@ -271,9 +271,9 @@ export default function JobTrackerPage() {
                     <SelectValue placeholder="Status Filter" />
                   </SelectTrigger>
                   <SelectContent className="glass border-white/10 bg-[#0b0e1a] text-white">
-                    <SelectItem value="All">All Pipelines</SelectItem>
+                    <SelectItem value="All"><SelectItemText>All Pipelines</SelectItemText></SelectItem>
                     {STATUS_OPTIONS.map(opt => (
-                      <SelectItem key={opt} value={opt}>{opt}</SelectItem>
+                      <SelectItem key={opt} value={opt}><SelectItemText>{opt}</SelectItemText></SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
@@ -302,12 +302,12 @@ export default function JobTrackerPage() {
                       <Select defaultValue={app.status} onValueChange={(val) => updateStatus(app.id, val)}>
                         <SelectTrigger className="w-fit h-8 border-none bg-transparent hover:bg-white/5 transition-all px-2">
                            <Badge className={`${STATUS_COLORS[app.status]} border-none font-bold text-[8px] uppercase tracking-widest`}>
-                            {app.status}
+                            <SelectValue />
                           </Badge>
                         </SelectTrigger>
                         <SelectContent className="glass border-white/10 bg-[#0b0e1a] text-white">
                           {STATUS_OPTIONS.map(opt => (
-                            <SelectItem key={opt} value={opt}>{opt}</SelectItem>
+                            <SelectItem key={opt} value={opt}><SelectItemText>{opt}</SelectItemText></SelectItem>
                           ))}
                         </SelectContent>
                       </Select>

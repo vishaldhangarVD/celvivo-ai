@@ -15,6 +15,7 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
+  SelectItemText,
 } from "@/components/ui/select";
 import { 
   Building2, 
@@ -53,6 +54,19 @@ const COMPANIES = [
   { name: "Wipro", domain: "wipro.com" },
   { name: "Cognizant", domain: "cognizant.com" },
   { name: "Capgemini", domain: "capgemini.com" },
+  { name: "NVIDIA", domain: "nvidia.com" },
+  { name: "Oracle", domain: "oracle.com" },
+  { name: "Salesforce", domain: "salesforce.com" },
+  { name: "Adobe", domain: "adobe.com" },
+  { name: "Cisco", domain: "cisco.com" },
+  { name: "Intel", domain: "intel.com" },
+  { name: "SAP", domain: "sap.com" },
+  { name: "HCLTech", domain: "hcltech.com" },
+  { name: "Tech Mahindra", domain: "techmahindra.com" },
+  { name: "LTIMindtree", domain: "ltimindtree.com" },
+  { name: "Mphasis", domain: "mphasis.com" },
+  { name: "Zoho", domain: "zoho.com" },
+  { name: "Freshworks", domain: "freshworks.com" },
   { name: "Other", domain: "" }
 ];
 
@@ -134,6 +148,84 @@ const CompanyLogo = ({ name, className }: { name: string, className?: string }) 
           <path fill="#007cc3" d="M10 20h108v88H10z"/><path fill="#FFFFFF" d="M25 40h15v10H25zm25 0h15v10H50zm25 0h15v10H75zm25 0h15v10h-15zm-75 25h15v10H25zm25 0h15v10H50zm25 0h15v10H75zm25 0h15v10h-15zm-75 25h15v10H25zm25 0h15v10H50zm25 0h15v10H75zm25 0h15v10h-15z"/>
         </svg>
       );
+    case "NVIDIA":
+      return (
+        <svg viewBox="0 0 48 48" className={className} style={{ width: size, height: size }}>
+          <path fill="#76B900" d="M37.3 17.5c-2.3-3.6-6.4-6-11-6-7.4 0-13.3 6-13.3 13.3s6 13.3 13.3 13.3c3.1 0 6-1 8.3-2.8L37.3 17.5zM26.3 35.8c-6.1 0-11-4.9-11-11s4.9-11 11-11c3.5 0 6.6 1.6 8.5 4.1L26.3 35.8z"/>
+        </svg>
+      );
+    case "Oracle":
+      return (
+        <svg viewBox="0 0 48 48" className={className} style={{ width: size, height: size }}>
+          <path fill="#F80000" d="M24 10c-7.7 0-14 6.3-14 14s6.3 14 14 14 14-6.3 14-14-6.3-14-14-14zm0 24c-5.5 0-10-4.5-10-10s4.5-10 10-10 10 4.5 10 10-4.5 10-10 10z"/>
+        </svg>
+      );
+    case "Salesforce":
+      return (
+        <svg viewBox="0 0 48 48" className={className} style={{ width: size, height: size }}>
+          <path fill="#00A1E0" d="M36 24c0-3.3-2.7-6-6-6-.5 0-1 .1-1.5.2-1.3-3.2-4.5-5.2-8.1-5.2-3.8 0-7.2 2.3-8.6 5.8C10.5 19.5 9 21.6 9 24c0 4.4 3.6 8 8 8h11c4.4 0 8-3.6 8-8z"/>
+        </svg>
+      );
+    case "Adobe":
+      return (
+        <svg viewBox="0 0 48 48" className={className} style={{ width: size, height: size }}>
+          <path fill="#FF0000" d="M24 8l14 32h-8.5l-5.5-13.5H19.5L14 40H6L24 8zm0 10.5L20.5 24.5h7L24 18.5z"/>
+        </svg>
+      );
+    case "Cisco":
+      return (
+        <svg viewBox="0 0 48 48" className={className} style={{ width: size, height: size }}>
+          <path fill="#00BCEB" d="M12 28h2v8h-2zm4-4h2v12h-2zm4-6h2v18h-2zm4 0h2v18h-2zm4 6h2v12h-2zm4 4h2v8h-2z"/>
+        </svg>
+      );
+    case "Intel":
+      return (
+        <svg viewBox="0 0 48 48" className={className} style={{ width: size, height: size }}>
+          <path fill="#0071C5" d="M24 8c-8.8 0-16 7.2-16 16s7.2 16 16 16 16-7.2 16-16-7.2-16-16-16zm-4.5 24h-3V16h3v8h4V16h3v16h-3v-5h-4v5z"/>
+        </svg>
+      );
+    case "SAP":
+      return (
+        <svg viewBox="0 0 48 48" className={className} style={{ width: size, height: size }}>
+          <path fill="#008FD3" d="M8 12h32v24H8V12zm5 18h4l1-3h6l1 3h4L19 15h-1l-6 15zm10-7l2-6 2 6h-4z"/>
+        </svg>
+      );
+    case "HCLTech":
+      return (
+        <svg viewBox="0 0 48 48" className={className} style={{ width: size, height: size }}>
+          <path fill="#005696" d="M10 12h4v10h6V12h4v24h-4v-10h-6v10h-4V12zm18 0h4v24h-4V12zm8 0h10v4h-6v6h6v4h-6v6h6v4H36V12z"/>
+        </svg>
+      );
+    case "Tech Mahindra":
+      return (
+        <svg viewBox="0 0 48 48" className={className} style={{ width: size, height: size }}>
+          <path fill="#E31E24" d="M12 12h24l-4 4H16v6h16l-4 4H16v10h-4V12z"/>
+        </svg>
+      );
+    case "LTIMindtree":
+      return (
+        <svg viewBox="0 0 48 48" className={className} style={{ width: size, height: size }}>
+          <path fill="#F05A28" d="M24 8l12 12-12 12-12-12L24 8zm0 6l-6 6 6 6 6-6-6-6z"/>
+        </svg>
+      );
+    case "Mphasis":
+      return (
+        <svg viewBox="0 0 48 48" className={className} style={{ width: size, height: size }}>
+          <path fill="#005A9C" d="M10 12l14 10 14-10v24l-14-10-14 10V12z"/>
+        </svg>
+      );
+    case "Zoho":
+      return (
+        <svg viewBox="0 0 48 48" className={className} style={{ width: size, height: size }}>
+          <rect fill="#F44336" x="10" y="10" width="12" height="12"/><rect fill="#4CAF50" x="26" y="10" width="12" height="12"/><rect fill="#2196F3" x="10" y="26" width="12" height="12"/><rect fill="#FFEB3B" x="26" y="26" width="12" height="12"/>
+        </svg>
+      );
+    case "Freshworks":
+      return (
+        <svg viewBox="0 0 48 48" className={className} style={{ width: size, height: size }}>
+          <path fill="#00A1E0" d="M24 8c-8.8 0-16 7.2-16 16s7.2 16 16 16 16-7.2 16-16-7.2-16-16-16zm0 24c-4.4 0-8-3.6-8-8s3.6-8 8-8 8 3.6 8 8-3.6 8-8 8z"/>
+        </svg>
+      );
     default:
       return <Building2 className={cn("text-accent", className)} style={{ width: size, height: size }} />;
   }
@@ -167,7 +259,6 @@ export default function InterviewSetupPage() {
       if (journey.company) setCompany(journey.company);
       if (journey.role) setRole(journey.role);
       if (journey.experience) setExperience(journey.experience);
-      // NOTE: Resume data is deliberately NOT pre-filled here to enforce fresh upload per session.
     }
   }, [journey]);
 
@@ -206,7 +297,6 @@ export default function InterviewSetupPage() {
     const sessionId = journey?.sessionId || Math.random().toString(36).substring(7);
 
     try {
-      // CALIBRATE NEURAL ENGINE WITH FRESH RESUME DATA
       const analysisResult = await analyzeResume({
         resumeDataUri: resumeBase64,
         targetRole: role,
@@ -217,8 +307,6 @@ export default function InterviewSetupPage() {
       const finalStage = targetPath === 'aptitude' ? INTERVIEW_STAGES.APTITUDE : INTERVIEW_STAGES.HR_INTERVIEW;
       const step = targetPath === 'aptitude' ? 4 : 8;
 
-      // PROTOCOL: When explicitly starting or updating the interview configuration,
-      // we must reset assessment status fields to ensure a fresh session.
       await setDoc(journeyRef!, {
         sessionId,
         role,
@@ -229,7 +317,6 @@ export default function InterviewSetupPage() {
         resumeAnalysis: analysisResult,
         currentStage: finalStage,
         step,
-        // RESET FIELDS FOR NEW JOURNEY
         aptitudeStatus: "not_started",
         aptitudeReport: null,
         aptitudeQuestions: null,
@@ -300,7 +387,7 @@ export default function InterviewSetupPage() {
                           <div className="w-5 h-5 flex items-center justify-center">
                             <CompanyLogo name={c.name} />
                           </div>
-                          <span>{c.name}</span>
+                          <SelectItemText>{c.name}</SelectItemText>
                         </div>
                       </SelectItem>
                     ))}
@@ -315,7 +402,11 @@ export default function InterviewSetupPage() {
                     <SelectValue placeholder="Select Job Role" />
                   </SelectTrigger>
                   <SelectContent className="glass border-white/10 bg-[#0b0e1a] text-white">
-                    {ROLES.map(r => <SelectItem key={r} value={r}>{r}</SelectItem>)}
+                    {ROLES.map(r => (
+                      <SelectItem key={r} value={r}>
+                        <SelectItemText>{r}</SelectItemText>
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
