@@ -3,13 +3,14 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
+    "dev": "next dev -H 0.0.0.0",
     "genkit:dev": "genkit start -- tsx src/ai/dev.ts",
     "genkit:watch": "genkit start -- tsx --watch src/ai/dev.ts",
     "build": "NODE_ENV=production next build",
     "start": "next start",
     "lint": "next lint",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "deploy:preview": "firebase hosting:channel:deploy preview"
   },
   "dependencies": {
     "@d-id/client-sdk": "^2.0.6",
@@ -51,6 +52,7 @@
     "genkit": "^1.28.0",
     "google-auth-library": "^9.15.0",
     "html2canvas": "^1.4.1",
+    "html-to-image": "^1.11.11",
     "jspdf": "^2.5.2",
     "lucide-react": "^0.475.0",
     "mammoth": "^1.8.0",
