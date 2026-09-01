@@ -4,7 +4,6 @@ import { useState, useMemo } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import Navbar from '@/components/layout/Navbar';
-import NavigationControls from '@/components/NavigationControls';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -20,9 +19,6 @@ import {
   Cpu,
   LayoutDashboard,
   Loader2,
-  Home,
-  Layers,
-  BrainCircuit,
   Star
 } from 'lucide-react';
 import { useUser, useFirestore, useDoc } from '@/firebase';
@@ -119,14 +115,13 @@ export default function FinalReportPage() {
     <div className="min-h-screen bg-[#050816] pb-32">
       <div className="particles-bg" />
       <Navbar />
-      <NavigationControls />
       
       <div className="container mx-auto px-4 pt-32">
-        <div className="max-w-7xl auto space-y-12">
+        <div className="max-w-7xl mx-auto space-y-12">
           
           <motion.div initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} className="premium-card p-12 border-glow-premium relative overflow-hidden">
             {feedback.hiringRecommendation && (
-              <div className="absolute top-0 right-0 p-12">
+              <div className="absolute top-6 right-12 z-10">
                 <Badge className={`${getScoreColor(feedback.overallScore)} border-none bg-white/5 font-black tracking-[0.4em] uppercase text-xs px-8 py-3 rounded-2xl`}>
                   RECOMMENDATION: {feedback.hiringRecommendation.toUpperCase()}
                 </Badge>
@@ -259,7 +254,7 @@ export default function FinalReportPage() {
                       {topicsToStudy.length > 0 && (
                         <div className="p-6 glass rounded-2xl border-white/5 space-y-4">
                            <h4 className="text-xs font-black uppercase tracking-widest text-white/40 flex items-center gap-2">
-                              <Layers className="w-4 h-4 text-purple-400" /> Topics to Improve
+                              <Star className="w-4 h-4 text-purple-400" /> Topics to Improve
                            </h4>
                            <div className="flex flex-wrap gap-2">
                               {topicsToStudy.map((topic: string, i: number) => (
@@ -271,7 +266,7 @@ export default function FinalReportPage() {
                       {criticalGaps.length > 0 && (
                         <div className="p-6 glass rounded-2xl border-white/5 space-y-4">
                            <h4 className="text-xs font-black uppercase tracking-widest text-white/40 flex items-center gap-2">
-                              <BrainCircuit className="w-4 h-4 text-accent" /> Skills to Improve
+                              <Target className="w-4 h-4 text-accent" /> Skills to Improve
                            </h4>
                            <div className="flex flex-wrap gap-2">
                               {criticalGaps.map((gap: string, i: number) => (
