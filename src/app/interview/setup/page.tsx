@@ -73,7 +73,17 @@ const ROLES = [
   "Software Engineer", "Frontend Developer", "Backend Developer", "Full Stack Developer",
   "Data Scientist", "Data Analyst", "Machine Learning Engineer", "DevOps Engineer",
   "Cloud Engineer", "Cyber Security Analyst", "UI/UX Designer", ".NET Developer",
-  "Python Developer", "Java Developer", "Other"
+  "Python Developer", "Java Developer", "Mobile App Developer", "Android Developer",
+  "iOS Developer", "React Developer", "Angular Developer", "Node.js Developer",
+  "PHP Developer", "C++ Developer", "C Developer", "Golang Developer",
+  "QA Engineer", "Automation Test Engineer", "SDET", "Software Tester",
+  "Data Engineer", "Database Administrator", "Database Developer", "Business Intelligence Developer",
+  "AI Engineer", "NLP Engineer", "MLOps Engineer", "Site Reliability Engineer",
+  "Systems Engineer", "System Administrator", "Network Engineer", "Network Security Engineer",
+  "Information Security Engineer", "DevSecOps Engineer", "Solutions Architect", "Software Architect",
+  "Technical Architect", "IT Support Engineer", "IT Consultant", "Salesforce Developer",
+  "SAP Developer", "Embedded Systems Engineer", "Firmware Engineer", "Blockchain Developer",
+  "Game Developer", "Other"
 ];
 
 const EXPERIENCE_LEVELS = ["Fresher", "0–1 Years", "1–3 Years", "3–5 Years", "5+ Years"];
@@ -100,7 +110,9 @@ const CompanyLogo = ({ name, className }: { name: string, className?: string }) 
     case "Amazon":
       return (
         <svg viewBox="0 0 24 24" className={className} style={{ width: size, height: size }} preserveAspectRatio="xMidYMid meet">
-          <path fill="#000" d="M12.6 3.9c-2.3 0-4.6.4-6.4 1.2-1.3.6-1.5 1.1-1.5 1.9 0 .8.5 1.3 1.5 1.3.4 0 .9-.1 1.4-.4.8-.4 1.9-.6 3.1-.6.7 0 1.4.1 1.9.3.9.3 1.2.7 1.2 1.5v1.2c-1.3-.1-3-.1-4.8.1-2.9.2-5.1 1.3-5.1 3.8 0 2.2 1.8 3.5 4.3 3.5 1.9 0 3.5-.8 4.7-2.3.2.7.7 1.3 1.9 1.3.8 0 1.6-.3 2.1-.8V12c0-5.1-2.8-8.1-7.4-8.1zm1.3 12.4c-.4.8-1.3 1.3-2.3 1.3-.9 0-1.6-.5-1.6-1.4 0-1.1 1-1.6 2.5-1.7 1-.1 1.4-.1 1.4-.1v1.9z"/><path fill="#FF9900" d="M4.6 20.2c4.4 2.4 10.3 2.5 14.8.5.5-.2.6-.8.2-1.1-.3-.2-.8-.1-1.1 0-4 1.8-9.3 1.7-13.3-.4-.4-.3-.9 0-.6.5z"/><path fill="#FF9900" d="M20 18.2c-.3-.4-1.6-.3-2.2-.2-.2.1-.2.3 0 .5.8.5 2.1.8 2.5.4.4-.3.2-1.6-.3-2.1-.1-.2-.3-.1-.3.1.1.7-.1 1.9.3 1.3z"/>
+          <path fill="#FF9900" d="M15.07 14.64c-1.35.91-3.32 1.4-5.28 1.4-2.84 0-4.88-1.23-4.88-3.41 0-2.31 2.21-3.32 5.16-3.41 1.8 0 3.4.15 4.54.34v.26c0-1.83-1.07-2.8-3.55-2.8-1.63 0-3.38.41-4.88 1.15l-.57-1.46c1.8-.91 4.14-1.31 6.09-1.31 4.14 0 5.86 2.02 5.86 5.8v5.86h-2.1v-2.42h-.39zm-.39-3.36c-1.01-.19-2.4-.29-3.83-.29-1.89 0-3.09.52-3.09 1.83 0 1.23 1.07 1.83 2.76 1.83 1.57 0 2.9-.45 3.86-1.1v-2.27z"/>
+          <path fill="#FF9900" d="M4.68 18.57c3.84 2.11 9.4 2.24 13.56.45.45-.19.52-.71.13-.97-.26-.19-.71-.06-.97.06-3.51 1.56-8.33 1.43-11.83-.39-.39-.19-.85.06-.52.52l-.37.33z"/>
+          <path fill="#FF9900" d="M19.1 16.63c-.26-.39-1.43-.26-1.95-.19-.19 0-.19.26 0 .39.78.45 1.89.71 2.21.39.39-.26.19-1.43-.26-1.89-.13-.13-.26-.06-.26.13.06.65-.13 1.63.26 1.17z"/>
         </svg>
       );
     case "Meta":
