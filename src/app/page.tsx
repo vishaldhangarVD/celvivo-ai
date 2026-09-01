@@ -98,14 +98,6 @@ const STATIC_TESTIMONIALS = [
     rating: 5
   },
   {
-    name: "SHUBHAM SOMWANSHI",
-    role: "FOUNDER & CEO",
-    company: "GOLDWINGS IT",
-    image: "https://picsum.photos/seed/person2/200/200",
-    text: "As a Founder & CEO, I use NexVoroAI’s with my students for aptitude and coding practice, resume analysis, and mock interviews. It has helped them overcome interview anxiety, improve their confidence and communication, and prepare better for real-world placements. It’s been incredibly valuable for their growth.",
-    rating: 5
-  },
-  {
     name: "ABHINAY CHAUHAN",
     role: "Full-Stack Software Engineer with AI/ML experience",
     company: "Microsoft",
@@ -327,7 +319,7 @@ export default function LandingPage() {
             initial={{ opacity: 0, y: 40 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
-            className="mt-[40px] mb-[60px] relative"
+            className="mt-[40px] mb-[24px] relative"
           >
             <div className="absolute -inset-24 bg-accent/5 rounded-full blur-[100px] pointer-events-none opacity-20" />
             
@@ -405,7 +397,7 @@ export default function LandingPage() {
       </section>
 
       {/* Success Stories Section */}
-      <section className="py-32 px-8 relative overflow-hidden">
+      <section className="pt-12 pb-32 px-8 relative overflow-hidden">
         <div className="container mx-auto max-w-7xl">
           <div className="text-center mb-20 space-y-4">
             <Badge className="bg-accent/20 text-accent border-none px-6 py-1.5 font-bold tracking-[0.4em] text-[10px] uppercase">Testimonials</Badge>
