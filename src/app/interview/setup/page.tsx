@@ -4,7 +4,6 @@ import { useState, useMemo, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import Navbar from '@/components/layout/Navbar';
-import NavigationControls from '@/components/NavigationControls';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -94,72 +93,68 @@ const CompanyLogo = ({ name, className }: { name: string, className?: string }) 
       );
     case "Microsoft":
       return (
-        <svg viewBox="0 0 23 23" className={className} style={{ width: size, height: size }} preserveAspectRatio="xMidYMid meet">
-          <path fill="#f35325" d="M1 1h10v10H1z"/><path fill="#81bc06" d="M12 1h10v10H12z"/><path fill="#05a6f0" d="M1 12h10v10H1z"/><path fill="#ffba08" d="M12 12h10v10H12z"/>
+        <svg viewBox="0 0 24 24" className={className} style={{ width: size, height: size }} preserveAspectRatio="xMidYMid meet">
+          <path fill="#f25022" d="M1 1h10.5v10.5H1z"/><path fill="#7fbb00" d="M12.5 1H23v10.5H12.5z"/><path fill="#00a4ef" d="M1 12.5h10.5V23H1z"/><path fill="#ffb900" d="M12.5 12.5H23V23H12.5z"/>
         </svg>
       );
     case "Amazon":
       return (
-        <svg viewBox="0 0 1024 1024" className={className} style={{ width: size, height: size }} preserveAspectRatio="xMidYMid meet">
-          <path fill="#FF9900" d="M836.7 646c-134.1 63.8-316.5 96.5-475.2 96.5-224.2 0-426.3-59.5-566-156.4-15.6-10.8-13.4-33.1 5.4-37.1 52.8-10.8 141.6 3.1 184.6 15 159.2 44 345 68.6 512.9 45.4 56.4-7.8 145.4-27.1 163.6-11.4 18.2 15.6 4.9 39.4-25.3 48z"/>
-          <path fill="#FF9900" d="M898.3 543.8c-23.7-30.8-121.2-34.9-158.4-25.1-13.7 3.5-12.8 16.9 2.5 19.3 50.8 7.8 135.5 13.5 152.1 43.1 16.6 29.6-10.5 111.4-33.1 154.5-9.1 17.5 7.8 28.5 21.6 14.8 45.8-45.7 85.1-134.1 15.3-206.6z"/>
+        <svg viewBox="0 0 24 24" className={className} style={{ width: size, height: size }} preserveAspectRatio="xMidYMid meet">
+          <path fill="#000" d="M12.6 3.9c-2.3 0-4.6.4-6.4 1.2-1.3.6-1.5 1.1-1.5 1.9 0 .8.5 1.3 1.5 1.3.4 0 .9-.1 1.4-.4.8-.4 1.9-.6 3.1-.6.7 0 1.4.1 1.9.3.9.3 1.2.7 1.2 1.5v1.2c-1.3-.1-3-.1-4.8.1-2.9.2-5.1 1.3-5.1 3.8 0 2.2 1.8 3.5 4.3 3.5 1.9 0 3.5-.8 4.7-2.3.2.7.7 1.3 1.9 1.3.8 0 1.6-.3 2.1-.8V12c0-5.1-2.8-8.1-7.4-8.1zm1.3 12.4c-.4.8-1.3 1.3-2.3 1.3-.9 0-1.6-.5-1.6-1.4 0-1.1 1-1.6 2.5-1.7 1-.1 1.4-.1 1.4-.1v1.9z"/><path fill="#FF9900" d="M4.6 20.2c4.4 2.4 10.3 2.5 14.8.5.5-.2.6-.8.2-1.1-.3-.2-.8-.1-1.1 0-4 1.8-9.3 1.7-13.3-.4-.4-.3-.9 0-.6.5z"/><path fill="#FF9900" d="M20 18.2c-.3-.4-1.6-.3-2.2-.2-.2.1-.2.3 0 .5.8.5 2.1.8 2.5.4.4-.3.2-1.6-.3-2.1-.1-.2-.3-.1-.3.1.1.7-.1 1.9.3 1.3z"/>
         </svg>
       );
     case "Meta":
       return (
         <svg viewBox="0 0 24 24" className={className} style={{ width: size, height: size }} preserveAspectRatio="xMidYMid meet">
-          <path fill="#0668E1" d="M15.2 7c-1.3 0-2.4.4-3.2 1.2L9.6 11c-.5.6-1.3.9-2.1.9-1.6 0-2.9-1.3-2.9-2.9S5.9 6.1 7.5 6.1c1 0 1.9.5 2.5 1.3l.5.7h2.8l-.6-.8c-1-1.3-2.6-2.1-4.3-2.1-3.2 0-5.8 2.6-5.8 5.8s2.6 5.8 5.8 5.8c1.3 0 2.4-.4 3.2-1.2l2.4-2.8c.5-.6 1.3-.9 2.1-.9 1.6 0 2.9 1.3 2.9 2.9s-1.3 2.9-2.9 2.9c-1 0-1.9-.5-2.5-1.3l-.5-.7h-2.8l.6.8c1 1.3 2.6 2.1 4.3 2.1 3.2 0 5.8-2.6 5.8-5.8S18.4 7 15.2 7z"/>
+          <path fill="#0668E1" d="M16.5 6.1c-1.3 0-2.5.5-3.4 1.4L11 9.6c-.6.6-1.4 1-2.3 1-1.8 0-3.3-1.4-3.3-3.3S6.8 4 8.6 4c1.1 0 2.1.5 2.8 1.4l.6.8h3.1l-.7-1C13.2 3.8 11.4 3 9.5 3 6 3 3.1 5.9 3.1 9.4s2.9 6.4 6.4 6.4c1.4 0 2.7-.5 3.6-1.3l2.6-3.1c.6-.6 1.4-1 2.3-1 1.8 0 3.3 1.4 3.3 3.3s-1.5 3.3-3.3 3.3c-1.1 0-2.1-.5-2.8-1.4l-.6-.8H11.4l.7 1c1.2 1.4 3 2.3 4.9 2.3 3.5 0 6.4-2.9 6.4-6.4s-3.4-6.4-6.9-6.4z"/>
         </svg>
       );
     case "Apple":
       return (
-        <svg viewBox="0 0 384 512" className={className} style={{ width: size, height: size }} preserveAspectRatio="xMidYMid meet">
-          <path fill="#FFFFFF" d="M318.7 268.7c-.2-36.7 16.4-64.4 50-84.8-18.8-26.9-47.2-41.7-84.7-44.6-35.5-2.8-74.3 20.7-88.5 20.7-15 0-49.4-19.7-76.4-19.7C63.3 141.2 4 184.8 4 273.5q0 39.3 14.4 81.2c12.8 36.7 59 126.7 107.2 125.2 25.2-.6 43-17.9 75.8-17.9 31.8 0 48.3 17.9 76.4 17.9 48.6-.7 90.4-82.5 102.6-119.3-65.2-31.2-79-114.7-77.7-112.7zm-14-159.2c35.8-43.5 35.8-85.1 35.8-85.1-40.4 1.5-81.8 28.5-103.8 62.1-23.7 34.6-23.7 85.1-23.7 85.1 41.5 2.2 76-18.6 91.7-62.1z"/>
+        <svg viewBox="0 0 24 24" className={className} style={{ width: size, height: size }} preserveAspectRatio="xMidYMid meet">
+          <path fill="currentColor" d="M17.05 20.28c-.98.95-2.05 1.78-3.36 1.78s-1.74-.75-3.4-.75-2.1.73-3.38.75c-1.28.02-2.35-.91-3.33-1.86-2.6-2.52-4.59-7.14-4.59-11.02 0-3.87 2-5.91 3.93-5.91 1.05 0 1.95.66 3.01.66 1.04 0 2.14-.73 3.35-.73 1.13 0 2.65.41 3.68 1.99-2.53 1.34-2.12 5.09.43 6.27-.85 1.98-1.95 3.94-3.34 4.82zM12.02 4.09c-.06-2.48 2.05-4.54 4.41-4.59.27 2.65-2.22 4.74-4.41 4.59z"/>
         </svg>
       );
     case "IBM":
       return (
-        <svg viewBox="0 0 32 32" className={className} style={{ width: size, height: size }} preserveAspectRatio="xMidYMid meet">
-          <path fill="#0062ff" d="M0 6h7v2H0zm9 0h7v2H9zm9 0h7v2H9zm9 0h7v2h-7zM0 10h7v2H0zm9 0h7v2H9zm9 0h7v2H9zm9 0h7v2h-7zM0 14h7v2H0zm9 0h7v2H9zm9 0h7v2H9zm9 0h7v2h-7zM0 18h7v2H0zm9 0h7v2H9zm9 0h7v2H9zm9 0h7v2h-7zM0 22h7v2H0zm9 0h7v2H9zm9 0h7v2H9zm9 0h7v2h-7zM0 26h7v2H0zm9 0h7v2H9zm9 0h7v2H9zm9 0h7v2h-7z"/>
+        <svg viewBox="0 0 24 24" className={className} style={{ width: size, height: size }} preserveAspectRatio="xMidYMid meet">
+          <path fill="#0062ff" d="M0 4h5.6v1.4H0zm6.8 0h5.6v1.4H6.8zm6.8 0H19.2v1.4h-5.6zm5.6 0H24v1.4h-1.6zM0 7h5.6v1.4H0zm6.8 0h5.6v1.4H6.8zm6.8 0H19.2v1.4h-5.6zm5.6 0H24v1.4h-1.6zM0 10h5.6v1.4H0zm6.8 0h5.6v1.4H6.8zm6.8 0H19.2v1.4h-5.6zm5.6 0H24v1.4h-1.6zM0 13h5.6v1.4H0zm6.8 0h5.6v1.4H6.8zm6.8 0H19.2v1.4h-5.6zm5.6 0H24v1.4h-1.6zM0 16h5.6v1.4H0zm6.8 0h5.6v1.4H6.8zm6.8 0H19.2v1.4h-5.6zm5.6 0H24v1.4h-1.6zM0 19h5.6v1.4H0zm6.8 0h5.6v1.4H6.8zm6.8 0H19.2v1.4h-5.6zm5.6 0H24v1.4h-1.6z"/>
         </svg>
       );
     case "Accenture":
       return (
-        <svg viewBox="0 0 256 256" className={className} style={{ width: size, height: size }} preserveAspectRatio="xMidYMid meet">
-          <path fill="#a100ff" d="M40 40l160 88L40 216V40z"/>
+        <svg viewBox="0 0 24 24" className={className} style={{ width: size, height: size }} preserveAspectRatio="xMidYMid meet">
+          <path fill="#A100FF" d="M1.5 2L18.5 12L1.5 22V2Z"/>
         </svg>
       );
     case "Deloitte":
       return (
-        <svg viewBox="0 0 256 50" className={className} style={{ width: size, height: size }} preserveAspectRatio="xMidYMid meet">
-          <circle cx="240" cy="35" r="10" fill="#86bc25"/>
-          <path fill="#FFFFFF" d="M10 5v40h25c15 0 25-10 25-20S50 5 35 5H10zm10 8h15c10 0 15 5 15 12s-5 12-15 12H20V13zM75 5v40h10V5h-10zm25 0v40h30V37h-20V26h18v-8h-18V13h20V5h-30zm45 0v40h10V5h-10zm25 0v40h30V37h-20V26h18v-8h-18V13h20V5h-30zm45 0v40h10V5h-10z"/>
+        <svg viewBox="0 0 24 24" className={className} style={{ width: size, height: size }} preserveAspectRatio="xMidYMid meet">
+          <path fill="currentColor" d="M1.5 5v14h3.5c1.9 0 3.4-.4 4.5-1.1 1.4-.9 2.1-2.4 2.1-4.4 0-1.6-.5-2.8-1.5-3.8-1-1-2.6-1.5-4.8-1.5H1.5zm1.5 1.5h1.7c1.7 0 2.8.3 3.6.9.7.6 1.1 1.6 1.1 2.9 0 1.6-.4 2.7-1.2 3.4-.8.7-2 1-3.6 1H3V6.5z"/><circle cx="21" cy="17.5" r="2.5" fill="#86bc25"/>
         </svg>
       );
     case "TCS":
       return (
-        <svg viewBox="0 0 100 60" className={className} style={{ width: size, height: size }} preserveAspectRatio="xMidYMid meet">
-          <path fill="#0054a6" d="M15 10h10v40H15V10zm15 0h25v10H30v5h20v10H30v5h25v10H30V10zm30 0h20v10H65v20h20v10H60V10z"/>
-          <path fill="#c21a30" d="M90 10c-5.5 0-10 4.5-10 10s4.5 10 10 10 10-4.5 10-10-4.5-10-10-10z"/>
+        <svg viewBox="0 0 24 24" className={className} style={{ width: size, height: size }} preserveAspectRatio="xMidYMid meet">
+          <path fill="#0054a6" d="M2.5 4h1.8v16H2.5V4zm2.7 0H8v1.8H5.2V9h2.3v1.8H5.2v3.2H8V16H5.2V4zm3.6 0h1.8v1.8h1.8V4h1.8v12h-1.8v-1.8h-1.8V16H8.8V4z"/><path fill="#c21a30" d="M20 6c-2.2 0-4 1.8-4 4s1.8 4 4 4 4-1.8 4-4-1.8-4-4-4z"/>
         </svg>
       );
     case "Infosys":
       return (
-        <svg viewBox="0 0 128 128" className={className} style={{ width: size, height: size }} preserveAspectRatio="xMidYMid meet">
-          <path fill="#007cc3" d="M0 0h128v128H0z"/>
-          <path fill="#FFFFFF" d="M20 20h20v20H20V20zm34 0h20v20H54V20zm34 0h20v20H88V20zM20 54h20v20H20V54zm34 0h20v20H54V54zm34 0h20v20H88V54zM20 88h20v20H20V88zm34 0h20v20H54V88zm34 0h20v20H88V88z"/>
+        <svg viewBox="0 0 24 24" className={className} style={{ width: size, height: size }} preserveAspectRatio="xMidYMid meet">
+          <path fill="#007cc3" d="M1 1h22v22H1V1zm2 2v18h18V3H3zm2 2h3v3H5V5zm4 0h3v3H9V5zm4 0h3v3h-3V5zm-8 4h3v3H5V9zm4 0h3v3H9V9zm4 0h3v3h-3V9zm-8 4h3v3H5v-3zm4 0h3v3H9v-3zm4 0h3v3h-3v-3z"/>
         </svg>
       );
     case "NVIDIA":
       return (
         <svg viewBox="0 0 24 24" className={className} style={{ width: size, height: size }} preserveAspectRatio="xMidYMid meet">
-          <path fill="#76B900" d="M23.2 11.5c-.1-3.6-2.5-6.7-6-7.8-1.5-.5-3-.6-4.5-.4-2.8.4-5.3 1.9-7 4.1-.4.5-.8 1.1-1.1 1.6-.2.4-.4.8-.6 1.3-.2.6-.3 1.2-.4 1.8 0 .4-.1.8-.1 1.2s.1.8.1 1.2c.1.6.2 1.1.4 1.7.1.4.3.7.4 1.1.2.5.5.9.8 1.3.1.2.3.4.4.6.1.1.2.2.3.3.4.4.8.8 1.3 1.1.2.1.3.2.5.3l.1.1.3.2c.7.4 1.5.7 2.4.9.4.1.8.2 1.3.2.4 0 .8.1 1.2.1s.8 0 1.2-.1c.6-.1 1.1-.2 1.7-.4.5-.2.9-.4 1.3-.7.1-.1.2-.1.3-.2.4-.3.8-.6 1.2-1 .3-.3.6-.7.8-1 .1-.1.1-.2.2-.3.4-.6.8-1.3 1-2 .1-.3.1-.6.2-.9.1-.5.1-1 .1-1.6 0-.3 0-.7-.1-1zm-10.9 6.2c-2.4 0-4.3-1.9-4.3-4.3s1.9-4.3 4.3-4.3 4.3 1.9 4.3 4.3-1.9 4.3-4.3 4.3zm0-7.2c-1.6 0-2.9 1.3-2.9 2.9s1.3 2.9 2.9 2.9 2.9-1.3 2.9-2.9-1.3-2.9-2.9-2.9z"/>
+          <path fill="#76B900" d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 17.5c-3.04 0-5.5-2.46-5.5-5.5s2.46-5.5 5.5-5.5 5.5 2.46 5.5 5.5-2.46 5.5-5.5 5.5z"/>
         </svg>
       );
     case "Oracle":
       return (
         <svg viewBox="0 0 24 24" className={className} style={{ width: size, height: size }} preserveAspectRatio="xMidYMid meet">
-          <path fill="#F80000" d="M12 4C5.373 4 0 9.373 0 16s5.373 12 12 12 12-5.373 12-12S18.627 4 12 4zm0 19.2c-3.976 0-7.2-3.224-7.2-7.2s3.224-7.2 7.2-7.2 7.2 3.224 7.2 7.2-3.224 7.2-7.2 7.2z"/>
+          <path fill="#F80000" d="M12 4C7.58 4 4 7.58 4 12s3.58 8 8 8 8-3.58 8-8-3.58-8-8-8zm0 14c-3.31 0-6-2.69-6-6s2.69-6 6-6 6 2.69 6 6-2.69 6-6 6z"/>
         </svg>
       );
     case "Salesforce":
@@ -183,7 +178,7 @@ const CompanyLogo = ({ name, className }: { name: string, className?: string }) 
     case "Intel":
       return (
         <svg viewBox="0 0 24 24" className={className} style={{ width: size, height: size }} preserveAspectRatio="xMidYMid meet">
-          <path fill="#0071C5" d="M12 2C5.373 2 0 7.373 0 14s5.373 12 12 12 12-5.373 12-12S18.627 2 12 2zm-4.5 18h-2V10h2v8zm3 0h-2v-8h2v8zm5-4.5h-3v4.5h-2V10h5v3.5z"/>
+          <path fill="#0071C5" d="M12 2C5.37 2 0 7.37 0 14s5.37 12 12 12 12-5.37 12-12S18.63 2 12 2zm-4.5 18h-2V10h2v8zm3 0h-2v-8h2v8zm5-4.5h-3v4.5h-2V10h5v3.5z"/>
         </svg>
       );
     case "SAP":
@@ -372,7 +367,6 @@ export default function InterviewSetupPage() {
     <div className="h-screen bg-[#050816] flex flex-col overflow-hidden relative">
       <div className="particles-bg" />
       <Navbar />
-      <NavigationControls />
 
       <main className="flex-1 container mx-auto px-6 pt-24 pb-4 overflow-hidden flex flex-col min-h-0">
         <div className="max-w-7xl mx-auto grid lg:grid-cols-12 gap-6 flex-1 min-h-0 w-full">
