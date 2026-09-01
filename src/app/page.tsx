@@ -541,20 +541,6 @@ export default function LandingPage() {
         .animate-light-streak {
           animation: light-streak 8s linear infinite;
         }
-        html {
-          height: auto !important;
-          overflow-y: scroll !important;
-          overflow-x: hidden !important;
-        }
-        body {
-          height: auto !important;
-          overflow: visible !important;
-          position: static !important;
-        }
-        #__next, body > div:first-child {
-          overflow: visible !important;
-          height: auto !important;
-        }
       `}</style>
     </div>
   );
