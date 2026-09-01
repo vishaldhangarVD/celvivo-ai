@@ -85,7 +85,7 @@ const STATIC_TESTIMONIALS = [
     name: "Prof. Rahul Patil",
     role: "FOUNDER & CEO",
     company: "Hruta Solutions Software company",
-    image: "https://picsum.photos/seed/person1/200/200",
+    image: "https://ui-avatars.com/api/?name=Rahul+Patil&background=7C3AED&color=fff&size=200&bold=true",
     text: "I was genuinely impressed by NexVoroAI’s technical depth. Its aptitude, coding assessments, resume analysis, and interview simulations go far beyond basic practice. The realistic challenges and meaningful feedback can truly help students bridge the gap between academic learning and real-world technical interviews.",
     rating: 5
   },
@@ -93,7 +93,7 @@ const STATIC_TESTIMONIALS = [
     name: "SHUBHAM SOMWANSHI",
     role: "FOUNDER & CEO",
     company: "GOLDWINGS IT",
-    image: "https://picsum.photos/seed/person2/200/200",
+    image: "https://ui-avatars.com/api/?name=Shubham+Somwanshi&background=06B6D4&color=fff&size=200&bold=true",
     text: "As a Founder & CEO, I use NexVoroAI’s with my students for aptitude and coding practice, resume analysis, and mock interviews. It has helped them overcome interview anxiety, improve their confidence and communication, and prepare better for real-world placements. It’s been incredibly valuable for their growth.",
     rating: 5
   },
@@ -101,7 +101,7 @@ const STATIC_TESTIMONIALS = [
     name: "ABHINAY CHAUHAN",
     role: "Full-Stack Software Engineer with AI/ML experience",
     company: "Microsoft",
-    image: "https://picsum.photos/seed/person3/200/200",
+    image: "https://ui-avatars.com/api/?name=Abhinay+Chauhan&background=F97316&color=fff&size=200&bold=true",
     text: "As a Full-Stack Software Engineer with AI/ML experience, I found NexVoroAI’s aptitude, coding, resume analysis, and interview assessments incredibly powerful and accurate. The real-world practice and detailed feedback make it genuinely useful for students preparing for technical careers.",
     rating: 5
   }
@@ -131,7 +131,7 @@ export default function LandingPage() {
       name: f.name,
       role: f.role,
       company: f.company,
-      image: f.photoURL || `https://picsum.photos/seed/${f.userId}/200/200`,
+      image: f.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(f.name || 'User')}&background=7C3AED&color=fff&size=200&bold=true`,
       text: f.feedback,
       rating: Math.max(0, Math.min(5, Number(f.rating) || 5))
     })) || [];
