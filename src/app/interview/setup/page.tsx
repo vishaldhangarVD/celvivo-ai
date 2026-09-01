@@ -398,7 +398,7 @@ export default function InterviewSetupPage() {
 
             <div className="space-y-4 flex-1 min-h-0 overflow-y-auto md:overflow-visible pr-2 custom-scrollbar">
               <div className="space-y-2">
-                <Label className="text-[9px] font-black uppercase tracking-[0.4em] text-white/40 ml-2">ORGANIZATION</Label>
+                <Label className="text-[9px] font-black uppercase tracking-[0.4em] text-white/40 ml-2">COMPANY</Label>
                 <Select value={company} onValueChange={setCompany}>
                   <SelectTrigger className="h-12 glass border-white/10 bg-transparent rounded-xl px-4 text-sm font-bold uppercase tracking-widest text-white">
                     <div className="flex items-center gap-3">
