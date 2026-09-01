@@ -165,7 +165,7 @@ export default function LandingPage() {
   if (authLoading) return <div className="min-h-screen bg-[#050816] flex items-center justify-center"><Loader2 className="w-12 h-12 text-accent animate-spin" /></div>;
 
   return (
-    <div className="flex flex-col min-h-screen relative overflow-x-hidden overflow-y-visible bg-[#050816]">
+    <div className="flex flex-col min-h-screen relative bg-[#050816]">
       <div className="particles-bg" />
       <div className="absolute top-[-10%] right-[-5%] w-[500px] h-[500px] bg-purple-600/10 rounded-full blur-[120px] pointer-events-none" />
       <div className="absolute bottom-[-10%] left-[-5%] w-[600px] h-[600px] bg-blue-600/10 rounded-full blur-[150px] pointer-events-none" />
