@@ -61,7 +61,7 @@ export default function FinalReportPage() {
         date: new Date().toLocaleDateString(),
         certId: interviewDoc.id?.substring(0, 20).toUpperCase()
       });
-      toast({ title: "Report Exported", description: "Your PDF dossier is ready." });
+      toast({ title: "Report Exported", description: "Your PDF report is ready." });
     } catch (e) {
       toast({ variant: "destructive", title: "Synthesis Error" });
     } finally {
@@ -87,9 +87,9 @@ export default function FinalReportPage() {
     return (
       <div className="h-screen flex flex-col items-center justify-center bg-[#050816]">
         <CircleAlert className="w-16 h-16 text-red-400 mb-6" />
-        <h2 className="text-2xl font-bold text-white">Result Data Not Found</h2>
+        <h2 className="text-2xl font-bold text-white">Interview Report Not Found</h2>
         <Link href="/dashboard" className="mt-8">
-          <Button variant="outline" className="rounded-xl font-bold uppercase tracking-widest text-[10px]">Return to Dashboard</Button>
+          <Button variant="outline" className="rounded-xl font-bold uppercase tracking-widest text-[10px]">Go to Dashboard</Button>
         </Link>
       </div>
     );
@@ -135,21 +135,21 @@ export default function FinalReportPage() {
             
             <div className="grid lg:grid-cols-12 gap-16 items-center">
               <div className="lg:col-span-4 text-center lg:text-left space-y-6">
-                <Badge className="bg-accent/20 text-accent border-none px-4 py-1 text-[10px] tracking-widest font-bold uppercase">Performance Audit</Badge>
-                <h1 className="text-6xl font-bold tracking-tighter text-premium leading-tight">{(interviewDoc as any).role}<br /><span className="text-gradient-purple">Report.</span></h1>
+                <Badge className="bg-accent/20 text-accent border-none px-4 py-1 text-[10px] tracking-widest font-bold uppercase">INTERVIEW RESULTS</Badge>
+                <h1 className="text-6xl font-bold tracking-tighter text-premium leading-tight">{(interviewDoc as any).role}</h1>
               </div>
 
               <div className="lg:col-span-8 flex flex-col md:flex-row items-center gap-12 lg:justify-end">
                 <div className="text-center">
                   <div className={`text-8xl font-bold tracking-tighter tabular-nums ${getScoreColor(feedback.overallScore)}`}>{formatScore(feedback.overallScore)}</div>
-                  <div className="text-[10px] uppercase tracking-[0.4em] text-muted-foreground font-bold mt-2">Overall Index</div>
+                  <div className="text-[10px] uppercase tracking-[0.4em] text-muted-foreground font-bold mt-2">Overall Score</div>
                 </div>
                 {feedback.interviewReadiness > 0 && (
                   <>
                     <div className="hidden md:block w-px h-24 bg-white/10" />
                     <div className="text-center">
                       <div className="text-6xl font-bold text-white tabular-nums">{feedback.interviewReadiness}%</div>
-                      <div className="text-[10px] uppercase tracking-[0.4em] text-accent font-bold mt-2">Readiness</div>
+                      <div className="text-[10px] uppercase tracking-[0.4em] text-accent font-bold mt-2">Interview Readiness</div>
                     </div>
                   </>
                 )}
@@ -172,12 +172,12 @@ export default function FinalReportPage() {
 
               <div className="space-y-4">
                 <div className="grid gap-3">
-                  <Button onClick={() => router.push('/dashboard')} className="h-16 rounded-2xl btn-premium flex gap-4 uppercase tracking-[0.3em] text-[10px] font-bold">
-                    <LayoutDashboard className="w-5 h-5" /> GO TO DASHBOARD
+                  <Button onClick={() => router.push('/interview/setup')} className="h-16 rounded-2xl btn-premium flex gap-4 uppercase tracking-[0.3em] text-[10px] font-bold">
+                    <Zap className="w-5 h-5" /> Start New Interview
                   </Button>
-                  <Button onClick={() => router.push('/')} className="h-16 rounded-2xl glass border-white/10 hover:bg-white/5 justify-start px-8 gap-4">
-                    <Home className="w-5 h-5 text-white/40" />
-                    <span className="text-[10px] font-bold uppercase tracking-widest">HOME</span>
+                  <Button onClick={() => router.push('/dashboard')} className="h-16 rounded-2xl glass border-white/10 hover:bg-white/5 justify-start px-8 gap-4">
+                    <LayoutDashboard className="w-5 h-5 text-white/40" />
+                    <span className="text-[10px] font-bold uppercase tracking-widest">Go to Dashboard</span>
                   </Button>
                 </div>
               </div>
@@ -187,7 +187,7 @@ export default function FinalReportPage() {
               {filteredMetrics.length > 0 && (
                 <Card className="premium-card bg-white/[0.01] border-white/5 p-10">
                   <h3 className="text-[10px] font-bold uppercase tracking-widest text-white/30 mb-10 flex items-center gap-2">
-                    <Cpu className="w-4 h-4 text-accent" /> Neural Capability Matrix
+                    <Cpu className="w-4 h-4 text-accent" /> INTERVIEW PERFORMANCE
                   </h3>
                   <div className="grid md:grid-cols-2 gap-x-16 gap-y-10">
                     {filteredMetrics.map((m, i) => (
@@ -215,7 +215,7 @@ export default function FinalReportPage() {
                 {aiFeedback.strongSkills && aiFeedback.strongSkills.length > 0 && (
                   <Card className="glass p-8 rounded-[2.5rem] border-accent/10 space-y-6">
                     <h3 className="text-accent text-lg font-bold flex items-center gap-3 uppercase tracking-tighter">
-                      <CircleCheck className="w-6 h-6" /> Strategic Strengths
+                      <CircleCheck className="w-6 h-6" /> Your Strengths
                     </h3>
                     <div className="space-y-4">
                       {aiFeedback.strongSkills.map((s: string, i: number) => (
@@ -229,7 +229,7 @@ export default function FinalReportPage() {
                 {aiFeedback.weakSkills && aiFeedback.weakSkills.length > 0 && (
                   <Card className="glass p-8 rounded-[2.5rem] border-red-500/10 space-y-6">
                     <h3 className="text-red-400 text-lg font-bold flex items-center gap-3 uppercase tracking-tighter">
-                      <CircleAlert className="w-6 h-6" /> Delta Gaps
+                      <CircleAlert className="w-6 h-6" /> Areas to Improve
                     </h3>
                     <div className="space-y-4">
                       {aiFeedback.weakSkills.map((w: string, i: number) => (
@@ -246,12 +246,12 @@ export default function FinalReportPage() {
                 <Card className="premium-card bg-accent/[0.02] border-accent/20 p-10 space-y-8">
                    <div className="flex items-center justify-between">
                       <div className="space-y-1">
-                         <h3 className="text-2xl font-bold tracking-tight">Growth Architecture</h3>
-                         <p className="text-[10px] font-bold uppercase tracking-widest text-white/30">AI-Generated Remediation Strategy</p>
+                         <h3 className="text-2xl font-bold tracking-tight">Personalized Learning Plan</h3>
+                         <p className="text-[10px] font-bold uppercase tracking-widest text-white/30">Recommended Learning Plan</p>
                       </div>
                       <Link href={`/roadmap/personalized/${docId}`}>
                          <Button className="h-14 px-8 btn-premium text-[10px] font-bold uppercase tracking-widest gap-3">
-                            Launch Roadmap <ChevronRight className="w-4 h-4" />
+                            View Learning Roadmap <ChevronRight className="w-4 h-4" />
                          </Button>
                       </Link>
                    </div>
@@ -259,7 +259,7 @@ export default function FinalReportPage() {
                       {topicsToStudy.length > 0 && (
                         <div className="p-6 glass rounded-2xl border-white/5 space-y-4">
                            <h4 className="text-xs font-black uppercase tracking-widest text-white/40 flex items-center gap-2">
-                              <Layers className="w-4 h-4 text-purple-400" /> Topics to Study
+                              <Layers className="w-4 h-4 text-purple-400" /> Topics to Improve
                            </h4>
                            <div className="flex flex-wrap gap-2">
                               {topicsToStudy.map((topic: string, i: number) => (
@@ -271,7 +271,7 @@ export default function FinalReportPage() {
                       {criticalGaps.length > 0 && (
                         <div className="p-6 glass rounded-2xl border-white/5 space-y-4">
                            <h4 className="text-xs font-black uppercase tracking-widest text-white/40 flex items-center gap-2">
-                              <BrainCircuit className="w-4 h-4 text-accent" /> Skill Gaps
+                              <BrainCircuit className="w-4 h-4 text-accent" /> Skills to Improve
                            </h4>
                            <div className="flex flex-wrap gap-2">
                               {criticalGaps.map((gap: string, i: number) => (
@@ -287,7 +287,7 @@ export default function FinalReportPage() {
               {validSummary && (
                 <Card className="glass p-10 rounded-[30px] border-white/5 bg-white/[0.01]">
                   <h3 className="text-xs font-bold uppercase tracking-widest text-accent mb-6 flex items-center gap-2">
-                    <Star className="w-4 h-4" /> AI Auditor Executive Summary
+                    <Star className="w-4 h-4" /> AI Interview Summary
                   </h3>
                   <p className="text-lg font-light leading-relaxed text-white/80 italic">
                     "{aiFeedback.performanceSummary}"
