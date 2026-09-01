@@ -21,7 +21,7 @@ import {
   Briefcase, 
   GraduationCap, 
   ArrowRight, 
-  Loader2,
+  Loader2, 
   ShieldCheck,
   Upload,
   Trash2,
@@ -30,7 +30,38 @@ import {
   Zap,
   ChevronRight,
   RotateCcw,
-  Layers
+  Layers,
+  Monitor,
+  Server,
+  BrainCircuit,
+  BarChart3,
+  Cpu,
+  GitBranch,
+  Cloud,
+  ShieldCheck as ShieldCheckIcon,
+  Palette,
+  Coffee,
+  Smartphone,
+  Apple,
+  Atom,
+  Hexagon,
+  FileJson,
+  Code,
+  Code2,
+  TestTube2,
+  Database,
+  Brain,
+  Settings,
+  Activity,
+  Network,
+  Compass,
+  UserPlus,
+  Link2,
+  Gamepad2,
+  MoreHorizontal,
+  Box,
+  Settings2,
+  SearchCode
 } from 'lucide-react';
 import { useUser, useFirestore, useDoc } from '@/firebase';
 import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
@@ -88,6 +119,50 @@ const ROLES = [
 
 const EXPERIENCE_LEVELS = ["Fresher", "0–1 Years", "1–3 Years", "3–5 Years", "5+ Years"];
 
+const RoleIcon = ({ role, className }: { role: string, className?: string }) => {
+  const iconProps = { className: cn("w-full h-full", className) };
+  const r = role.toLowerCase();
+
+  if (r.includes("software engineer")) return <Code2 {...iconProps} />;
+  if (r.includes("frontend")) return <Monitor {...iconProps} />;
+  if (r.includes("backend")) return <Server {...iconProps} />;
+  if (r.includes("full stack")) return <Layers {...iconProps} />;
+  if (r.includes("data scientist")) return <BrainCircuit {...iconProps} />;
+  if (r.includes("data analyst")) return <BarChart3 {...iconProps} />;
+  if (r.includes("machine learning")) return <Network {...iconProps} />;
+  if (r.includes("devops")) return <GitBranch {...iconProps} />;
+  if (r.includes("cloud")) return <Cloud {...iconProps} />;
+  if (r.includes("cyber security") || r.includes("information security")) return <ShieldCheckIcon {...iconProps} />;
+  if (r.includes("ui/ux")) return <Palette {...iconProps} />;
+  if (r.includes(".net")) return <Command {...iconProps} />;
+  if (r.includes("python")) return <SearchCode {...iconProps} />;
+  if (r.includes("java developer")) return <Coffee {...iconProps} />;
+  if (r.includes("mobile") || r.includes("android") || r.includes("ios")) return <Smartphone {...iconProps} />;
+  if (r.includes("react")) return <Atom {...iconProps} />;
+  if (r.includes("angular")) return <Hexagon {...iconProps} />;
+  if (r.includes("node.js")) return <FileJson {...iconProps} />;
+  if (r.includes("php")) return <Code {...iconProps} />;
+  if (r.includes("c++") || r.includes("c developer")) return <Code2 {...iconProps} />;
+  if (r.includes("golang")) return <Zap {...iconProps} />;
+  if (r.includes("qa engineer") || r.includes("automation test") || r.includes("sdet") || r.includes("software tester")) return <TestTube2 {...iconProps} />;
+  if (r.includes("data engineer") || r.includes("database")) return <Database {...iconProps} />;
+  if (r.includes("business intelligence")) return <BarChart3 {...iconProps} />;
+  if (r.includes("ai engineer") || r.includes("nlp")) return <Brain {...iconProps} />;
+  if (r.includes("mlops") || r.includes("site reliability")) return <Activity {...iconProps} />;
+  if (r.includes("systems engineer") || r.includes("system administrator")) return <Box {...iconProps} />;
+  if (r.includes("network")) return <Network {...iconProps} />;
+  if (r.includes("devsecops")) return <ShieldCheckIcon {...iconProps} />;
+  if (r.includes("architect")) return <Compass {...iconProps} />;
+  if (r.includes("it support")) return <Settings2 {...iconProps} />;
+  if (r.includes("consultant")) return <UserPlus {...iconProps} />;
+  if (r.includes("salesforce") || r.includes("sap")) return <Briefcase {...iconProps} />;
+  if (r.includes("embedded") || r.includes("firmware")) return <Cpu {...iconProps} />;
+  if (r.includes("blockchain")) return <Link2 {...iconProps} />;
+  if (r.includes("game developer")) return <Gamepad2 {...iconProps} />;
+  
+  return <MoreHorizontal {...iconProps} />;
+};
+
 const CompanyLogo = ({ name, className }: { name: string, className?: string }) => {
   const size = "100%";
   
@@ -110,9 +185,8 @@ const CompanyLogo = ({ name, className }: { name: string, className?: string }) 
     case "Amazon":
       return (
         <svg viewBox="0 0 24 24" className={className} style={{ width: size, height: size }} preserveAspectRatio="xMidYMid meet">
-          <path fill="#FF9900" d="M15.07 14.64c-1.35.91-3.32 1.4-5.28 1.4-2.84 0-4.88-1.23-4.88-3.41 0-2.31 2.21-3.32 5.16-3.41 1.8 0 3.4.15 4.54.34v.26c0-1.83-1.07-2.8-3.55-2.8-1.63 0-3.38.41-4.88 1.15l-.57-1.46c1.8-.91 4.14-1.31 6.09-1.31 4.14 0 5.86 2.02 5.86 5.8v5.86h-2.1v-2.42h-.39zm-.39-3.36c-1.01-.19-2.4-.29-3.83-.29-1.89 0-3.09.52-3.09 1.83 0 1.23 1.07 1.83 2.76 1.83 1.57 0 2.9-.45 3.86-1.1v-2.27z"/>
-          <path fill="#FF9900" d="M4.68 18.57c3.84 2.11 9.4 2.24 13.56.45.45-.19.52-.71.13-.97-.26-.19-.71-.06-.97.06-3.51 1.56-8.33 1.43-11.83-.39-.39-.19-.85.06-.52.52l-.37.33z"/>
-          <path fill="#FF9900" d="M19.1 16.63c-.26-.39-1.43-.26-1.95-.19-.19 0-.19.26 0 .39.78.45 1.89.71 2.21.39.39-.26.19-1.43-.26-1.89-.13-.13-.26-.06-.26.13.06.65-.13 1.63.26 1.17z"/>
+          <path fill="#000000" d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z"/>
+          <path fill="#FF9900" d="M15.93 13.56c-1.47.92-3.54 1.39-5.59 1.39-2.91 0-4.99-1.2-4.99-3.34 0-2.25 2.18-3.23 5.07-3.33 1.76-.05 3.33.15 4.45.34v.25c0-1.78-1.04-2.73-3.46-2.73-1.61 0-3.35.4-4.83 1.13l-.56-1.43c1.78-.89 4.09-1.27 6.01-1.27 4.09 0 5.8 1.98 5.8 5.67v5.7h-2.1v-2.38h-.4zm-.4-3.28c-1.03-.18-2.45-.28-3.92-.28-1.92 0-3.15.5-3.15 1.78 0 1.2.1 1.78 2.82 1.78 1.54 0 2.85-.43 3.82-1.08v-2.2z"/>
         </svg>
       );
     case "Meta":
@@ -133,16 +207,28 @@ const CompanyLogo = ({ name, className }: { name: string, className?: string }) 
           <path fill="#0062ff" d="M0 4h5.6v1.4H0zm6.8 0h5.6v1.4H6.8zm6.8 0H19.2v1.4h-5.6zm5.6 0H24v1.4h-1.6zM0 7h5.6v1.4H0zm6.8 0h5.6v1.4H6.8zm6.8 0H19.2v1.4h-5.6zm5.6 0H24v1.4h-1.6zM0 10h5.6v1.4H0zm6.8 0h5.6v1.4H6.8zm6.8 0H19.2v1.4h-5.6zm5.6 0H24v1.4h-1.6zM0 13h5.6v1.4H0zm6.8 0h5.6v1.4H6.8zm6.8 0H19.2v1.4h-5.6zm5.6 0H24v1.4h-1.6zM0 16h5.6v1.4H0zm6.8 0h5.6v1.4H6.8zm6.8 0H19.2v1.4h-5.6zm5.6 0H24v1.4h-1.6zM0 19h5.6v1.4H0zm6.8 0h5.6v1.4H6.8zm6.8 0H19.2v1.4h-5.6zm5.6 0H24v1.4h-1.6z"/>
         </svg>
       );
-    case "Accenture":
+    case "NVIDIA":
       return (
         <svg viewBox="0 0 24 24" className={className} style={{ width: size, height: size }} preserveAspectRatio="xMidYMid meet">
-          <path fill="#A100FF" d="M1.5 2L18.5 12L1.5 22V2Z"/>
+          <path fill="#76B900" d="M23.3 5.4c-1.8-1.5-4.1-2.4-6.6-2.4-5.3 0-9.6 4.3-9.6 9.6 0 5.3 4.3 9.6 9.6 9.6 2.5 0 4.8-.9 6.6-2.4l-1.4-1.4c-1.4 1.1-3.2 1.8-5.2 1.8-4.2 0-7.6-3.4-7.6-7.6s3.4-7.6 7.6-7.6c2 0 3.8.7 5.2 1.8l1.4-1.4zM16.7 6.4c-3.1 0-5.6 2.5-5.6 5.6s2.5 5.6 5.6 5.6c1.4 0 2.8-.5 3.8-1.4l-1.4-1.4c-.7.6-1.6.9-2.4.9-2 0-3.6-1.6-3.6-3.6s1.6-3.6 3.6-3.6c.8 0 1.7.3 2.4.9l1.4-1.4c-1-1-2.4-1.6-3.8-1.6z"/>
         </svg>
       );
-    case "Deloitte":
+    case "Adobe":
       return (
         <svg viewBox="0 0 24 24" className={className} style={{ width: size, height: size }} preserveAspectRatio="xMidYMid meet">
-          <path fill="currentColor" d="M1.5 5v14h3.5c1.9 0 3.4-.4 4.5-1.1 1.4-.9 2.1-2.4 2.1-4.4 0-1.6-.5-2.8-1.5-3.8-1-1-2.6-1.5-4.8-1.5H1.5zm1.5 1.5h1.7c1.7 0 2.8.3 3.6.9.7.6 1.1 1.6 1.1 2.9 0 1.6-.4 2.7-1.2 3.4-.8.7-2 1-3.6 1H3V6.5z"/><circle cx="21" cy="17.5" r="2.5" fill="#86bc25"/>
+          <path fill="#FF0000" d="M14.58 2.5l9.42 22h-6.28l-3.61-9.06h-4.32l3.61 9.06H4l9.42-22h1.16zM6.16 24.5H0V2.5h9.42L6.16 24.5z"/>
+        </svg>
+      );
+    case "Salesforce":
+      return (
+        <svg viewBox="0 0 24 24" className={className} style={{ width: size, height: size }} preserveAspectRatio="xMidYMid meet">
+          <path fill="#00A1E0" d="M23.7 13.9c-.1-1-.4-1.9-.9-2.7-1.3-2.3-3.8-3.4-6.3-3.1-1.3-3.2-4.5-5.2-8.1-5.2-3.8 0-7.2 2.3-8.6 5.8C-1.5 9.5-2.5 11.6-2.5 14c0 4.4 3.6 8 8 8h11c4.4 0 8-3.6 8-8-.1-.1-.2-.1-.8-.1z"/>
+        </svg>
+      );
+    case "Oracle":
+      return (
+        <svg viewBox="0 0 24 24" className={className} style={{ width: size, height: size }} preserveAspectRatio="xMidYMid meet">
+          <path fill="#F80000" d="M12 4C7.58 4 4 7.58 4 12s3.58 8 8 8 8-3.58 8-8-3.58-8-8-8zm0 14c-3.31 0-6-2.69-6-6s2.69-6 6-6 6 2.69 6 6-2.69 6-6 6z"/>
         </svg>
       );
     case "TCS":
@@ -157,102 +243,16 @@ const CompanyLogo = ({ name, className }: { name: string, className?: string }) 
           <path fill="#007cc3" d="M1 1h22v22H1V1zm2 2v18h18V3H3zm2 2h3v3H5V5zm4 0h3v3H9V5zm4 0h3v3h-3V5zm-8 4h3v3H5V9zm4 0h3v3H9V9zm4 0h3v3h-3V9zm-8 4h3v3H5v-3zm4 0h3v3H9v-3zm4 0h3v3h-3v-3z"/>
         </svg>
       );
-    case "NVIDIA":
+    case "Accenture":
       return (
         <svg viewBox="0 0 24 24" className={className} style={{ width: size, height: size }} preserveAspectRatio="xMidYMid meet">
-          <path fill="#76B900" d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 17.5c-3.04 0-5.5-2.46-5.5-5.5s2.46-5.5 5.5-5.5 5.5 2.46 5.5 5.5-2.46 5.5-5.5 5.5z"/>
+          <path fill="#A100FF" d="M1.5 2L18.5 12L1.5 22V2Z"/>
         </svg>
       );
-    case "Oracle":
+    case "Deloitte":
       return (
         <svg viewBox="0 0 24 24" className={className} style={{ width: size, height: size }} preserveAspectRatio="xMidYMid meet">
-          <path fill="#F80000" d="M12 4C7.58 4 4 7.58 4 12s3.58 8 8 8 8-3.58 8-8-3.58-8-8-8zm0 14c-3.31 0-6-2.69-6-6s2.69-6 6-6 6 2.69 6 6-2.69 6-6 6z"/>
-        </svg>
-      );
-    case "Salesforce":
-      return (
-        <svg viewBox="0 0 24 24" className={className} style={{ width: size, height: size }} preserveAspectRatio="xMidYMid meet">
-          <path fill="#00A1E0" d="M23.7 13.9c-.1-1-.4-1.9-.9-2.7-1.3-2.3-3.8-3.4-6.3-3.1-1.3-3.2-4.5-5.2-8.1-5.2-3.8 0-7.2 2.3-8.6 5.8C-1.5 9.5-2.5 11.6-2.5 14c0 4.4 3.6 8 8 8h11c4.4 0 8-3.6 8-8-.1-.1-.2-.1-.8-.1z"/>
-        </svg>
-      );
-    case "Adobe":
-      return (
-        <svg viewBox="0 0 24 24" className={className} style={{ width: size, height: size }} preserveAspectRatio="xMidYMid meet">
-          <path fill="#FF0000" d="M14.58 2.5l9.42 22h-6.28l-3.61-9.06h-4.32l3.61 9.06H4l9.42-22h1.16zM6.16 24.5H0V2.5h9.42L6.16 24.5z"/>
-        </svg>
-      );
-    case "Cisco":
-      return (
-        <svg viewBox="0 0 24 24" className={className} style={{ width: size, height: size }} preserveAspectRatio="xMidYMid meet">
-          <path fill="#00BCEB" d="M3 14h2v6H3zm4-4h2v10H7zm4-4h2v14h-2zm4 0h2v14h-2zm4 4h2v10h-2zm4 4h2v6h-2z"/>
-        </svg>
-      );
-    case "Intel":
-      return (
-        <svg viewBox="0 0 24 24" className={className} style={{ width: size, height: size }} preserveAspectRatio="xMidYMid meet">
-          <path fill="#0071C5" d="M12 2C5.37 2 0 7.37 0 14s5.37 12 12 12 12-5.37 12-12S18.63 2 12 2zm-4.5 18h-2V10h2v8zm3 0h-2v-8h2v8zm5-4.5h-3v4.5h-2V10h5v3.5z"/>
-        </svg>
-      );
-    case "SAP":
-      return (
-        <svg viewBox="0 0 24 24" className={className} style={{ width: size, height: size }} preserveAspectRatio="xMidYMid meet">
-          <path fill="#008FD3" d="M0 6h24v12H0z"/>
-          <path fill="#FFFFFF" d="M4 15h3l1-3h5l1 3h3L10 8h-1L4 15zm6-5l1.5-4 1.5 4h-3z"/>
-        </svg>
-      );
-    case "HCLTech":
-      return (
-        <svg viewBox="0 0 24 24" className={className} style={{ width: size, height: size }} preserveAspectRatio="xMidYMid meet">
-          <path fill="#005696" d="M2 6h4v5h4V6h4v12h-4v-4H6v4H2V6zm14 0h4v12h-4V6z"/>
-        </svg>
-      );
-    case "Tech Mahindra":
-      return (
-        <svg viewBox="0 0 24 24" className={className} style={{ width: size, height: size }} preserveAspectRatio="xMidYMid meet">
-          <path fill="#E31E24" d="M2 6h20l-3 3H5v4h14l-3 3H5v6H2V6z"/>
-        </svg>
-      );
-    case "LTIMindtree":
-      return (
-        <svg viewBox="0 0 24 24" className={className} style={{ width: size, height: size }} preserveAspectRatio="xMidYMid meet">
-          <path fill="#F05A28" d="M12 2l8 8-8 8-8-8 8-8zm0 4l-4 4 4 4 4-4-4-4z"/>
-        </svg>
-      );
-    case "Mphasis":
-      return (
-        <svg viewBox="0 0 24 24" className={className} style={{ width: size, height: size }} preserveAspectRatio="xMidYMid meet">
-          <path fill="#005A9C" d="M4 6l8 6 8-6v12l-8-6-8 6V6z"/>
-        </svg>
-      );
-    case "Zoho":
-      return (
-        <svg viewBox="0 0 24 24" className={className} style={{ width: size, height: size }} preserveAspectRatio="xMidYMid meet">
-          <rect fill="#F44336" x="2" y="2" width="9" height="9"/><rect fill="#4CAF50" x="13" y="2" width="9" height="9"/><rect fill="#2196F3" x="2" y="13" width="9" height="9"/><rect fill="#FFEB3B" x="13" y="13" width="9" height="9"/>
-        </svg>
-      );
-    case "Freshworks":
-      return (
-        <svg viewBox="0 0 24 24" className={className} style={{ width: size, height: size }} preserveAspectRatio="xMidYMid meet">
-          <path fill="#00A1E0" d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 16c-3.31 0-6-2.69-6-6s2.69-6 6-6 6 2.69 6 6-2.69 6-6 6z"/>
-        </svg>
-      );
-    case "Wipro":
-      return (
-        <svg viewBox="0 0 24 24" className={className} style={{ width: size, height: size }} preserveAspectRatio="xMidYMid meet">
-          <circle cx="12" cy="12" r="10" fill="none" stroke="#7C3AED" strokeWidth="2" strokeDasharray="2 2"/>
-          <circle cx="12" cy="12" r="6" fill="#7C3AED"/>
-        </svg>
-      );
-    case "Cognizant":
-      return (
-        <svg viewBox="0 0 24 24" className={className} style={{ width: size, height: size }} preserveAspectRatio="xMidYMid meet">
-          <path fill="#0033A0" d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10c2.76 0 5.26-1.12 7.07-2.93l-2.83-2.83C15.02 17.46 13.58 18 12 18c-3.31 0-6-2.69-6-6s2.69-6 6-6c1.58 0 3.02.54 4.24 1.76l2.83-2.83C17.26 3.12 14.76 2 12 2z"/>
-        </svg>
-      );
-    case "Capgemini":
-      return (
-        <svg viewBox="0 0 24 24" className={className} style={{ width: size, height: size }} preserveAspectRatio="xMidYMid meet">
-          <path fill="#0070AD" d="M12 2L4 12l8 8 8-10-8-8z"/>
+          <path fill="currentColor" d="M1.5 5v14h3.5c1.9 0 3.4-.4 4.5-1.1 1.4-.9 2.1-2.4 2.1-4.4 0-1.6-.5-2.8-1.5-3.8-1-1-2.6-1.5-4.8-1.5H1.5zm1.5 1.5h1.7c1.7 0 2.8.3 3.6.9.7.6 1.1 1.6 1.1 2.9 0 1.6-.4 2.7-1.2 3.4-.8.7-2 1-3.6 1H3V6.5z"/><circle cx="21" cy="17.5" r="2.5" fill="#86bc25"/>
         </svg>
       );
     default:
@@ -427,12 +427,22 @@ export default function InterviewSetupPage() {
                 <Label className="text-[9px] font-black uppercase tracking-[0.4em] text-white/40 ml-2">JOB ROLE</Label>
                 <Select value={role} onValueChange={setRole}>
                   <SelectTrigger className="h-12 glass border-white/10 bg-transparent rounded-xl px-4 text-sm font-bold uppercase tracking-widest text-white">
-                    <SelectValue placeholder="Select Job Role" />
+                    <div className="flex items-center gap-3">
+                      <div className="w-5 h-5 flex items-center justify-center text-accent">
+                        <RoleIcon role={role} />
+                      </div>
+                      <SelectValue placeholder="Select Job Role" />
+                    </div>
                   </SelectTrigger>
                   <SelectContent className="glass border-white/10 bg-[#0b0e1a] text-white">
                     {ROLES.map(r => (
                       <SelectItem key={r} value={r}>
-                        <SelectItemText>{r}</SelectItemText>
+                        <div className="flex items-center gap-3">
+                          <div className="w-5 h-5 flex items-center justify-center text-accent/60 group-hover:text-accent">
+                            <RoleIcon role={r} />
+                          </div>
+                          <SelectItemText>{r}</SelectItemText>
+                        </div>
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -473,6 +483,8 @@ export default function InterviewSetupPage() {
                            <div className="w-4 h-4 flex items-center justify-center">
                              <CompanyLogo name={item.val} />
                            </div>
+                         ) : item.label === "Job Role" ? (
+                           <RoleIcon role={item.val} className="w-4 h-4" />
                          ) : <item.icon className="w-4 h-4" />}
                        </div>
                        <div>
