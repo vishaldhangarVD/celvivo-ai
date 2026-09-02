@@ -92,7 +92,8 @@ export default function CertificateTemplate({
             <div className="w-[250px] text-center">
               <img src="/certificate-signature.png" alt="Signature" className="h-14 w-auto mx-auto object-contain block" />
               <div className="w-full h-[1px] bg-[#d8b374]/35 mt-2" />
-              <div className="text-[9px] tracking-widest text-[#8b8a94] uppercase mt-1.5 font-mono">Founder & CEO, Nexvoro AI</div>
+              <div className="text-[13px] font-bold tracking-widest text-[#d8b374] uppercase mt-1.5">Vishal Dhangar</div>
+              <div className="text-[9px] tracking-widest text-[#8b8a94] uppercase mt-1 font-mono">Founder & CEO, Nexvoro AI</div>
             </div>
           </div>
         </div>
