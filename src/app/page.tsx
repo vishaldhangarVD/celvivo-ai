@@ -107,6 +107,27 @@ const STATIC_TESTIMONIALS = [
   }
 ];
 
+// Variants for staggered animations
+const containerVariants = {
+  hidden: { opacity: 0 },
+  visible: {
+    opacity: 1,
+    transition: {
+      staggerChildren: 0.1,
+      delayChildren: 0.2
+    }
+  }
+};
+
+const itemVariants = {
+  hidden: { opacity: 0, y: 20 },
+  visible: { 
+    opacity: 1, 
+    y: 0,
+    transition: { duration: 0.5, ease: "easeOut" }
+  }
+};
+
 export default function LandingPage() {
   const router = useRouter();
   const db = useFirestore();
@@ -366,14 +387,17 @@ export default function LandingPage() {
                 <div className="absolute inset-y-0 right-0 w-24 bg-gradient-to-l from-[#050816]/50 to-transparent z-10" />
               </div>
 
-              <div className="mt-12 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 relative z-10">
+              <motion.div 
+                variants={containerVariants}
+                initial="hidden"
+                whileInView="visible"
+                viewport={{ once: true, margin: "-50px" }}
+                className="mt-12 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 relative z-10"
+              >
                 {TRUST_CARDS.map((card, i) => (
                   <motion.div
                     key={i}
-                    initial={{ opacity: 0, y: 20 }}
-                    whileInView={{ opacity: 1, y: 0 }}
-                    viewport={{ once: true }}
-                    transition={{ delay: i * 0.1, duration: 0.5 }}
+                    variants={itemVariants}
                     whileHover={{ translateY: -8, scale: 1.03 }}
                     className="glass rounded-[18px] p-6 border-cyan-500/20 bg-white/[0.02] shadow-[0_0_30px_rgba(34,211,238,0.05)] hover:shadow-[0_0_40px_rgba(34,211,238,0.15)] transition-all duration-300 group/card"
                   >
@@ -384,7 +408,7 @@ export default function LandingPage() {
                     <p className="text-[11px] text-white/50 leading-relaxed font-medium">{card.subtitle}</p>
                   </motion.div>
                 ))}
-              </div>
+              </motion.div>
             </Card>
 
             <div className="mt-6 text-center">
@@ -410,20 +434,23 @@ export default function LandingPage() {
             </div>
           </div>
 
-          <div className="grid md:grid-cols-3 gap-8">
+          <motion.div 
+            variants={containerVariants}
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true, margin: "-100px" }}
+            className="grid md:grid-cols-3 gap-8"
+          >
             {allTestimonials.map((t, i) => (
               <motion.div
                 key={i}
-                initial={{ opacity: 0, y: 30 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ delay: i * 0.1 }}
+                variants={itemVariants}
               >
                 <Card className="glass p-10 rounded-[2.5rem] border-white/5 bg-white/[0.01] hover:bg-white/[0.03] transition-all h-full flex flex-col justify-between group">
                   <div className="space-y-6">
                     <div className="flex gap-1">
                       {Array.from({ length: t.rating }).map((_, idx) => (
-                        <Star key={idx} className="w-4 h-4 text-yellow-500 fill-current" />
+                        <Star key={idx} className="w-4 h-4 text-yellow-500 fill-yellow-400" />
                       ))}
                     </div>
                     <p className="text-white/80 font-light leading-relaxed text-lg italic">"{t.text}"</p>
@@ -431,7 +458,13 @@ export default function LandingPage() {
                   
                   <div className="pt-8 mt-8 border-t border-white/5 flex items-center gap-4">
                     <div className="relative w-12 h-12 rounded-full overflow-hidden border-2 border-accent/20">
-                      <Image src={t.image} alt={t.name} fill className="object-cover" />
+                      <Image 
+                        src={t.image} 
+                        alt={t.name} 
+                        fill 
+                        className="object-cover" 
+                        sizes="48px"
+                      />
                     </div>
                     <div>
                       <p className="text-sm font-bold text-white uppercase tracking-widest">{t.name}</p>
@@ -441,7 +474,7 @@ export default function LandingPage() {
                 </Card>
               </motion.div>
             ))}
-          </div>
+          </motion.div>
         </div>
       </section>
 

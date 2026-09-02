@@ -128,7 +128,9 @@ export default function AboutPage() {
                     alt="Vinay Dange - Founder & CEO"
                     fill
                     className="object-cover"
+                    sizes="(max-width: 768px) 192px, 256px"
                     data-ai-hint="professional portrait"
+                    priority
                   />
                   {/* Subtle glass overlay on image */}
                   <div className="absolute inset-0 bg-gradient-to-t from-[#050816]/40 via-transparent to-transparent" />
