@@ -1,5 +1,5 @@
 /**
- * @fileOverview Nexvoro AI Master Question Data (v31.0 - Audited Nodes, 13 Languages).
+ * @fileOverview Nexvoro AI Master Question Data (v32.0 - Fixed Batch 7 Stubs).
  * A high-fidelity repository of coding challenges across all difficulty tiers.
  */
 
@@ -211,11 +211,11 @@ export const MASTER_QUESTIONS: CodingQuestion[] = [
       cpp: "#include <iostream>\n#include <vector>\n#include <algorithm>\n\nusing namespace std;\n\nint main() {\n    int n;\n    if(!(cin >> n)) return 0;\n    vector<int> nums(n);\n    for(int i=0; i<n; i++) cin >> nums[i];\n    // Write your logic here\n    return 0;\n}",
       c: "#include <stdio.h>\n#include <stdlib.h>\n\nint main() {\n    int n;\n    if(scanf(\"%d\", &n) != 1) return 0;\n    int *nums = (int*)malloc(n * sizeof(int));\n    for(int i=0; i<n; i++) scanf(\"%d\", &nums[i]);\n    // Write your logic here\n    free(nums);\n    return 0;\n}",
       csharp: "using System;\n\nclass Solution {\n    static void Main() {\n        int n = int.Parse(Console.ReadLine());\n        string[] p = Console.ReadLine().Split();\n        int[] nums = new int[n];\n        for(int i=0; i<n; i++) nums[i] = int.Parse(p[i]);\n        // Write your logic here\n    }\n}",
-      go: "package main\n\nimport \"fmt\"\n\nfunc main() {\n    var n int\n    fmt.Scan(&n)\n    nums := make([]int, n)\n    for i := 0; i < n; i++ { fmt.Scan(&nums[i]) }\n    // Write your logic here\n}",
-      rust: "use std::io::{self, Read};\n\nfn main() {\n    let mut input = String::new();\n    io::stdin().read_to_string(&mut input).unwrap();\n    let mut parts = input.split_whitespace();\n    let n: usize = parts.next().unwrap().parse().unwrap();\n    // Write your logic here\n}",
-      kotlin: "import java.util.Scanner\n\nfun main(args: Array<String>) {\n    val sc = Scanner(System.`in`)\n    if(!sc.hasNextInt()) return\n    val n = sc.nextInt()\n    val nums = IntArray(n)\n    for(i in 0 until n) nums[i] = sc.nextInt()\n    // Write your logic here\n}",
-      php: "<?php\n$input = preg_split('/\\s+/', trim(file_get_contents('php://stdin')));\n$n = $input[0];\n$nums = array_slice($input, 1);\n// Write your logic here\n?>",
-      swift: "import Foundation\n\nif let line1 = readLine(), let n = Int(line1) {\n    if let line2 = readLine()?.split(separator: \" \") {\n        let nums = line2.map { Int($0)! }\n        // Write your logic here\n    }\n}",
+      go: "package main\nimport \"fmt\"\nfunc main() {\n    var n int\n    fmt.Scan(&n)\n    h := make([]int, n)\n    for i := 0; i < n; i++ { fmt.Scan(&h[i]) }\n    // Write your logic here\n}",
+      rust: "use std::io; fn main() { }",
+      kotlin: "import java.util.Scanner\nfun main() { }",
+      php: "<?php // Write logic here ?>",
+      swift: "import Foundation",
       ruby: "n = gets.to_i\nnums = gets.split.map(&:to_i)\n# Write your logic here"
     },
     hiddenTestCases: [
@@ -611,12 +611,12 @@ export const MASTER_QUESTIONS: CodingQuestion[] = [
       cpp: "#include <iostream>\n#include <vector>\n\nusing namespace std;\n\nint main() {\n    int n;\n    if(!(cin >> n)) return 0;\n    vector<int> nums(n);\n    for(int i=0; i<n; i++) cin >> nums[i];\n    // Write your logic here\n    return 0;\n}",
       c: "#include <stdio.h>\n#include <stdlib.h>\n\nint main() {\n    int n;\n    if(scanf(\"%d\", &n) != 1) return 0;\n    int *nums = (int*)malloc(n * sizeof(int));\n    for(int i=0; i<n; i++) scanf(\"%d\", &nums[i]);\n    // Write your logic here\n    return 0;\n}",
       csharp: "using System;\n\nclass Solution {\n    static void Main(string[] args) {\n        int n = int.Parse(Console.ReadLine());\n        string[] p = Console.ReadLine().Split();\n        int[] nums = new int[n];\n        for(int i=0; i<n; i++) nums[i] = int.Parse(p[i]);\n        // Write your logic here\n    }\n}",
-      go: "package main\n\nimport \"fmt\"\n\nfunc main() {\n    var n int\n    fmt.Scan(&n)\n    nums := make([]int, n)\n    for i := 0; i < n; i++ { fmt.Scan(&nums[i]) }\n    // Write your logic here\n}",
-      rust: "use std::io::{self, Read};\n\nfn main() {\n    let mut input = String::new();\n    io::stdin().read_to_string(&mut input).unwrap();\n    let mut parts = input.split_whitespace();\n    if let Some(ns) = parts.next() {\n        let n: usize = ns.parse().unwrap();\n        let nums: Vec<i32> = parts.map(|s| s.parse().unwrap()).collect();\n        // Write your logic here\n    }\n}",
-      kotlin: "import java.util.Scanner\n\nfun main(args: Array<String>) {\n    val sc = Scanner(System.`in`)\n    if(!sc.hasNextInt()) return\n    val n = sc.nextInt()\n    val nums = IntArray(n)\n    for(i in 0 until n) nums[i] = sc.nextInt()\n    // Write your logic here\n}",
-      php: "<?php\n$input = preg_split('/\\s+/', trim(file_get_contents('php://stdin')));\n$n = $input[0];\n$nums = array_slice($input, 1);\n// Write your logic here\n?>",
-      swift: "import Foundation\n\nif let line1 = readLine(), let n = Int(line1) {\n    if let line2 = readLine()?.split(separator: \" \") {\n        let nums = line2.map { Int($0)! }\n        // Write your logic here\n    }\n}",
-      ruby: "n = gets.to_i\nnums = gets.split.map(&:to_i)\n# Write your logic here"
+      go: "package main\nimport \"fmt\"\nfunc main() {\n    var n int\n    fmt.Scan(&n)\n    h := make([]int, n)\n    for i := 0; i < n; i++ { fmt.Scan(&h[i]) }\n    // Write your logic here\n}",
+      rust: "use std::io; fn main() { }",
+      kotlin: "import java.util.Scanner\nfun main() { }",
+      php: "<?php // Write logic here ?>",
+      swift: "import Foundation",
+      ruby: "n = gets.to_i\nh = gets.split.map(&:to_i)"
     },
     hiddenTestCases: [
       { input: "5\n-1 1 0 -3 3", output: "0 0 9 0 0" },
@@ -1004,7 +1004,7 @@ export const MASTER_QUESTIONS: CodingQuestion[] = [
     sampleOutput: "10",
     explanation: "The largest rectangle is formed by bars 5 and 6, with area = 5 * 2 = 10.",
     starterCode: {
-      python: "import sys\ndef largest_rectangle_brute(heights):\n    # BRUTE FORCE O(n^2) - REWRITE TO O(n) using Stack\n    n = len(heights)\n    max_area = 0\n    for i in range(n):\n        min_h = heights[i]\n        for j in range(i, n):\n            min_h = min(min_h, heights[j])\n            max_area = max(max_area, min_h * (j - i + 1))\n    return max_area\n\ndef solution():\n    data = sys.stdin.read().split()\n    if not data: return\n    n = int(data[0])\n    h = list(map(int, data[1:]))\n    print(largest_rectangle_brute(h))\nsolution()",
+      python: "import sys\ndef largest_rectangle_brute(heights):\n    # BRUTE FORCE O(n^2) - REWRITE TO O(n) using Stack\n    n = len(heights)\n    max_area = 0\n    for i in range(n):\n        min_h = heights[i]\n        for j in range(i, n):\n            min_h = min(min_h, heights[j])\n            max_area = max(max_area, min_h * (j - i + 1))\n    return max_area\n\ndef solution():\n    data = sys.stdin.read().split()\n    if not input_data: return\n    n = int(data[0])\n    h = list(map(int, data[1:]))\n    print(largest_rectangle_brute(h))\nsolution()",
       java: "import java.util.*;\npublic class Main {\n    public static int solveBrute(int[] h) {\n        // Brute force provided. Optimize to O(n)!\n        int max = 0;\n        for(int i=0; i<h.length; i++) {\n            int min = h[i];\n            for(int j=i; j<h.length; j++) {\n                min = Math.min(min, h[j]);\n                max = Math.max(max, min * (j - i + 1));\n            }\n        }\n        return max;\n    }\n    public static void main(String[] args) {\n        Scanner sc = new Scanner(System.in);\n        int n = sc.nextInt();\n        int[] h = new int[n];\n        for(int i=0; i<n; i++) h[i] = sc.nextInt();\n        System.out.println(solveBrute(h));\n    }\n}",
       javascript: "const fs = require('fs');\nfunction solve(h) {\n    // OPTIMIZE: Currently brute force. Change to O(n).\n    let max = 0;\n    for(let i=0; i<h.length; i++) {\n        let min = h[i];\n        for(let j=i; j<h.length; j++) {\n            min = Math.min(min, h[j]);\n            max = Math.max(max, min * (j - i + 1));\n        }\n    }\n    return max;\n}\n// solve logic...",
       typescript: "import * as fs from 'fs'; // solve logic here...",
@@ -1215,7 +1215,7 @@ export const MASTER_QUESTIONS: CodingQuestion[] = [
       rust: "struct LRUCache { }",
       kotlin: "class LRUCache { }",
       php: "<?php class LRUCache { } ?>",
-      swift: "class LRUCache { }",
+      swift: "class MinStack { }",
       ruby: "class LRUCache; end"
     },
     hiddenTestCases: [
@@ -1251,11 +1251,11 @@ export const MASTER_QUESTIONS: CodingQuestion[] = [
       cpp: "#include <iostream>\n#include <vector>\n#include <algorithm>\nusing namespace std;\nint main() {\n    int n; cin >> n;\n    vector<int> nums(n); for(int i=0; i<n; i++) cin >> nums[i];\n    // Write your logic here\n    return 0;\n}",
       c: "#include <stdio.h>\n#include <limits.h>\nint main() {\n    int n; scanf(\"%d\", &n);\n    // Write your logic here\n    return 0;\n}",
       csharp: "using System;\nclass Solution {\n    static void Main() {\n        int n = int.Parse(Console.ReadLine());\n        string[] p = Console.ReadLine().Split();\n        // Write logic here\n    }\n}",
-      go: "package main\nimport \"fmt\"\nfunc main() {\n    var n int\n    fmt.Scan(&n)\n    // Write logic here\n}",
-      rust: "use std::io; fn main() { }",
-      kotlin: "fun main() { }",
-      php: "<?php ?>",
-      swift: "import Foundation",
+      go: "package main\nimport \"fmt\"\nfunc main() {\n    var n int\n    fmt.Scan(&n)\n    // Write your logic here\n}",
+      rust: "use std::io::{self, BufRead};\n\nfn solve() {\n    let stdin = io::stdin();\n    let mut lines = stdin.lock().lines();\n    if let Some(Ok(line)) = lines.next() {\n        let n: usize = line.trim().parse().unwrap();\n        if let Some(Ok(line2)) = lines.next() {\n            let nums: Vec<i32> = line2.split_whitespace().map(|s| s.parse().unwrap()).collect();\n            // Write your logic here\n        }\n    }\n}\n\nfn main() {\n    solve();\n}",
+      kotlin: "import java.util.Scanner\n\nfun main(args: Array<String>) {\n    val sc = Scanner(System.`in`)\n    if (!sc.hasNextInt()) return\n    val n = sc.nextInt()\n    val nums = IntArray(n)\n    for (i in 0 until n) {\n        nums[i] = sc.nextInt()\n    }\n    // Write your logic here\n}",
+      php: "<?php\n$stdin = fopen('php://stdin', 'r');\n$n = (int)trim(fgets($stdin));\n$line = fgets($stdin);\nif (!$line) exit;\n$nums = array_map('intval', explode(' ', trim($line)));\n// Write your logic here\n?>",
+      swift: "import Foundation\n\nif let line1 = readLine(), let n = Int(line1) {\n    if let line2 = readLine() {\n        let nums = line2.split(separator: \" \").map { Int($0)! }\n        // Write your logic here\n    }\n}",
       ruby: "n = gets.to_i; nums = gets.split.map(&:to_i)"
     },
     hiddenTestCases: [
@@ -1290,12 +1290,12 @@ export const MASTER_QUESTIONS: CodingQuestion[] = [
       typescript: "import * as fs from 'fs';\nfunction solve() {\n    const n = fs.readFileSync(0, 'utf8').trim();\n    // Write your logic here\n}\nsolve();",
       cpp: "#include <iostream>\nusing namespace std;\nint main() {\n    int n; if(!(cin >> n)) return 0;\n    // Write your logic here\n    return 0;\n}",
       c: "#include <stdio.h>\nint main() {\n    int n; if(scanf(\"%d\", &n) != 1) return 0;\n    // Write your logic here\n    return 0;\n}",
-      csharp: "using System;\nclass Solution {\n    static void Main() {\n        string s = Console.ReadLine();\n        if(string.IsNullOrEmpty(s)) return;\n        // Write logic here\n    }\n}",
-      go: "package main\nimport \"fmt\"\nfunc main() {\n    var n int\n    fmt.Scan(&n)\n    // Write logic here\n}",
-      rust: "use std::io; fn main() { }",
-      kotlin: "fun main() { }",
-      php: "<?php ?>",
-      swift: "import Foundation",
+      csharp: "using System;\nclass Solution {\n    static void Main() {\n        string s = Console.ReadLine();\n        if(string.IsNullOrEmpty(s)) return;\n        // Write your logic here\n    }\n}",
+      go: "package main\nimport \"fmt\"\nfunc main() {\n    var n int\n    fmt.Scan(&n)\n    // Write your logic here\n}",
+      rust: "use std::io::{self, Read};\n\nfn main() {\n    let mut input = String::new();\n    if let Ok(_) = io::stdin().read_to_string(&mut input) {\n        if let Ok(n) = input.trim().parse::<i64>() {\n            // Write your logic here\n        }\n    }\n}",
+      kotlin: "import java.util.Scanner\n\nfun main(args: Array<String>) {\n    val sc = Scanner(System.`in`)\n    if (!sc.hasNextLong()) return\n    val n = sc.nextLong()\n    // Write your logic here\n}",
+      php: "<?php\n$stdin = fopen('php://stdin', 'r');\n$n = trim(fgets($stdin));\nif ($n === \"\") exit;\n// Write your logic here\n?>",
+      swift: "import Foundation\n\nif let line = readLine(), let n = Int(line) {\n    // Write your logic here\n}",
       ruby: "n = gets.to_i"
     },
     hiddenTestCases: [
@@ -1303,7 +1303,7 @@ export const MASTER_QUESTIONS: CodingQuestion[] = [
       { input: "9", output: "9" },
       { input: "999", output: "27" },
       { input: "10000", output: "1" },
-      { input: "123456789", output: "15" }
+      { input: "123456789", output: "45" }
     ],
     timeLimit: "1s", memoryLimit: "256MB", languageSupport: ["python", "java", "javascript", "typescript", "cpp", "c", "csharp", "go", "rust", "kotlin", "php", "swift", "ruby"]
   },
@@ -1332,10 +1332,10 @@ export const MASTER_QUESTIONS: CodingQuestion[] = [
       c: "#include <stdio.h>\n#include <stdbool.h>\n// TODO: Fill-in-blank function\nbool isSorted(int* nums, int n) {\n    for(int i=0; i<n-1; i++) {\n        if(nums[i] > nums[i+1]) return false;\n    }\n    return true;\n}",
       csharp: "using System; class Solution { /* TODO: Fill-in-blank */ }",
       go: "package main import \"fmt\" // TODO: Fill-in-blank",
-      rust: "fn main() { /* TODO: Fill-in-blank */ }",
-      kotlin: "fun main() { /* TODO: Fill-in-blank */ }",
-      php: "<?php // TODO: Fill-in-blank ?>",
-      swift: "import Foundation // TODO: Fill-in-blank",
+      rust: "use std::io::{self, BufRead};\n\nfn is_sorted(nums: &[i32]) -> bool {\n    for i in 0..nums.len() - 1 {\n        // TODO: Replace with comparison\n        if nums[i] > nums[i+1] { return false; }\n    }\n    true\n}\n\nfn main() {\n    let stdin = io::stdin();\n    let mut lines = stdin.lock().lines();\n    if let Some(Ok(line)) = lines.next() {\n        let n: usize = line.trim().parse().unwrap();\n        if let Some(Ok(line2)) = lines.next() {\n            let nums: Vec<i32> = line2.split_whitespace().map(|s| s.parse().unwrap()).collect();\n            println!(\"{}\", is_sorted(&nums));\n        }\n    }\n}",
+      kotlin: "import java.util.Scanner\n\nfun isSorted(nums: IntArray): Boolean {\n    for (i in 0 until nums.size - 1) {\n        // TODO: Add comparison logic\n        if (nums[i] > nums[i+1]) return false\n    }\n    return true\n}\n\nfun main(args: Array<String>) {\n    val sc = Scanner(System.`in`)\n    if (!sc.hasNextInt()) return\n    val n = sc.nextInt()\n    val nums = IntArray(n)\n    for (i in 0 until n) nums[i] = sc.nextInt()\n    println(isSorted(nums))\n}",
+      php: "<?php\nfunction isSorted($nums) {\n    for ($i = 0; $i < count($nums) - 1; $i++) {\n        // TODO: Replace with condition\n        if ($nums[$i] > $nums[$i+1]) return \"false\";\n    }\n    return \"true\";\n}\n$stdin = fopen('php://stdin', 'r');\nfgets($stdin);\n$nums = array_map('intval', explode(' ', trim(fgets($stdin))));\necho isSorted($nums);\n?>",
+      swift: "import Foundation\n\nfunc isSorted(_ nums: [Int]) -> Bool {\n    for i in 0..<nums.count - 1 {\n        // TODO: Add check\n        if nums[i] > nums[i+1] { return false }\n    }\n    return true\n}\n\nif let line1 = readLine(), let n = Int(line1) {\n    if let line2 = readLine() {\n        let nums = line2.split(separator: \" \").map { Int($0)! }\n        print(isSorted(nums))\n    }\n}",
       ruby: "# TODO: Fill-in-blank"
     },
     hiddenTestCases: [
@@ -1368,14 +1368,14 @@ export const MASTER_QUESTIONS: CodingQuestion[] = [
       java: "import java.util.Scanner;\npublic class Main {\n    public static void main(String[] args) {\n        Scanner sc = new Scanner(System.in);\n        if(!sc.hasNextInt()) return;\n        int a = sc.nextInt();\n        int b = sc.nextInt();\n        // Write logic here\n    }\n}",
       javascript: "const fs = require('fs');\nfunction solve() {\n    const input = fs.readFileSync(0, 'utf8').split(/\\s+/);\n    const a = parseInt(input[0]);\n    const b = parseInt(input[1]);\n    // Write logic here\n}\nsolve();",
       typescript: "import * as fs from 'fs';\nfunction solve() {\n    const input = fs.readFileSync(0, 'utf8').split(/\\s+/);\n    const a = parseInt(input[0]);\n    const b = parseInt(input[1]);\n    // Write logic here\n}\nsolve();",
-      cpp: "#include <iostream>\nusing namespace std;\nint main() {\n    int a, b; cin >> a >> b;\n    // Write logic here\n    return 0;\n}",
-      c: "#include <stdio.h>\nint main() {\n    int a, b; scanf(\"%d %d\", &a, &b);\n    // Write logic here\n    return 0;\n}",
+      cpp: "#include <iostream>\nusing namespace std;\nint main() {\n    int a, b; cin >> a >> b;\n    // Write your logic here\n    return 0;\n}",
+      c: "#include <stdio.h>\nint main() {\n    int a, b; scanf(\"%d %d\", &a, &b);\n    // Write your logic here\n    return 0;\n}",
       csharp: "using System;\nclass Solution {\n    static void Main() {\n        string[] p = Console.ReadLine().Split();\n        // Write logic here\n    }\n}",
-      go: "package main\nimport \"fmt\"\nfunc main() {\n    var a, b int\n    fmt.Scan(&a, &b)\n    // Write logic here\n}",
-      rust: "use std::io; fn main() { }",
-      kotlin: "fun main() { }",
-      php: "<?php ?>",
-      swift: "import Foundation",
+      go: "package main\nimport \"fmt\"\nfunc main() {\n    var a, b int\n    fmt.Scan(&a, &b)\n    // Write your logic here\n}",
+      rust: "use std::io::{self, BufRead};\n\nfn gcd(a: i64, b: i64) -> i64 {\n    // Write your logic here\n    0\n}\n\nfn main() {\n    let stdin = io::stdin();\n    let mut lines = stdin.lock().lines();\n    if let Some(Ok(line)) = lines.next() {\n        let parts: Vec<i64> = line.split_whitespace().map(|s| s.parse().unwrap()).collect();\n        if parts.len() == 2 {\n            println!(\"{}\", gcd(parts[0], parts[1]));\n        }\n    }\n}",
+      kotlin: "import java.util.Scanner\n\nfun gcd(a: Int, b: Int): Int {\n    // Write your logic here\n    return 0\n}\n\nfun main(args: Array<String>) {\n    val sc = Scanner(System.`in`)\n    if (!sc.hasNextInt()) return\n    val a = sc.nextInt()\n    val b = sc.nextInt()\n    println(gcd(a, b))\n}",
+      php: "<?php\nfunction gcd($a, $b) {\n    // Write your logic here\n    return 0;\n}\n$stdin = fopen('php://stdin', 'r');\n$line = fgets($stdin);\nif (!$line) exit;\nlist($a, $b) = array_map('intval', explode(' ', trim($line)));\necho gcd($a, $b);\n?>",
+      swift: "import Foundation\n\nfunc gcd(_ a: Int, _ b: Int) -> Int {\n    // Write your logic here\n    return 0\n}\n\nif let line = readLine()?.split(separator: \" \") {\n    let a = Int(line[0])!\n    let b = Int(line[1])!\n    print(gcd(a, b))\n}",
       ruby: "a, b = gets.split.map(&:to_i)"
     },
     hiddenTestCases: [
@@ -1404,18 +1404,18 @@ export const MASTER_QUESTIONS: CodingQuestion[] = [
     sampleOutput: "3",
     explanation: "Vowels: e, o, o. Total = 3.",
     starterCode: {
-      python: "import sys\ndef solution():\n    s = sys.stdin.read().strip()\n    # Write logic here\nif __name__ == \"__main__\":\n    solution()",
-      java: "import java.util.Scanner;\npublic class Main {\n    public static void main(String[] args) {\n        Scanner sc = new Scanner(System.in);\n        String s = sc.hasNextLine() ? sc.nextLine() : \"\";\n        // Write logic here\n    }\n}",
-      javascript: "const fs = require('fs');\nfunction solve() {\n    const s = fs.readFileSync(0, 'utf8').trim();\n    // Write logic here\n}\nsolve();",
-      typescript: "import * as fs from 'fs';\nfunction solve() {\n    const s = fs.readFileSync(0, 'utf8').trim();\n    // Write logic here\n}\nsolve();",
-      cpp: "#include <iostream>\n#include <string>\nusing namespace std;\nint main() {\n    string s; getline(cin, s);\n    // Write logic here\n    return 0;\n}",
-      c: "#include <stdio.h>\n#include <string.h>\n#include <ctype.h>\nint main() {\n    char s[10005]; if(!fgets(s, 10005, stdin)) return 0;\n    // Write logic here\n    return 0;\n}",
-      csharp: "using System;\nclass Solution {\n    static void Main() {\n        string s = Console.ReadLine() ?? \"\";\n        // Write logic here\n    }\n}",
-      go: "package main\nimport (\"bufio\"; \"fmt\"; \"os\")\nfunc main() {\n    scanner := bufio.NewScanner(os.Stdin)\n    // Write logic here\n}",
-      rust: "use std::io; fn main() { }",
-      kotlin: "fun main() { }",
-      php: "<?php ?>",
-      swift: "import Foundation",
+      python: "import sys\ndef solution():\n    s = sys.stdin.read().strip()\n    # Write your logic here\nif __name__ == \"__main__\":\n    solution()",
+      java: "import java.util.Scanner;\npublic class Main {\n    public static void main(String[] args) {\n        Scanner sc = new Scanner(System.in);\n        String s = sc.hasNextLine() ? sc.nextLine() : \"\";\n        // Write your logic here\n    }\n}",
+      javascript: "const fs = require('fs');\nfunction solve() {\n    const s = fs.readFileSync(0, 'utf8').trim();\n    // Write your logic here\n}\nsolve();",
+      typescript: "import * as fs from 'fs';\nfunction solve() {\n    const s = fs.readFileSync(0, 'utf8').trim();\n    // Write your logic here\n}\nsolve();",
+      cpp: "#include <iostream>\n#include <string>\nusing namespace std;\nint main() {\n    string s; getline(cin, s);\n    // Write your logic here\n    return 0;\n}",
+      c: "#include <stdio.h>\n#include <string.h>\n#include <ctype.h>\nint main() {\n    char s[10005]; if(!fgets(s, 10005, stdin)) return 0;\n    // Write your logic here\n    return 0;\n}",
+      csharp: "using System;\nclass Solution {\n    static void Main() {\n        string s = Console.ReadLine() ?? \"\";\n        // Write your logic here\n    }\n}",
+      go: "package main\nimport (\"bufio\"; \"fmt\"; \"os\")\nfunc main() {\n    scanner := bufio.NewScanner(os.Stdin)\n    // Write your logic here\n}",
+      rust: "use std::io::{self, BufRead};\n\nfn count_vowels(s: &str) -> usize {\n    // Write your logic here\n    0\n}\n\nfn main() {\n    let stdin = io::stdin();\n    let mut lines = stdin.lock().lines();\n    if let Some(Ok(line)) = lines.next() {\n        println!(\"{}\", count_vowels(&line));\n    }\n}",
+      kotlin: "import java.util.Scanner\n\nfun countVowels(s: String): Int {\n    // Write your logic here\n    return 0\n}\n\nfun main(args: Array<String>) {\n    val sc = Scanner(System.`in`)\n    val s = if (sc.hasNextLine()) sc.nextLine() else \"\"\n    println(countVowels(s))\n}",
+      php: "<?php\nfunction countVowels($s) {\n    // Write your logic here\n    return 0;\n}\n$stdin = fopen('php://stdin', 'r');\n$s = fgets($stdin);\necho countVowels(trim($s));\n?>",
+      swift: "import Foundation\n\nfunc countVowels(_ s: String) -> Int {\n    // Write your logic here\n    return 0\n}\n\nif let line = readLine() {\n    print(countVowels(line))\n}",
       ruby: "s = gets.to_s.strip"
     },
     hiddenTestCases: [
