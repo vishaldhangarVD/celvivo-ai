@@ -4,26 +4,19 @@ import { motion, useMotionValue, useSpring, useTransform } from 'framer-motion';
 import NavigationControls from '@/components/NavigationControls';
 import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
-import { Sparkles, BrainCircuit, ShieldCheck, Zap } from 'lucide-react';
+import { BrainCircuit, ShieldCheck, Zap } from 'lucide-react';
 import Image from 'next/image';
 import { useRef } from 'react';
-
-/**
- * @fileOverview About NEXVORO AI Page.
- * Features a premium glassmorphism layout with 3D mouse-tracking interaction for the founder profile.
- */
 
 export default function AboutPage() {
   const containerRef = useRef<HTMLDivElement>(null);
   
-  // Mouse tracking values for 3D effect
   const x = useMotionValue(0);
   const y = useMotionValue(0);
 
   const mouseXSpring = useSpring(x);
   const mouseYSpring = useSpring(y);
 
-  // Transformations for subtle 3D rotation
   const rotateX = useTransform(mouseYSpring, [-0.5, 0.5], ["10deg", "-10deg"]);
   const rotateY = useTransform(mouseXSpring, [-0.5, 0.5], ["-10deg", "10deg"]);
 
@@ -35,7 +28,6 @@ export default function AboutPage() {
     const mouseX = e.clientX - rect.left;
     const mouseY = e.clientY - rect.top;
     
-    // Normalize to -0.5 to 0.5
     x.set(mouseX / width - 0.5);
     y.set(mouseY / height - 0.5);
   };
@@ -50,7 +42,6 @@ export default function AboutPage() {
       <div className="particles-bg" />
       <NavigationControls />
 
-      {/* Decorative background blurs */}
       <div className="absolute top-[-10%] left-[-10%] w-[500px] h-[500px] bg-purple-600/10 rounded-full blur-[120px] pointer-events-none" />
       <div className="absolute bottom-[-10%] right-[-10%] w-[600px] h-[600px] bg-blue-600/10 rounded-full blur-[150px] pointer-events-none" />
 
@@ -81,26 +72,22 @@ export default function AboutPage() {
           className="w-full max-w-5xl"
         >
           <Card className="premium-card bg-white/[0.02] border-white/5 p-12 md:p-20 relative overflow-hidden flex flex-col md:flex-row items-center gap-16 md:gap-24 shadow-2xl backdrop-blur-3xl">
-            {/* Background decorative element */}
             <div className="absolute top-0 right-0 p-12 opacity-[0.03]">
               <BrainCircuit className="w-64 h-64 text-white" />
             </div>
 
-            {/* Interactive Founder Image Section */}
             <div 
               ref={containerRef}
               onMouseMove={handleMouseMove}
               onMouseLeave={handleMouseLeave}
               className="relative shrink-0 perspective-1000 group"
             >
-              {/* Outer Glowing Ring */}
               <motion.div 
                 animate={{ rotate: 360 }}
                 transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
                 className="absolute inset-[-15px] rounded-full border-2 border-dashed border-accent/20 opacity-40 group-hover:opacity-100 group-hover:border-accent/40 transition-all duration-500" 
               />
               
-              {/* Inner Pulsing Ring */}
               <motion.div 
                 initial={{ scale: 0.8, opacity: 0 }}
                 animate={{ scale: 1, opacity: 1 }}
@@ -108,7 +95,6 @@ export default function AboutPage() {
                 className="absolute inset-[-8px] rounded-full bg-gradient-to-br from-purple-500/20 to-blue-500/20 blur-md pointer-events-none"
               />
 
-              {/* 3D Image Wrapper */}
               <motion.div
                 style={{
                   rotateX,
@@ -130,12 +116,10 @@ export default function AboutPage() {
                     data-ai-hint="professional portrait"
                     priority
                   />
-                  {/* Subtle glass overlay on image */}
                   <div className="absolute inset-0 bg-gradient-to-t from-[#050816]/40 via-transparent to-transparent" />
                 </motion.div>
               </motion.div>
 
-              {/* Decorative status indicator */}
               <motion.div 
                 animate={{ scale: [1, 1.2, 1] }}
                 transition={{ duration: 4, repeat: Infinity }}
@@ -143,7 +127,6 @@ export default function AboutPage() {
               />
             </div>
 
-            {/* Content Section */}
             <div className="flex-1 space-y-8 text-center md:text-left relative z-10">
               <div className="space-y-2">
                 <motion.div
@@ -181,7 +164,6 @@ export default function AboutPage() {
           </Card>
         </motion.div>
 
-        {/* Vision Statement Footer */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}

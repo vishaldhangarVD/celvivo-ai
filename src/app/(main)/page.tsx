@@ -106,7 +106,6 @@ const STATIC_TESTIMONIALS = [
   }
 ];
 
-// Variants for staggered animations
 const containerVariants = {
   hidden: { opacity: 0 },
   visible: {
@@ -134,7 +133,6 @@ export default function LandingPage() {
   const [isScrollingPaused, setIsScrollingPaused] = useState(false);
   const [isVideoMuted, setIsVideoMuted] = useState(true);
 
-  // Fetch approved community feedback
   const feedbackQuery = useMemo(() => {
     if (!db) return null;
     return query(
@@ -314,7 +312,6 @@ export default function LandingPage() {
                       controls={false}
                       preload="auto"
                       onPlaying={() => {
-                        // Video has started playing natively (muted). Unmute shortly after confirmation.
                         setTimeout(() => setIsVideoMuted(false), 100);
                       }}
                       onEnded={(e) => {
@@ -417,7 +414,6 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* Success Stories Section */}
       <section className="pt-12 pb-32 px-8 relative overflow-hidden">
         <div className="container mx-auto max-w-7xl">
           <div className="text-center mb-20 space-y-4">
@@ -475,7 +471,6 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* Footer Section */}
       <footer className="pt-32 pb-16 px-8 border-t border-white/5 bg-black/20">
         <div className="container mx-auto max-w-7xl">
           <div className="grid md:grid-cols-4 gap-16 mb-20">

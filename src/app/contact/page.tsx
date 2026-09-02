@@ -2,17 +2,15 @@
 
 import { useState } from 'react';
 import { motion } from 'framer-motion';
-import Navbar from '@/components/layout/Navbar';
 import NavigationControls from '@/components/NavigationControls';
 import { Badge } from '@/components/ui/badge';
-import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
+import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { 
   Mail, 
-  MessageSquare, 
   HelpCircle, 
   Globe, 
   Twitter, 
@@ -53,7 +51,7 @@ export default function ContactPage() {
       setIsSending(false);
       toast({
         title: "Protocol Initialized",
-        description: "Your message has been received by our strategic operations team.",
+        description: "Your message has been received by our team.",
       });
     }, 2000);
   };
@@ -61,7 +59,6 @@ export default function ContactPage() {
   return (
     <div className="min-h-screen bg-[#050816]">
       <div className="particles-bg" />
-      <Navbar />
       <NavigationControls />
 
       <main className="container mx-auto px-6 pt-40 pb-32">
@@ -77,13 +74,12 @@ export default function ContactPage() {
               Contact <span className="text-gradient-purple">Nexvoro.</span>
             </h1>
             <p className="text-xl text-muted-foreground font-light leading-relaxed max-w-2xl mx-auto">
-              Our strategic operations team is available for technical support, business enquiries, and system calibrations.
+              Our team is available for technical support and business enquiries.
             </p>
           </motion.div>
         </div>
 
         <div className="grid lg:grid-cols-12 gap-12 max-w-7xl mx-auto mb-32">
-          {/* Contact Form */}
           <motion.div
             initial={{ opacity: 0, x: -30 }}
             animate={{ opacity: 1, x: 0 }}
@@ -120,7 +116,6 @@ export default function ContactPage() {
             </Card>
           </motion.div>
 
-          {/* Info Column */}
           <motion.div
             initial={{ opacity: 0, x: 30 }}
             animate={{ opacity: 1, x: 0 }}
@@ -182,7 +177,6 @@ export default function ContactPage() {
           </motion.div>
         </div>
 
-        {/* FAQ Section */}
         <div className="max-w-4xl mx-auto">
           <div className="text-center mb-16">
             <h2 className="text-3xl font-bold tracking-tighter text-premium">Frequently Asked Protocols</h2>

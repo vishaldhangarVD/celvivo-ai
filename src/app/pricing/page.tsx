@@ -1,8 +1,7 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import Navbar from '@/components/layout/Navbar';
 import NavigationControls from '@/components/NavigationControls';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -47,11 +46,10 @@ export default function PricingPage() {
       return;
     }
 
-    const planType = plan.toLowerCase(); // 'pro' or 'premium'
+    const planType = plan.toLowerCase();
     setIsProcessing(planType);
 
     try {
-      // 1. Create Subscription on Server
       const res = await fetch('/api/payment/create-subscription', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -62,7 +60,6 @@ export default function PricingPage() {
       
       const { subscriptionId, keyId } = await res.json();
 
-      // 2. Open Razorpay Checkout
       const options = {
         key: keyId,
         subscription_id: subscriptionId,
@@ -70,7 +67,6 @@ export default function PricingPage() {
         description: `${plan} Plan Subscription`,
         image: "/favicon.ico",
         handler: async function (response: any) {
-          // 3. Verify Payment on Server
           setIsProcessing('verifying');
           const verifyRes = await fetch('/api/payment/verify', {
             method: 'POST',
@@ -85,7 +81,6 @@ export default function PricingPage() {
           const verifyData = await verifyRes.json();
 
           if (verifyData.verified && db) {
-            // 4. Update Firestore Profile
             await updateDoc(doc(db, 'users', user.uid), {
               plan: planType,
               subscriptionStatus: 'active',
@@ -209,7 +204,6 @@ export default function PricingPage() {
     <div className="min-h-screen bg-[#050816] pb-32">
       <Script src="https://checkout.razorpay.com/v1/checkout.js" strategy="lazyOnload" />
       <div className="particles-bg" />
-      <Navbar />
       <NavigationControls />
       
       <main className="container mx-auto px-6 pt-40">
@@ -340,7 +334,7 @@ export default function PricingPage() {
             <ShieldCheck className="w-12 h-12 text-accent mx-auto mb-6" />
             <h4 className="text-2xl font-bold mb-4 uppercase tracking-tighter">Enterprise Grade Security</h4>
             <p className="text-muted-foreground font-light leading-relaxed max-w-2xl mx-auto italic">
-              "All neural simulation data is encrypted with AES-256 protocols. We prioritize the integrity of your professional identity. For corporate team licensing or custom neural tracks, contact our strategic operations team."
+              "All neural simulation data is encrypted with AES-256 protocols. We prioritize the integrity of your professional identity."
             </p>
           </div>
         </div>

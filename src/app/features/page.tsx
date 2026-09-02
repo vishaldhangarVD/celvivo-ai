@@ -1,7 +1,6 @@
 'use client';
 
 import { motion } from 'framer-motion';
-import Navbar from '@/components/layout/Navbar';
 import { 
   BrainCircuit, 
   BarChart3, 
@@ -30,7 +29,7 @@ const features = [
   {
     icon: Target,
     title: "Job Readiness Benchmark",
-    description: "Compare your performance against anonymized data from senior engineers at Google, Meta, and OpenAI.",
+    description: "Compare your performance against anonymized data from senior engineers at top tech firms.",
     details: ["Industry Comparisons", "Leveling Suggestions", "Market Value Prediction"]
   },
   {
@@ -61,7 +60,6 @@ export default function FeaturesPage() {
   return (
     <div className="min-h-screen bg-[#050816]">
       <div className="particles-bg" />
-      <Navbar />
       
       <main className="container mx-auto px-6 pt-40 pb-32">
         <div className="max-w-4xl mx-auto text-center mb-24">

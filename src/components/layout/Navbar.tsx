@@ -15,11 +15,9 @@ import {
   Crown,
   CreditCard,
   Sparkles,
-  Briefcase,
-  Info,
-  MessageSquare,
+  Home,
   Clock,
-  Home
+  MessageSquare
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useState, useMemo, useCallback } from 'react';
@@ -53,6 +51,11 @@ export default function Navbar() {
   const router = useRouter();
   const pathname = usePathname();
 
+  // EXCLUSION PROTOCOL: Hide Navbar on focused routes
+  const isAuthPage = pathname === '/login' || pathname === '/signup';
+  const isInterviewArena = pathname.startsWith('/interview/') && pathname !== '/interview/setup' && pathname !== '/interview/aptitude-result' && pathname !== '/interview/coding-result';
+  const isSpecialHRArena = pathname === '/special-hr-interview';
+  
   const profileRef = useMemo(() => {
     if (!db || !user?.uid) return null;
     return doc(db, 'users', user.uid);
@@ -104,6 +107,8 @@ export default function Navbar() {
     router.push('/');
   };
 
+  if (isAuthPage || isInterviewArena || isSpecialHRArena) return null;
+
   const isFounder = profile?.role === 'founder';
 
   const pillClasses = "relative flex items-center gap-2.5 px-4 py-1.5 rounded-full glass border-white/10 text-[9px] font-black uppercase tracking-widest text-white transition-all duration-250 group/pill";
@@ -135,19 +140,19 @@ export default function Navbar() {
         </div>
 
         <div className="hidden md:flex items-center gap-4">
+          <Link 
+            href="/" 
+            className={cn(pillClasses, pillHoverClasses, pathname === '/' && pillActiveClasses)}
+          >
+            <div className={cn(pillIconWrapperClasses, pathname === '/' && pillActiveIconWrapperClasses)}>
+              <Home className="w-2.5 h-2.5" />
+            </div>
+            HOME
+            <span className={pillUnderlineClasses} />
+          </Link>
+
           {user && (
             <>
-              <Link 
-                href="/" 
-                className={cn(pillClasses, pillHoverClasses, pathname === '/' && pillActiveClasses)}
-              >
-                <div className={cn(pillIconWrapperClasses, pathname === '/' && pillActiveIconWrapperClasses)}>
-                  <Home className="w-2.5 h-2.5" />
-                </div>
-                HOME
-                <span className={pillUnderlineClasses} />
-              </Link>
-
               <Link 
                 href="/special-hr-resume-upload" 
                 className={cn(
@@ -367,11 +372,11 @@ export default function Navbar() {
             exit={{ opacity: 0, x: 20 }}
             className="fixed inset-0 top-[72px] w-full bg-[#050816]/95 backdrop-blur-2xl p-12 flex flex-col gap-8 md:hidden z-[100]"
           >
+            <Link href="/" onClick={() => setIsOpen(false)} className="text-2xl font-bold tracking-tighter uppercase text-white hover:text-accent flex items-center gap-4">
+              <Home className="w-6 h-6" /> Home
+            </Link>
             {user && (
               <>
-                <Link href="/" onClick={() => setIsOpen(false)} className="text-2xl font-bold tracking-tighter uppercase text-white hover:text-accent flex items-center gap-4">
-                  <Home className="w-6 h-6" /> Home
-                </Link>
                 <Link href="/special-hr-resume-upload" onClick={() => setIsOpen(false)} className="text-2xl font-bold tracking-tighter uppercase text-purple-400 hover:text-purple-300 flex items-center gap-4">
                   <Sparkles className="w-6 h-6" /> Special HR Interview
                 </Link>

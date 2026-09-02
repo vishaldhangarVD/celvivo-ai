@@ -29,7 +29,7 @@ const features = [
   {
     icon: Target,
     title: "Job Readiness Benchmark",
-    description: "Compare your performance against anonymized data from senior engineers at Google, Meta, and OpenAI.",
+    description: "Compare your performance against anonymized data from senior engineers at top tech firms.",
     details: ["Industry Comparisons", "Leveling Suggestions", "Market Value Prediction"]
   },
   {

@@ -1,9 +1,9 @@
 'use client';
 
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import NavigationControls from '@/components/NavigationControls';
-import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
+import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
@@ -13,12 +13,9 @@ import {
   Star, 
   ChevronDown, 
   ChevronUp, 
-  Filter,
-  Layers,
   Zap,
   CheckCircle2,
   Bookmark,
-  Loader2,
   Eye,
   EyeOff,
   Building2,
@@ -30,7 +27,7 @@ import {
 } from 'lucide-react';
 import { QUESTIONS, CATEGORIES, COMPANIES, type Question, type Difficulty } from '@/lib/question-data';
 import { useUser, useFirestore, useCollection } from '@/firebase';
-import { collection, addDoc, deleteDoc, doc, serverTimestamp, query, where } from 'firebase/firestore';
+import { collection, addDoc, deleteDoc, doc, serverTimestamp, query } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 import { useRouter } from 'next/navigation';
 
@@ -47,7 +44,6 @@ export default function QuestionBankPage() {
   const [revealedIds, setRevealedIds] = useState<Set<string>>(new Set());
   const [viewedCount, setViewedCount] = useState(0);
 
-  // Fetch Favorites
   const favoritesQuery = useMemo(() => {
     if (!db || !user?.uid) return null;
     return query(collection(db, 'users', user.uid, 'favorite_questions'));
@@ -128,11 +124,10 @@ export default function QuestionBankPage() {
             <Badge className="bg-accent/20 text-accent mb-4 border-none px-6 py-1.5 font-bold tracking-[0.4em] text-[10px] uppercase">Technical Intelligence Repository</Badge>
             <h1 className="text-6xl font-bold tracking-tighter text-premium">Question <span className="text-gradient-purple">Bank.</span></h1>
             <p className="text-xl text-muted-foreground font-light max-w-2xl mx-auto leading-relaxed">
-              Master core engineering nodes through our curated technical repository, revealing deep intelligence for elite placement.
+              Master core engineering nodes through our curated technical repository.
             </p>
           </header>
 
-          {/* Stats Bar */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {[
               { label: "Nodes Viewed", val: viewedCount, icon: Eye, color: "text-blue-400" },
@@ -151,7 +146,6 @@ export default function QuestionBankPage() {
             ))}
           </div>
 
-          {/* Filters Bar */}
           <Card className="premium-card bg-white/[0.01] border-white/5 p-8">
             <div className="flex flex-col lg:flex-row gap-6">
               <div className="relative flex-1 group">
@@ -194,7 +188,6 @@ export default function QuestionBankPage() {
             </div>
           </Card>
 
-          {/* Questions Grid */}
           <div className="space-y-6">
             <div className="flex justify-between items-center px-4">
               <p className="text-[10px] font-bold uppercase tracking-widest text-white/30">Found {filteredQuestions.length} Knowledge Nodes</p>
@@ -284,7 +277,7 @@ export default function QuestionBankPage() {
                                     <Lightbulb className="w-4 h-4 text-yellow-400" /> Interview Tips
                                   </h5>
                                   <ul className="space-y-3">
-                                    {(q.tips || ["Focus on clear architectural reasoning.", "Explain the trade-offs involved."]).map((tip, idx) => (
+                                    {(q.tips || ["Focus on clear architectural reasoning."]).map((tip, idx) => (
                                       <li key={idx} className="flex gap-3 text-xs font-light text-white/60 leading-relaxed">
                                         <div className="w-1.5 h-1.5 rounded-full bg-accent mt-1.5 shrink-0" />
                                         {tip}
@@ -297,7 +290,7 @@ export default function QuestionBankPage() {
                                     <AlertCircle className="w-4 h-4 text-red-400" /> Common Pitfalls
                                   </h5>
                                   <ul className="space-y-3">
-                                    {(q.mistakes || ["Giving a superficial answer without depth.", "Ignoring the performance implications."]).map((m, idx) => (
+                                    {(q.mistakes || ["Giving a superficial answer without depth."]).map((m, idx) => (
                                       <li key={idx} className="flex gap-3 text-xs font-light text-white/60 leading-relaxed">
                                         <div className="w-1.5 h-1.5 rounded-full bg-red-400 mt-1.5 shrink-0" />
                                         {m}
@@ -306,17 +299,6 @@ export default function QuestionBankPage() {
                                   </ul>
                                 </div>
                               </div>
-
-                              {q.usage && (
-                                <div className="p-6 glass rounded-2xl border-white/5 bg-white/[0.01]">
-                                  <h5 className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-white/50 mb-4">
-                                    <TrendingUp className="w-4 h-4 text-blue-400" /> Real-World Usage
-                                  </h5>
-                                  <p className="text-sm font-light text-white/60 leading-relaxed">
-                                    {q.usage}
-                                  </p>
-                                </div>
-                              )}
                             </div>
                           </motion.div>
                         )}
@@ -325,16 +307,6 @@ export default function QuestionBankPage() {
                   </Card>
                 </motion.div>
               ))}
-
-              {filteredQuestions.length === 0 && (
-                <div className="py-32 text-center glass rounded-[3rem] border-white/5 border-dashed">
-                  <BookOpen className="w-16 h-16 text-white/5 mx-auto mb-6" />
-                  <h3 className="text-2xl font-bold mb-2">No Nodes Found</h3>
-                  <p className="text-muted-foreground font-light max-w-sm mx-auto">
-                    Recalibrate your search parameters to find the technical intelligence you seek.
-                  </p>
-                </div>
-              )}
             </div>
           </div>
         </div>
