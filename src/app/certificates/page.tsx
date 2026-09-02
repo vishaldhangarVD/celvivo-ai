@@ -35,6 +35,16 @@ import { generateCertificatePDF } from '@/lib/certificate-generator';
 
 const MASTERY_THRESHOLD = 70;
 
+type SessionRecord = {
+  id: string;
+  role: string;
+  overallScore?: number;
+  createdAt?: { seconds: number };
+  stream: 'standard' | 'special';
+  round?: string;
+  [key: string]: any; // allow any additional Firestore fields without strict checking
+};
+
 // Reusable Certificate Template Component (For Preview)
 const CertificateTemplate = ({ data }: { data: any }) => {
   const logoMark = (
@@ -127,10 +137,6 @@ const CertificateTemplate = ({ data }: { data: any }) => {
                   <div className="absolute inset-[5px] border border-dashed border-[#d8b374]/50 rounded-full" />
                   <span className="text-[24px] text-[#d8b374]">★</span>
                 </div>
-                <div className="flex justify-center -mt-1">
-                  <div className="w-0 h-0 border-l-[15px] border-l-transparent border-r-[15px] border-r-transparent border-t-[18px] border-t-[#8a7146] mr-[-2px]" />
-                  <div className="w-0 h-0 border-l-[15px] border-l-transparent border-r-[15px] border-r-transparent border-t-[18px] border-t-[#8a7146]" />
-                </div>
               </div>
               
               {/* Signature Block */}
@@ -180,18 +186,18 @@ export default function CertificatesPage() {
   const { data: standardData, loading: standardLoading } = useCollection(standardInterviewsQuery);
   const { data: specialData, loading: specialLoading } = useCollection(specialHRQuery);
 
-  const allSessions = useMemo(() => {
-    const combined = [
-      ...(standardData || []).map(s => ({ ...s, stream: 'standard' })),
-      ...(specialData || []).map(s => ({ ...s, stream: 'special', role: s.role || 'Special HR Interview' }))
+  const allSessions = useMemo((): SessionRecord[] => {
+    const combined: SessionRecord[] = [
+      ...(standardData || []).map((s: any) => ({ ...s, stream: 'standard' as const })),
+      ...(specialData || []).map((s: any) => ({ ...s, stream: 'special' as const, role: s.role || 'Special HR Interview' }))
     ];
-    return combined.sort((a: any, b: any) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
+    return combined.sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
   }, [standardData, specialData]);
 
-  const bestCertified = useMemo(() => {
-    const certified = allSessions.filter((s: any) => (s.overallScore || 0) >= MASTERY_THRESHOLD);
+  const bestCertified = useMemo((): SessionRecord | null => {
+    const certified = allSessions.filter((s) => (s.overallScore || 0) >= MASTERY_THRESHOLD);
     if (certified.length === 0) return null;
-    return [...certified].sort((a: any, b: any) => (b.overallScore || 0) - (a.overallScore || 0))[0];
+    return [...certified].sort((a, b) => (b.overallScore || 0) - (a.overallScore || 0))[0];
   }, [allSessions]);
 
   const handleDownload = async (cert: any) => {
