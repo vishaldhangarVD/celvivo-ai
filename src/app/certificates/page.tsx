@@ -2,7 +2,6 @@
 
 import { motion } from 'framer-motion';
 import Navbar from '@/components/layout/Navbar';
-import NavigationControls from '@/components/NavigationControls';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { 
@@ -234,7 +233,6 @@ export default function CertificatesPage() {
     <div className="min-h-screen bg-[#050816] pb-32">
       <div className="particles-bg" />
       <Navbar />
-      <NavigationControls />
       
       <main className="container mx-auto px-6 pt-40">
         <div className="max-w-7xl mx-auto space-y-20">
