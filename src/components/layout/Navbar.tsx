@@ -22,10 +22,10 @@ import {
   Home
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useState, useMemo, Suspense, useCallback } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import { useUser, useAuth, useDoc, useFirestore, useCollection } from '@/firebase';
 import { signOut } from 'firebase/auth';
-import { useRouter, usePathname, useSearchParams } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import {
   DropdownMenu,
@@ -45,7 +45,7 @@ import { cn } from '@/lib/utils';
 import { doc, collection, query, orderBy, limit, updateDoc } from 'firebase/firestore';
 import { format } from 'date-fns';
 
-function NavbarContent() {
+export default function Navbar() {
   const [isOpen, setIsOpen] = useState(false);
   const { user, loading } = useUser();
   const auth = useAuth();
@@ -420,13 +420,5 @@ function NavbarContent() {
         )}
       </AnimatePresence>
     </nav>
-  );
-}
-
-export default function Navbar() {
-  return (
-    <Suspense fallback={null}>
-      <NavbarContent />
-    </Suspense>
   );
 }
