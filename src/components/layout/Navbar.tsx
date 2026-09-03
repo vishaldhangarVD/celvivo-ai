@@ -17,7 +17,8 @@ import {
   Sparkles,
   Home,
   Clock,
-  MessageSquare
+  MessageSquare,
+  Users
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useState, useMemo, useCallback } from 'react';
@@ -200,6 +201,17 @@ export default function Navbar() {
                   <CreditCard className="w-2.5 h-2.5" />
                 </div>
                 PRICING
+                <span className={pillUnderlineClasses} />
+              </Link>
+
+              <Link 
+                href="/about" 
+                className={cn(pillClasses, pillHoverClasses, pathname === '/about' && pillActiveClasses)}
+              >
+                <div className={cn(pillIconWrapperClasses, pathname === '/about' && pillActiveIconWrapperClasses)}>
+                  <Users className="w-2.5 h-2.5" />
+                </div>
+                ABOUT
                 <span className={pillUnderlineClasses} />
               </Link>
 
@@ -393,6 +405,9 @@ export default function Navbar() {
                 </Link>
                 <Link href="/pricing" onClick={() => setIsOpen(false)} className="text-2xl font-bold tracking-tighter uppercase text-white hover:text-accent flex items-center gap-4">
                   <CreditCard className="w-6 h-6" /> Pricing
+                </Link>
+                <Link href="/about" onClick={() => setIsOpen(false)} className="text-2xl font-bold tracking-tighter uppercase text-white hover:text-accent flex items-center gap-4">
+                  <Users className="w-6 h-6" /> About
                 </Link>
                 <Link href="/user-dashboard" onClick={() => setIsOpen(false)} className="text-2xl font-bold tracking-tighter uppercase text-white hover:text-accent flex items-center gap-4">
                   <ShieldCheck className="w-6 h-6" /> Verified Identity: {userFirstName}
