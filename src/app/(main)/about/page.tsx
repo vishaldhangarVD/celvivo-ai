@@ -54,13 +54,13 @@ export default function AboutPage() {
             className="space-y-6"
           >
             <Badge className="bg-accent/20 text-accent border-none px-6 py-1.5 font-bold tracking-[0.4em] text-[10px] uppercase">
-              The Visionary Protocol
+              Built By A Student, For Students
             </Badge>
             <h1 className="text-6xl md:text-7xl font-bold tracking-tighter text-premium">
               About <span className="text-gradient-purple">NEXVORO AI.</span>
             </h1>
             <p className="text-xl text-muted-foreground font-light leading-relaxed max-w-2xl mx-auto mt-6">
-              Empowering students with AI-powered interview success.
+              Real interview practice, at a price every student can afford.
             </p>
           </motion.div>
         </header>
@@ -108,8 +108,8 @@ export default function AboutPage() {
                   className="w-full h-full relative"
                 >
                   <Image 
-                    src="https://picsum.photos/seed/vinay/600/600"
-                    alt="Vinay Dange - Founder & CEO"
+                    src="/founder-photo.jpg"
+                    alt="Vishal Dhangar - Founder & CEO"
                     fill
                     className="object-cover"
                     sizes="(max-width: 768px) 192px, 256px"
@@ -134,7 +134,7 @@ export default function AboutPage() {
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ delay: 0.4 }}
                 >
-                  <h2 className="text-4xl md:text-5xl font-bold tracking-tight text-white mb-2">Vinay Dange</h2>
+                  <h2 className="text-4xl md:text-5xl font-bold tracking-tight text-white mb-2">Vishal Dhangar</h2>
                   <p className="text-accent font-black uppercase tracking-[0.3em] text-xs">Founder & CEO of NEXVORO AI</p>
                 </motion.div>
               </div>
@@ -146,17 +146,23 @@ export default function AboutPage() {
                 className="space-y-6"
               >
                 <p className="text-lg md:text-xl text-white/80 font-light leading-relaxed">
-                  NEXVORO AI was created to help students reduce interview fear, improve confidence, strengthen communication skills, and become job-ready through AI-powered interview practice and resume analysis.
+                  Vishal is a final-year student who watched classmates lose job offers not because they lacked skill, but because they'd never actually sat through a real interview before the one that mattered. Aptitude rounds felt unfamiliar, coding rounds were a mystery, and most resumes never made it past the first screen.
+                </p>
+                <p className="text-lg md:text-xl text-white/80 font-light leading-relaxed">
+                  So he built NEXVORO AI — a place where students can practice the real thing: realistic aptitude tests, coding rounds, and AI-powered mock interviews that talk back and push back, plus resume tools that turn a rough draft into something a recruiter actually stops on. All of it priced so a student, not just a placement cell, can afford it.
+                </p>
+                <p className="text-lg md:text-xl text-white/80 font-light leading-relaxed">
+                  The goal isn't to remove the nerves before an interview — it's to make sure the first real one isn't the first one you've ever done.
                 </p>
                 
                 <div className="grid grid-cols-2 gap-6 pt-6 border-t border-white/5">
                   <div className="flex items-center gap-3">
                     <ShieldCheck className="w-5 h-5 text-accent/60" />
-                    <span className="text-[10px] font-bold uppercase tracking-widest text-white/40">Student Centric</span>
+                    <span className="text-[10px] font-bold uppercase tracking-widest text-white/40">Built by a Student</span>
                   </div>
                   <div className="flex items-center gap-3">
                     <Zap className="w-5 h-5 text-purple-400/60" />
-                    <span className="text-[10px] font-bold uppercase tracking-widest text-white/40">Neural Precision</span>
+                    <span className="text-[10px] font-bold uppercase tracking-widest text-white/40">Priced for Students</span>
                   </div>
                 </div>
               </motion.div>
@@ -171,9 +177,9 @@ export default function AboutPage() {
           className="mt-24 text-center space-y-4 max-w-2xl mx-auto"
         >
           <div className="w-px h-12 bg-gradient-to-b from-transparent via-accent/30 to-transparent mx-auto mb-8" />
-          <h3 className="text-[10px] font-black uppercase tracking-[0.5em] text-accent">Bridging the Gap</h3>
+          <h3 className="text-[10px] font-black uppercase tracking-[0.5em] text-accent">Why This Exists</h3>
           <p className="text-muted-foreground font-light italic leading-relaxed">
-            "We believe talent is universal, but elite interview preparation is not. NEXVORO AI is here to democratize high-stakes career placement for the next generation of engineers."
+            "Every student deserves to walk into their first real interview having already faced one before. NEXVORO AI exists so that practice, not privilege, decides who's ready."
           </p>
         </motion.div>
       </main>
