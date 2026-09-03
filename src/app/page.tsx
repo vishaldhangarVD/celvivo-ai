@@ -231,10 +231,29 @@ const HeroSection = memo(({ onStart, onEnterRoom }: { onStart: () => void, onEnt
                   autoPlay
                   muted={isVideoMuted}
                   playsInline
-                  loop
                   controls={false}
-                  preload="metadata"
-                  onPlaying={() => setIsVideoMuted(false)}
+                  preload="auto"
+                  onPlaying={() => {
+                    setTimeout(() => {
+                      setIsVideoMuted(false);
+                    }, 100);
+                  }}
+                  onPause={(e) => {
+                    // If the browser paused the video due to a blocked unmute attempt, resume it muted instead of leaving it stuck paused
+                    const video = e.currentTarget;
+                    if (!video.ended && video.paused) {
+                      video.muted = true;
+                      setIsVideoMuted(true);
+                      video.play().catch(() => {
+                        // If even muted play fails, leave it paused silently — no further action needed
+                      });
+                    }
+                  }}
+                  onEnded={(e) => {
+                    const video = e.currentTarget;
+                    video.currentTime = 0;
+                    video.pause();
+                  }}
                   className="h-full w-full object-cover"
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-[#050816]/30 via-transparent to-transparent z-20" />
