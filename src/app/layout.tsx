@@ -1,7 +1,10 @@
+
 import type { Metadata } from "next";
 import "./globals.css";
 import { FirebaseClientProvider } from "@/firebase";
 import { Toaster } from "@/components/ui/toaster";
+import Navbar from "@/components/layout/Navbar";
+import AuthGuard from "@/components/AuthGuard";
 
 export const metadata: Metadata = {
   title: "Nexvoro AI - Ace Your Technical Interviews",
@@ -34,7 +37,10 @@ export default function RootLayout({
         style={{ backgroundColor: '#050816' }}
       >
         <FirebaseClientProvider>
-          {children}
+          <AuthGuard>
+            <Navbar />
+            {children}
+          </AuthGuard>
           <Toaster />
         </FirebaseClientProvider>
       </body>

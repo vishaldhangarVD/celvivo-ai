@@ -1,19 +1,13 @@
-import Navbar from '@/components/layout/Navbar';
-import AuthGuard from '@/components/AuthGuard';
 
 /**
- * @fileOverview Main Route Group Layout.
- * Wraps all dashboard and utility routes with the AuthGuard and Navbar.
+ * @fileOverview Main Route Group Layout (Inert).
+ * This layout is now just a pass-through as logic has been moved to the root layout 
+ * to resolve parallel route conflicts and bundler manifest errors.
  */
 export default function MainLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  return (
-    <AuthGuard>
-      <Navbar />
-      {children}
-    </AuthGuard>
-  );
+  return <>{children}</>;
 }
