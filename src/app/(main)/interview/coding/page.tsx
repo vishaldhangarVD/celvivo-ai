@@ -88,7 +88,6 @@ function CodingEngineContent() {
 
   const hasRestoredRef = useRef(false);
 
-  // Fast-Unlock Override via URL Protocol
   const isUnlockedParam = searchParams.get('unlocked') === 'true';
 
   const journeyRef = useMemo(() => {
@@ -108,7 +107,6 @@ function CodingEngineContent() {
 
   const { data: existingResultsData } = useCollection(resultsQuery);
 
-  // Restore session results from archives
   useEffect(() => {
     if (hasRestoredRef.current) return;
     if (existingResultsData && existingResultsData.length > 0 && questions.length > 0) {
@@ -275,9 +273,7 @@ function CodingEngineContent() {
     try {
       const response = await fetch('/api/execute', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
           source_code: code, 
           language: selectedLang.id, 
@@ -315,9 +311,7 @@ function CodingEngineContent() {
     try {
       const response = await fetch('/api/execute', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
           source_code: code, 
           language: selectedLang.id, 
@@ -390,17 +384,20 @@ function CodingEngineContent() {
     async function initEnvironment() {
       if (!db || !user || !journey || !journeyRef) return;
 
-      // FAST TRACK: Instant check for existing data in current journey
-      if (Array.isArray(journey.codingQuestions) && journey.codingQuestions.length === 8 && journey.questionsSessionId === journey.sessionId) {
+      // DETECT BROKEN CACHE: If the cached questions have suspected "stubs" (under 50 chars in starter code)
+      // or if they belong to an old session, force a re-generation from the high-fidelity bank.
+      const isCacheSuspect = journey.codingQuestions?.some((q: any) => 
+        (q.starterCode?.python?.length < 50) || !q.hiddenTestCases?.length
+      );
+
+      if (!isCacheSuspect && Array.isArray(journey.codingQuestions) && journey.codingQuestions.length === 8 && journey.questionsSessionId === journey.sessionId) {
         setQuestions(journey.codingQuestions);
         setIsInitializing(false);
         return;
       }
 
-      // Concurrency Guard: Prevent duplicate setup sequences
       if (initLoadingRef.current) return;
 
-      // Access Check: Verify unlock status (accept URL override for high-speed transition)
       if (journey.codingUnlocked !== true && !isUnlockedParam) {
         toast({ variant: "destructive", title: "Access Restricted", description: "Complete previous nodes to unlock syntax matrix." });
         router.push(STAGE_ROUTES.APTITUDE_RESULT);
@@ -423,37 +420,45 @@ function CodingEngineContent() {
         const usedTitles = Array.isArray(userSnap.data()?.codingQuestionHistory) ? userSnap.data()?.codingQuestionHistory : [];
         
         let finalQuestions = [];
-        try {
-          const response = await generateCodingQuestions({
-            role: journey.role,
-            company: journey.company,
-            experienceLevel: journey.experience,
-            count: 8,
-            avoidTitles: usedTitles
-          });
-          finalQuestions = response.questions;
-        } catch (genError) {
-          console.warn("[Coding Round] AI generation failed, deploying failsafe master bank.");
-          const pickQuestions = (difficulty: string, count: number) => {
-            const pool = [...MASTER_QUESTIONS].filter(q => q.difficulty === difficulty);
-            return pool.sort(() => Math.random() - 0.5).slice(0, count);
-          };
-          finalQuestions = [...pickQuestions('Easy', 3), ...pickQuestions('Medium', 3), ...pickQuestions('Hard', 2)];
-        }
 
+        // GOLD STANDARD PROTOCOL: Prefer High-Fidelity Bank for Pro/Premium Tier Consistency
+        const pickFromBank = (difficulty: string, count: number) => {
+          const pool = [...MASTER_QUESTIONS].filter(q => q.difficulty === difficulty);
+          const newOnes = pool.filter(q => !usedTitles.includes(q.title));
+          const targetPool = newOnes.length >= count ? newOnes : pool;
+          return targetPool.sort(() => Math.random() - 0.5).slice(0, count);
+        };
+
+        // Distribution: 3 Easy, 3 Medium, 2 Hard
+        finalQuestions = [
+          ...pickFromBank('Easy', 3),
+          ...pickFromBank('Medium', 3),
+          ...pickFromBank('Hard', 2)
+        ];
+
+        // FALLBACK: Use AI Generator only if the bank is exhausted or explicitly requested
         if (!finalQuestions || finalQuestions.length < 8) {
-          finalQuestions = [...MASTER_QUESTIONS].sort(() => Math.random() - 0.5).slice(0, 8);
+           try {
+              const response = await generateCodingQuestions({
+                role: journey.role,
+                company: journey.company,
+                experienceLevel: journey.experience,
+                count: 8,
+                avoidTitles: usedTitles
+              });
+              finalQuestions = response.questions;
+           } catch (genError) {
+              finalQuestions = [...MASTER_QUESTIONS].sort(() => Math.random() - 0.5).slice(0, 8);
+           }
         }
 
         const newTitles = finalQuestions.map(q => q.title);
         
-        // PERFORMANCE OPTIMIZATION: Render first, persist in background
         setQuestions(finalQuestions);
         setIsInitializing(false);
         initLoadingRef.current = false;
         clearTimeout(timeoutId);
 
-        // PERSISTENCE (Non-blocking)
         updateDoc(journeyRef!, {
           codingQuestions: finalQuestions,
           questionsSessionId: journey.sessionId || "unknown",
@@ -483,6 +488,7 @@ function CodingEngineContent() {
       const isSameLanguage = savedResult?.language === selectedLang.label;
       const savedCode = isSameLanguage ? savedResult.code : null;
 
+      // Extract the proper multi-line template from the bank-aligned question
       const starterCode = currentQ.starterCode?.[selectedLang.id] || 
                           currentQ.starterCode?.["python"] || 
                           "// Starter code unavailable.";
@@ -529,7 +535,6 @@ function CodingEngineContent() {
             key="error"
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.95 }}
             className="space-y-8 max-w-lg"
           >
             <div className="w-20 h-20 rounded-full bg-red-500/20 border border-red-500/30 flex items-center justify-center mx-auto">
@@ -540,7 +545,6 @@ function CodingEngineContent() {
               <p className="text-muted-foreground font-light leading-relaxed">
                 We couldn't prepare your coding round right now. Please try again.
               </p>
-              <p className="text-[10px] text-white/20 uppercase tracking-widest">{typeof initError === 'string' ? initError : "Neural link fault"}</p>
             </div>
             <Button 
               onClick={() => { setInitError(null); initLoadingRef.current = false; setRetryKey(k => k + 1); }} 
@@ -554,7 +558,6 @@ function CodingEngineContent() {
             key="loading"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
             className="flex flex-col items-center gap-12"
           >
             <div className="relative">
@@ -564,7 +567,7 @@ function CodingEngineContent() {
             <div className="space-y-4">
               <h2 className="text-4xl font-bold tracking-tighter text-premium uppercase">Preparing Your Coding Round</h2>
               <p className="text-[10px] font-black uppercase tracking-[0.4em] text-accent animate-pulse">
-                Generating coding questions and preparing your coding environment...
+                Synchronizing High-Fidelity Question Matrix...
               </p>
             </div>
           </motion.div>
