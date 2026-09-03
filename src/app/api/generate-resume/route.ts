@@ -1,9 +1,9 @@
 import { NextResponse } from 'next/server';
-import puppeteer from 'puppeteer';
 
 /**
  * @fileOverview Server-side Resume PDF Generator.
  * Optimized for Custom Container deployments using the official Puppeteer image.
+ * Uses dynamic imports to keep development build times fast.
  */
 
 export const maxDuration = 60;
@@ -13,6 +13,9 @@ export async function POST(req: Request) {
   try {
     const data = await req.json();
     const { name, role, email, phone, loc, summary, skills, experience, projects, education, theme } = data;
+
+    // Lazy-load puppeteer to avoid heavy bundle analysis during dev navigation
+    const puppeteer = await import('puppeteer');
 
     const html = `
       <!DOCTYPE html>

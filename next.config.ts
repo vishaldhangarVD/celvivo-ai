@@ -12,6 +12,8 @@ const nextConfig: NextConfig = {
     serverActions: {
       bodySizeLimit: '10mb',
     },
+    // Optimize development performance by excluding heavy native modules from the bundle
+    serverExternalPackages: ['puppeteer', 'puppeteer-core'],
   },
   
   allowedDevOrigins: [
