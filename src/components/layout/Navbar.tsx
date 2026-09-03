@@ -331,12 +331,12 @@ export default function Navbar() {
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end" className="w-56 glass border-white/10 bg-[#0b0e1a] text-white mt-2 p-2 rounded-2xl">
                       <DropdownMenuLabel className="px-3 py-2">
-                        <p className="text-xs font-black uppercase tracking-widest">Operator {userFirstName}</p>
+                        <p className="text-xs font-black uppercase tracking-widest">{userFirstName}</p>
                         <p className="text-[10px] text-white/40 font-light truncate">{user.email}</p>
                       </DropdownMenuLabel>
                       <DropdownMenuSeparator className="bg-white/5" />
                       <DropdownMenuItem onClick={() => router.push('/dashboard')} className="rounded-xl focus:bg-white/5 focus:text-accent cursor-pointer gap-3 text-[10px] uppercase font-bold tracking-widest py-3">
-                        <LayoutDashboard className="w-4 h-4" /> System Dashboard
+                        <LayoutDashboard className="w-4 h-4" /> Dashboard
                       </DropdownMenuItem>
                       {isFounder && (
                         <DropdownMenuItem onClick={() => router.push('/founder')} className="rounded-xl focus:bg-purple-500/10 focus:text-purple-400 cursor-pointer gap-3 text-[10px] uppercase font-bold tracking-widest py-3 text-purple-400">
@@ -344,11 +344,11 @@ export default function Navbar() {
                         </DropdownMenuItem>
                       )}
                       <DropdownMenuItem onClick={() => router.push('/settings')} className="rounded-xl focus:bg-white/5 focus:text-accent cursor-pointer gap-3 text-[10px] uppercase font-bold tracking-widest py-3">
-                        <Award className="w-4 h-4" /> Credentials
+                        <Award className="w-4 h-4" /> Certificates & Achievements
                       </DropdownMenuItem>
                       <DropdownMenuSeparator className="bg-white/5" />
                       <DropdownMenuItem onClick={handleSignOut} className="rounded-xl focus:bg-red-500/10 focus:text-red-400 text-red-400 cursor-pointer gap-3 text-[10px] uppercase font-bold tracking-widest py-3">
-                        <LogOut className="w-4 h-4" /> Terminate Session
+                        <LogOut className="w-4 h-4" /> Log Out
                       </DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
@@ -423,7 +423,7 @@ export default function Navbar() {
                   onClick={() => { handleSignOut(); setIsOpen(false); }}
                   className="w-full h-16 rounded-2xl glass border-white/10 font-bold uppercase tracking-widest text-xs text-red-400"
                 >
-                  Terminate Session
+                  Log Out
                 </Button>
               ) : (
                 <>
