@@ -394,11 +394,11 @@ export default function InterviewSetupPage() {
               </p>
             </header>
 
-            <div className="space-y-10 flex-1 min-h-0 overflow-y-auto md:overflow-visible pr-2 custom-scrollbar">
-              <div className="space-y-3">
+            <div className="space-y-8 flex-1 min-h-0 overflow-y-auto md:overflow-visible pr-2 custom-scrollbar">
+              <div className="space-y-2">
                 <Label className="text-[9px] font-black uppercase tracking-[0.4em] text-white/40 ml-2">COMPANY</Label>
                 <Select value={company} onValueChange={setCompany}>
-                  <SelectTrigger className="h-16 glass border-white/10 bg-transparent rounded-xl px-5 text-sm font-bold uppercase tracking-widest text-white transition-all">
+                  <SelectTrigger className="h-14 glass border-white/10 bg-transparent rounded-xl px-5 text-sm font-bold uppercase tracking-widest text-white transition-all">
                     <div className="flex items-center gap-4">
                       <div className="w-6 h-6 flex items-center justify-center">
                         <CompanyLogo name={company} />
@@ -421,10 +421,10 @@ export default function InterviewSetupPage() {
                 </Select>
               </div>
 
-              <div className="space-y-3">
+              <div className="space-y-2">
                 <Label className="text-[9px] font-black uppercase tracking-[0.4em] text-white/40 ml-2">JOB ROLE</Label>
                 <Select value={role} onValueChange={setRole}>
-                  <SelectTrigger className="h-16 glass border-white/10 bg-transparent rounded-xl px-5 text-sm font-bold uppercase tracking-widest text-white transition-all">
+                  <SelectTrigger className="h-14 glass border-white/10 bg-transparent rounded-xl px-5 text-sm font-bold uppercase tracking-widest text-white transition-all">
                     <div className="flex items-center gap-4">
                       <div className="w-6 h-6 flex items-center justify-center text-accent">
                         <RoleIcon role={role} />
@@ -447,7 +447,7 @@ export default function InterviewSetupPage() {
                 </Select>
               </div>
 
-              <div className="space-y-3">
+              <div className="space-y-2">
                 <Label className="text-[9px] font-black uppercase tracking-[0.4em] text-white/40 ml-2">EXPERIENCE LEVEL</Label>
                 <div className="flex flex-wrap gap-3">
                   {EXPERIENCE_LEVELS.map(l => (
@@ -455,7 +455,7 @@ export default function InterviewSetupPage() {
                       key={l}
                       onClick={() => setExperience(l)}
                       className={cn(
-                        "px-6 py-4 rounded-xl border text-[9px] font-black uppercase tracking-widest transition-all",
+                        "px-5 py-2.5 rounded-xl border text-[9px] font-black uppercase tracking-widest transition-all",
                         experience === l 
                           ? "bg-accent/20 border-accent text-accent shadow-[0_0_15px_rgba(34,211,238,0.2)]" 
                           : "glass border-white/5 text-white/40 hover:bg-white/5"
@@ -467,7 +467,7 @@ export default function InterviewSetupPage() {
                 </div>
               </div>
 
-              <div className="space-y-4">
+              <div className="space-y-3">
                 <h3 className="text-[9px] font-black uppercase tracking-[0.4em] text-white/40 ml-2">SELECTED CONFIGURATION</h3>
                 <div className="grid grid-cols-3 gap-4">
                   {[
@@ -475,7 +475,7 @@ export default function InterviewSetupPage() {
                     { label: "Job Role", val: role, icon: Briefcase },
                     { label: "Experience Level", val: experience, icon: GraduationCap }
                   ].map((item, i) => (
-                    <Card key={i} className="p-6 glass border-accent/20 bg-accent/5 rounded-2xl space-y-4 transition-all">
+                    <Card key={i} className="p-4 glass border-accent/20 bg-accent/5 rounded-2xl space-y-4 transition-all">
                        <div className="w-10 h-10 rounded-lg bg-accent/10 flex items-center justify-center text-accent">
                          {item.label === "Organization" ? (
                            <div className="w-6 h-6 flex items-center justify-center">
@@ -498,12 +498,12 @@ export default function InterviewSetupPage() {
           </div>
 
           <div className="lg:col-span-5 flex flex-col h-full min-h-0 gap-6">
-            <div className="space-y-3 shrink-0">
+            <div className="space-y-2 shrink-0">
               <h2 className="text-lg font-bold tracking-tighter ml-2 uppercase">Resume Upload</h2>
               <Card 
                 onClick={() => !isVerifying && document.getElementById('resume-input')?.click()}
                 className={cn(
-                  "premium-card bg-white/[0.01] border-white/5 p-6 flex flex-col items-center justify-center text-center cursor-pointer group transition-all duration-500 h-[300px] relative overflow-hidden shrink-0",
+                  "premium-card bg-white/[0.01] border-white/5 p-6 flex flex-col items-center justify-center text-center cursor-pointer group transition-all duration-500 h-[210px] relative overflow-hidden shrink-0",
                   isUploaded ? "border-green-500/20 bg-green-500/[0.02]" : "hover:border-accent/20 hover:bg-white/[0.03]"
                 )}
               >
@@ -548,14 +548,14 @@ export default function InterviewSetupPage() {
               </Card>
             </div>
 
-            <div id="next-steps-section" className="space-y-8 flex-1 min-h-0 flex flex-col justify-end pb-4">
+            <div id="next-steps-section" className="space-y-6 flex-1 min-h-0 flex flex-col justify-end pb-4">
               <div className="space-y-0.5 ml-2 shrink-0">
                 <h3 className="text-lg font-bold tracking-tighter uppercase">NEXT STEPS</h3>
                 <p className="text-[9px] text-white/40 uppercase tracking-widest">Choose how you want to proceed with your assessment</p>
               </div>
               
               <div className="grid grid-cols-2 gap-4 shrink-0">
-                <Card className="glass border-white/5 bg-white/[0.01] p-8 rounded-[1.8rem] flex flex-col justify-between hover:border-accent/40 transition-all group">
+                <Card className="glass border-white/5 bg-white/[0.01] p-6 rounded-[1.8rem] flex flex-col justify-between hover:border-accent/40 transition-all group">
                   <div className="space-y-3">
                     <div className="w-10 h-10 rounded-lg bg-accent/10 flex items-center justify-center text-accent">
                       <Command className="w-5 h-5" />
@@ -574,7 +574,7 @@ export default function InterviewSetupPage() {
                   </Button>
                 </Card>
 
-                <Card className="glass border-white/5 bg-white/[0.01] p-8 rounded-[1.8rem] flex flex-col justify-between hover:border-purple-500/40 transition-all group">
+                <Card className="glass border-white/5 bg-white/[0.01] p-6 rounded-[1.8rem] flex flex-col justify-between hover:border-purple-500/40 transition-all group">
                   <div className="space-y-3">
                     <div className="w-10 h-10 rounded-lg bg-purple-500/10 flex items-center justify-center text-purple-400">
                       <Zap className="w-5 h-5" />
