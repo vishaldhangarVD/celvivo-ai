@@ -125,7 +125,7 @@ const HeroSection = memo(({ onStart, onEnterRoom }: { onStart: () => void, onEnt
             
             <div className="space-y-4">
               <h1 className="text-6xl md:text-7xl font-bold tracking-tighter leading-[0.95] text-premium">
-                Master Every <br />
+                Ace Every <br />
                 <span className="text-gradient-purple">Interview.</span>
               </h1>
               <p className="max-w-md text-xl text-muted-foreground font-light leading-relaxed">
@@ -475,9 +475,9 @@ export default function LandingPage() {
         </div>
       </section>
 
-      <footer className="pt-32 pb-16 px-8 border-t border-white/5 bg-black/20">
+      <footer className="mt-auto pt-32 pb-4 px-8 border-t border-white/5 bg-black/20">
         <div className="container mx-auto max-w-7xl">
-          <div className="grid md:grid-cols-4 gap-16 mb-20">
+        <div className="grid md:grid-cols-4 gap-16 mb-10">
             <div className="md:col-span-1 space-y-8">
               <Link href="/" className="flex items-center gap-4 group">
                 <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-purple-600 to-blue-600 flex items-center justify-center shadow-lg shadow-purple-500/20 border border-white/10 group-hover:rotate-90 transition-transform duration-500">
@@ -539,7 +539,7 @@ export default function LandingPage() {
             </div>
           </div>
 
-          <div className="pt-12 border-t border-white/5 flex flex-col md:flex-row justify-between items-center gap-8">
+          <div className="pt-12 mt-auto border-t border-white/5 flex flex-col md:flex-row justify-between items-center gap-8">
             <p className="text-[10px] font-bold text-white/20 uppercase tracking-[0.3em]">
               © 2026 NEXVORO AI PROTOCOLS. ALL RIGHTS RESERVED.
             </p>
