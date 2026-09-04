@@ -1,4 +1,3 @@
-
 "use client";
 
 import { motion } from 'framer-motion';
@@ -232,7 +231,7 @@ const HeroSection = memo(({ onStart, onEnterRoom }: { onStart: () => void, onEnt
                   muted={isVideoMuted}
                   playsInline
                   controls={false}
-                  preload="auto"
+                  preload="metadata"
                   onPlaying={() => {
                     setTimeout(() => {
                       setIsVideoMuted(false);
@@ -273,87 +272,89 @@ const TrustSection = memo(() => {
   const [isScrollingPaused, setIsScrollingPaused] = useState(false);
 
   return (
-    <motion.div 
-      initial={{ opacity: 0, y: 40 }}
-      whileInView={{ opacity: 1, y: 0 }}
-      viewport={{ once: true }}
-      className="mt-[40px] mb-[24px] relative"
-    >
-      <div className="absolute -inset-24 bg-accent/5 rounded-full blur-[100px] pointer-events-none opacity-20" />
-      
-      <Card className="relative overflow-hidden glass border-cyan-500/20 rounded-[24px] p-[30px] bg-white/[0.01] shadow-[0_0_40px_rgba(34,211,238,0.05)] group">
-        <div className="absolute inset-0 pointer-events-none">
-          <div className="absolute top-0 -left-[100%] w-full h-full bg-gradient-to-r from-transparent via-white/[0.03] to-transparent animate-light-streak" />
-        </div>
+    <div className="container mx-auto max-w-7xl">
+      <motion.div 
+        initial={{ opacity: 0, y: 40 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        viewport={{ once: true }}
+        className="mt-[40px] mb-[24px] relative"
+      >
+        <div className="absolute -inset-24 bg-accent/5 rounded-full blur-[100px] pointer-events-none opacity-20" />
+        
+        <Card className="relative overflow-hidden glass border-cyan-500/20 rounded-[24px] p-[30px] bg-white/[0.01] shadow-[0_0_40px_rgba(34,211,238,0.05)] group">
+          <div className="absolute inset-0 pointer-events-none">
+            <div className="absolute top-0 -left-[100%] w-full h-full bg-gradient-to-r from-transparent via-white/[0.03] to-transparent animate-light-streak" />
+          </div>
 
-        <div className="text-center mb-10">
-          <h2 className="text-[11px] font-black tracking-[0.4em] uppercase text-gradient-purple">
-            TRUSTED BY TOP COMPANIES WORLDWIDE
-          </h2>
-        </div>
+          <div className="text-center mb-10">
+            <h2 className="text-[11px] font-black tracking-[0.4em] uppercase text-gradient-purple">
+              TRUSTED BY TOP COMPANIES WORLDWIDE
+            </h2>
+          </div>
 
-        <div 
-          className="relative overflow-hidden py-4"
-          onMouseEnter={() => setIsScrollingPaused(true)}
-          onMouseLeave={() => setIsScrollingPaused(false)}
-        >
-          <motion.div 
-            className="flex gap-12 w-max items-center"
-            animate={{ x: isScrollingPaused ? 0 : [0, -100 * COMPANIES.length] }}
-            transition={{ 
-              duration: 40, 
-              repeat: Infinity, 
-              ease: "linear",
-              repeatType: "loop"
-            }}
+          <div 
+            className="relative overflow-hidden py-4"
+            onMouseEnter={() => setIsScrollingPaused(true)}
+            onMouseLeave={() => setIsScrollingPaused(false)}
           >
-            {[...COMPANIES, ...COMPANIES].map((company, idx) => (
-              <div 
-                key={idx}
-                className="flex items-center gap-3 transition-all duration-300 grayscale opacity-60 hover:grayscale-0 hover:opacity-100 hover:scale-[1.08] cursor-default"
-              >
-                <div className={`text-2xl font-black ${company.color} tracking-tighter`}>
-                  {company.logo}
+            <motion.div 
+              className="flex gap-12 w-max items-center"
+              animate={{ x: isScrollingPaused ? 0 : [0, -100 * COMPANIES.length] }}
+              transition={{ 
+                duration: 40, 
+                repeat: Infinity, 
+                ease: "linear",
+                repeatType: "loop"
+              }}
+            >
+              {[...COMPANIES, ...COMPANIES].map((company, idx) => (
+                <div 
+                  key={idx}
+                  className="flex items-center gap-3 transition-all duration-300 grayscale opacity-60 hover:grayscale-0 hover:opacity-100 hover:scale-[1.08] cursor-default"
+                >
+                  <div className={`text-2xl font-black ${company.color} tracking-tighter`}>
+                    {company.logo}
+                  </div>
+                  <span className="text-[10px] font-bold uppercase tracking-widest text-white/40">{company.name}</span>
                 </div>
-                <span className="text-[10px] font-bold uppercase tracking-widest text-white/40">{company.name}</span>
-              </div>
+              ))}
+            </motion.div>
+            
+            <div className="absolute inset-y-0 left-0 w-24 bg-gradient-to-r from-[#050816]/50 to-transparent z-10" />
+            <div className="absolute inset-y-0 right-0 w-24 bg-gradient-to-l from-[#050816]/50 to-transparent z-10" />
+          </div>
+
+          <motion.div 
+            variants={containerVariants}
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true, margin: "-50px" }}
+            className="mt-12 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 relative z-10"
+          >
+            {TRUST_CARDS.map((card, i) => (
+              <motion.div
+                key={i}
+                variants={itemVariants}
+                whileHover={{ translateY: -8, scale: 1.03 }}
+                className="glass rounded-[18px] p-6 border-cyan-500/20 bg-white/[0.02] shadow-[0_0_30px_rgba(34,211,238,0.05)] hover:shadow-[0_0_40px_rgba(34,211,238,0.15)] transition-all duration-300 group/card"
+              >
+                <div className="w-12 h-12 rounded-full bg-accent/10 flex items-center justify-center mb-5 group-hover/card:bg-accent/20 transition-colors">
+                  <card.icon className={`w-6 h-6 ${card.color}`} />
+                </div>
+                <h3 className="text-sm font-bold text-white mb-2 group-hover/card:text-accent transition-colors">{card.title}</h3>
+                <p className="text-[11px] text-white/50 leading-relaxed font-medium">{card.subtitle}</p>
+              </motion.div>
             ))}
           </motion.div>
-          
-          <div className="absolute inset-y-0 left-0 w-24 bg-gradient-to-r from-[#050816]/50 to-transparent z-10" />
-          <div className="absolute inset-y-0 right-0 w-24 bg-gradient-to-l from-[#050816]/50 to-transparent z-10" />
+        </Card>
+
+        <div className="mt-6 text-center">
+          <p className="text-[10px] font-bold tracking-[0.3em] uppercase text-white/20">
+            Trusted by students preparing for the world's leading technology companies.
+          </p>
         </div>
-
-        <motion.div 
-          variants={containerVariants}
-          initial="hidden"
-          whileInView="visible"
-          viewport={{ once: true, margin: "-50px" }}
-          className="mt-12 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 relative z-10"
-        >
-          {TRUST_CARDS.map((card, i) => (
-            <motion.div
-              key={i}
-              variants={itemVariants}
-              whileHover={{ translateY: -8, scale: 1.03 }}
-              className="glass rounded-[18px] p-6 border-cyan-500/20 bg-white/[0.02] shadow-[0_0_30px_rgba(34,211,238,0.05)] hover:shadow-[0_0_40px_rgba(34,211,238,0.15)] transition-all duration-300 group/card"
-            >
-              <div className="w-12 h-12 rounded-full bg-accent/10 flex items-center justify-center mb-5 group-hover/card:bg-accent/20 transition-colors">
-                <card.icon className={`w-6 h-6 ${card.color}`} />
-              </div>
-              <h3 className="text-sm font-bold text-white mb-2 group-hover/card:text-accent transition-colors">{card.title}</h3>
-              <p className="text-[11px] text-white/50 leading-relaxed font-medium">{card.subtitle}</p>
-            </motion.div>
-          ))}
-        </motion.div>
-      </Card>
-
-      <div className="mt-6 text-center">
-        <p className="text-[10px] font-bold tracking-[0.3em] uppercase text-white/20">
-          Trusted by students preparing for the world's leading technology companies.
-        </p>
-      </div>
-    </motion.div>
+      </motion.div>
+    </div>
   );
 });
 TrustSection.displayName = "TrustSection";
