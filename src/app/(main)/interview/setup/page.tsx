@@ -375,13 +375,13 @@ export default function InterviewSetupPage() {
   );
 
   return (
-    <div className="h-screen bg-[#050816] flex flex-col overflow-hidden relative">
+    <div className="min-h-screen bg-[#050816] flex flex-col overflow-x-hidden relative">
       <div className="particles-bg" />
 
-      <main className="flex-1 container mx-auto px-6 pt-24 pb-4 overflow-hidden flex flex-col min-h-0">
-        <div className="max-w-7xl mx-auto grid lg:grid-cols-12 gap-10 flex-1 min-h-0 w-full">
+      <main className="flex-1 container mx-auto px-6 pt-24 pb-10 flex flex-col w-full">
+        <div className="max-w-7xl mx-auto grid lg:grid-cols-12 gap-10 flex-1 w-full">
           
-          <div className="lg:col-span-7 flex flex-col h-full min-h-0">
+          <div className="lg:col-span-7 flex flex-col">
             <header className="space-y-2 mb-10 shrink-0">
               <Badge className="bg-accent/20 text-accent border-none px-4 py-0.5 text-[9px] tracking-[0.4em] font-black uppercase">
                 INTERVIEW PREPARATION
@@ -394,7 +394,7 @@ export default function InterviewSetupPage() {
               </p>
             </header>
 
-            <div className="space-y-8 flex-1 min-h-0 overflow-y-auto md:overflow-visible pr-2 custom-scrollbar">
+            <div className="space-y-8 pr-2 custom-scrollbar">
               <div className="space-y-2">
                 <Label className="text-[9px] font-black uppercase tracking-[0.4em] text-white/40 ml-2">COMPANY</Label>
                 <Select value={company} onValueChange={setCompany}>
@@ -497,7 +497,7 @@ export default function InterviewSetupPage() {
             </div>
           </div>
 
-          <div className="lg:col-span-5 flex flex-col h-full min-h-0 gap-6">
+          <div className="lg:col-span-5 flex flex-col gap-6">
             <div className="space-y-2 shrink-0">
               <h2 className="text-lg font-bold tracking-tighter ml-2 uppercase">Resume Upload</h2>
               <Card 
@@ -548,7 +548,7 @@ export default function InterviewSetupPage() {
               </Card>
             </div>
 
-            <div id="next-steps-section" className="space-y-6 flex-1 min-h-0 flex flex-col justify-end pb-4">
+            <div id="next-steps-section" className="space-y-6 flex flex-col justify-end pb-4">
               <div className="space-y-0.5 ml-2 shrink-0">
                 <h3 className="text-lg font-bold tracking-tighter uppercase">NEXT STEPS</h3>
                 <p className="text-[9px] text-white/40 uppercase tracking-widest">Choose how you want to proceed with your assessment</p>
