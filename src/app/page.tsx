@@ -329,7 +329,7 @@ const TrustSection = memo(() => {
             initial="hidden"
             whileInView="visible"
             viewport={{ once: true, margin: "-50px" }}
-            className="mt-12 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 relative z-10 px-4"
+            className="mt-12 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 relative z-10"
           >
             {TRUST_CARDS.map((card, i) => (
               <motion.div
@@ -480,7 +480,7 @@ export default function LandingPage() {
           <div className="grid md:grid-cols-4 gap-16 mb-20">
             <div className="md:col-span-1 space-y-8">
               <Link href="/" className="flex items-center gap-4 group">
-                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-purple-600 to-blue-600 flex items-center justify-center shadow-lg border border-white/10 group-hover:rotate-90 transition-transform duration-500">
+                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-purple-600 to-blue-600 flex items-center justify-center shadow-lg shadow-purple-500/20 border border-white/10 group-hover:rotate-90 transition-transform duration-500">
                   <Command className="text-white w-5 h-5" />
                 </div>
                 <span className="font-headline font-bold text-2xl tracking-tighter uppercase text-premium">
