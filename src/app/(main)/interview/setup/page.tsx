@@ -379,10 +379,10 @@ export default function InterviewSetupPage() {
       <div className="particles-bg" />
 
       <main className="flex-1 container mx-auto px-6 pt-24 pb-4 overflow-hidden flex flex-col min-h-0">
-        <div className="max-w-7xl mx-auto grid lg:grid-cols-12 gap-6 flex-1 min-h-0 w-full">
+        <div className="max-w-7xl mx-auto grid lg:grid-cols-12 gap-10 flex-1 min-h-0 w-full">
           
           <div className="lg:col-span-7 flex flex-col h-full min-h-0">
-            <header className="space-y-1 mb-4 shrink-0">
+            <header className="space-y-2 mb-6 shrink-0">
               <Badge className="bg-accent/20 text-accent border-none px-4 py-0.5 text-[9px] tracking-[0.4em] font-black uppercase">
                 INTERVIEW PREPARATION
               </Badge>
@@ -394,13 +394,13 @@ export default function InterviewSetupPage() {
               </p>
             </header>
 
-            <div className="space-y-4 flex-1 min-h-0 overflow-y-auto md:overflow-visible pr-2 custom-scrollbar">
-              <div className="space-y-2">
+            <div className="space-y-6 flex-1 min-h-0 overflow-y-auto md:overflow-visible pr-2 custom-scrollbar">
+              <div className="space-y-3">
                 <Label className="text-[9px] font-black uppercase tracking-[0.4em] text-white/40 ml-2">COMPANY</Label>
                 <Select value={company} onValueChange={setCompany}>
-                  <SelectTrigger className="h-12 glass border-white/10 bg-transparent rounded-xl px-4 text-sm font-bold uppercase tracking-widest text-white">
-                    <div className="flex items-center gap-3">
-                      <div className="w-5 h-5 flex items-center justify-center">
+                  <SelectTrigger className="h-14 glass border-white/10 bg-transparent rounded-xl px-5 text-sm font-bold uppercase tracking-widest text-white transition-all">
+                    <div className="flex items-center gap-4">
+                      <div className="w-6 h-6 flex items-center justify-center">
                         <CompanyLogo name={company} />
                       </div>
                       <SelectValue placeholder="Select Organization" />
@@ -421,12 +421,12 @@ export default function InterviewSetupPage() {
                 </Select>
               </div>
 
-              <div className="space-y-2">
+              <div className="space-y-3">
                 <Label className="text-[9px] font-black uppercase tracking-[0.4em] text-white/40 ml-2">JOB ROLE</Label>
                 <Select value={role} onValueChange={setRole}>
-                  <SelectTrigger className="h-12 glass border-white/10 bg-transparent rounded-xl px-4 text-sm font-bold uppercase tracking-widest text-white">
-                    <div className="flex items-center gap-3">
-                      <div className="w-5 h-5 flex items-center justify-center text-accent">
+                  <SelectTrigger className="h-14 glass border-white/10 bg-transparent rounded-xl px-5 text-sm font-bold uppercase tracking-widest text-white transition-all">
+                    <div className="flex items-center gap-4">
+                      <div className="w-6 h-6 flex items-center justify-center text-accent">
                         <RoleIcon role={role} />
                       </div>
                       <SelectValue placeholder="Select Job Role" />
@@ -447,15 +447,15 @@ export default function InterviewSetupPage() {
                 </Select>
               </div>
 
-              <div className="space-y-2">
+              <div className="space-y-3">
                 <Label className="text-[9px] font-black uppercase tracking-[0.4em] text-white/40 ml-2">EXPERIENCE LEVEL</Label>
-                <div className="flex flex-wrap gap-2">
+                <div className="flex flex-wrap gap-3">
                   {EXPERIENCE_LEVELS.map(l => (
                     <button
                       key={l}
                       onClick={() => setExperience(l)}
                       className={cn(
-                        "px-4 py-2 rounded-xl border text-[9px] font-black uppercase tracking-widest transition-all",
+                        "px-5 py-2.5 rounded-xl border text-[9px] font-black uppercase tracking-widest transition-all",
                         experience === l 
                           ? "bg-accent/20 border-accent text-accent shadow-[0_0_15px_rgba(34,211,238,0.2)]" 
                           : "glass border-white/5 text-white/40 hover:bg-white/5"
@@ -467,66 +467,60 @@ export default function InterviewSetupPage() {
                 </div>
               </div>
 
-              <div className="space-y-3">
+              <div className="space-y-4">
                 <h3 className="text-[9px] font-black uppercase tracking-[0.4em] text-white/40 ml-2">SELECTED CONFIGURATION</h3>
-                <div className="grid grid-cols-3 gap-3">
+                <div className="grid grid-cols-3 gap-4">
                   {[
                     { label: "Organization", val: company, icon: Building2 },
                     { label: "Job Role", val: role, icon: Briefcase },
                     { label: "Experience Level", val: experience, icon: GraduationCap }
                   ].map((item, i) => (
-                    <Card key={i} className="p-3 glass border-accent/20 bg-accent/5 rounded-2xl space-y-1.5">
-                       <div className="w-7 h-7 rounded-lg bg-accent/10 flex items-center justify-center text-accent">
+                    <Card key={i} className="p-4 glass border-accent/20 bg-accent/5 rounded-2xl space-y-2.5 transition-all">
+                       <div className="w-8 h-8 rounded-lg bg-accent/10 flex items-center justify-center text-accent">
                          {item.label === "Organization" ? (
-                           <div className="w-4 h-4 flex items-center justify-center">
+                           <div className="w-5 h-5 flex items-center justify-center">
                              <CompanyLogo name={item.val} />
                            </div>
                          ) : item.label === "Job Role" ? (
-                           <RoleIcon role={item.val} className="w-4 h-4" />
-                         ) : <item.icon className="w-4 h-4" />}
+                           <RoleIcon role={item.val} className="w-5 h-5" />
+                         ) : <item.icon className="w-5 h-5" />}
                        </div>
                        <div>
                          <p className="text-[11px] font-bold text-white leading-tight truncate">{item.val}</p>
-                         <p className="text-[7px] font-black uppercase tracking-widest text-white/30 mt-0.5">{item.label}</p>
+                         <p className="text-[7px] font-black uppercase tracking-widest text-white/30 mt-1">{item.label}</p>
                        </div>
                     </Card>
                   ))}
                 </div>
               </div>
-
-              <Button 
-                onClick={() => document.getElementById('next-steps-section')?.scrollIntoView({ behavior: 'smooth' })}
-                className="w-full h-14 btn-premium text-[10px] font-black uppercase tracking-[0.4em] shadow-[0_20px_60px_rgba(147,51,234,0.3)] mt-2"
-              >
-                CONTINUE TO NEXT STEP
-              </Button>
+              
             </div>
           </div>
 
-          <div className="lg:col-span-5 flex flex-col h-full min-h-0 gap-4">
-            <div className="space-y-2 shrink-0">
+          <div className="lg:col-span-5 flex flex-col h-full min-h-0 gap-6">
+            <div className="space-y-3 shrink-0">
               <h2 className="text-lg font-bold tracking-tighter ml-2 uppercase">Resume Upload</h2>
               <Card 
                 onClick={() => !isVerifying && document.getElementById('resume-input')?.click()}
                 className={cn(
-                  "premium-card bg-white/[0.01] border-white/5 p-4 flex flex-col items-center justify-center text-center cursor-pointer group transition-all duration-500 h-[180px] relative overflow-hidden shrink-0",
+                  "premium-card bg-white/[0.01] border-white/5 p-6 flex flex-col items-center justify-center text-center cursor-pointer group transition-all duration-500 h-[210px] relative overflow-hidden shrink-0",
                   isUploaded ? "border-green-500/20 bg-green-500/[0.02]" : "hover:border-accent/20 hover:bg-white/[0.03]"
                 )}
               >
                 <input type="file" id="resume-input" className="hidden" accept=".pdf" onChange={handleFileChange} />
                 <AnimatePresence mode="wait">
                   {isVerifying ? (
-                    <motion.div key="verifying" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-3">
+                    <motion.div key="verifying" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-4">
                       <div className="relative">
-                        <div className="w-12 h-12 rounded-full border-2 border-accent/10 border-t-accent animate-spin" />
-                        <ShieldCheck className="w-5 h-5 text-accent absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 animate-pulse" />
+                        <div className="w-14 h-14 rounded-full border-2 border-accent/10 border-t-accent animate-spin" />
+                        <ShieldCheck className="w-6 h-6 text-accent absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 animate-pulse" />
                       </div>
                       <p className="text-[9px] font-black text-accent uppercase tracking-[0.4em]">Verifying Blueprint...</p>
                     </motion.div>
                   ) : !isUploaded ? (
-                    <motion.div key="upload" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-3">
-                      <div className="w-10 h-10 rounded-xl bg-accent/10 flex items-center justify-center mx-auto border border-accent/20 group-hover:scale-110 transition-transform">
-                        <Upload className="w-5 h-5 text-accent" />
+                    <motion.div key="upload" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-4">
+                      <div className="w-12 h-12 rounded-xl bg-accent/10 flex items-center justify-center mx-auto border border-accent/20 group-hover:scale-110 transition-transform">
+                        <Upload className="w-6 h-6 text-accent" />
                       </div>
                       <div className="space-y-1">
                         <h3 className="text-lg font-bold">Choose File</h3>
@@ -534,18 +528,18 @@ export default function InterviewSetupPage() {
                       </div>
                     </motion.div>
                   ) : (
-                    <motion.div key="uploaded" initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="space-y-3 w-full">
-                      <div className="relative mx-auto w-12 h-14 glass rounded-lg border-white/10 flex items-center justify-center overflow-hidden">
-                        <FileText className="w-6 h-6 text-white/20" />
-                        <Badge className="absolute top-0.5 right-0.5 bg-red-500/20 text-red-500 border-none text-[6px] font-black px-1">PDF</Badge>
+                    <motion.div key="uploaded" initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="space-y-4 w-full">
+                      <div className="relative mx-auto w-14 h-16 glass rounded-lg border-white/10 flex items-center justify-center overflow-hidden">
+                        <FileText className="w-7 h-7 text-white/20" />
+                        <Badge className="absolute top-1 right-1 bg-red-500/20 text-red-500 border-none text-[6px] font-black px-1.5 py-0.5">PDF</Badge>
                       </div>
-                      <div className="space-y-0.5">
+                      <div className="space-y-1">
                         <p className="text-sm font-bold text-white truncate max-w-[240px] mx-auto">{file?.name}</p>
                         <button 
                           onClick={(e) => { e.stopPropagation(); setIsUploaded(false); setFile(null); }} 
                           className="flex items-center gap-1.5 text-[8px] font-bold uppercase tracking-widest text-white/30 hover:text-red-400 transition-all mx-auto pt-2"
                         >
-                          <Trash2 className="w-2.5 h-2.5" /> Remove Blueprint
+                          <Trash2 className="w-3 h-3" /> Remove Blueprint
                         </button>
                       </div>
                     </motion.div>
@@ -554,48 +548,48 @@ export default function InterviewSetupPage() {
               </Card>
             </div>
 
-            <div id="next-steps-section" className="space-y-3 flex-1 min-h-0 flex flex-col justify-end pb-2">
+            <div id="next-steps-section" className="space-y-5 flex-1 min-h-0 flex flex-col justify-end pb-2">
               <div className="space-y-0.5 ml-2 shrink-0">
                 <h3 className="text-lg font-bold tracking-tighter uppercase">NEXT STEPS</h3>
                 <p className="text-[9px] text-white/40 uppercase tracking-widest">Choose how you want to proceed with your assessment</p>
               </div>
               
               <div className="grid grid-cols-2 gap-4 shrink-0">
-                <Card className="glass border-white/5 bg-white/[0.01] p-4 rounded-[1.5rem] flex flex-col justify-between hover:border-accent/40 transition-all group">
-                  <div className="space-y-2">
-                    <div className="w-8 h-8 rounded-lg bg-accent/10 flex items-center justify-center text-accent">
-                      <Command className="w-4 h-4" />
+                <Card className="glass border-white/5 bg-white/[0.01] p-5 rounded-[1.8rem] flex flex-col justify-between hover:border-accent/40 transition-all group">
+                  <div className="space-y-3">
+                    <div className="w-10 h-10 rounded-lg bg-accent/10 flex items-center justify-center text-accent">
+                      <Command className="w-5 h-5" />
                     </div>
-                    <div className="space-y-0.5">
-                      <h4 className="font-bold text-[10px] uppercase tracking-widest">Aptitude Round</h4>
-                      <p className="text-[8px] text-white/30 leading-tight font-medium">Logical intelligence audit.</p>
+                    <div className="space-y-1">
+                      <h4 className="font-bold text-[11px] uppercase tracking-widest">Aptitude Round</h4>
+                      <p className="text-[9px] text-white/30 leading-tight font-medium">Logical intelligence audit.</p>
                     </div>
                   </div>
                   <Button 
                     onClick={() => handleProceed('aptitude')}
                     disabled={isInitializing || !isUploaded}
-                    className="w-full h-9 mt-3 rounded-lg glass border-white/10 text-[8px] font-black uppercase tracking-widest hover:bg-accent hover:text-black transition-all"
+                    className="w-full h-11 mt-4 rounded-xl glass border-white/10 text-[9px] font-black uppercase tracking-widest hover:bg-accent hover:text-black transition-all"
                   >
-                    {isInitializing ? <Loader2 className="w-3 h-3 animate-spin" /> : "CONTINUE TO APTITUDE"}
+                    {isInitializing ? <Loader2 className="w-4 h-4 animate-spin" /> : "CONTINUE TO APTITUDE"}
                   </Button>
                 </Card>
 
-                <Card className="glass border-white/5 bg-white/[0.01] p-4 rounded-[1.5rem] flex flex-col justify-between hover:border-purple-500/40 transition-all group">
-                  <div className="space-y-2">
-                    <div className="w-8 h-8 rounded-lg bg-purple-500/10 flex items-center justify-center text-purple-400">
-                      <Zap className="w-4 h-4" />
+                <Card className="glass border-white/5 bg-white/[0.01] p-5 rounded-[1.8rem] flex flex-col justify-between hover:border-purple-500/40 transition-all group">
+                  <div className="space-y-3">
+                    <div className="w-10 h-10 rounded-lg bg-purple-500/10 flex items-center justify-center text-purple-400">
+                      <Zap className="w-5 h-5" />
                     </div>
-                    <div className="space-y-0.5">
-                      <h4 className="font-bold text-[10px] uppercase tracking-widest">Interview Round</h4>
-                      <p className="text-[8px] text-white/30 leading-tight font-medium">AI executive simulation.</p>
+                    <div className="space-y-1">
+                      <h4 className="font-bold text-[11px] uppercase tracking-widest">Interview Round</h4>
+                      <p className="text-[9px] text-white/30 leading-tight font-medium">AI executive simulation.</p>
                     </div>
                   </div>
                   <Button 
                     onClick={() => handleProceed('interview')}
                     disabled={isInitializing || !isUploaded}
-                    className="w-full h-9 mt-3 rounded-lg glass border-white/10 text-[8px] font-black uppercase tracking-widest hover:bg-purple-600 hover:text-white transition-all"
+                    className="w-full h-11 mt-4 rounded-xl glass border-white/10 text-[9px] font-black uppercase tracking-widest hover:bg-purple-600 hover:text-white transition-all"
                   >
-                    {isInitializing ? <Loader2 className="w-3 h-3 animate-spin" /> : "CONTINUE TO INTERVIEW"}
+                    {isInitializing ? <Loader2 className="w-4 h-4 animate-spin" /> : "CONTINUE TO INTERVIEW"}
                   </Button>
                 </Card>
               </div>
