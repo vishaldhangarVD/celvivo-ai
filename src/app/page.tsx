@@ -238,14 +238,11 @@ const HeroSection = memo(({ onStart, onEnterRoom }: { onStart: () => void, onEnt
                     }, 100);
                   }}
                   onPause={(e) => {
-                    // If the browser paused the video due to a blocked unmute attempt, resume it muted instead of leaving it stuck paused
                     const video = e.currentTarget;
                     if (!video.ended && video.paused) {
                       video.muted = true;
                       setIsVideoMuted(true);
-                      video.play().catch(() => {
-                        // If even muted play fails, leave it paused silently — no further action needed
-                      });
+                      video.play().catch(() => {});
                     }
                   }}
                   onEnded={(e) => {
@@ -410,7 +407,7 @@ export default function LandingPage() {
   );
 
   return (
-    <div className="flex flex-col min-h-screen relative bg-[#050816]">
+    <div className="flex flex-col min-h-screen relative bg-[#050816] overflow-hidden">
       <div className="particles-bg" />
       
       <div className="absolute top-[-10%] right-[-5%] w-[500px] h-[500px] bg-purple-600/10 rounded-full blur-[120px] pointer-events-none" />
@@ -475,7 +472,7 @@ export default function LandingPage() {
         </div>
       </section>
 
-      <footer className="mt-auto pt-32 pb-4 px-8 border-t border-white/5 bg-black/20">
+      <footer className="mt-auto pt-32 pb-12 px-8 border-t border-white/5 bg-black/20">
         <div className="container mx-auto max-w-7xl">
         <div className="grid md:grid-cols-4 gap-16 mb-10">
             <div className="md:col-span-1 space-y-8">
