@@ -272,7 +272,7 @@ const TrustSection = memo(() => {
   const [isScrollingPaused, setIsScrollingPaused] = useState(false);
 
   return (
-    <div className="container mx-auto max-w-7xl">
+    <div className="w-full">
       <motion.div 
         initial={{ opacity: 0, y: 40 }}
         whileInView={{ opacity: 1, y: 0 }}
@@ -281,7 +281,7 @@ const TrustSection = memo(() => {
       >
         <div className="absolute -inset-24 bg-accent/5 rounded-full blur-[100px] pointer-events-none opacity-20" />
         
-        <Card className="relative overflow-hidden glass border-cyan-500/20 rounded-[24px] py-[30px] px-0 bg-white/[0.01] shadow-[0_0_40px_rgba(34,211,238,0.05)] group">
+        <Card className="relative overflow-hidden glass border-cyan-500/20 rounded-[24px] py-[30px] px-0 bg-white/[0.01] shadow-[0_0_40px_rgba(34,211,238,0.05)] group w-full">
           <div className="absolute inset-0 pointer-events-none">
             <div className="absolute top-0 -left-[100%] w-full h-full bg-gradient-to-r from-transparent via-white/[0.03] to-transparent animate-light-streak" />
           </div>
