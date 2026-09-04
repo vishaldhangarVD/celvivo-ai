@@ -281,12 +281,12 @@ const TrustSection = memo(() => {
       >
         <div className="absolute -inset-24 bg-accent/5 rounded-full blur-[100px] pointer-events-none opacity-20" />
         
-        <Card className="relative overflow-hidden glass border-cyan-500/20 rounded-[24px] py-[30px] px-[12px] bg-white/[0.01] shadow-[0_0_40px_rgba(34,211,238,0.05)] group">
+        <Card className="relative overflow-hidden glass border-cyan-500/20 rounded-[24px] py-[30px] px-0 bg-white/[0.01] shadow-[0_0_40px_rgba(34,211,238,0.05)] group">
           <div className="absolute inset-0 pointer-events-none">
             <div className="absolute top-0 -left-[100%] w-full h-full bg-gradient-to-r from-transparent via-white/[0.03] to-transparent animate-light-streak" />
           </div>
 
-          <div className="text-center mb-10">
+          <div className="text-center mb-10 px-[30px]">
             <h2 className="text-[11px] font-black tracking-[0.4em] uppercase text-gradient-purple">
               TRUSTED BY TOP COMPANIES WORLDWIDE
             </h2>
@@ -329,20 +329,20 @@ const TrustSection = memo(() => {
             initial="hidden"
             whileInView="visible"
             viewport={{ once: true, margin: "-50px" }}
-            className="mt-12 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 relative z-10"
+            className="mt-12 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 relative z-10 px-4"
           >
             {TRUST_CARDS.map((card, i) => (
               <motion.div
                 key={i}
                 variants={itemVariants}
                 whileHover={{ translateY: -8, scale: 1.03 }}
-                className="glass rounded-[18px] p-8 border-cyan-500/20 bg-white/[0.02] shadow-[0_0_30px_rgba(34,211,238,0.05)] hover:shadow-[0_0_40px_rgba(34,211,238,0.15)] transition-all duration-300 group/card"
+                className="glass rounded-[18px] p-8 border-cyan-500/20 bg-white/[0.02] shadow-[0_0_30px_rgba(34,211,238,0.05)] hover:shadow-[0_0_40px_rgba(34,211,238,0.15)] transition-all duration-300 group/card min-h-[280px] flex flex-col"
               >
                 <div className="w-16 h-16 rounded-full bg-accent/10 flex items-center justify-center mb-6 group-hover/card:bg-accent/20 transition-colors">
                   <card.icon className={`w-8 h-8 ${card.color}`} />
                 </div>
-                <h3 className="text-base font-bold text-white mb-3 group-hover/card:text-accent transition-colors">{card.title}</h3>
-                <p className="text-[13px] text-white/50 leading-relaxed font-medium">{card.subtitle}</p>
+                <h3 className="text-lg font-bold text-white mb-3 group-hover/card:text-accent transition-colors">{card.title}</h3>
+                <p className="text-sm text-white/50 leading-relaxed font-medium">{card.subtitle}</p>
               </motion.div>
             ))}
           </motion.div>
