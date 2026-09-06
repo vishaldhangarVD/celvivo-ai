@@ -326,7 +326,7 @@ const TrustSection = memo(() => {
             initial="hidden"
             whileInView="visible"
             viewport={{ once: true, margin: "-50px" }}
-            className="mt-12 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 relative z-10"
+            className="mt-12 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 relative z-10 px-4"
           >
             {TRUST_CARDS.map((card, i) => (
               <motion.div

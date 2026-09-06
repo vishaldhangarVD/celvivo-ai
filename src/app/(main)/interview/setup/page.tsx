@@ -382,7 +382,7 @@ export default function InterviewSetupPage() {
         <div className="max-w-7xl mx-auto grid lg:grid-cols-12 gap-10 flex-1 w-full">
           
           <div className="lg:col-span-7 flex flex-col">
-            <header className="space-y-2 mb-10 shrink-0">
+            <header className="space-y-2 mb-6 shrink-0">
               <Badge className="bg-accent/20 text-accent border-none px-4 py-0.5 text-[9px] tracking-[0.4em] font-black uppercase">
                 INTERVIEW PREPARATION
               </Badge>
@@ -394,16 +394,16 @@ export default function InterviewSetupPage() {
               </p>
             </header>
 
-            <div className="space-y-8 pr-2 custom-scrollbar">
+            <div className="space-y-5 pr-2 custom-scrollbar">
               <div className="space-y-2">
                 <Label className="text-[9px] font-black uppercase tracking-[0.4em] text-white/40 ml-2">COMPANY</Label>
                 <Select value={company} onValueChange={setCompany}>
-                  <SelectTrigger className="h-14 glass border-white/10 bg-transparent rounded-xl px-5 text-sm font-bold uppercase tracking-widest text-white transition-all">
+                  <SelectTrigger className="h-12 glass border-white/10 bg-transparent rounded-xl px-5 text-sm font-bold uppercase tracking-widest text-white transition-all">
                     <div className="flex items-center gap-4">
                       <div className="w-6 h-6 flex items-center justify-center">
                         <CompanyLogo name={company} />
                       </div>
-                      <SelectValue placeholder="Select Organization" />
+                      <SelectValue placeholder="Select COMPANY" />
                     </div>
                   </SelectTrigger>
                   <SelectContent className="glass border-white/10 bg-[#0b0e1a] text-white">
@@ -424,7 +424,7 @@ export default function InterviewSetupPage() {
               <div className="space-y-2">
                 <Label className="text-[9px] font-black uppercase tracking-[0.4em] text-white/40 ml-2">JOB ROLE</Label>
                 <Select value={role} onValueChange={setRole}>
-                  <SelectTrigger className="h-14 glass border-white/10 bg-transparent rounded-xl px-5 text-sm font-bold uppercase tracking-widest text-white transition-all">
+                  <SelectTrigger className="h-12 glass border-white/10 bg-transparent rounded-xl px-5 text-sm font-bold uppercase tracking-widest text-white transition-all">
                     <div className="flex items-center gap-4">
                       <div className="w-6 h-6 flex items-center justify-center text-accent">
                         <RoleIcon role={role} />
@@ -467,23 +467,23 @@ export default function InterviewSetupPage() {
                 </div>
               </div>
 
-              <div className="space-y-3">
+              <div className="space-y-2">
                 <h3 className="text-[9px] font-black uppercase tracking-[0.4em] text-white/40 ml-2">SELECTED CONFIGURATION</h3>
-                <div className="grid grid-cols-3 gap-4">
+                <div className="grid grid-cols-3 gap-3">
                   {[
-                    { label: "Organization", val: company, icon: Building2 },
+                    { label: "COMPANY", val: company, icon: Building2 },
                     { label: "Job Role", val: role, icon: Briefcase },
                     { label: "Experience Level", val: experience, icon: GraduationCap }
                   ].map((item, i) => (
-                    <Card key={i} className="p-4 glass border-accent/20 bg-accent/5 rounded-2xl space-y-4 transition-all">
-                       <div className="w-10 h-10 rounded-lg bg-accent/10 flex items-center justify-center text-accent">
-                         {item.label === "Organization" ? (
-                           <div className="w-6 h-6 flex items-center justify-center">
+                    <Card key={i} className="p-3 glass border-accent/20 bg-accent/5 rounded-2xl space-y-2 transition-all">
+                       <div className="w-8 h-8 rounded-lg bg-accent/10 flex items-center justify-center text-accent">
+                         {item.label === "COMPANY" ? (
+                           <div className="w-5 h-5 flex items-center justify-center">
                              <CompanyLogo name={item.val} />
                            </div>
                          ) : item.label === "Job Role" ? (
-                           <RoleIcon role={item.val} className="w-6 h-6" />
-                         ) : <item.icon className="w-6 h-6" />}
+                           <RoleIcon role={item.val} className="w-5 h-5" />
+                         ) : <item.icon className="w-5 h-5" />}
                        </div>
                        <div>
                          <p className="text-xs font-bold text-white leading-tight truncate">{item.val}</p>
