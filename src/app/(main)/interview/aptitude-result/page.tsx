@@ -3,7 +3,6 @@
 import { useMemo, useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
-import NavigationControls from '@/components/NavigationControls';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -140,7 +139,6 @@ export default function AptitudeResultPage() {
   return (
     <div className="min-h-screen bg-[#050816] pb-32">
       <div className="particles-bg" />
-      <NavigationControls onHome={() => router.push('/')} />
 
       <main className="container mx-auto px-6 pt-40">
         <div className="max-w-7xl mx-auto space-y-16">
@@ -268,7 +266,7 @@ export default function AptitudeResultPage() {
                 <div className="flex items-center gap-4">
                   <Target className="w-10 h-10 text-accent" />
                   <div>
-                    <h3 className="text-2xl font-bold tracking-tight">Performance Summary</h3>
+                    <h3 className="text-2xl font-bold tracking-tight">Your Performance Analysis</h3>
                     <p className="text-[10px] font-black uppercase tracking-[0.4em] text-accent animate-pulse">Your Performance Analysis</p>
                   </div>
                 </div>
