@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
@@ -180,8 +181,8 @@ export default function SpecialHRInterview() {
       if (!SpeechRecognition) {
         toast({ 
           variant: "destructive", 
-          title: "Unsupported Browser", 
-          description: "Please use Google Chrome for voice features." 
+          title: "Browser Not Supported", 
+          description: "Please use Google Chrome for the best voice interview experience." 
         });
         return;
       }
@@ -201,7 +202,7 @@ export default function SpecialHRInterview() {
 
         for (let i = event.resultIndex; i < event.results.length; ++i) {
           const transcriptChunk = event.results[i][0].transcript;
-          if (event.results[i].isFinal) {
+          if (event.results[i][0].confidence > 0 && event.results[i].isFinal) {
             finalTranscript += transcriptChunk;
           } else {
             interimTranscript += transcriptChunk;
@@ -290,8 +291,8 @@ export default function SpecialHRInterview() {
       console.error("[HR Result] Analysis failed:", err);
       toast({
         variant: "destructive",
-        title: "Result Synthesis Failed",
-        description: "Your interview was recorded, but the report couldn't be generated. Please contact support.",
+        title: "Unable to Generate Results",
+        description: "Your interview was saved, but we couldn't generate your results. Please try again later.",
       });
     }
   }, [resumeAnalysis, journey, journeyRef, user, router, toast]);
@@ -406,7 +407,11 @@ export default function SpecialHRInterview() {
 
     } catch (error: any) {
       console.error("[Interview] Turn error:", error);
-      toast({ variant: "destructive", title: "Intelligence Fault", description: "Neural link interrupted." });
+      toast({ 
+        variant: "destructive", 
+        title: "Interview Error", 
+        description: "Something went wrong while processing your answer. Please try again." 
+      });
     } finally {
       setIsProcessing(false);
       isProcessingRef.current = false;
@@ -622,7 +627,7 @@ export default function SpecialHRInterview() {
                         <div className="absolute inset-0 border-2 border-accent/20 rounded-full animate-ping" />
                         <Loader2 className="w-full h-full text-accent animate-spin" />
                      </div>
-                     <p className="text-[10px] font-black uppercase tracking-[0.5em] text-accent animate-pulse">Connecting to Interviewer</p>
+                     <p className="text-[10px] font-black uppercase tracking-[0.5em] text-accent animate-pulse">Connecting to Your Interviewer</p>
                   </motion.div>
                 ) : status === "READY" ? (
                   <motion.div key="ready" initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} className="space-y-10">
@@ -630,8 +635,8 @@ export default function SpecialHRInterview() {
                         <ShieldCheck className="w-10 h-10 text-accent" />
                      </div>
                      <div className="space-y-4">
-                       <h3 className="text-3xl font-bold tracking-tighter text-white">You're All Set</h3>
-                       <p className="text-muted-foreground font-light max-w-xs mx-auto">Your camera and microphone are ready. This interview will feel like a real video call.</p>
+                       <h3 className="text-3xl font-bold tracking-tighter text-white">You're Ready</h3>
+                       <p className="text-muted-foreground font-light max-w-xs mx-auto">Your camera and microphone are ready. This interview will feel like a real video interview.</p>
                      </div>
 
                      {isAudioBlocked ? (
@@ -640,15 +645,15 @@ export default function SpecialHRInterview() {
                         </Button>
                      ) : (
                         <Button onClick={startInterview} className="h-20 px-12 btn-premium rounded-3xl text-xs font-black uppercase tracking-[0.3em] shadow-2xl hover:scale-105 transition-transform">
-                          Enter HR Interview <Play className="ml-3 w-5 h-5 fill-current" />
+                          Start HR Interview <Play className="ml-3 w-5 h-5 fill-current" />
                         </Button>
                      )}
                   </motion.div>
                 ) : (
                   <motion.div key="error" className="space-y-4 text-red-400">
                      <AlertCircle className="w-16 h-16 mx-auto" />
-                     <p className="text-xs font-bold uppercase tracking-widest">Protocol Sync Failure</p>
-                     <Button variant="ghost" onClick={() => window.location.reload()} className="text-[9px] uppercase tracking-widest text-white/40">Re-initialize Handshake</Button>
+                     <p className="text-xs font-bold uppercase tracking-widest">Connection Failed</p>
+                     <Button variant="ghost" onClick={() => window.location.reload()} className="text-[9px] uppercase tracking-widest text-white/40">Try Again</Button>
                   </motion.div>
                 )}
               </AnimatePresence>
@@ -676,7 +681,7 @@ export default function SpecialHRInterview() {
                      )}
                      <div className="flex flex-col">
                         <span className="text-[10px] font-black uppercase tracking-widest text-white/80">
-                          {isListening ? "Listening" : isProcessing ? "Neural Thinking" : isAiSpeaking ? "Interviewer Speaking" : "Idle"}
+                          {isListening ? "Listening..." : isProcessing ? "Thinking" : isAiSpeaking ? "Interviewer Speaking" : "Ready"}
                         </span>
                      </div>
                    </div>
@@ -687,7 +692,7 @@ export default function SpecialHRInterview() {
                      <div className="glass p-6 rounded-3xl border-white/10 bg-black/60 backdrop-blur-xl">
                         <div className="flex items-center gap-3 mb-2 text-accent">
                            <MessageSquare className="w-4 h-4" />
-                           <span className="text-[9px] font-black uppercase tracking-widest">Live Capture Log</span>
+                           <span className="text-[9px] font-black uppercase tracking-widest">Your Answer</span>
                         </div>
                         <p className="text-lg font-light text-white/90 leading-relaxed italic line-clamp-2">"{transcript}"</p>
                      </div>
@@ -707,9 +712,9 @@ export default function SpecialHRInterview() {
                            <User className="w-5 h-5" />
                         </div>
                         <div>
-                          <h3 className="text-xs font-black uppercase tracking-widest text-white">AI Evaluator</h3>
+                          <h3 className="text-xs font-black uppercase tracking-widest text-white">AI Interviewer</h3>
                           <p className={cn("text-[9px] font-bold uppercase tracking-[0.2em]", isAiSpeaking ? "text-accent animate-pulse" : "text-white/40")}>
-                            {isAiSpeaking ? "Transmitting" : isListening ? "Listening" : "Ready"}
+                            {isAiSpeaking ? "Speaking" : isListening ? "Listening..." : "Ready"}
                           </p>
                         </div>
                      </div>
@@ -726,7 +731,7 @@ export default function SpecialHRInterview() {
                       </div>
                       <div className="p-6 glass rounded-3xl border-accent/20 bg-accent/5">
                         <h4 className="text-xl font-medium text-white leading-relaxed">
-                          {currentQuestion || "Synchronizing with neural engine..."}
+                          {currentQuestion || "Preparing your next question..."}
                         </h4>
                       </div>
                     </div>
@@ -736,13 +741,13 @@ export default function SpecialHRInterview() {
                         {isTypeMode ? (
                           <motion.div key="type-area" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 10 }} className="space-y-4">
                              <div className="flex items-center justify-between">
-                                <span className="text-[10px] font-black uppercase tracking-widest text-white/40">Manual Entry Override</span>
-                                <Button variant="ghost" size="sm" onClick={() => toggleTypeMode(false)} className="h-6 text-[8px] uppercase tracking-widest hover:text-accent">Voice Interface</Button>
+                                <span className="text-[10px] font-black uppercase tracking-widest text-white/40">Type Your Answer</span>
+                                <Button variant="ghost" size="sm" onClick={() => toggleTypeMode(false)} className="h-6 text-[8px] uppercase tracking-widest hover:text-accent">Use Voice</Button>
                              </div>
                              <Textarea 
                                value={typedAnswer}
                                onChange={(e) => setTypedAnswer(e.target.value)}
-                               placeholder="Synthesize your response..."
+                               placeholder="Type your answer here..."
                                className="min-h-[120px] rounded-2xl glass border-white/10 bg-transparent text-white p-4 text-sm font-light resize-none focus:border-accent"
                              />
                              <Button 
@@ -750,19 +755,19 @@ export default function SpecialHRInterview() {
                               onClick={handleTypedSubmit}
                               className="w-full h-14 btn-premium rounded-xl text-[10px] font-black uppercase tracking-widest"
                              >
-                                {isProcessing ? <Loader2 className="w-4 h-4 animate-spin" /> : <><Send className="w-4 h-4 mr-2" /> Commit Answer</>}
+                                {isProcessing ? <Loader2 className="w-4 h-4 animate-spin" /> : <><Send className="w-4 h-4 mr-2" /> Submit Answer</>}
                              </Button>
                           </motion.div>
                         ) : (
                           <motion.div key="mic-area" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 10 }} className="text-center space-y-6">
-                             <p className="text-xs text-white/40 font-light italic">"Awaiting vocal response node..."</p>
+                             <p className="text-xs text-white/40 font-light italic">"Please answer when you're ready."</p>
                              <Button 
                                onClick={() => toggleTypeMode(true)}
                                variant="outline" 
                                className="w-full h-16 rounded-2xl glass border-white/10 text-[10px] font-black uppercase tracking-[0.2em] hover:bg-white/5 flex gap-3"
                              >
                                <Keyboard className="w-5 h-5 text-accent" />
-                               Switch to Manual Text Entry
+                               Type Answer Instead
                              </Button>
                           </motion.div>
                         )}
@@ -772,8 +777,8 @@ export default function SpecialHRInterview() {
 
                   <div className="p-4 bg-black/40 border-t border-white/5 flex items-center justify-between">
                      <div className="flex items-center gap-4 text-[8px] font-bold text-white/20 uppercase tracking-widest">
-                        <span className="flex items-center gap-1.5"><ShieldCheck className="w-3 h-3" /> Secure Matrix</span>
-                        <span className="flex items-center gap-1.5"><ChevronRight className="w-3 h-3" /> Grade: {interviewDifficulty}</span>
+                        <span className="flex items-center gap-1.5"><ShieldCheck className="w-3 h-3" /> Secure Interview</span>
+                        <span className="flex items-center gap-1.5"><ChevronRight className="w-3 h-3" /> Difficulty: {interviewDifficulty}</span>
                      </div>
                      <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse shadow-[0_0_10px_#22c55e]" />
                   </div>
@@ -787,7 +792,7 @@ export default function SpecialHRInterview() {
                 variant="ghost"
                 className="h-10 px-4 glass border-red-500/20 text-red-400 hover:bg-red-500/10 rounded-full text-[9px] font-black uppercase tracking-widest transition-all"
                >
-                 <Square className="w-3 h-3 mr-2 fill-current" /> Terminate Session
+                 <Square className="w-3 h-3 mr-2 fill-current" /> End Interview
                </Button>
             </div>
           </div>
