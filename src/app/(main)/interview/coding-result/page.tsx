@@ -11,14 +11,11 @@ import {
   XCircle, 
   Trophy, 
   ChevronRight, 
-  RotateCcw, 
   Cpu, 
-  ShieldCheck, 
   Target, 
   Code2, 
   Layers,
   Loader2,
-  AlertTriangle,
   ArrowRight,
   FastForward,
   ChevronDown,
@@ -142,33 +139,6 @@ function CodingResultContent() {
               </div>
               <p className="text-[9px] font-bold uppercase tracking-[0.4em] text-white/30 mt-2">Overall Efficiency Index</p>
             </Card>
-
-            <Card className={cn("flex-1 p-6 rounded-[2.5rem] border flex flex-col justify-between relative overflow-hidden", 
-              isPassed ? "bg-green-500/5 border-green-500/20" : "bg-red-500/5 border-red-500/20")}>
-              <div className="space-y-3 relative z-10">
-                <div className={cn("w-10 h-10 rounded-2xl flex items-center justify-center", 
-                  isPassed ? "bg-green-500/20 text-green-400" : "bg-red-500/20 text-red-400")}>
-                  {isPassed ? <ShieldCheck className="w-5 h-5" /> : <AlertTriangle className="w-5 h-5" />}
-                </div>
-                <div className="space-y-1">
-                  <h3 className="text-xl font-bold tracking-tight">{isPassed ? "🎉 Neural Verification Passed" : "Proficiency Threshold Not Met"}</h3>
-                  <p className="text-xs font-light text-white/60 leading-relaxed">
-                    {isPassed ? "Proceed to the Virtual HR Arena for final deployment." : "Minimum proficiency rating of 60% required."}
-                  </p>
-                </div>
-              </div>
-
-              <div className="relative z-10 pt-4 space-y-3">
-                <Button onClick={handleContinueToInterview} className="w-full h-16 btn-premium rounded-2xl text-xs font-black uppercase tracking-[0.3em] shadow-2xl group">
-                  START INTERVIEW <ArrowRight className="ml-3 w-5 h-5 transition-transform group-hover:translate-x-1" />
-                </Button>
-                {!isPassed && (
-                  <Button onClick={() => router.push(STAGE_ROUTES.CODING)} className="w-full h-12 glass border-white/10 hover:bg-white/5 rounded-xl text-[10px] font-bold uppercase tracking-widest">
-                    <RotateCcw className="mr-2 w-4 h-4" /> RETAKE CODING ROUND
-                  </Button>
-                )}
-              </div>
-            </Card>
           </div>
 
           <div className="lg:col-span-8 flex flex-col gap-6 overflow-hidden">
@@ -189,6 +159,9 @@ function CodingResultContent() {
                })}
             </div>
             <div className="flex justify-end gap-4 pt-4 border-t border-white/5">
+              <Button onClick={handleContinueToInterview} className="h-12 px-10 btn-premium rounded-xl text-[10px] font-black uppercase tracking-[0.3em] shadow-2xl flex items-center gap-2">
+                CONTINUE TO INTERVIEW <ArrowRight className="w-4 h-4" />
+              </Button>
               <Button onClick={() => router.push('/dashboard')} variant="ghost" className="h-12 px-8 rounded-xl glass border-white/10 text-[9px] font-black uppercase tracking-widest text-white/30 hover:text-white">Exit to Control Panel</Button>
             </div>
           </div>
