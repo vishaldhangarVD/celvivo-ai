@@ -21,6 +21,7 @@ import { Button } from '@/components/ui/button';
 import { useUser, useFirestore, useCollection, useDoc } from '@/firebase';
 import { collection, query, orderBy, doc } from 'firebase/firestore';
 import { useMemo, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from "@/lib/utils";
@@ -75,27 +76,27 @@ const CertificateTemplate = ({ data }: { data: any }) => {
         <div className="inner relative z-10 h-full flex flex-col justify-between py-[20px] px-[56px]">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-[#171a2e] to-[#0d0f1c] border border-[#d8b374]/25 flex items-center justify-center shrink-0">
+              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-[#171a2e] to-[#0d0f1c] border border-[#d8b374]/25 flex items-center justify-center shrink-0">
                 {logoMark}
               </div>
               <div className="brand-text">
-                <div className="font-headline font-bold text-[16px] tracking-widest text-[#f1eee4]">NEXVORO<span className="text-[#d8b374]">AI</span></div>
-                <div className="text-[9px] tracking-[2.5px] text-[#8b8a94] uppercase mt-0.5">AI Career Tools</div>
+                <div className="font-headline font-bold text-[20px] tracking-widest text-[#f1eee4]">CELVIVO<span className="text-[#d8b374]">AI</span></div>
+                <div className="text-[10px] tracking-[2.5px] text-[#8b8a94] uppercase mt-0.5">AI Career Tools</div>
               </div>
             </div>
-            <div className="font-mono text-[10px] tracking-[2.5px] text-[#d8b374] uppercase border border-[#d8b374]/30 px-4 py-1.5 rounded-[1px]">
+            <div className="font-mono text-[12px] tracking-[2.5px] text-[#d8b374] uppercase border border-[#d8b374]/30 px-5 py-2 rounded-[1px]">
               Neural Performance Verification
             </div>
           </div>
 
           <div className="flex flex-col items-center text-center">
-            <div className="text-[13px] text-[#8b8a94] italic tracking-tight">This credential certifies that</div>
-            <div className="font-serif font-semibold text-[50px] text-[#f0d9a8] tracking-tight mt-3 leading-none">
+            <div className="text-[15px] text-[#8b8a94] italic tracking-tight">This credential certifies that</div>
+            <div className="font-serif font-semibold text-[64px] text-[#f0d9a8] tracking-tight mt-3 leading-none">
               {data.userName}
             </div>
-            <div className="w-[120px] h-[1px] bg-gradient-to-r from-transparent via-[#d8b374] to-transparent my-4" />
-            <div className="text-[13px] text-[#8b8a94]">has demonstrated mastery in the simulation for</div>
-            <div className="font-serif font-semibold text-[26px] text-[#f1eee4] mt-1.5 tracking-tight">
+            <div className="w-[140px] h-[1px] bg-gradient-to-r from-transparent via-[#d8b374] to-transparent my-4" />
+            <div className="text-[15px] text-[#8b8a94]">has demonstrated mastery in the simulation for</div>
+            <div className="font-serif font-semibold text-[32px] text-[#f1eee4] mt-1.5 tracking-tight">
               {data.role} Mastery
             </div>
           </div>
@@ -103,32 +104,32 @@ const CertificateTemplate = ({ data }: { data: any }) => {
           <div className="flex flex-col items-center gap-4">
             <div className="flex items-center justify-center gap-12 w-full">
               <div className="flex flex-col items-center gap-1">
-                <span className="text-[9px] tracking-widest text-[#8b8a94] uppercase font-mono">Date of Issue</span>
-                <span className="text-[13px] text-[#f1eee4] font-mono">{data.date}</span>
+                <span className="text-[10px] tracking-widest text-[#8b8a94] uppercase font-mono">Date of Issue</span>
+                <span className="text-[15px] text-[#f1eee4] font-mono">{data.date}</span>
               </div>
               <div className="flex flex-col items-center gap-1">
-                <span className="text-[9px] tracking-widest text-[#8b8a94] uppercase font-mono">Verification ID</span>
-                <span className="text-[13px] text-[#f1eee4] font-mono uppercase">{data.certId}</span>
+                <span className="text-[10px] tracking-widest text-[#8b8a94] uppercase font-mono">Verification ID</span>
+                <span className="text-[15px] text-[#f1eee4] font-mono uppercase">{data.certId}</span>
               </div>
               <div className="flex flex-col items-center gap-1">
-                <span className="text-[9px] tracking-widest text-[#8b8a94] uppercase font-mono">Verify at</span>
-                <span className="text-[13px] text-[#d8b374] font-mono">nexvoro.ai</span>
+                <span className="text-[10px] tracking-widest text-[#8b8a94] uppercase font-mono">Verify at</span>
+                <span className="text-[15px] text-[#d8b374] font-mono">celvivo.ai</span>
               </div>
             </div>
 
-            <div className="flex items-center justify-center gap-8 pt-4 border-t border-[#d8b374]/15 w-full max-w-[500px]">
-              <div className="seal w-24 text-center shrink-0">
-                <div className="w-[86px] h-[86px] mx-auto rounded-full bg-radial-at-tl from-[#2a2210] to-[#0a0c16] border-[2px] border-[#d8b374] flex items-center justify-center relative">
+            <div className="flex items-center justify-center gap-8 pt-4 border-t border-[#d8b374]/15 w-full max-w-[560px]">
+              <div className="seal w-28 text-center shrink-0">
+                <div className="w-[100px] h-[100px] mx-auto rounded-full bg-radial-at-tl from-[#2a2210] to-[#0a0c16] border-[2px] border-[#d8b374] flex items-center justify-center relative">
                   <div className="absolute inset-[5px] border border-dashed border-[#d8b374]/50 rounded-full" />
-                  <span className="text-[24px] text-[#d8b374]">★</span>
+                  <span className="text-[28px] text-[#d8b374]">★</span>
                 </div>
               </div>
               
-              <div className="w-[250px] text-center">
-                <img src="/certificate-signature.png" alt="Signature" className="h-14 w-auto mx-auto object-contain block" />
+              <div className="w-[280px] text-center">
+                <img src="/certificate-signature.png" alt="Signature" className="h-16 w-auto mx-auto object-contain block" />
                 <div className="w-full h-[1px] bg-[#d8b374]/35 mt-2" />
-                <div className="text-[13px] font-bold tracking-widest text-[#d8b374] uppercase mt-1.5">Vishal Dhangar</div>
-                <div className="text-[9px] tracking-widest text-[#8b8a94] uppercase mt-1 font-mono">Founder & CEO, Nexvoro AI</div>
+                <div className="text-[15px] font-bold tracking-widest text-[#d8b374] uppercase mt-1.5">Vishal Dhangar</div>
+                <div className="text-[10px] tracking-widest text-[#8b8a94] uppercase mt-1 font-mono">Founder & CEO, Celvivo AI</div>
               </div>
             </div>
           </div>
@@ -143,6 +144,7 @@ export default function CertificatesPage() {
   const db = useFirestore();
   const { toast } = useToast();
   const [isExporting, setIsExporting] = useState(false);
+  const router = useRouter();
 
   // Fetch Full Name from Profile
   const profileRef = useMemo(() => {
@@ -208,7 +210,7 @@ export default function CertificatesPage() {
   };
 
   const handleShareToLinkedIn = (cert: any) => {
-    const url = `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent('https://nexvoro.ai')}`;
+    const url = `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent('https://celvivo.ai')}`;
     window.open(url, '_blank');
   };
 
