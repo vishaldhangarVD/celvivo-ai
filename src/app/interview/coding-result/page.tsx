@@ -59,7 +59,7 @@ function CodingResultContent() {
     return query(
       collection(db, 'users', user.uid, 'coding_results'),
       where('interviewId', '==', activeId),
-      orderBy('completedAt', 'asc')
+      orderBy('completedAt', 'desc')
     );
   }, [db, user?.uid, activeId]);
 
@@ -69,14 +69,35 @@ function CodingResultContent() {
     return attemptDoc?.questions || journey?.codingQuestions || [];
   }, [attemptDoc, journey]);
 
+  // Unified result mapping to ensure we only use results from the current attempt window
+  const currentAttemptResultsMap = useMemo(() => {
+    if (!questionResults || questionResults.length === 0) return new Map();
+    
+    const map = new Map();
+    const attemptTime = attemptDoc?.createdAt?.seconds || journey?.updatedAt?.seconds || (Date.now() / 1000);
+    
+    questionResults.forEach((res: any) => {
+      if (!map.has(res.questionId)) {
+        const resultTime = res.completedAt?.seconds || 0;
+        // Verify result belongs to the specific attempt timeframe (within 2h window)
+        if (resultTime <= attemptTime + 10 && resultTime >= attemptTime - 7200) {
+          map.set(res.questionId, res);
+        }
+      }
+    });
+    return map;
+  }, [questionResults, attemptDoc, journey]);
+
   const result = useMemo(() => {
     if (attemptDoc?.score !== undefined) return attemptDoc;
     if (journey?.codingReport && (!attemptId || attemptId === journey.sessionId)) return journey.codingReport;
     
     const total = 8;
-    if (questionResults && questionResults.length > 0) {
-      const solved = questionResults.filter((r: any) => r.status === 'Solved').length;
-      const failed = questionResults.filter((r: any) => r.status === 'Failed').length;
+    const resultsArray = Array.from(currentAttemptResultsMap.values());
+
+    if (resultsArray.length > 0) {
+      const solved = resultsArray.filter((r: any) => r.status === 'Solved').length;
+      const failed = resultsArray.filter((r: any) => r.status === 'Failed').length;
       const score = Math.round((solved / total) * 100);
 
       return {
@@ -86,13 +107,13 @@ function CodingResultContent() {
         passedQuestions: solved,
         failedQuestions: failed,
         skippedQuestions: Math.max(0, total - (solved + failed)),
-        totalPassedCases: questionResults.reduce((acc, curr) => acc + (curr.passedTestCases || 0), 0),
-        totalTestCases: questionResults.reduce((acc, curr) => acc + (curr.totalTestCases || 0), 0),
+        totalPassedCases: resultsArray.reduce((acc, curr: any) => acc + (curr.passedTestCases || 0), 0),
+        totalTestCases: resultsArray.reduce((acc, curr: any) => acc + (curr.totalTestCases || 0), 0),
       };
     }
 
     return { score: 0, status: 'Awaiting', totalQuestions: total, passedQuestions: 0, failedQuestions: 0, skippedQuestions: total, totalPassedCases: 0, totalTestCases: 0 };
-  }, [attemptDoc, journey, questionResults, attemptId]);
+  }, [attemptDoc, journey, currentAttemptResultsMap, attemptId]);
 
   const isPassed = (result?.score || 0) >= 60;
 
@@ -159,15 +180,23 @@ function CodingResultContent() {
           <div className="lg:col-span-8 flex flex-col gap-6 overflow-hidden">
             <div className="overflow-y-auto custom-scrollbar flex-1 pr-2 space-y-4">
                {displayQuestions.map((q: any, idx: number) => {
-                 const res = questionResults?.find((r: any) => r.questionId === q.id);
+                 const res = currentAttemptResultsMap.get(q.id);
+                 const status = res?.status;
+
                  return (
                    <Card key={idx} className="glass p-6 rounded-[2rem] border-white/5 flex items-center justify-between">
                      <div className="flex items-center gap-6">
                         <div className="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center text-[10px] font-black">0{idx + 1}</div>
                         <p className="text-base font-bold text-white/90">{q.title}</p>
                      </div>
-                     <Badge variant="outline" className={cn("text-[9px] uppercase", res?.status === 'Solved' ? "text-green-400 border-green-500/20" : "text-red-400 border-red-500/20")}>
-                        {res?.status || "SKIPPED"}
+                     <Badge variant="outline" className={cn("text-[9px] uppercase font-black tracking-widest", 
+                       status === 'Solved' ? "text-green-400 border-green-500/20" : 
+                       status === 'Failed' || status === 'Skipped' ? "text-red-400 border-red-500/20" : 
+                       "text-white/20 border-white/5"
+                     )}>
+                        {status === 'Solved' ? "SOLVED" : 
+                         status === 'Failed' ? "FAILED" : 
+                         status === 'Skipped' ? "SKIPPED" : "NOT ATTEMPTED"}
                      </Badge>
                    </Card>
                  );
