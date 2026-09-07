@@ -7,7 +7,7 @@ import Navbar from "@/components/layout/Navbar";
 import AuthGuard from "@/components/AuthGuard";
 
 export const metadata: Metadata = {
-  title: "Nexvoro AI - Ace Your Technical Interviews",
+  title: "CELVIVO AI - Ace Your Technical Interviews",
   description:
     "AI-powered mock interviews, resume analysis, and personalized feedback for tech job seekers.",
 };

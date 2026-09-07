@@ -1,3 +1,4 @@
+
 "use client";
 import { Suspense, useEffect, useState, useRef, useMemo, useCallback } from "react";
 import { useRouter, useParams } from "next/navigation";
@@ -419,7 +420,7 @@ function VirtualArenaContent() {
       <header className="h-16 border-b border-white/5 bg-[#0b0e1a] flex items-center justify-between px-6 shrink-0 z-50">
         <div className="flex items-center gap-6">
            <div className="w-9 h-9 rounded-xl bg-blue-500/10 flex items-center justify-center text-blue-500 font-black">N</div>
-           <div><h1 className="text-xs font-black uppercase text-white">NEXVOROAI</h1><p className="text-[9px] text-white/40 uppercase font-black">{formattedName}</p></div>
+           <div><h1 className="text-xs font-black uppercase text-white">CELVIVO AI</h1><p className="text-[9px] text-white/40 uppercase font-black">{formattedName}</p></div>
         </div>
         
         <div className="flex items-center gap-4">
@@ -550,7 +551,7 @@ function VirtualArenaContent() {
              <Textarea 
                value={userAnswer} 
                onChange={(e) => setUserAnswer(e.target.value)} 
-               placeholder="Synthesize your response..." 
+               placeholder="Type your answer here..." 
                className="min-h-[80px] rounded-xl glass border-white/10 bg-transparent p-3 text-sm font-light resize-none focus:border-accent/50 transition-all" 
              />
              <Button 

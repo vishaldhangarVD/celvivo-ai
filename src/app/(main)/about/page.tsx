@@ -1,3 +1,4 @@
+
 'use client';
 
 import { motion, useMotionValue, useSpring, useTransform } from 'framer-motion';
@@ -57,7 +58,7 @@ export default function AboutPage() {
               Built By A Student, For Students
             </Badge>
             <h1 className="text-6xl md:text-7xl font-bold tracking-tighter text-premium">
-              About <span className="text-gradient-purple">NEXVORO AI.</span>
+              About <span className="text-gradient-purple">CELVIVO AI.</span>
             </h1>
             <p className="text-xl text-muted-foreground font-light leading-relaxed max-w-2xl mx-auto mt-6">
               Real interview practice, at a price every student can afford.
@@ -135,7 +136,7 @@ export default function AboutPage() {
                   transition={{ delay: 0.4 }}
                 >
                   <h2 className="text-4xl md:text-5xl font-bold tracking-tight text-white mb-2">Vishal Dhangar</h2>
-                  <p className="text-accent font-black uppercase tracking-[0.3em] text-xs">Founder & CEO of NEXVORO AI</p>
+                  <p className="text-accent font-black uppercase tracking-[0.3em] text-xs">Founder & CEO of CELVIVO AI</p>
                 </motion.div>
               </div>
 
@@ -149,7 +150,7 @@ export default function AboutPage() {
                   Vishal is a final-year student who watched classmates lose job offers not because they lacked skill, but because they'd never actually sat through a real interview before the one that mattered. Aptitude rounds felt unfamiliar, coding rounds were a mystery, and most resumes never made it past the first screen.
                 </p>
                 <p className="text-lg md:text-xl text-white/80 font-light leading-relaxed">
-                  So he built NEXVORO AI — a place where students can practice the real thing: realistic aptitude tests, coding rounds, and AI-powered mock interviews that talk back and push back, plus resume tools that turn a rough draft into something a recruiter actually stops on. All of it priced so a student, not just a placement cell, can afford it.
+                  So he built CELVIVO AI — a place where students can practice the real thing: realistic aptitude tests, coding rounds, and AI-powered mock interviews that talk back and push back, plus resume tools that turn a rough draft into something a recruiter actually stops on. All of it priced so a student, not just a placement cell, can afford it.
                 </p>
                 <p className="text-lg md:text-xl text-white/80 font-light leading-relaxed">
                   The goal isn't to remove the nerves before an interview — it's to make sure the first real one isn't the first one you've ever done.
@@ -179,7 +180,7 @@ export default function AboutPage() {
           <div className="w-px h-12 bg-gradient-to-b from-transparent via-accent/30 to-transparent mx-auto mb-8" />
           <h3 className="text-[10px] font-black uppercase tracking-[0.5em] text-accent">Why This Exists</h3>
           <p className="text-muted-foreground font-light italic leading-relaxed">
-            "Every student deserves to walk into their first real interview having already faced one before. NEXVORO AI exists so that practice, not privilege, decides who's ready."
+            "Every student deserves to walk into their first real interview having already faced one before. CELVIVO AI exists so that practice, not privilege, decides who's ready."
           </p>
         </motion.div>
       </main>

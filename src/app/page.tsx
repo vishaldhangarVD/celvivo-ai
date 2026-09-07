@@ -1,3 +1,4 @@
+
 "use client";
 
 import { motion } from 'framer-motion';
@@ -49,7 +50,7 @@ const COMPANIES = [
 ];
 
 const TRUST_CARDS = [
-  { icon: Star, title: "4.9/5 User Rating", subtitle: "Thousands of students trust Nexvoro AI.", color: "text-yellow-400" },
+  { icon: Star, title: "4.9/5 User Rating", subtitle: "Thousands of students trust CELVIVO AI.", color: "text-yellow-400" },
   { icon: Users, title: "Students & Professionals", subtitle: "Used by freshers, graduates and experienced candidates.", color: "text-blue-400" },
   { icon: BrainCircuit, title: "Powered by Advanced AI", subtitle: "AI-driven interview simulation with intelligent feedback.", color: "text-purple-400" },
   { icon: Zap, title: "Real Interview Experience", subtitle: "Experience realistic HR and Technical interview environments.", color: "text-accent" },
@@ -62,7 +63,7 @@ const STATIC_TESTIMONIALS = [
     role: "FOUNDER & CEO",
     company: "Hruta Solutions Software company",
     image: "https://ui-avatars.com/api/?name=Rahul+Patil&background=7C3AED&color=fff&size=200&bold=true",
-    text: "I was genuinely impressed by NexVoroAI’s technical depth. Its aptitude, coding assessments, resume analysis, and interview simulations go far beyond basic practice.",
+    text: "I was genuinely impressed by CELVIVO AI’s technical depth. Its aptitude, coding assessments, resume analysis, and interview simulations go far beyond basic practice.",
     rating: 5
   },
   {
@@ -70,7 +71,7 @@ const STATIC_TESTIMONIALS = [
     role: "FOUNDER & CEO",
     company: "GOLDWINGS IT",
     image: "https://ui-avatars.com/api/?name=Shubham+Somwanshi&background=06B6D4&color=fff&size=200&bold=true",
-    text: "As a Founder & CEO, I use NexVoroAI’s with my students for aptitude and coding practice. It has helped them overcome interview anxiety and improve their confidence.",
+    text: "As a Founder & CEO, I use CELVIVO AI with my students for aptitude and coding practice. It has helped them overcome interview anxiety and improve their confidence.",
     rating: 5
   },
   {
@@ -78,7 +79,7 @@ const STATIC_TESTIMONIALS = [
     role: "Full-Stack Software Engineer",
     company: "Microsoft",
     image: "https://ui-avatars.com/api/?name=Abhinay+Chauhan&background=F97316&color=fff&size=200&bold=true",
-    text: "As a Full-Stack Software Engineer with AI/ML experience, I found NexVoroAI’s aptitude, coding, and resume analysis incredibly powerful and accurate.",
+    text: "As a Full-Stack Software Engineer with AI/ML experience, I found CELVIVO AI’s aptitude, coding, and resume analysis incredibly powerful and accurate.",
     rating: 5
   }
 ];
@@ -424,7 +425,7 @@ export default function LandingPage() {
             <Badge className="bg-accent/20 text-accent border-none px-6 py-1.5 font-bold tracking-[0.4em] text-[10px] uppercase">Testimonials</Badge>
             <h2 className="text-5xl md:text-6xl font-bold tracking-tighter text-premium">Success <span className="text-gradient-purple">Stories.</span></h2>
             <p className="text-muted-foreground font-light max-w-2xl mx-auto text-lg">
-              Engineers from the world's most innovative companies used Nexvoro AI to master their interviews.
+              Engineers from the world's most innovative companies used CELVIVO AI to master their interviews.
             </p>
             <div className="pt-8">
               <FeedbackDialog />
@@ -481,7 +482,7 @@ export default function LandingPage() {
                   <Command className="text-white w-5 h-5" />
                 </div>
                 <span className="font-headline font-bold text-2xl tracking-tighter uppercase text-premium">
-                  NEXVORO<span className="text-accent">AI</span>
+                  CELVIVO <span className="text-accent">AI</span>
                 </span>
               </Link>
               <p className="text-white/40 text-sm font-light leading-relaxed">
@@ -538,7 +539,7 @@ export default function LandingPage() {
 
           <div className="pt-12 mt-auto border-t border-white/5 flex flex-col md:flex-row justify-between items-center gap-8">
             <p className="text-[10px] font-bold text-white/20 uppercase tracking-[0.3em]">
-              © 2026 NEXVORO AI PROTOCOLS. ALL RIGHTS RESERVED.
+              © 2026 CELVIVO AI PROTOCOLS. ALL RIGHTS RESERVED.
             </p>
             <div className="flex items-center gap-6">
               <div className="flex items-center gap-2 px-3 py-1 glass rounded-full border-green-500/20">

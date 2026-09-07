@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, Suspense } from 'react';
@@ -161,7 +162,7 @@ function SignupContent() {
 
       toast({
         title: "Account Created",
-        description: "Welcome to Nexvoro AI. Your identity has been initialized.",
+        description: "Welcome to CELVIVO AI. Your identity has been initialized.",
       });
       
       router.push(redirectTo);
@@ -216,7 +217,7 @@ function SignupContent() {
           <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-purple-600 to-blue-600 flex items-center justify-center mx-auto mb-8 shadow-2xl shadow-purple-500/20">
             <Command className="text-white w-8 h-8" />
           </div>
-          <h1 className="text-4xl font-bold tracking-tighter mb-4">Welcome to Nexvoro AI.</h1>
+          <h1 className="text-4xl font-bold tracking-tighter mb-4">Welcome to CELVIVO AI.</h1>
           <p className="text-muted-foreground font-light">Join the elite network of performance-ready engineers.</p>
         </div>
 
@@ -285,7 +286,6 @@ function SignupContent() {
                     onChange={(e) => setPassword(e.target.value)}
                     placeholder="••••••••" 
                     className="h-14 rounded-2xl glass border-white/10 bg-transparent focus:border-accent transition-all text-white px-6 pr-14" 
-                    required
                   />
                   <button
                     type="button"

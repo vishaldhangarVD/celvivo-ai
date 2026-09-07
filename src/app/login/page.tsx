@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect, Suspense, useCallback, useRef } from 'react';
@@ -327,7 +328,7 @@ function LoginContent() {
             className="space-y-2"
           >
             <h1 className="text-5xl font-bold tracking-tighter text-premium">
-              {confirmNameMode ? "Final Calibration." : <>Welcome to <span className="text-gradient-purple">Nexvoro AI.</span></>}
+              {confirmNameMode ? "Final Calibration." : <>Welcome to <span className="text-gradient-purple">CELVIVO AI.</span></>}
             </h1>
             <p className="text-muted-foreground font-light text-sm uppercase tracking-[0.3em]">
               {confirmNameMode ? "Complete your professional identity" : "Your Intelligent Career Companion"}

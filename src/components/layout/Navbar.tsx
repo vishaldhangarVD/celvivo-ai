@@ -1,3 +1,4 @@
+
 'use client';
 
 import Link from 'next/link';
@@ -133,9 +134,9 @@ export default function Navbar() {
             </motion.div>
             <div className="flex flex-col">
               <span className="font-headline font-bold text-xl tracking-tighter uppercase text-premium leading-none">
-                NEXVORO<span className="text-accent">AI</span>
+                CELVIVO <span className="text-accent">AI</span>
               </span>
-              <span className="text-[7px] font-black tracking-[0.3em] uppercase text-white/30 mt-1">AI Career Tools</span>
+              <span className="text-[7px] font-black tracking-[0.3em] uppercase text-white/30 mt-1">AI Career Platform</span>
             </div>
           </Link>
         </div>
