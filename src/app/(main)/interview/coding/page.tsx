@@ -170,7 +170,7 @@ function CodingEngineContent() {
       const scorePercentage = Math.round((passed / total) * 100);
       const attemptId = journey.sessionId;
 
-      const report = { 
+      await setDoc(doc(db, 'users', user.uid, 'coding_attempts', attemptId), {
         score: scorePercentage, 
         status: scorePercentage >= 60 ? 'Pass' : 'Fail', 
         totalQuestions: total, 
@@ -180,11 +180,7 @@ function CodingEngineContent() {
         totalPassedCases,
         totalTestCases,
         submissionTime: new Date().toLocaleTimeString(),
-        sessionId: attemptId
-      };
-
-      await setDoc(doc(db, 'users', user.uid, 'coding_attempts', attemptId), {
-        ...report,
+        sessionId: attemptId,
         questions: questions,
         userId: user.uid,
         role: journey.role,
@@ -193,7 +189,18 @@ function CodingEngineContent() {
       });
       
       await updateDoc(journeyRef!, {
-        codingReport: report,
+        codingReport: { 
+          score: scorePercentage, 
+          status: scorePercentage >= 60 ? 'Pass' : 'Fail', 
+          totalQuestions: total, 
+          passedQuestions: passed, 
+          failedQuestions: failed,
+          skippedQuestions: skipped,
+          totalPassedCases,
+          totalTestCases,
+          submissionTime: new Date().toLocaleTimeString(),
+          sessionId: attemptId
+        },
         codingRoundCompleted: true,
         codingScore: scorePercentage,
         currentStage: INTERVIEW_STAGES.CODING_RESULT,
@@ -384,8 +391,6 @@ function CodingEngineContent() {
     async function initEnvironment() {
       if (!db || !user || !journey || !journeyRef) return;
 
-      // DETECT BROKEN CACHE: If the cached questions have suspected "stubs" (under 50 chars in starter code)
-      // or if they belong to an old session, force a re-generation from the high-fidelity bank.
       const isCacheSuspect = journey.codingQuestions?.some((q: any) => 
         (q.starterCode?.python?.length < 50) || !q.hiddenTestCases?.length
       );
@@ -421,7 +426,6 @@ function CodingEngineContent() {
         
         let finalQuestions = [];
 
-        // GOLD STANDARD PROTOCOL: Prefer High-Fidelity Bank for Pro/Premium Tier Consistency
         const pickFromBank = (difficulty: string, count: number) => {
           const pool = [...MASTER_QUESTIONS].filter(q => q.difficulty === difficulty);
           const newOnes = pool.filter(q => !usedTitles.includes(q.title));
@@ -429,14 +433,12 @@ function CodingEngineContent() {
           return targetPool.sort(() => Math.random() - 0.5).slice(0, count);
         };
 
-        // Distribution: 3 Easy, 3 Medium, 2 Hard
         finalQuestions = [
           ...pickFromBank('Easy', 3),
           ...pickFromBank('Medium', 3),
           ...pickFromBank('Hard', 2)
         ];
 
-        // FALLBACK: Use AI Generator only if the bank is exhausted or explicitly requested
         if (!finalQuestions || finalQuestions.length < 8) {
            try {
               const response = await generateCodingQuestions({
@@ -488,7 +490,6 @@ function CodingEngineContent() {
       const isSameLanguage = savedResult?.language === selectedLang.label;
       const savedCode = isSameLanguage ? savedResult.code : null;
 
-      // Extract the proper multi-line template from the bank-aligned question
       const starterCode = currentQ.starterCode?.[selectedLang.id] || 
                           currentQ.starterCode?.["python"] || 
                           "// Starter code unavailable.";
@@ -609,27 +610,27 @@ function CodingEngineContent() {
         <div className="w-[35%] flex flex-col gap-4">
           <Card className="flex-1 glass bg-white/[0.01] border-white/5 p-8 overflow-y-auto custom-scrollbar rounded-[2.5rem]">
             {currentQ ? (
-              <div className="space-y-10">
+              <div className="space-y-14">
                 <div className="flex items-center justify-between">
-                  <span className="text-[10px] font-black uppercase tracking-widest text-white/40">Question {currentIdx + 1} of 8</span>
+                <span className="text-sm font-black uppercase tracking-widest text-white/40">Question {currentIdx + 1} of 8</span>
                   <Badge variant="outline" className="text-[9px] font-bold uppercase tracking-widest text-accent border-accent/30">{currentQ.difficulty}</Badge>
                 </div>
 
-                <div className="space-y-6">
-                  <h2 className="text-3xl font-bold tracking-tight text-white">{currentQ.title || 'Untitled Node'}</h2>
-                  <p className="text-base text-white/70 leading-relaxed font-light whitespace-pre-wrap">{currentQ.problemStatement || currentQ.description}</p>
+                <div className="space-y-8">
+                <h2 className="text-5xl font-bold tracking-tight text-white">{currentQ.title || 'Untitled Node'}</h2>
+                <p className="text-xl text-white/70 leading-relaxed font-light whitespace-pre-wrap">{currentQ.problemStatement || currentQ.description}</p>
                 </div>
 
                 <div className="space-y-4 p-6 glass border-white/5 rounded-3xl bg-black/40">
-                  <h4 className="text-[11px] font-black uppercase tracking-[0.3em] text-accent">EXAMPLE</h4>
+                <h4 className="text-sm font-black uppercase tracking-[0.3em] text-accent">EXAMPLE</h4>
                   <div className="space-y-4">
                     <div className="space-y-1">
-                      <p className="text-white/20 uppercase tracking-widest text-[9px]">INPUT</p>
-                      <pre className="text-accent text-[11px] p-4 glass rounded-xl bg-white/5">{currentQ.sampleInput}</pre>
+                    <p className="text-xs font-black text-white/30 uppercase tracking-widest">INPUT</p>
+                    <pre className="text-base text-accent p-5 glass rounded-xl bg-white/5">{currentQ.sampleInput}</pre>
                     </div>
                     <div className="space-y-1">
-                      <p className="text-white/20 uppercase tracking-widest text-[9px]">EXPECTED OUTPUT</p>
-                      <pre className="text-green-400 text-[11px] p-4 glass rounded-xl bg-white/5">{currentQ.sampleOutput}</pre>
+                    <p className="text-xs font-black text-white/30 uppercase tracking-widest">EXPECTED OUTPUT</p>
+                    <pre className="text-base text-green-400 p-5 glass rounded-xl bg-white/5">{currentQ.sampleOutput}</pre>
                     </div>
                   </div>
                 </div>
