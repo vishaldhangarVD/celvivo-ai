@@ -486,7 +486,7 @@ export default function AptitudeEnginePage() {
   const currentQ = questions[currentIdx];
 
   return (
-    <div className="h-screen bg-[#050816] flex flex-col overflow-hidden relative pt-[72px]">
+    <div className="h-screen bg-[#050816] flex flex-col overflow-hidden relative">
       <div className="particles-bg" />
 
       <div className="flex-1 flex flex-col min-h-0">
@@ -496,7 +496,7 @@ export default function AptitudeEnginePage() {
               <Command className="w-5 h-5" />
             </div>
             <div>
-              <h1 className="text-sm font-black uppercase tracking-widest text-premium">NEXVOROAI</h1>
+              <h1 className="text-sm font-black uppercase tracking-widest text-premium">CELVIVO AI</h1>
               <p className="text-[9px] font-bold text-white/40 uppercase tracking-widest mt-0.5">APTITUDE TEST IN PROGRESS</p>
             </div>
           </div>
@@ -530,27 +530,27 @@ export default function AptitudeEnginePage() {
                   <Badge variant="outline" className="border-accent/20 text-accent text-[9px] font-black uppercase px-3">{currentQ?.difficulty || "Medium"}</Badge>
                 </div>
                 
-                <div className="max-w-3xl mx-auto w-full space-y-8 pt-2">
+                <div className="max-w-4xl mx-auto w-full space-y-8 pt-2">
                   <div className="space-y-4">
                     <Badge className="bg-purple-500/10 text-purple-400 border-none text-[9px] font-black uppercase tracking-widest">{currentQ?.category || "Category"}</Badge>
-                    <h2 className="text-2xl font-bold tracking-tight text-white/90 leading-tight whitespace-pre-wrap">{currentQ?.question}</h2>
+                    <h2 className="text-3xl font-bold tracking-tight text-white/90 leading-tight whitespace-pre-wrap">{currentQ?.question}</h2>
                   </div>
 
-                  <div className="grid md:grid-cols-2 gap-4 pb-4">
+                  <div className="grid md:grid-cols-2 gap-5 pb-4">
                     {currentQ?.options?.map((opt, i) => (
                       <button 
                         key={i} 
                         onClick={() => handleOptionSelect(i)} 
                         disabled={isSubmitting}
-                        className={cn("p-6 rounded-2xl border text-left transition-all group flex items-center gap-6", 
+                        className={cn("p-8 rounded-2xl border text-left transition-all group flex items-center gap-6", 
                         answers[currentIdx] === i ? "bg-accent/20 border-accent text-accent shadow-[0_0_30px_rgba(34,211,238,0.1)]" : "glass border-white/5 hover:border-white/20 text-white/60")}
                       >
-                        <div className={cn("w-10 h-10 rounded-xl border flex items-center justify-center text-xs font-black shrink-0", 
+                        <div className={cn("w-12 h-12 rounded-xl border flex items-center justify-center text-sm font-black shrink-0", 
                           answers[currentIdx] === i ? "bg-accent border-accent text-black" : "border-white/10 group-hover:border-white/30")}
                         >
                           {String.fromCharCode(65 + i)}
                         </div>
-                        <span className="text-sm font-medium leading-relaxed">{opt}</span>
+                        <span className="text-base font-medium leading-relaxed">{opt}</span>
                       </button>
                     ))}
                   </div>
@@ -566,7 +566,7 @@ export default function AptitudeEnginePage() {
                     disabled={isSubmitting}
                     className={cn("h-12 px-8 rounded-xl glass border-white/10 text-[10px] font-black uppercase", markedForReview.has(currentIdx) && "bg-orange-500/10 text-orange-400 shadow-[0_0_15px_rgba(249,115,22,0.3)]")}
                   >
-                    Review Later
+                    Skip Question
                   </Button>
                 </div>
                 <div className="flex gap-4">
