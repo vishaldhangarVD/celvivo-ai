@@ -201,7 +201,7 @@ export default function AptitudeEnginePage() {
         setIsInitializing(false);
       } catch (e: any) {
         console.error("[APTITUDE SESSION] Initialization fault:", e);
-        toast({ variant: "destructive", title: "Assessment calibration failure." });
+        toast({ variant: "destructive", title: "Unable to prepare your test." });
         setIsInitializing(false);
       }
     }
@@ -253,7 +253,7 @@ export default function AptitudeEnginePage() {
       const finalNumericScore = Math.round((correctCount / questions.length) * 100);
       await new Promise(r => setTimeout(r, 400));
 
-      // STEP 2: Generating Performance Analysis
+      // STEP 2: Analyzing Your Performance
       setEvaluationStep(2);
       const journeySnap = await getDoc(journeyRef);
       const data = journeySnap.data();
@@ -293,7 +293,7 @@ export default function AptitudeEnginePage() {
       router.replace(STAGE_ROUTES.APTITUDE_RESULT);
     } catch (e) {
       console.error("[APTITUDE SESSION] Submission fault:", e);
-      setSubmissionError("Failed to synchronize result with assessment node. Please retry.");
+      setSubmissionError("Unable to save your result. Please try again.");
       setIsSubmitting(false);
       submissionGuard.current = false;
     }
@@ -378,9 +378,9 @@ export default function AptitudeEnginePage() {
           <Brain className="w-10 h-10 text-accent absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 animate-pulse" />
         </div>
         <div className="text-center space-y-2">
-          <h2 className="text-2xl font-bold tracking-tighter text-premium uppercase">PREPARING YOUR APTITUDE ROUND</h2>
+          <h2 className="text-2xl font-bold tracking-tighter text-premium uppercase">PREPARING YOUR APTITUDE TEST</h2>
           <p className="text-[10px] font-black uppercase tracking-[0.4em] text-accent animate-pulse">
-            GENERATING YOUR PERSONALIZED QUESTIONS
+            PREPARING YOUR QUESTIONS
           </p>
           <p className="text-[8px] font-bold uppercase tracking-[0.2em] text-white/20">
             PLEASE WAIT A MOMENT
@@ -394,7 +394,7 @@ export default function AptitudeEnginePage() {
     const analysisSteps = [
       { id: 0, label: "Checking Answers" },
       { id: 1, label: "Calculating Score" },
-      { id: 2, label: "Generating Performance Analysis" },
+      { id: 2, label: "Analyzing Your Performance" },
       { id: 3, label: "Preparing Your Result" }
     ];
 
@@ -414,11 +414,11 @@ export default function AptitudeEnginePage() {
                 <AlertCircle className="w-10 h-10 text-red-500" />
               </div>
               <div className="space-y-4">
-                <h2 className="text-3xl font-bold tracking-tight text-white">Synchronization Error</h2>
+                <h2 className="text-3xl font-bold tracking-tight text-white">Something went wrong</h2>
                 <p className="text-muted-foreground font-light leading-relaxed">{submissionError}</p>
               </div>
               <Button onClick={() => handleSubmit()} className="btn-premium px-12 h-14 uppercase tracking-widest text-[10px]">
-                <RotateCcw className="w-4 h-4 mr-2" /> Retry Transmission
+                <RotateCcw className="w-4 h-4 mr-2" /> Try Again
               </Button>
             </motion.div>
           ) : (
@@ -514,7 +514,7 @@ export default function AptitudeEnginePage() {
           </div>
         </header>
 
-        <main className="flex-1 min-h-0 container-fluid flex flex-col w-full px-8 py-4 overflow-hidden">
+        <main className="flex-1 min-0 container-fluid flex flex-col w-full px-8 py-4 overflow-hidden">
           <div className="grid flex-1 min-h-0 lg:grid-cols-12 gap-8 overflow-hidden">
             <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="lg:col-span-9 flex flex-col h-full min-h-0 gap-4">
               <div className="space-y-2 shrink-0">
