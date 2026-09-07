@@ -39,6 +39,7 @@ import { cn } from '@/lib/utils';
 import { MASTER_QUESTIONS } from '@/lib/coding-questions-data';
 import { generateCodingQuestions } from '@/ai/flows/ai-coding-generator';
 import { INTERVIEW_STAGES, STAGE_ROUTES } from '@/lib/interview-stages';
+import { Progress } from '@/components/ui/progress';
 
 const LANGUAGES = [
   { id: 'python', label: 'Python 3', monaco: 'python' },
@@ -577,6 +578,76 @@ function CodingEngineContent() {
     </div>
   );
 
+  if (isFinalizing) {
+    const analysisSteps = [
+      { id: 0, label: "Analyzing Your Performance" },
+      { id: 1, label: "Calculating Your Score" },
+      { id: 2, label: "Checking Your Results" },
+      { id: 3, label: "Saving Your Results" }
+    ];
+
+    return (
+      <div className="h-screen bg-[#050816] flex flex-col items-center justify-center p-12 text-center overflow-hidden">
+        <div className="particles-bg" />
+        
+        <motion.div 
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          className="space-y-12 max-w-xl w-full"
+        >
+          <div className="relative mb-16 mx-auto w-40 h-40">
+            <div className="absolute inset-0 rounded-full border-2 border-accent/20 border-t-accent animate-spin" />
+            <div className="absolute inset-0 flex items-center justify-center">
+              <Cpu className="w-12 h-12 text-accent animate-pulse" />
+            </div>
+          </div>
+          
+          <div className="space-y-6">
+            <div className="space-y-2">
+              <h2 className="text-4xl font-bold tracking-tighter text-premium uppercase">Analyzing Your Coding Performance</h2>
+              <p className="text-sm text-white/40 font-light">Evaluating your solutions and preparing your results…</p>
+            </div>
+            
+            <div className="space-y-4">
+              <Progress value={(submitStep + 1) * 25} className="h-1.5" />
+            </div>
+
+            <div className="grid gap-3 pt-6">
+              {analysisSteps.map((step) => {
+                const isActive = submitStep === step.id;
+                const isDone = submitStep > step.id;
+                return (
+                  <div 
+                    key={step.id} 
+                    className={cn(
+                      "flex items-center gap-4 px-6 py-3 rounded-2xl border transition-all duration-500",
+                      isActive ? "bg-accent/10 border-accent/30 translate-x-2" : 
+                      isDone ? "bg-white/5 border-white/10 opacity-50" : "bg-transparent border-transparent opacity-20"
+                    )}
+                  >
+                    <div className={cn(
+                      "w-6 h-6 rounded-full flex items-center justify-center transition-colors duration-500",
+                      isDone ? "bg-green-500 text-black" : isActive ? "bg-accent text-black" : "bg-white/10"
+                    )}>
+                      {isDone ? <Check className="w-3.5 h-3.5" /> : <span className="text-[10px] font-bold">{step.id + 1}</span>}
+                    </div>
+                    <span className={cn(
+                      "text-[10px] font-black uppercase tracking-widest transition-colors duration-500",
+                      isActive ? "text-accent" : isDone ? "text-white/60" : "text-white/20"
+                    )}>
+                      {step.label}
+                    </span>
+                    {isActive && <Loader2 className="w-3.5 h-3.5 ml-auto animate-spin text-accent" />}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </motion.div>
+      </div>
+    );
+  }
+
   return (
     <div className="h-screen bg-[#050816] flex flex-col overflow-hidden relative">
       <div className="particles-bg" />
@@ -712,19 +783,6 @@ function CodingEngineContent() {
           </Card>
         </div>
       </main>
-
-      <AnimatePresence>
-        {isFinalizing && (
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="fixed inset-0 z-[200] bg-[#050816]/98 backdrop-blur-3xl flex flex-col items-center justify-center p-12 text-center">
-            <div className="relative mb-16">
-              <div className="w-48 h-48 rounded-full border-2 border-accent/20 border-t-accent animate-spin" />
-              <Cpu className="w-12 h-12 text-accent absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 animate-pulse" />
-            </div>
-            <h2 className="text-5xl font-bold tracking-tighter text-premium uppercase">PREPARING YOUR RESULTS</h2>
-            <p className="text-[10px] font-black uppercase tracking-[0.6em] text-accent animate-pulse mt-8">{["ANALYZING YOUR PERFORMANCE...", "CALCULATING YOUR SCORE...", "CHECKING YOUR RESULTS...", "SAVING YOUR RESULTS..."][submitStep]}</p>
-          </motion.div>
-        )}
-      </AnimatePresence>
     </div>
   );
 }
