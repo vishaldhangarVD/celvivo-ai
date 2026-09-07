@@ -294,6 +294,7 @@ export default function SpecialHRInterview() {
         title: "Unable to Generate Results",
         description: "Your interview was saved, but we couldn't generate your results. Please try again later.",
       });
+      resultProcessedRef.current = false;
     }
   }, [resumeAnalysis, journey, journeyRef, user, router, toast]);
 
@@ -432,6 +433,11 @@ export default function SpecialHRInterview() {
   };
 
   const stopInterview = async () => {
+    if (isProcessingRef.current || resultProcessedRef.current) return;
+    
+    setIsProcessing(true);
+    isProcessingRef.current = true;
+    
     setInterviewStarted(false);
     interviewStartedRef.current = false;
     stopListening();
@@ -446,6 +452,11 @@ export default function SpecialHRInterview() {
       didConnectionStateRef.current = "disconnected";
       setStatus("LOADING");
     }
+
+    // Manual end protocol: capture current history and finalize results
+    finalTranscriptRef.current = conversationHistory;
+    finalStageRef.current = interviewStage;
+    await finalizeInterviewResult();
   };
 
   const handleTypedSubmit = () => {
@@ -789,10 +800,11 @@ export default function SpecialHRInterview() {
             <div className="fixed top-8 right-8 pointer-events-auto">
                <Button 
                 onClick={stopInterview}
+                disabled={isProcessing}
                 variant="ghost"
                 className="h-10 px-4 glass border-red-500/20 text-red-400 hover:bg-red-500/10 rounded-full text-[9px] font-black uppercase tracking-widest transition-all"
                >
-                 <Square className="w-3 h-3 mr-2 fill-current" /> End Interview
+                 {isProcessing ? <Loader2 className="w-3 h-3 mr-2 animate-spin" /> : <Square className="w-3 h-3 mr-2 fill-current" />} End Interview
                </Button>
             </div>
           </div>
