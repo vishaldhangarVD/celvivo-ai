@@ -82,7 +82,7 @@ function CodingEngineContent() {
   const [isFinalizing, setIsFinalizing] = useState(false);
   const [isNavigating, setIsNavigating] = useState(false);
   const [submitStep, setSubmitStep] = useState(0);
-  const [terminalOutput, setTerminalOutput] = useState("Waiting for your implementation.");
+  const [terminalOutput, setTerminalOutput] = useState("WRITE YOUR CODE TO SOLVE THE PROBLEM.");
   const [activeTerminalTab, setActiveTerminalTab] = useState("output");
   const [countdown, setCountdown] = useState<number | null>(null);
 
@@ -215,7 +215,7 @@ function CodingEngineContent() {
 
     if (currentIdx < 7) { 
       setCurrentIdx(prev => prev + 1);
-      setTerminalOutput("Waiting for your implementation.");
+      setTerminalOutput("WRITE YOUR CODE TO SOLVE THE PROBLEM.");
       setActiveTerminalTab("output");
       setIsNavigating(false);
     } else {
@@ -268,7 +268,7 @@ function CodingEngineContent() {
 
     setIsRunning(true);
     setActiveTerminalTab("output");
-    setTerminalOutput("Initializing system sample execution...");
+    setTerminalOutput("Initializing execution...");
     
     try {
       const response = await fetch('/api/execute', {
@@ -290,7 +290,7 @@ function CodingEngineContent() {
         setTerminalOutput(`${statusPrefix}\n\nOutput Trace:\n${data.stdout || ''}\n\nExpected:\n${currentQ.sampleOutput || ''}\n\nTemporal Audit: ${data.time || '0.00'}s | Memory Load: ${data.memory || 'N/A'}KB`);
       }
     } catch (error) {
-      setTerminalOutput("[NETWORK FAULT] Execution link interrupted.");
+      setTerminalOutput("[NETWORK ERROR] Connection interrupted.");
     } finally {
       setIsRunning(false);
     }
@@ -306,7 +306,7 @@ function CodingEngineContent() {
 
     setIsSubmitting(true);
     setActiveTerminalTab("cases");
-    setTerminalOutput("Running Hidden Test Cases...");
+    setTerminalOutput("Running test cases...");
     
     try {
       const response = await fetch('/api/execute', {
@@ -356,7 +356,7 @@ function CodingEngineContent() {
       }
     } catch (error: any) {
       console.error("[CODING] Submission Error:", error);
-      setTerminalOutput("[CRITICAL FAULT] Matrix node connection lost.");
+      setTerminalOutput("[CONNECTION ERROR] Unable to verify your solution.");
       toast({ variant: "destructive", title: "Submission Error", description: "Failed to verify algorithm." });
     } finally {
       setIsSubmitting(false);
@@ -399,7 +399,7 @@ function CodingEngineContent() {
       if (initLoadingRef.current) return;
 
       if (journey.codingUnlocked !== true && !isUnlockedParam) {
-        toast({ variant: "destructive", title: "Access Restricted", description: "Complete previous nodes to unlock syntax matrix." });
+        toast({ variant: "destructive", title: "ACCESS RESTRICTED", description: "Please complete the previous round to continue." });
         router.push(STAGE_ROUTES.APTITUDE_RESULT);
         return;
       }
@@ -409,7 +409,7 @@ function CodingEngineContent() {
 
       const timeoutId = setTimeout(() => {
         if (initLoadingRef.current && isInitializing) {
-          setInitError("Environment setup timed out. The neural link is experiencing high latency.");
+          setInitError("Environment setup timed out. The connection is experiencing high latency.");
           initLoadingRef.current = false;
         }
       }, 45000);
@@ -474,7 +474,7 @@ function CodingEngineContent() {
         console.error("[CODING ROUND] Environment Sync Fault:", e);
         clearTimeout(timeoutId);
         if (initLoadingRef.current) {
-          setInitError(e.message || "A neural link fault occurred while preparing the coding matrix.");
+          setInitError(e.message || "A connection error occurred while preparing the coding challenge.");
           initLoadingRef.current = false;
         }
       }
@@ -494,7 +494,7 @@ function CodingEngineContent() {
                           "// Starter code unavailable.";
 
       setCode(savedCode || starterCode);
-      setTerminalOutput(isSameLanguage ? "Submission archived." : "Waiting for implementation.");
+      setTerminalOutput(isSameLanguage ? "Submission saved." : "WRITE YOUR CODE TO SOLVE THE PROBLEM.");
       setActiveTerminalTab(isSameLanguage ? "cases" : "output");
     }
   }, [currentIdx, selectedLang, currentQ, sessionResults]);
@@ -550,7 +550,7 @@ function CodingEngineContent() {
               onClick={() => { setInitError(null); initLoadingRef.current = false; setRetryKey(k => k + 1); }} 
               className="btn-premium px-12 h-14 uppercase tracking-widest text-[10px] rounded-xl"
             >
-              <RotateCcw className="w-4 h-4 mr-2" /> Retry Protocol
+              <RotateCcw className="w-4 h-4 mr-2" /> TRY AGAIN
             </Button>
           </motion.div>
         ) : (
@@ -567,7 +567,7 @@ function CodingEngineContent() {
             <div className="space-y-4">
               <h2 className="text-4xl font-bold tracking-tighter text-premium uppercase">Preparing Your Coding Round</h2>
               <p className="text-[10px] font-black uppercase tracking-[0.4em] text-accent animate-pulse">
-                Synchronizing High-Fidelity Question Matrix...
+                PREPARING YOUR CODING QUESTIONS...
               </p>
             </div>
           </motion.div>
@@ -580,13 +580,13 @@ function CodingEngineContent() {
     <div className="h-screen bg-[#050816] flex flex-col overflow-hidden relative">
       <div className="particles-bg" />
       
-      <header className="h-[72px] border-b border-white/5 bg-[#0b0e1a]/80 backdrop-blur-xl flex items-center justify-between px-8 z-50 sticky top-[72px]">
+      <header className="h-[72px] border-b border-white/5 bg-[#0b0e1a]/80 backdrop-blur-xl flex items-center justify-between px-8 z-50 sticky top-0">
         <div className="flex items-center gap-6">
           <div className="w-10 h-10 rounded-xl bg-accent/10 flex items-center justify-center border border-accent/20">
              <Code2 className="w-5 h-5 text-accent" />
           </div>
           <div>
-            <h1 className="text-sm font-black uppercase tracking-widest text-premium">Syntax Matrix Protocol</h1>
+            <h1 className="text-sm font-black uppercase tracking-widest text-premium">CODING CHALLENGE</h1>
             <p className="text-[9px] font-bold text-accent uppercase tracking-widest">Question {currentIdx + 1} of 8</p>
           </div>
         </div>
@@ -605,7 +605,7 @@ function CodingEngineContent() {
         </div>
       </header>
 
-      <main className="flex-1 container-fluid flex overflow-hidden p-4 gap-4 mt-20">
+      <main className="flex-1 container-fluid flex overflow-hidden p-4 gap-4">
         <div className="w-[35%] flex flex-col gap-4">
           <Card className="flex-1 glass bg-white/[0.01] border-white/5 p-8 overflow-y-auto custom-scrollbar rounded-[2.5rem]">
             {currentQ ? (
@@ -621,7 +621,7 @@ function CodingEngineContent() {
                 </div>
 
                 <div className="space-y-4 p-6 glass border-white/5 rounded-3xl bg-black/40">
-                  <h4 className="text-[11px] font-black uppercase tracking-[0.3em] text-accent">SYSTEM SAMPLE</h4>
+                  <h4 className="text-[11px] font-black uppercase tracking-[0.3em] text-accent">EXAMPLE</h4>
                   <div className="space-y-4">
                     <div className="space-y-1">
                       <p className="text-white/20 uppercase tracking-widest text-[9px]">INPUT</p>
@@ -641,7 +641,7 @@ function CodingEngineContent() {
         <div className="flex-1 flex flex-col gap-4">
           <Card className="flex-1 glass border-white/5 bg-[#0b0e1a] flex flex-col relative overflow-hidden rounded-[2.5rem] shadow-2xl">
             <div className="h-14 border-b border-white/5 bg-white/[0.02] flex items-center px-10 justify-between">
-               <span className="text-[9px] font-black text-white/30 uppercase tracking-widest">Environment</span>
+               <span className="text-[9px] font-black text-white/30 uppercase tracking-widest">CODE EDITOR</span>
                <select 
                  value={selectedLang?.id || LANGUAGES[0].id} 
                  onChange={(e) => setSelectedLang(LANGUAGES.find(l => l.id === e.target.value) || LANGUAGES[0])} 
@@ -666,7 +666,7 @@ function CodingEngineContent() {
                   {isRunning ? <Loader2 className="w-4 animate-spin mr-2" /> : <Activity className="w-4 h-4 mr-2" />} RUN SAMPLE
                 </Button>
                 <Button onClick={handleSubmitCode} disabled={isSubmitting || isRunning || isTimeExpired || isNavigating} className="h-12 px-12 btn-premium rounded-xl text-[10px] font-black uppercase tracking-[0.3em] group">
-                  {isSubmitting ? <><Loader2 className="w-4 animate-spin mr-2" /> AUDITING...</> : <><ShieldCheck className="w-4 h-4 mr-2 group-hover:scale-110 transition-transform" /> SUBMIT SOLUTION</>}
+                  {isSubmitting ? <><Loader2 className="w-4 animate-spin mr-2" /> CHECKING SOLUTION...</> : <><ShieldCheck className="w-4 h-4 mr-2 group-hover:scale-110 transition-transform" /> SUBMIT SOLUTION</>}
                 </Button>
                 <Button onClick={handleSkipQuestion} disabled={isRunning || isSubmitting || isTimeExpired || isNavigating} variant="ghost" className="h-12 px-6 rounded-xl border border-white/10 text-white/40 text-[10px] font-black uppercase tracking-widest">
                   <FastForward className="w-4 h-4 mr-2" /> SKIP
@@ -679,7 +679,7 @@ function CodingEngineContent() {
             <Tabs value={activeTerminalTab} onValueChange={setActiveTerminalTab} className="h-full flex flex-col">
               <TabsList className="bg-[#08090D] px-10 h-14 border-b border-white/5 justify-start gap-12">
                 <TabsTrigger value="output" className="text-[9px] font-black uppercase tracking-[0.3em]">CONSOLE OUTPUT</TabsTrigger>
-                <TabsTrigger value="cases" className="text-[9px] font-black uppercase tracking-[0.3em]">AUDIT TRACE</TabsTrigger>
+                <TabsTrigger value="cases" className="text-[9px] font-black uppercase tracking-[0.3em]">TEST RESULTS</TabsTrigger>
               </TabsList>
               <div className="flex-1 font-mono text-[13px] overflow-hidden bg-black/40">
                 <TabsContent value="output" className="p-8 text-white/70 h-full overflow-y-auto whitespace-pre-wrap leading-relaxed">{terminalOutput}</TabsContent>
@@ -689,7 +689,7 @@ function CodingEngineContent() {
                       <div className={cn("p-4 rounded-xl border flex items-center justify-between", sessionResults[currentIdx].status === 'Solved' ? "bg-green-500/10 border-green-500/20" : "bg-red-500/10 border-red-500/20")}>
                          <div className="flex items-center gap-4">
                             <h4 className={cn("text-base font-bold", sessionResults[currentIdx].status === 'Solved' ? "text-green-400" : "text-red-400")}>
-                                {sessionResults[currentIdx].status === 'Solved' ? "VERIFIED" : "AUDIT FAILURE"}
+                                {sessionResults[currentIdx].status === 'Solved' ? "ALL TESTS PASSED" : "SOME TESTS FAILED"}
                             </h4>
                             <span className="text-[9px] font-black text-white/30 uppercase tracking-[0.2em]">Passes: {sessionResults[currentIdx].passedCount}/{sessionResults[currentIdx].totalCount}</span>
                          </div>
@@ -697,14 +697,14 @@ function CodingEngineContent() {
                       <div className="grid gap-2">
                         {sessionResults[currentIdx].results.map((r: any, i: number) => (
                           <div key={i} className="p-3 glass border-white/5 rounded-xl flex items-center justify-between">
-                            <span className="text-[10px] font-black text-white/40 uppercase">Node #{i+1}</span>
+                            <span className="text-[10px] font-black text-white/40 uppercase">TEST CASE #{i+1}</span>
                             <Badge variant="outline" className={cn("text-[8px] uppercase", r.passed ? "text-green-400 border-green-500/20" : "text-red-400 border-red-500/20")}>{r.status}</Badge>
                           </div>
                         ))}
                       </div>
                       {countdown !== null && <p className="text-center text-xs font-black uppercase tracking-widest text-accent animate-pulse">NEXT NODE IN {countdown}S...</p>}
                     </div>
-                  ) : <div className="h-full flex flex-col items-center justify-center opacity-20"><ShieldCheck className="w-12 h-12 mb-2" /><p className="text-[9px] font-black uppercase">Awaiting Submission</p></div>}
+                  ) : <div className="h-full flex flex-col items-center justify-center opacity-20"><ShieldCheck className="w-12 h-12 mb-2" /><p className="text-[9px] font-black uppercase">SUBMIT YOUR SOLUTION TO SEE THE RESULTS</p></div>}
                 </TabsContent>
               </div>
             </Tabs>
@@ -719,8 +719,8 @@ function CodingEngineContent() {
               <div className="w-48 h-48 rounded-full border-2 border-accent/20 border-t-accent animate-spin" />
               <Cpu className="w-12 h-12 text-accent absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 animate-pulse" />
             </div>
-            <h2 className="text-5xl font-bold tracking-tighter text-premium uppercase">Synthesizing Dossier</h2>
-            <p className="text-[10px] font-black uppercase tracking-[0.6em] text-accent animate-pulse mt-8">{["Aggregating Performance...", "Calculating Precision...", "Validating Efficiency...", "Finalizing Archive..."][submitStep]}</p>
+            <h2 className="text-5xl font-bold tracking-tighter text-premium uppercase">PREPARING YOUR RESULTS</h2>
+            <p className="text-[10px] font-black uppercase tracking-[0.6em] text-accent animate-pulse mt-8">{["ANALYZING YOUR PERFORMANCE...", "CALCULATING YOUR SCORE...", "CHECKING YOUR RESULTS...", "SAVING YOUR RESULTS..."][submitStep]}</p>
           </motion.div>
         )}
       </AnimatePresence>
