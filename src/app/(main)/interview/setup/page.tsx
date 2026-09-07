@@ -468,8 +468,8 @@ export default function InterviewSetupPage() {
                 </div>
               </div>
 
-              <div className="space-y-2">
-                <h3 className="text-[9px] font-black uppercase tracking-[0.4em] text-white/40 ml-2">SELECTED CONFIGURATION</h3>
+              <div className="space-y-2 mt-6">
+  <h3 className="text-[9px] font-black uppercase tracking-[0.4em] text-white/40 ml-2">SELECTED CONFIGURATION</h3>
                 <div className="grid grid-cols-3 gap-3">
                   {[
                     { label: "COMPANY", val: company, icon: Building2 },
