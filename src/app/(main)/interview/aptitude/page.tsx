@@ -571,7 +571,22 @@ export default function AptitudeEnginePage() {
                 </div>
                 <div className="flex gap-4">
                   {currentIdx < questions.length - 1 ? (
-                    <Button onClick={() => handleNav(Math.min(questions.length - 1, currentIdx + 1))} disabled={isSubmitting} className="h-12 px-12 btn-premium rounded-xl text-[10px] font-black uppercase">Next Question <ChevronRight className="ml-2 w-4 h-4" /></Button>
+                    <Button 
+                      onClick={() => {
+                        if (answers[currentIdx] !== undefined) {
+                          handleNav(Math.min(questions.length - 1, currentIdx + 1));
+                        } else {
+                          toast({
+                            title: "Answer Required",
+                            description: "Please select an answer before moving to the next question.",
+                          });
+                        }
+                      }} 
+                      disabled={isSubmitting} 
+                      className="h-12 px-12 btn-premium rounded-xl text-[10px] font-black uppercase"
+                    >
+                      Next Question <ChevronRight className="ml-2 w-4 h-4" />
+                    </Button>
                   ) : (
                     <Button onClick={handleSubmit} disabled={isSubmitting} className="h-12 px-12 bg-green-600 hover:bg-green-500 text-white rounded-xl text-[10px] font-black uppercase shadow-lg group">
                       {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <>Finish Test <ShieldCheck className="ml-2 w-4 h-4 group-hover:scale-110 transition-transform" /></>}
