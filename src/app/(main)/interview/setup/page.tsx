@@ -269,7 +269,7 @@ export default function InterviewSetupPage() {
   const [company, setCompany] = useState("Google");
   const [role, setRole] = useState("Software Engineer");
   const [experience, setExperience] = useState("Fresher");
-  const [isInitializing, setIsInitializing] = useState(false);
+  const [loadingTarget, setLoadingTarget] = useState<'aptitude' | 'interview' | null>(null);
   
   const [file, setFile] = useState<File | null>(null);
   const [isVerifying, setIsVerifying] = useState(false);
@@ -322,7 +322,7 @@ export default function InterviewSetupPage() {
       return;
     }
 
-    setIsInitializing(true);
+    setLoadingTarget(targetPath);
     const sessionId = journey?.sessionId || Math.random().toString(36).substring(7);
 
     try {
@@ -365,7 +365,7 @@ export default function InterviewSetupPage() {
     } catch (e) {
       console.error(e);
       toast({ variant: "destructive", title: "Protocol Fault", description: "Failed to persist identity node." });
-      setIsInitializing(false);
+      setLoadingTarget(null);
     }
   };
 
@@ -379,15 +379,15 @@ export default function InterviewSetupPage() {
     <div className="min-h-screen bg-[#050816] flex flex-col overflow-x-hidden relative">
       <div className="particles-bg" />
 
-      <main className="flex-1 container mx-auto px-6 pt-24 pb-10 flex flex-col w-full h-[calc(100vh-0px)]">
-        <div className="max-w-7xl mx-auto grid lg:grid-cols-12 gap-10 flex-1 w-full h-full">
+      <main className="flex-1 container mx-auto px-10 pt-20 pb-6 flex flex-col w-full h-[calc(100vh-0px)]">
+        <div className="max-w-[1600px] mx-auto grid lg:grid-cols-12 gap-14 flex-1 w-full h-full">
           
           <div className="lg:col-span-7 flex flex-col h-full justify-between">
             <header className="space-y-2 mb-6 shrink-0">
               <Badge className="bg-accent/20 text-accent border-none px-4 py-0.5 text-[9px] tracking-[0.4em] font-black uppercase">
                 INTERVIEW PREPARATION
               </Badge>
-              <h1 className="text-4xl font-bold tracking-tighter text-premium">
+              <h1 className="text-5xl font-bold tracking-tighter text-premium">
                 Set Up Your Interview.
               </h1>
               <p className="text-sm text-muted-foreground font-light max-w-xl">
@@ -502,9 +502,9 @@ export default function InterviewSetupPage() {
             <div className="space-y-2 shrink-0">
               <h2 className="text-lg font-bold tracking-tighter ml-2 uppercase">Resume Upload</h2>
               <Card 
-                onClick={() => !isVerifying && document.getElementById('resume-input')?.click()}
+                onClick={() => !isVerifying && !loadingTarget && document.getElementById('resume-input')?.click()}
                 className={cn(
-                  "premium-card bg-white/[0.01] border-white/5 p-6 flex flex-col items-center justify-center text-center cursor-pointer group transition-all duration-500 h-[210px] relative overflow-hidden shrink-0",
+                  "premium-card bg-white/[0.01] border-white/5 p-8 flex flex-col items-center justify-center text-center cursor-pointer group transition-all duration-500 h-[280px] relative overflow-hidden shrink-0",
                   isUploaded ? "border-green-500/20 bg-green-500/[0.02]" : "hover:border-accent/20 hover:bg-white/[0.03]"
                 )}
               >
@@ -568,10 +568,10 @@ export default function InterviewSetupPage() {
                   </div>
                   <Button 
                     onClick={() => handleProceed('aptitude')}
-                    disabled={isInitializing || !isUploaded}
+                    disabled={loadingTarget !== null || !isUploaded}
                     className="w-full h-11 mt-4 rounded-xl glass border-white/10 text-[9px] font-black uppercase tracking-widest hover:bg-accent hover:text-black transition-all"
                   >
-                    {isInitializing ? <Loader2 className="w-4 h-4 animate-spin" /> : "CONTINUE TO APTITUDE"}
+                    {loadingTarget === 'aptitude' ? <Loader2 className="w-4 h-4 animate-spin" /> : "CONTINUE TO APTITUDE"}
                   </Button>
                 </Card>
 
@@ -587,10 +587,10 @@ export default function InterviewSetupPage() {
                   </div>
                   <Button 
                     onClick={() => handleProceed('interview')}
-                    disabled={isInitializing || !isUploaded}
+                    disabled={loadingTarget !== null || !isUploaded}
                     className="w-full h-11 mt-4 rounded-xl glass border-white/10 text-[9px] font-black uppercase tracking-widest hover:bg-purple-600 hover:text-white transition-all"
                   >
-                    {isInitializing ? <Loader2 className="w-4 h-4 animate-spin" /> : "CONTINUE TO INTERVIEW"}
+                    {loadingTarget === 'interview' ? <Loader2 className="w-4 h-4 animate-spin" /> : "CONTINUE TO INTERVIEW"}
                   </Button>
                 </Card>
               </div>
