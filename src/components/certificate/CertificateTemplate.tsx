@@ -65,24 +65,24 @@ export default function CertificateTemplate({
             </div>
             <div className="brand-text">
               <div className="font-headline font-bold text-[20px] tracking-widest text-[#f1eee4]">CELVIVO<span className="text-[#d8b374]">AI</span></div>
-              <div className="text-[10px] tracking-[2.5px] text-[#8b8a94] uppercase mt-0.5">AI Career Tools</div>
+              <div className="text-[10px] tracking-[2.5px] text-[#8b8a94] uppercase mt-0.5">AI Career Platform</div>
             </div>
           </div>
           <div className="font-mono text-[12px] tracking-[2.5px] text-[#d8b374] uppercase border border-[#d8b374]/30 px-5 py-2 rounded-[1px]">
-            Neural Performance Verification
+            Interview Performance Certificate
           </div>
         </div>
 
         {/* Body Content */}
         <div className="flex flex-col items-center text-center">
-          <div className="text-[15px] text-[#8b8a94] italic tracking-tight">This credential certifies that</div>
+          <div className="text-[15px] text-[#8b8a94] italic tracking-tight">This certificate is awarded to</div>
           <div className="font-serif font-semibold text-[64px] text-[#f0d9a8] tracking-tight mt-3 leading-none" style={{ fontFamily: "'Fraunces', serif" }}>
             {userName}
           </div>
           <div className="w-[140px] h-[1px] bg-gradient-to-r from-transparent via-[#d8b374] to-transparent my-4" />
-          <div className="text-[15px] text-[#8b8a94]">has demonstrated mastery in the simulation for</div>
+          <div className="text-[15px] text-[#8b8a94]">has successfully demonstrated strong interview skills in</div>
           <div className="font-serif font-semibold text-[32px] text-[#f1eee4] mt-1.5 tracking-tight" style={{ fontFamily: "'Fraunces', serif" }}>
-            {role} Mastery
+            {role} Interview Skills
           </div>
         </div>
 
@@ -90,15 +90,15 @@ export default function CertificateTemplate({
         <div className="flex flex-col items-center gap-6">
           <div className="flex items-center justify-center gap-12 w-full">
             <div className="flex flex-col items-center gap-1">
-              <span className="text-[10px] tracking-widest text-[#8b8a94] uppercase font-mono">Date of Issue</span>
+              <span className="text-[10px] tracking-widest text-[#8b8a94] uppercase font-mono">Issued On</span>
               <span className="text-[15px] text-[#f1eee4] font-mono">{date}</span>
             </div>
             <div className="flex flex-col items-center gap-1">
-              <span className="text-[10px] tracking-widest text-[#8b8a94] uppercase font-mono">Verification ID</span>
+              <span className="text-[10px] tracking-widest text-[#8b8a94] uppercase font-mono">Certificate ID</span>
               <span className="text-[15px] text-[#f1eee4] font-mono uppercase">{certId}</span>
             </div>
             <div className="flex flex-col items-center gap-1">
-              <span className="text-[10px] tracking-widest text-[#8b8a94] uppercase font-mono">Verify at</span>
+              <span className="text-[10px] tracking-widest text-[#8b8a94] uppercase font-mono">Certificate Website</span>
               <span className="text-[15px] text-[#d8b374] font-mono">celvivo.ai</span>
             </div>
           </div>

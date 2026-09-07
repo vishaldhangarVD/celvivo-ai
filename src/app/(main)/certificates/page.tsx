@@ -43,7 +43,7 @@ const CertificateTemplate = ({ data }: { data: any }) => {
   const logoMark = (
     <svg width="40" height="40" viewBox="0 0 40 40" fill="none">
       <defs>
-        <linearGradient id="lgGrad" x1="0" y1="0" x2="40" x2="40">
+        <linearGradient id="lgGrad" x1="0" x2="40" x2="40">
           <stop offset="0%" stopColor="#7c5cff"/>
           <stop offset="100%" stopColor="#d8b374"/>
         </linearGradient>
@@ -81,38 +81,38 @@ const CertificateTemplate = ({ data }: { data: any }) => {
               </div>
               <div className="brand-text">
                 <div className="font-headline font-bold text-[20px] tracking-widest text-[#f1eee4]">CELVIVO<span className="text-[#d8b374]">AI</span></div>
-                <div className="text-[10px] tracking-[2.5px] text-[#8b8a94] uppercase mt-0.5">AI Career Tools</div>
+                <div className="text-[10px] tracking-[2.5px] text-[#8b8a94] uppercase mt-0.5">AI Career Platform</div>
               </div>
             </div>
             <div className="font-mono text-[12px] tracking-[2.5px] text-[#d8b374] uppercase border border-[#d8b374]/30 px-5 py-2 rounded-[1px]">
-              Neural Performance Verification
+              Interview Performance Certificate
             </div>
           </div>
 
           <div className="flex flex-col items-center text-center">
-            <div className="text-[15px] text-[#8b8a94] italic tracking-tight">This credential certifies that</div>
+            <div className="text-[15px] text-[#8b8a94] italic tracking-tight">This certificate is awarded to</div>
             <div className="font-serif font-semibold text-[64px] text-[#f0d9a8] tracking-tight mt-3 leading-none">
               {data.userName}
             </div>
             <div className="w-[140px] h-[1px] bg-gradient-to-r from-transparent via-[#d8b374] to-transparent my-4" />
-            <div className="text-[15px] text-[#8b8a94]">has demonstrated mastery in the simulation for</div>
+            <div className="text-[15px] text-[#8b8a94]">has successfully demonstrated strong interview skills in</div>
             <div className="font-serif font-semibold text-[32px] text-[#f1eee4] mt-1.5 tracking-tight">
-              {data.role} Mastery
+              {data.role} Interview Skills
             </div>
           </div>
 
           <div className="flex flex-col items-center gap-4">
             <div className="flex items-center justify-center gap-12 w-full">
               <div className="flex flex-col items-center gap-1">
-                <span className="text-[10px] tracking-widest text-[#8b8a94] uppercase font-mono">Date of Issue</span>
+                <span className="text-[10px] tracking-widest text-[#8b8a94] uppercase font-mono">Issued On</span>
                 <span className="text-[15px] text-[#f1eee4] font-mono">{data.date}</span>
               </div>
               <div className="flex flex-col items-center gap-1">
-                <span className="text-[10px] tracking-widest text-[#8b8a94] uppercase font-mono">Verification ID</span>
+                <span className="text-[10px] tracking-widest text-[#8b8a94] uppercase font-mono">Certificate ID</span>
                 <span className="text-[15px] text-[#f1eee4] font-mono uppercase">{data.certId}</span>
               </div>
               <div className="flex flex-col items-center gap-1">
-                <span className="text-[10px] tracking-widest text-[#8b8a94] uppercase font-mono">Verify at</span>
+                <span className="text-[10px] tracking-widest text-[#8b8a94] uppercase font-mono">Certificate Website</span>
                 <span className="text-[15px] text-[#d8b374] font-mono">celvivo.ai</span>
               </div>
             </div>
@@ -200,10 +200,10 @@ export default function CertificatesPage() {
         certId: cert.id?.substring(0, 20).toUpperCase()
       });
       
-      toast({ title: "Credential Exported", description: "Your high-fidelity PDF is ready." });
+      toast({ title: "Certificate Downloaded", description: "Your certificate PDF is ready." });
     } catch (e) {
       console.error(e);
-      toast({ variant: "destructive", title: "Synthesis Error" });
+      toast({ variant: "destructive", title: "Download Error" });
     } finally {
       setIsExporting(false);
     }
@@ -230,7 +230,7 @@ export default function CertificatesPage() {
           <header className="text-center relative">
             <div className="absolute inset-0 bg-gradient-to-r from-accent/10 via-purple-500/10 to-accent/10 blur-[100px] opacity-50 -z-10 animate-pulse" />
             <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-4">
-              <Badge className="bg-accent/20 text-accent border-none px-6 py-1.5 font-bold tracking-[0.4em] text-[10px] uppercase">Achievement Vault</Badge>
+              <Badge className="bg-accent/20 text-accent border-none px-6 py-1.5 font-bold tracking-[0.4em] text-[10px] uppercase">My Certificates</Badge>
               <h1 className="text-7xl font-bold tracking-tighter text-premium">Career <span className="text-gradient-purple">Credentials.</span></h1>
               <p className="text-xl text-muted-foreground font-light max-w-2xl mx-auto">
                 Verified interview mastery records, issued directly from high-fidelity simulations.
@@ -241,17 +241,17 @@ export default function CertificatesPage() {
           {standardLoading || specialLoading ? (
             <div className="py-20 flex flex-col items-center gap-6">
               <Loader2 className="w-12 h-12 animate-spin text-accent" />
-              <p className="text-[10px] font-bold uppercase tracking-widest text-white/30">Syncing Intelligence Nodes...</p>
+              <p className="text-[10px] font-bold uppercase tracking-widest text-white/30">Loading Interview History...</p>
             </div>
           ) : (
             <div className="space-y-24">
               
               <section className="space-y-8">
                 <div className="flex items-center justify-between px-4">
-                  <h3 className="text-sm font-black uppercase tracking-[0.4em] text-white/40">Verified Mastery Node</h3>
+                  <h3 className="text-sm font-black uppercase tracking-[0.4em] text-white/40">Certificate</h3>
                   {bestCertified && (
                     <Badge className="bg-green-500/20 text-green-400 border-none font-bold text-[10px] tracking-widest flex items-center gap-2">
-                      <ShieldCheck className="w-3.5 h-3.5" /> AUTHENTICATED
+                      <ShieldCheck className="w-3.5 h-3.5" /> VERIFIED
                     </Badge>
                   )}
                 </div>
@@ -291,18 +291,18 @@ export default function CertificatesPage() {
                       <div className="space-y-2">
                         <h3 className="text-2xl font-bold tracking-tight text-white">No Certificates Yet</h3>
                         <p className="text-muted-foreground font-light max-w-md mx-auto text-sm">
-                          Score 70% or higher in any interview round to earn a verified certificate.
+                          Score 70% or higher in an interview to earn a certificate.
                         </p>
                       </div>
                       <div className="flex flex-wrap justify-center gap-4 pt-4">
                         <Link href="/interview/setup">
                           <Button className="btn-premium h-14 px-8 text-[9px] font-black uppercase tracking-[0.3em] shadow-xl">
-                            Technical Track <Zap className="ml-2 w-3.5 h-3.5 fill-current" />
+                            Start Technical Interview <Zap className="ml-2 w-3.5 h-3.5 fill-current" />
                           </Button>
                         </Link>
                         <Link href="/special-hr-resume-upload">
                           <Button variant="outline" className="h-14 px-8 glass border-white/10 rounded-full text-[9px] font-black uppercase tracking-[0.3em]">
-                            Special HR Arena <Sparkles className="ml-2 w-3.5 h-3.5 text-purple-400" />
+                            Start HR Interview <Sparkles className="ml-2 w-3.5 h-3.5 text-purple-400" />
                           </Button>
                         </Link>
                       </div>
@@ -314,9 +314,9 @@ export default function CertificatesPage() {
               <section className="space-y-10">
                 <div className="flex items-center justify-between px-4">
                    <h3 className="text-xl font-bold flex items-center gap-3 text-white">
-                     <History className="w-6 h-6 text-accent" /> Intelligence Archive
+                     <History className="w-6 h-6 text-accent" /> Interview History
                    </h3>
-                   <span className="text-[10px] font-bold uppercase tracking-widest text-white/40">{allSessions.length} Nodes Captured</span>
+                   <span className="text-[10px] font-bold uppercase tracking-widest text-white/40">{allSessions.length} Interviews Completed</span>
                 </div>
                 
                 {allSessions.length > 0 ? (
@@ -340,7 +340,7 @@ export default function CertificatesPage() {
                                       <Calendar className="w-3 h-3" /> {session.createdAt?.seconds ? new Date(session.createdAt.seconds * 1000).toLocaleDateString() : 'Recent'}
                                     </span>
                                     <span className="text-[10px] uppercase font-bold text-white/40 flex items-center gap-2">
-                                      <Clock className="w-3 h-3" /> {session.stream === 'special' ? 'D-ID Arena' : session.round || 'Arena'}
+                                      <Clock className="w-3 h-3" /> {session.stream === 'special' ? 'Special HR Interview' : session.round || 'Interview'}
                                     </span>
                                  </div>
                               </div>
@@ -348,14 +348,14 @@ export default function CertificatesPage() {
 
                             <div className="flex items-center gap-8 w-full md:w-auto justify-between md:justify-end">
                               <div className="text-right">
-                                <p className="text-[8px] font-black uppercase text-white/20 tracking-widest mb-1">Score Index</p>
+                                <p className="text-[8px] font-black uppercase text-white/20 tracking-widest mb-1">Interview Score</p>
                                 <p className={cn("text-xl font-black tabular-nums", isCertified ? "text-accent" : "text-white/40")}>{session.overallScore || 0}%</p>
                               </div>
                               <Badge className={cn(
                                 "px-4 py-1 border-none text-[8px] font-black uppercase tracking-widest",
                                 isCertified ? "bg-green-500/20 text-green-400" : "bg-white/5 text-white/30"
                               )}>
-                                {isCertified ? "Certified" : "Practice Attempt"}
+                                {isCertified ? "Certificate Earned" : "Practice Interview"}
                               </Badge>
                               <Button 
                                 onClick={() => handleDownload(session)}
@@ -384,11 +384,11 @@ export default function CertificatesPage() {
       </main>
 
       <footer className="container mx-auto px-6 mt-32 border-t border-white/5 pt-12 flex flex-col md:flex-row justify-between items-center gap-8 opacity-60">
-        <p className="text-[9px] font-bold text-white/30 uppercase tracking-[0.4em]">Vault Engine v5.3.0 &middot; {new Date().getFullYear()}</p>
+        <p className="text-[9px] font-bold text-white/30 uppercase tracking-[0.4em]">Certificate System v5.3.0 &middot; {new Date().getFullYear()}</p>
         <div className="flex items-center gap-6">
            <div className="flex items-center gap-2">
               <ShieldCheck className="w-3 h-3 text-accent" />
-              <span className="text-[8px] font-bold text-white/40 uppercase tracking-widest">Authenticated Nodes</span>
+              <span className="text-[8px] font-bold text-white/40 uppercase tracking-widest">Verified Interviews</span>
            </div>
         </div>
       </footer>
