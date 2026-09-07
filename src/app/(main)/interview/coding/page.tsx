@@ -234,6 +234,8 @@ function CodingEngineContent() {
   const saveQuestionResult = async (idx: number, res: any) => {
     if (!user || !db || !journey || !questions || !questions[idx]) return;
     const q = questions[idx];
+    const sessionId = journey.sessionId || "unknown";
+    const docId = `${sessionId}_${q.id}`;
     
     const executionTime = (res.results || []).length > 0 
       ? Math.max(...res.results.map((r: any) => parseFloat(r.executionTime || 0))) 
@@ -246,8 +248,9 @@ function CodingEngineContent() {
       : 0;
 
     try {
-      addDoc(collection(db, 'users', user.uid, 'coding_results'), {
-        interviewId: journey.sessionId || "unknown",
+      // Use setDoc with deterministic ID to prevent duplicates and ensure attempt isolation
+      await setDoc(doc(db, 'users', user.uid, 'coding_results', docId), {
+        interviewId: sessionId,
         userId: user.uid,
         questionId: q.id || "unknown",
         language: res.language || "Unknown",
@@ -260,7 +263,7 @@ function CodingEngineContent() {
         memory,
         auditTrace: res.results || [],
         completedAt: serverTimestamp(),
-      });
+      }, { merge: true });
     } catch (e) {
       console.error("Error saving coding result:", e);
     }

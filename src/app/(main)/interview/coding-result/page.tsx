@@ -71,9 +71,9 @@ function CodingResultContent() {
 
   const result = useMemo(() => {
     if (attemptDoc?.score !== undefined) return attemptDoc;
-    if (journey?.codingReport && (!attemptId || attemptId === journey.sessionId)) return journey.codingReport;
     
     const total = 8;
+    // Calculate real-time score from results associated strictly with this attempt
     if (questionResults && questionResults.length > 0) {
       const solved = questionResults.filter((r: any) => r.status === 'Solved').length;
       const failed = questionResults.filter((r: any) => r.status === 'Failed').length;
@@ -92,7 +92,7 @@ function CodingResultContent() {
     }
 
     return { score: 0, status: 'Awaiting', totalQuestions: total, passedQuestions: 0, failedQuestions: 0, skippedQuestions: total, totalPassedCases: 0, totalTestCases: 0 };
-  }, [attemptDoc, journey, questionResults, attemptId]);
+  }, [attemptDoc, questionResults]);
 
   const isPassed = (result?.score || 0) >= 60;
 
@@ -132,7 +132,7 @@ function CodingResultContent() {
 
         <div className="flex-1 grid lg:grid-cols-12 gap-4 overflow-hidden">
           <div className="lg:col-span-4 flex flex-col gap-4 overflow-hidden">
-          <Card className="premium-card bg-white/[0.01] border-white/5 p-6 h-[260px] flex flex-col items-center text-center justify-center relative overflow-hidden shrink-0">
+            <Card className="premium-card bg-white/[0.01] border-white/5 p-6 h-[260px] flex flex-col items-center text-center justify-center relative overflow-hidden shrink-0">
               <div className={cn("text-[100px] font-black tracking-tighter tabular-nums drop-shadow-[0_0_50px_rgba(34,211,238,0.2)] leading-none", 
                 isPassed ? "text-accent" : "text-red-400")}>
                 {result?.score}%
@@ -140,34 +140,42 @@ function CodingResultContent() {
               <p className="text-[9px] font-bold uppercase tracking-[0.4em] text-white/30 mt-2">Overall Efficiency Index</p>
             </Card>
 
-            <Button 
-              onClick={handleContinueToInterview} 
-              className="w-full h-12 px-10 btn-premium rounded-xl text-[10px] font-black uppercase tracking-[0.3em] shadow-2xl flex items-center justify-center gap-2"
-            >
-              CONTINUE TO INTERVIEW <ArrowRight className="w-4 h-4" />
-            </Button>
-            
-            <Button 
-              onClick={() => router.push('/dashboard')} 
-              variant="ghost" 
-              className="w-full h-12 px-8 rounded-xl glass border-white/10 text-[9px] font-black uppercase tracking-widest text-white/30 hover:text-white"
-            >
-              Exit to Control Panel
-            </Button>
+            <div className="space-y-4">
+              <Button 
+                onClick={handleContinueToInterview} 
+                className="w-full h-14 px-10 btn-premium rounded-xl text-[10px] font-black uppercase tracking-[0.3em] shadow-2xl flex items-center justify-center gap-2"
+              >
+                CONTINUE TO INTERVIEW <ArrowRight className="w-4 h-4" />
+              </Button>
+              
+              <Button 
+                onClick={() => router.push('/dashboard')} 
+                variant="ghost" 
+                className="w-full h-12 px-8 rounded-xl glass border-white/10 text-[9px] font-black uppercase tracking-widest text-white/30 hover:text-white"
+              >
+                Exit to Control Panel
+              </Button>
+            </div>
           </div>
 
           <div className="lg:col-span-8 flex flex-col gap-6 overflow-hidden">
             <div className="overflow-y-auto custom-scrollbar flex-1 pr-2 space-y-4">
                {displayQuestions.map((q: any, idx: number) => {
+                 // Strictly match results to the current question and session
                  const res = questionResults?.find((r: any) => r.questionId === q.id);
+                 const statusText = res?.status === 'Solved' ? 'SOLVED' : res?.status === 'Failed' ? 'FAILED' : 'SKIPPED';
+
                  return (
                    <Card key={idx} className="glass p-6 rounded-[2rem] border-white/5 flex items-center justify-between">
                      <div className="flex items-center gap-6">
                         <div className="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center text-[10px] font-black">0{idx + 1}</div>
                         <p className="text-base font-bold text-white/90">{q.title}</p>
                      </div>
-                     <Badge variant="outline" className={cn("text-[9px] uppercase", res?.status === 'Solved' ? "text-green-400 border-green-500/20" : "text-red-400 border-red-500/20")}>
-                        {res?.status || "SKIPPED"}
+                     <Badge variant="outline" className={cn("text-[9px] uppercase", 
+                       statusText === 'SOLVED' ? "text-green-400 border-green-500/20" : 
+                       statusText === 'FAILED' ? "text-red-400 border-red-500/20" : 
+                       "text-white/20 border-white/5")}>
+                        {statusText}
                      </Badge>
                    </Card>
                  );
