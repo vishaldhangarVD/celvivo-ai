@@ -139,6 +139,21 @@ function CodingResultContent() {
               </div>
               <p className="text-[9px] font-bold uppercase tracking-[0.4em] text-white/30 mt-2">Overall Efficiency Index</p>
             </Card>
+
+            <Button 
+              onClick={handleContinueToInterview} 
+              className="w-full h-12 px-10 btn-premium rounded-xl text-[10px] font-black uppercase tracking-[0.3em] shadow-2xl flex items-center justify-center gap-2"
+            >
+              CONTINUE TO INTERVIEW <ArrowRight className="w-4 h-4" />
+            </Button>
+            
+            <Button 
+              onClick={() => router.push('/dashboard')} 
+              variant="ghost" 
+              className="w-full h-12 px-8 rounded-xl glass border-white/10 text-[9px] font-black uppercase tracking-widest text-white/30 hover:text-white"
+            >
+              Exit to Control Panel
+            </Button>
           </div>
 
           <div className="lg:col-span-8 flex flex-col gap-6 overflow-hidden">
@@ -157,12 +172,6 @@ function CodingResultContent() {
                    </Card>
                  );
                })}
-            </div>
-            <div className="flex justify-end gap-4 pt-4 border-t border-white/5">
-              <Button onClick={handleContinueToInterview} className="h-12 px-10 btn-premium rounded-xl text-[10px] font-black uppercase tracking-[0.3em] shadow-2xl flex items-center gap-2">
-                CONTINUE TO INTERVIEW <ArrowRight className="w-4 h-4" />
-              </Button>
-              <Button onClick={() => router.push('/dashboard')} variant="ghost" className="h-12 px-8 rounded-xl glass border-white/10 text-[9px] font-black uppercase tracking-widest text-white/30 hover:text-white">Exit to Control Panel</Button>
             </div>
           </div>
         </div>
