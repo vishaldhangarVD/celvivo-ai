@@ -256,7 +256,7 @@ export default function AptitudeResultPage() {
                     ))}
                   </div>
                   <div className="p-5 glass rounded-2xl border-white/5 bg-white/[0.01] text-center">
-                    <p className="text-[9px] font-bold uppercase tracking-widest text-white/20 mb-2">AI Observation</p>
+                    <p className="text-[9px] font-bold uppercase tracking-widest text-white/20 mb-2">Performance Insight</p>
                     <p className="text-xs font-light text-white/60 italic leading-relaxed">
                       {result.feedback?.speedAnalysis || "Analysis available after processing."}
                     </p>
@@ -269,7 +269,7 @@ export default function AptitudeResultPage() {
                   <Target className="w-10 h-10 text-accent" />
                   <div>
                     <h3 className="text-2xl font-bold tracking-tight">Performance Summary</h3>
-                    <p className="text-[10px] font-black uppercase tracking-[0.4em] text-accent animate-pulse">Detailed Analysis</p>
+                    <p className="text-[10px] font-black uppercase tracking-[0.4em] text-accent animate-pulse">Your Performance Analysis</p>
                   </div>
                 </div>
 
@@ -277,7 +277,7 @@ export default function AptitudeResultPage() {
                   <div className="space-y-6">
                     <div className="flex items-center gap-3 text-green-400">
                       <CircleCheck className="w-6 h-6" />
-                      <h4 className="text-[10px] font-black uppercase tracking-widest">Strong Areas</h4>
+                      <h4 className="text-[10px] font-black uppercase tracking-widest">Your Strengths</h4>
                     </div>
                     <ul className="space-y-4">
                       {(result.feedback?.strengths || ["Correct logic and consistency verified."]).map((s: string, i: number) => (
@@ -290,7 +290,7 @@ export default function AptitudeResultPage() {
                   <div className="space-y-6">
                     <div className="flex items-center gap-3 text-red-400">
                       <AlertCircle className="w-6 h-6" />
-                      <h4 className="text-[10px] font-black uppercase tracking-widest">Needs Improvement</h4>
+                      <h4 className="text-[10px] font-black uppercase tracking-widest">Areas to Improve</h4>
                     </div>
                     <ul className="space-y-4">
                       {(result.feedback?.weaknesses || ["Review complex logic questions to improve score."]).map((w: string, i: number) => (
@@ -305,7 +305,7 @@ export default function AptitudeResultPage() {
                 <div className="pt-8 border-t border-white/10">
                    <div className="flex items-center gap-4 text-accent mb-4">
                      <TrendingUp className="w-5 h-5" />
-                     <h4 className="text-sm font-bold uppercase tracking-widest">Next Step Recommendation</h4>
+                     <h4 className="text-sm font-bold uppercase tracking-widest">What's Next</h4>
                    </div>
                    <p className="text-lg font-light text-white/90 leading-relaxed italic">"{result.recommendation || "Baseline established. You are ready for the technical round."}"</p>
                 </div>
@@ -317,7 +317,7 @@ export default function AptitudeResultPage() {
           <section className="space-y-8">
             <div className="flex items-center justify-between px-2">
               <h3 className="text-xl font-bold flex items-center gap-4"><History className="w-6 h-6 text-accent" /> Review Questions</h3>
-              <Badge variant="outline" className="border-white/10 text-white/30 uppercase text-[9px]">Review List</Badge>
+              <Badge variant="outline" className="border-white/10 text-white/30 uppercase text-[9px]">Question Review</Badge>
             </div>
             
             <div className="grid gap-4">
