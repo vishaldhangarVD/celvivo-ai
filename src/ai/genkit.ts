@@ -1,4 +1,3 @@
-
 import { genkit } from 'genkit';
 import { googleAI } from '@genkit-ai/google-genai';
 import { config } from 'dotenv';
@@ -71,31 +70,6 @@ export const ai = genkit({
     googleAI(apiKey ? { apiKey } : {}),
   ],
   model: PRIMARY_MODEL,
-});
-
-/**
- * GLOBAL USAGE MIDDLEWARE
- * Automatically intercepts every .generate() call to extract usageMetadata.
- */
-ai.onGenerate(async (req, next) => {
-  const response = await next();
-  const metadata = req.metadata || {};
-  
-  // Log usage if feature metadata is present
-  if (metadata.feature) {
-    logGeminiUsage({
-      userId: metadata.userId || 'anonymous',
-      sessionId: metadata.sessionId || 'none',
-      feature: metadata.feature,
-      model: response.model || req.model || PRIMARY_MODEL,
-      provider: 'google',
-      inputTokens: response.usage?.inputTokens || 0,
-      outputTokens: response.usage?.outputTokens || 0,
-      characterCount: metadata.characterCount
-    });
-  }
-  
-  return response;
 });
 
 /**
