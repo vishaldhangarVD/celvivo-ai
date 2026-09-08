@@ -12,10 +12,10 @@ if (typeof window === 'undefined') {
 
 /**
  * Global Model Protocol.
- * Using 'gemini-1.5-flash' as the verified baseline stable model.
+ * Using 'gemini-3.6-flash' as the verified ground-truth model.
  */
-export const PRIMARY_MODEL = 'googleai/gemini-1.5-flash';
-export const FALLBACK_MODEL = 'googleai/gemini-1.5-flash';
+export const PRIMARY_MODEL = 'googleai/gemini-3.6-flash';
+export const FALLBACK_MODEL = 'googleai/gemini-3.6-flash';
 
 const apiKey = (
   process.env.GOOGLE_GENAI_API_KEY || 
@@ -55,7 +55,7 @@ export const ai = genkit({
 
 /**
  * Resilient execution wrapper.
- * Removed multi-model escalation to prevent 404s from unavailable 'pro' tiers.
+ * Optimized for gemini-3.6-flash execution.
  */
 export async function runWithResilience(promptFn: any, input: any, metadata?: any) {
   const delays = [2000, 5000, 10000];
@@ -81,6 +81,8 @@ export async function runWithResilience(promptFn: any, input: any, metadata?: an
         return result;
       } catch (e: any) {
         const status = e.status || e.code;
+        console.warn(`[Neural] Attempt ${i + 1} Failed for ${model}:`, e.message);
+
         if (status === 429 && i < 3) {
           await new Promise(r => setTimeout(r, 5000));
           continue;
