@@ -17,7 +17,9 @@ export async function runGeminiTest() {
   const startTime = Date.now();
   try {
     const response = await runWithResilience(testPrompt, {});
-    const latency = Date.now() - startTime;
+    // Safety check for startTime calculation
+    const current = Date.now();
+    const latency = current - (startTime || current);
     
     return { 
       success: true, 

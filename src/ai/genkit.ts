@@ -55,10 +55,10 @@ export const ai = genkit({
 
 /**
  * Resilient execution wrapper.
- * Optimized for gemini-3.6-flash execution.
+ * Optimized for gemini-3.6-flash execution with exponential backoff for 503/Overload errors.
  */
 export async function runWithResilience(promptFn: any, input: any, metadata?: any) {
-  const delays = [2000, 5000, 10000];
+  const delays = [1000, 2000, 4000]; // 1s, 2s, 4s backoff
   const retryableStatuses = [429, 500, 502, 503, 504];
 
   async function attemptExecution(model: string) {
@@ -81,13 +81,15 @@ export async function runWithResilience(promptFn: any, input: any, metadata?: an
         return result;
       } catch (e: any) {
         const status = e.status || e.code;
+        const message = e.message || "";
+        const isOverloaded = status === 503 || message.includes("UNAVAILABLE") || message.includes("high demand");
+
         console.warn(`[Neural] Attempt ${i + 1} Failed for ${model}:`, e.message);
 
-        if (status === 429 && i < 3) {
-          await new Promise(r => setTimeout(r, 5000));
-          continue;
-        } else if (retryableStatuses.includes(status) && i < 3) {
-          await new Promise(r => setTimeout(r, delays[i]));
+        if ((isOverloaded || retryableStatuses.includes(status)) && i < 3) {
+          const delay = delays[i];
+          console.log(`[Gemini] Retry attempt ${i + 1} after ${isOverloaded ? 'overload' : status}, waiting ${delay}ms`);
+          await new Promise(r => setTimeout(r, delay));
           continue;
         }
         throw e;

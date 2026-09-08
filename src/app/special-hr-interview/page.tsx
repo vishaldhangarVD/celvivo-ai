@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
@@ -382,8 +383,17 @@ export default function SpecialHRInterview() {
         let isConnected = await waitForDIdConnection();
         
         if (!isConnected && agentManagerRef.current) {
-          await agentManagerRef.current.connect();
-          isConnected = await waitForDIdConnection(10000);
+          // Attempt retry for WebSocket 503
+          for (let retry = 0; retry < 2; retry++) {
+             try {
+               await agentManagerRef.current.connect();
+               isConnected = await waitForDIdConnection(10000);
+               if (isConnected) break;
+             } catch (e) {
+               console.warn(`[D-ID] Connection retry ${retry + 1} failed`);
+               await new Promise(r => setTimeout(r, 2000));
+             }
+          }
         }
 
         if (!isConnected) throw new Error("Neural interface timed out.");
@@ -394,8 +404,8 @@ export default function SpecialHRInterview() {
         });
       } catch (speakError: any) {
         console.error("[D-ID] Speak failure:", speakError);
-        if (speakError.message?.includes("session_id") || speakError.status === 400) {
-          await agentManagerRef.current.connect();
+        if (speakError.message?.includes("session_id") || speakError.status === 400 || speakError.status === 503) {
+          await agentManagerRef.current.connect().catch(() => {});
           if (await waitForDIdConnection(10000)) {
             await agentManagerRef.current.speak({ type: "text", input: result.nextQuestion });
           }
@@ -523,7 +533,21 @@ export default function SpecialHRInterview() {
           },
         });
         agentManagerRef.current = manager;
-        await manager.connect();
+        
+        // Initial connection with retry for 503
+        const tryConnect = async () => {
+          for (let i = 0; i < 3; i++) {
+            try {
+              await manager.connect();
+              return;
+            } catch (e) {
+              console.warn(`[D-ID] Initial connection failed, retry ${i+1}`);
+              await new Promise(r => setTimeout(r, 3000));
+            }
+          }
+        };
+        tryConnect();
+        
       } catch (error) { 
         setStatus("ERROR"); 
       }
