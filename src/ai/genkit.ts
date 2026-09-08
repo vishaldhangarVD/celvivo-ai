@@ -23,8 +23,9 @@ const apiKey = (
 ).trim();
 
 // Global Model Protocol - Updated to currently supported stable IDs (3.1 Tier)
+// Fallback is set to Flash as well to ensure consistent availability in this flow
 export const PRIMARY_MODEL = 'googleai/gemini-3.1-flash';
-export const FALLBACK_MODEL = 'googleai/gemini-3.1-pro';
+export const FALLBACK_MODEL = 'googleai/gemini-3.1-flash';
 
 // Runtime Diagnostic Sequence (Server-side only)
 if (typeof window === 'undefined') {
@@ -114,12 +115,16 @@ export async function runWithResilience(promptFn: any, input: any, metadata?: an
   try {
     return await attemptExecution(PRIMARY_MODEL);
   } catch (primaryError: any) {
-    console.warn(`[Neural Fallback] Primary model failure (${primaryError.status || primaryError.code}). Attempting ${FALLBACK_MODEL}...`);
-    try {
-      return await attemptExecution(FALLBACK_MODEL);
-    } catch (finalError: any) {
-      console.error("[Neural Critical] Resilience pipeline exhausted for all models.");
-      throw finalError;
+    // Only attempt fallback if the fallback model is different from the primary
+    if (FALLBACK_MODEL !== PRIMARY_MODEL) {
+      console.warn(`[Neural Fallback] Primary model failure (${primaryError.status || primaryError.code}). Attempting ${FALLBACK_MODEL}...`);
+      try {
+        return await attemptExecution(FALLBACK_MODEL);
+      } catch (finalError: any) {
+        console.error("[Neural Critical] Resilience pipeline exhausted for all models.");
+        throw finalError;
+      }
     }
+    throw primaryError;
   }
 }

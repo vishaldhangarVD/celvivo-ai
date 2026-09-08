@@ -18,7 +18,8 @@ export async function runGeminiTest() {
     console.log('[Diagnostic] Initializing Resilient Gemini Connectivity Test...');
     
     const response = await runWithResilience(testPrompt, {});
-    const latency = Date.now() - startTime;
+    // Defensive check to ensure startTime is a valid number before calculation
+    const latency = typeof startTime === 'number' ? Date.now() - startTime : 0;
     
     console.log('[Diagnostic] SUCCESS. Response Received.');
     return { 
