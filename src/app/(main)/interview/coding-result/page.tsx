@@ -38,19 +38,21 @@ function CodingResultContent() {
 
   const attemptId = searchParams.get('attemptId');
 
-  const attemptRef = useMemo(() => {
-    if (!db || !user?.uid || !attemptId) return null;
-    return doc(db, 'users', user.uid, 'coding_attempts', attemptId);
-  }, [db, user?.uid, attemptId]);
-
-  const { data: attemptDoc, loading: attemptLoading } = useDoc(attemptRef);
-
   const journeyRef = useMemo(() => {
     if (!db || !user?.uid) return null;
     return doc(db, 'users', user.uid, 'journey', 'active');
   }, [db, user?.uid]);
 
   const { data: journey, loading: journeyLoading } = useDoc(journeyRef);
+
+  const attemptRef = useMemo(() => {
+    if (!db || !user?.uid) return null;
+    const idToUse = attemptId || journey?.sessionId;
+    if (!idToUse) return null;
+    return doc(db, 'users', user.uid, 'coding_attempts', idToUse);
+  }, [db, user?.uid, attemptId, journey?.sessionId]);
+
+  const { data: attemptDoc, loading: attemptLoading } = useDoc(attemptRef);
 
   const activeId = attemptId || journey?.sessionId;
 
