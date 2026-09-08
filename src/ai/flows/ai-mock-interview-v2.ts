@@ -1,11 +1,11 @@
+
 'use server';
 /**
- * @fileOverview Nexvoro AI Virtual Interview Agent (Elite Senior Interviewer v13.0).
- * MASTER PROTOCOL: Calibrated for multi-round intelligence using Gemini 3.1.
- * Includes detailed diagnostic logging to debug fallback repetition issues.
+ * @fileOverview Nexvoro AI Virtual Interview Agent.
+ * Unified with central model protocol to prevent 404 mismatches.
  */
 
-import { ai, runWithResilience, PRIMARY_MODEL, FALLBACK_MODEL } from '@/ai/genkit';
+import { ai, runWithResilience, PRIMARY_MODEL } from '@/ai/genkit';
 import { z } from 'genkit';
 
 const FALLBACK_QUESTIONS = [
@@ -101,13 +101,10 @@ const prompt = ai.definePrompt({
   name: 'aiMockInterviewPrompt',
   input: { schema: AiMockInterviewInputSchema },
   output: { schema: AiMockInterviewOutputSchema },
-  prompt: `You are an elite human Senior Interviewer conducting a high-fidelity Special HR Interview for a {{{role}}} candidate at {{{targetCompany}}}.
+  prompt: `You are an elite Senior Interviewer conducting a Special HR Interview for a {{{role}}} candidate at {{{targetCompany}}}.
 
 CORE INTERVIEW RULE:
-Every question must be intelligently connected to the candidate's uploaded resume, previous answers, or Round 1 performance nodes.
-
-MANDATORY FIRST-TURN RULE:
-If current interview history is empty, ask a warm, professional introduction.
+Every question must be intelligently connected to the candidate's resume, previous answers, or Round 1 performance nodes.
 
 RESUME DATA:
 Summary: {{{resumeSummary}}}
@@ -117,13 +114,6 @@ Projects: {{#each resumeProjects}}{{{this}}}, {{/each}}
 ROUND 1 PERFORMANCE:
 Aptitude: {{{aptitudeScore}}}%
 Coding: {{{codingScore}}}%
-
-HISTORY:
-{{#each history}}
-Interviewer: {{{this.question}}}
-Candidate: {{{this.answer}}}
-{{/each}}
-Latest Answer: {{{userAnswer}}}
 
 Return ONLY the natural spoken interviewer dialogue in JSON.`
 });
@@ -136,9 +126,6 @@ const aiMockInterviewFlow = ai.defineFlow(
   },
   async (input) => {
     try {
-      console.log(`\n[Special HR] --- Turn ${input.currentMainQuestionIndex} Initialization ---`);
-      console.log(`[Special HR] Target Model: ${PRIMARY_MODEL}`);
-      
       const { output } = await runWithResilience(prompt, {
         ...input,
         askedQuestions: input.askedQuestions || [],
@@ -150,9 +137,7 @@ const aiMockInterviewFlow = ai.defineFlow(
         feature: 'special_interview'
       });
     
-      if (!output) {
-        throw new Error("Neural synthesis failed to produce structured output.");
-      }
+      if (!output) throw new Error("Neural synthesis empty.");
     
       return {
         ...output,
@@ -165,8 +150,7 @@ const aiMockInterviewFlow = ai.defineFlow(
       };
     
     } catch (error: any) {
-      console.error("\n🔴 [Special HR] AI FLOW CRITICAL FAILURE:", error.message);
-      
+      console.error("[Special HR] Critical Failure:", error.message);
       const fallbackIdx = input.currentMainQuestionIndex % FALLBACK_QUESTIONS.length;
       return {
         nextQuestion: FALLBACK_QUESTIONS[fallbackIdx],
@@ -175,7 +159,7 @@ const aiMockInterviewFlow = ai.defineFlow(
         isInterviewComplete: input.currentMainQuestionIndex >= 12,
         isHint: false,
         _debug: {
-          modelUsed: `${PRIMARY_MODEL} -> ${FALLBACK_MODEL}`,
+          modelUsed: PRIMARY_MODEL,
           geminiSucceeded: false,
           geminiError: error.message,
           usedFallback: true

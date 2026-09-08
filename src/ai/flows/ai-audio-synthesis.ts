@@ -1,11 +1,11 @@
+
 'use server';
 /**
  * @fileOverview Nexvoro AI Neural Voice Synthesis (TTS).
- * Updated to use stable Gemini 3.1 Flash for audio generation.
+ * Unified with central PRIMARY_MODEL to ensure consistency.
  */
 
-import { ai } from '@/ai/genkit';
-import { googleAI } from '@genkit-ai/google-genai';
+import { ai, PRIMARY_MODEL } from '@/ai/genkit';
 import { z } from 'genkit';
 import wav from 'wav';
 
@@ -33,8 +33,8 @@ const audioSynthesisFlow = ai.defineFlow(
   async (input) => {
     try {
       const { media } = await ai.generate({
-        // Using stable Gemini 3.1 Flash for audio synthesis
-        model: 'googleai/gemini-3.1-flash',
+        // Using central PRIMARY_MODEL for consistency
+        model: PRIMARY_MODEL,
         config: {
           responseModalities: ['AUDIO'],
           speechConfig: {
@@ -57,7 +57,6 @@ const audioSynthesisFlow = ai.defineFlow(
         throw new Error('Neural voice synthesis failed: No media returned.');
       }
 
-      // Convert PCM to WAV
       const pcmBase64 = media.url.substring(media.url.indexOf(',') + 1);
       const audioBuffer = Buffer.from(pcmBase64, 'base64');
       const wavBase64 = await toWav(audioBuffer);
@@ -72,9 +71,6 @@ const audioSynthesisFlow = ai.defineFlow(
   }
 );
 
-/**
- * Helper to convert PCM audio to WAV format.
- */
 async function toWav(
   pcmData: Buffer,
   channels = 1,

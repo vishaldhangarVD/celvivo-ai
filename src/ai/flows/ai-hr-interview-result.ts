@@ -1,10 +1,11 @@
+
 'use server';
 /**
  * @fileOverview Nexvoro AI — Special HR Interview Result Analyzer.
- * Updated to use stable Gemini 1.5 models and added robust fallback to prevent API 500 errors.
+ * Unified with central model protocol to prevent 404 errors.
  */
 
-import { ai, runWithResilience } from '@/ai/genkit';
+import { ai, runWithResilience, PRIMARY_MODEL } from '@/ai/genkit';
 import { z } from 'genkit';
 
 const TranscriptEntrySchema = z.object({
@@ -51,20 +52,13 @@ const prompt = ai.definePrompt({
   name: 'aiHRInterviewResultPrompt',
   input: { schema: AiHRInterviewResultInputSchema },
   output: { schema: AiHRInterviewResultOutputSchema },
-  prompt: `You are a senior technical hiring evaluator producing a post-interview assessment report.
+  prompt: `You are a senior technical hiring evaluator. Produce a post-interview assessment report.
 
 Candidate: {{{candidateName}}}
 Role: {{{role}}}
 Target Company: {{{targetCompany}}}
 
-Transcript:
-{{#each transcript}}
-[{{{this.stage}}}]
-Interviewer: {{{this.question}}}
-Candidate: {{{this.answer}}}
-{{/each}}
-
-Evaluate the transcript honestly based only on provided text. Return JSON.`
+Evaluate the transcript and return valid JSON.`
 });
 
 const aiHRInterviewResultFlow = ai.defineFlow(
@@ -79,8 +73,7 @@ const aiHRInterviewResultFlow = ai.defineFlow(
       if (!output) throw new Error("Neural synthesis failed.");
       return output;
     } catch (error) {
-      console.error("[HR Result Flow] Critical failure, using heuristic fallback:", error);
-      // Safety Fallback to prevent 500 errors on UI
+      console.error("[HR Result Flow] Failure, using fallback:", error);
       return {
         overallScore: 65,
         verdict: "Manual Review Needed",
@@ -91,7 +84,7 @@ const aiHRInterviewResultFlow = ai.defineFlow(
           { subject: "Problem Solving", score: 60 },
           { subject: "Resume Alignment", score: 70 }
         ],
-        strengths: ["Session completed successfully", "Voice interaction verified"],
+        strengths: ["Session completed successfully"],
         improvements: ["AI synthesis interrupted - review transcript manually"],
         annotatedTranscript: input.transcript.map(t => ({
           ...t,

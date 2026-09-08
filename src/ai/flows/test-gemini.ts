@@ -1,3 +1,4 @@
+
 'use server';
 /**
  * @fileOverview Resilient diagnostic flow to verify Gemini API connectivity.
@@ -15,13 +16,9 @@ const testPrompt = ai.definePrompt({
 export async function runGeminiTest() {
   const startTime = Date.now();
   try {
-    console.log('[Diagnostic] Initializing Resilient Gemini Connectivity Test...');
-    
     const response = await runWithResilience(testPrompt, {});
-    // Defensive check to ensure startTime is a valid number before calculation
-    const latency = typeof startTime === 'number' ? Date.now() - startTime : 0;
+    const latency = Date.now() - startTime;
     
-    console.log('[Diagnostic] SUCCESS. Response Received.');
     return { 
       success: true, 
       data: response.text,
@@ -34,8 +31,7 @@ export async function runGeminiTest() {
     return { 
       success: false, 
       error: err.message || 'Unknown Neural Error',
-      status: err.status || err.code || '500',
-      details: err.details || 'N/A'
+      status: err.status || err.code || '500'
     };
   }
 }
