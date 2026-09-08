@@ -166,8 +166,24 @@ function CodingResultContent() {
           <div className="lg:col-span-8 flex flex-col gap-6 overflow-hidden">
             <div className="overflow-y-auto custom-scrollbar flex-1 pr-2 space-y-4">
                {displayQuestions.map((q: any, idx: number) => {
-                 // Strictly match results to the current question and session
-                 const res = questionResults?.find((r: any) => r.questionId === q.id);
+                 // STALE DATA PROTECTION:
+                 // Match results by session + question, but perform a temporal audit to filter out 
+                 // historical data from previous retries that reused the same sessionId.
+                 const res = questionResults?.find((r: any) => {
+                    if (r.questionId !== q.id) return false;
+                    
+                    // If we have the finalized attempt timestamp, only trust results from that round (max 90 min window)
+                    if (attemptDoc?.createdAt) {
+                       const finalTime = attemptDoc.createdAt.toMillis?.() || attemptDoc.createdAt.seconds * 1000;
+                       const resultTime = r.completedAt?.toMillis?.() || r.completedAt?.seconds * 1000;
+                       
+                       // A standard round shouldn't take more than 90 mins (8 q x 10 min + buffer)
+                       const windowLimit = 90 * 60 * 1000;
+                       return resultTime >= (finalTime - windowLimit) && resultTime <= (finalTime + 10000); // 10s server-skew buffer
+                    }
+                    return true;
+                 });
+
                  const statusText = res?.status === 'Solved' ? 'SOLVED' : res?.status === 'Failed' ? 'FAILED' : 'SKIPPED';
 
                  return (
