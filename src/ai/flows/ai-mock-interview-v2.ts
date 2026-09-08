@@ -1,11 +1,11 @@
 'use server';
 /**
  * @fileOverview Nexvoro AI Virtual Interview Agent (Elite Senior Interviewer v13.0).
- * MASTER PROTOCOL: Calibrated for multi-round intelligence using Gemini 2.5.
- * Includes improved fallback diversity to prevent repeated questions during neural drift.
+ * MASTER PROTOCOL: Calibrated for multi-round intelligence using Gemini 3.1.
+ * Includes detailed diagnostic logging to debug fallback repetition issues.
  */
 
-import { ai, runWithResilience } from '@/ai/genkit';
+import { ai, runWithResilience, PRIMARY_MODEL } from '@/ai/genkit';
 import { z } from 'genkit';
 
 const FALLBACK_QUESTIONS = [
@@ -130,7 +130,10 @@ const aiMockInterviewFlow = ai.defineFlow(
   },
   async (input) => {
     try {
-      console.log(`[Special HR] Synthesizing turn ${input.currentMainQuestionIndex} using primary protocol...`);
+      console.log(`\n[Special HR] --- Turn ${input.currentMainQuestionIndex} Initialization ---`);
+      console.log(`[Special HR] Target Model: ${PRIMARY_MODEL}`);
+      console.log(`[Special HR] Session ID: ${input.sessionId || 'N/A'}`);
+      console.log(`[Special HR] History Depth: ${input.history.length} exchanges`);
       
       const { output } = await runWithResilience(prompt, {
         ...input,
@@ -143,17 +146,29 @@ const aiMockInterviewFlow = ai.defineFlow(
         feature: 'special_interview'
       });
     
-      if (!output) throw new Error("Neural synthesis failed.");
+      if (!output) {
+        console.error("[Special HR] Neural fault: Gemini returned success but output object is undefined.");
+        throw new Error("Neural synthesis failed to produce structured output.");
+      }
     
-      console.log(`[Special HR] Success. Generated question: "${output.nextQuestion.substring(0, 30)}..."`);
+      console.log(`[Special HR] Gemini SUCCESS. Question Length: ${output.nextQuestion.length} chars`);
+      console.log(`[Special HR] Generated Question: "${output.nextQuestion.substring(0, 60)}..."`);
+      console.log("[Special HR] Using fallback? FALSE");
       
       return {
         ...output,
         isInterviewComplete: output.isInterviewComplete || input.currentMainQuestionIndex >= 12,
       };
     
-    } catch (error) {
-      console.error("\n🔴 AI MOCK INTERVIEW ERROR (Switching to Dynamic Fallback Array)", error);
+    } catch (error: any) {
+      console.error("\n🔴 [Special HR] AI FLOW CRITICAL FAILURE:", {
+        message: error.message,
+        status: error.status || error.code,
+        index: input.currentMainQuestionIndex
+      });
+      
+      console.log("[Special HR] Using fallback? TRUE (Triggered by catch block)");
+      
       // DYNAMIC FALLBACK: Rotate questions to prevent repeating the same one
       const fallbackIdx = input.currentMainQuestionIndex % FALLBACK_QUESTIONS.length;
       return {

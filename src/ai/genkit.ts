@@ -70,6 +70,7 @@ export async function runWithResilience(promptFn: any, input: any, metadata?: an
   async function attemptExecution(model: string) {
     for (let i = 0; i <= 3; i++) {
       try {
+        console.log(`[Neural] Attempting execution with model: ${model} (Try ${i + 1}/4)`);
         const result = await promptFn(input, { model, metadata });
         
         // Log successful usage
@@ -87,13 +88,21 @@ export async function runWithResilience(promptFn: any, input: any, metadata?: an
         return result;
       } catch (e: any) {
         const status = e.status || e.code;
+        console.warn(`[Neural] Execution fault for ${model}:`, {
+          status,
+          message: e.message,
+          retryable: retryableStatuses.includes(status) || status === 429
+        });
+
         if (status === 429) {
           const quotaDelay = i === 0 ? 5000 : 15000;
           if (i < 3) {
+            console.log(`[Neural] Quota exceeded. Retrying in ${quotaDelay}ms...`);
             await new Promise(r => setTimeout(r, quotaDelay));
             continue;
           }
         } else if (i < 3 && retryableStatuses.includes(status)) {
+          console.log(`[Neural] Server error ${status}. Retrying in ${delays[i]}ms...`);
           await new Promise(r => setTimeout(r, delays[i]));
           continue;
         }
@@ -105,11 +114,11 @@ export async function runWithResilience(promptFn: any, input: any, metadata?: an
   try {
     return await attemptExecution(PRIMARY_MODEL);
   } catch (primaryError: any) {
-    console.warn(`[Neural Fallback] Primary model failure (${primaryError.status}). Trying ${FALLBACK_MODEL}...`);
+    console.warn(`[Neural Fallback] Primary model failure (${primaryError.status || primaryError.code}). Attempting ${FALLBACK_MODEL}...`);
     try {
       return await attemptExecution(FALLBACK_MODEL);
     } catch (finalError: any) {
-      console.error("[Neural Critical] Resilience pipeline exhausted.");
+      console.error("[Neural Critical] Resilience pipeline exhausted for all models.");
       throw finalError;
     }
   }
