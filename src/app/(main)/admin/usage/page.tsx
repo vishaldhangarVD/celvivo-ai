@@ -25,12 +25,20 @@ import { useUser, useFirestore, useCollection } from '@/firebase';
 import { collection, query, orderBy, limit, where, Timestamp } from 'firebase/firestore';
 import { cn } from '@/lib/utils';
 
-// COST PARAMETERS (Hardcoded rates as requested)
+// COST PARAMETERS
+// These constants are used to calculate the estimated infrastructure overhead.
 const RATES = {
+  // Gemini 2.5 Flash Rates (per 1M tokens)
   GEMINI_INPUT: 0.10 / 1_000_000,
   GEMINI_OUTPUT: 0.40 / 1_000_000,
-  ELEVENLABS_PER_CHAR: 0.0003, // Custom placeholder
-  DID_PER_MINUTE: 0.50, // Custom placeholder
+  
+  // ElevenLabs / TTS Placeholder Rate (per character)
+  // Current: $0.0003 per char (~$0.30 per 1k chars)
+  ELEVENLABS_PER_CHAR: 0.0003, 
+  
+  // D-ID Video Rate (per minute)
+  // Current: $0.50 per minute of generated video
+  DID_PER_MINUTE: 0.50, 
 };
 
 export default function UsageAnalyticsPage() {
