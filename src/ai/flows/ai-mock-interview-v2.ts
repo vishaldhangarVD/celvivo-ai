@@ -1,7 +1,7 @@
 'use server';
 /**
- * @fileOverview Nexvoro AI Virtual Interview Agent (Elite Senior Interviewer v12.0).
- * MASTER PROTOCOL: Calibrated for multi-round intelligence.
+ * @fileOverview Nexvoro AI Virtual Interview Agent (Elite Senior Interviewer v13.0).
+ * MASTER PROTOCOL: Calibrated for multi-round intelligence using Gemini 2.5.
  * Includes improved fallback diversity to prevent repeated questions during neural drift.
  */
 
@@ -130,6 +130,8 @@ const aiMockInterviewFlow = ai.defineFlow(
   },
   async (input) => {
     try {
+      console.log(`[Special HR] Synthesizing turn ${input.currentMainQuestionIndex} using primary protocol...`);
+      
       const { output } = await runWithResilience(prompt, {
         ...input,
         askedQuestions: input.askedQuestions || [],
@@ -143,13 +145,15 @@ const aiMockInterviewFlow = ai.defineFlow(
     
       if (!output) throw new Error("Neural synthesis failed.");
     
+      console.log(`[Special HR] Success. Generated question: "${output.nextQuestion.substring(0, 30)}..."`);
+      
       return {
         ...output,
         isInterviewComplete: output.isInterviewComplete || input.currentMainQuestionIndex >= 12,
       };
     
     } catch (error) {
-      console.error("\n🔴 AI MOCK INTERVIEW ERROR", error);
+      console.error("\n🔴 AI MOCK INTERVIEW ERROR (Switching to Dynamic Fallback Array)", error);
       // DYNAMIC FALLBACK: Rotate questions to prevent repeating the same one
       const fallbackIdx = input.currentMainQuestionIndex % FALLBACK_QUESTIONS.length;
       return {

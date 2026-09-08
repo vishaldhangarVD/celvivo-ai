@@ -11,7 +11,7 @@ if (typeof window === 'undefined') {
 
 /**
  * Genkit instance initialized with the Google AI plugin.
- * Optimized for current Gemini 1.5 production models.
+ * Optimized for current Gemini 2.5 production models.
  * Includes server-side diagnostics and resilient execution wrappers.
  */
 
@@ -22,9 +22,9 @@ const apiKey = (
   ''
 ).trim();
 
-// Global Model Protocol - Updated to currently supported stable IDs
-export const PRIMARY_MODEL = 'googleai/gemini-1.5-flash';
-export const FALLBACK_MODEL = 'googleai/gemini-1.5-pro';
+// Global Model Protocol - Updated to currently supported stable IDs (2.5 Tier)
+export const PRIMARY_MODEL = 'googleai/gemini-2.5-flash';
+export const FALLBACK_MODEL = 'googleai/gemini-2.5-pro';
 
 // Runtime Diagnostic Sequence (Server-side only)
 if (typeof window === 'undefined') {
@@ -70,7 +70,21 @@ export async function runWithResilience(promptFn: any, input: any, metadata?: an
   async function attemptExecution(model: string) {
     for (let i = 0; i <= 3; i++) {
       try {
-        return await promptFn(input, { model, metadata });
+        const result = await promptFn(input, { model, metadata });
+        
+        // Log successful usage
+        if (result?.usage) {
+          logGeminiUsage({
+            userId: metadata?.userId,
+            sessionId: metadata?.sessionId,
+            feature: metadata?.feature || 'unknown',
+            model: model,
+            inputTokens: result.usage.promptTokenCount,
+            outputTokens: result.usage.candidatesTokenCount
+          });
+        }
+        
+        return result;
       } catch (e: any) {
         const status = e.status || e.code;
         if (status === 429) {

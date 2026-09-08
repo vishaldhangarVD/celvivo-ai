@@ -1,7 +1,7 @@
 'use server';
 /**
  * @fileOverview Nexvoro AI Neural Voice Synthesis (TTS).
- * Updated to use stable Gemini 1.5 Flash for audio generation.
+ * Updated to use stable Gemini 2.5 Flash for audio generation.
  */
 
 import { ai } from '@/ai/genkit';
@@ -33,8 +33,8 @@ const audioSynthesisFlow = ai.defineFlow(
   async (input) => {
     try {
       const { media } = await ai.generate({
-        // Using stable Gemini 1.5 Flash for audio synthesis
-        model: 'googleai/gemini-1.5-flash',
+        // Using stable Gemini 2.5 Flash for audio synthesis
+        model: 'googleai/gemini-2.5-flash',
         config: {
           responseModalities: ['AUDIO'],
           speechConfig: {
