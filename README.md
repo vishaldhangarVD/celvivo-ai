@@ -4,7 +4,7 @@ Nexvoro AI is an advanced, AI-powered interview preparation and career developme
 
 ## Core Capabilities
 
-- **Neural Interview Engine**: High-fidelity simulations powered by Gemini 2.5 Flash with real-time scoring.
+- **Neural Interview Engine**: High-fidelity simulations powered by Gemini 3.1 Flash with real-time scoring.
 - **Resume Intelligence**: Deep ATS blueprint auditing and optimization.
 - **Growth Architecture**: Personalized 90-day roadmaps and skill gap analysis.
 - **Deployment Tracker**: Integrated mission log for job applications.
@@ -36,7 +36,7 @@ Nexvoro AI is an advanced, AI-powered interview preparation and career developme
 ## Tech Stack
 
 - **Framework**: Next.js 15 (App Router)
-- **AI**: Genkit 1.x + Gemini 2.5 Flash (Primary) / 2.0 Flash (Fallback)
+- **AI**: Genkit 1.x + Gemini 3.1 Flash (Primary) / 3.1 Pro (Fallback)
 - **Database**: Firebase Firestore
 - **Auth**: Firebase Authentication (Google & Email)
 - **UI**: Tailwind CSS + Framer Motion + ShadCN

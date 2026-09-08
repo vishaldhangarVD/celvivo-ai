@@ -11,7 +11,7 @@ if (typeof window === 'undefined') {
 
 /**
  * Genkit instance initialized with the Google AI plugin.
- * Optimized for current Gemini 2.5 production models.
+ * Optimized for current Gemini 3.1 production models.
  * Includes server-side diagnostics and resilient execution wrappers.
  */
 
@@ -22,9 +22,9 @@ const apiKey = (
   ''
 ).trim();
 
-// Global Model Protocol - Updated to currently supported stable IDs (2.5 Tier)
-export const PRIMARY_MODEL = 'googleai/gemini-2.5-flash';
-export const FALLBACK_MODEL = 'googleai/gemini-2.5-pro';
+// Global Model Protocol - Updated to currently supported stable IDs (3.1 Tier)
+export const PRIMARY_MODEL = 'googleai/gemini-3.1-flash';
+export const FALLBACK_MODEL = 'googleai/gemini-3.1-pro';
 
 // Runtime Diagnostic Sequence (Server-side only)
 if (typeof window === 'undefined') {

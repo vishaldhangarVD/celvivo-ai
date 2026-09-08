@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useMemo } from 'react';
@@ -28,7 +27,7 @@ import { cn } from '@/lib/utils';
 // COST PARAMETERS
 // These constants are used to calculate the estimated infrastructure overhead.
 const RATES = {
-  // Gemini 2.5 Flash Rates (per 1M tokens)
+  // Gemini 3.1 Flash Rates (per 1M tokens)
   GEMINI_INPUT: 0.10 / 1_000_000,
   GEMINI_OUTPUT: 0.40 / 1_000_000,
   
