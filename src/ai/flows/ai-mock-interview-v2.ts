@@ -1,4 +1,3 @@
-
 'use server';
 /**
  * @fileOverview Nexvoro AI Virtual Interview Agent.
@@ -105,6 +104,7 @@ const prompt = ai.definePrompt({
 
 CORE INTERVIEW RULE:
 Every question must be intelligently connected to the candidate's resume, previous answers, or Round 1 performance nodes.
+CRITICAL: DO NOT repeat any question that has already been asked in this session.
 
 RESUME DATA:
 Summary: {{{resumeSummary}}}
@@ -115,6 +115,22 @@ ROUND 1 PERFORMANCE:
 Aptitude: {{{aptitudeScore}}}%
 Coding: {{{codingScore}}}%
 
+PREVIOUSLY ASKED QUESTIONS (DO NOT REPEAT):
+{{#each askedQuestions}}
+- {{{this}}}
+{{/each}}
+
+CONVERSATION HISTORY:
+{{#each history}}
+Interviewer: {{{this.question}}}
+Candidate: {{{this.answer}}}
+{{/each}}
+
+LATEST CANDIDATE RESPONSE:
+{{{userAnswer}}}
+
+Task: Generate the NEXT unique question for the {{{currentStage}}} stage. 
+Ensure it progresses the interview naturally based on the latest response.
 Return ONLY the natural spoken interviewer dialogue in JSON.`
 });
 

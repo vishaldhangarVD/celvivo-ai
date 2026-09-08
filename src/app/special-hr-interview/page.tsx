@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
@@ -336,6 +335,8 @@ export default function SpecialHRInterview() {
         ? [...conversationHistory, { question: currentQuestion, answer: userAnswer }]
         : conversationHistory;
       
+      console.log(`[Interview] Turn ${nextIndex}: Processing answer "${userAnswer}" for question "${currentQuestion}"`);
+      
       if (userAnswer) setConversationHistory(history);
 
       const result: AiMockInterviewOutput = await aiMockInterview({
@@ -358,6 +359,9 @@ export default function SpecialHRInterview() {
         hintUsed: false,
         round1Context: round1Context 
       });
+
+      console.log(`[Interview] Turn ${nextIndex}: Gemini generated NEW question: "${result.nextQuestion}"`);
+      console.log(`[Interview] Next Stage: ${result.stage}, Difficulty: ${result.difficulty}`);
 
       setDebugInfo(result._debug);
       setCurrentQuestion(result.nextQuestion);
@@ -383,7 +387,6 @@ export default function SpecialHRInterview() {
         let isConnected = await waitForDIdConnection();
         
         if (!isConnected && agentManagerRef.current) {
-          // Attempt retry for WebSocket 503
           for (let retry = 0; retry < 2; retry++) {
              try {
                await agentManagerRef.current.connect();
@@ -534,7 +537,6 @@ export default function SpecialHRInterview() {
         });
         agentManagerRef.current = manager;
         
-        // Initial connection with retry for 503
         const tryConnect = async () => {
           for (let i = 0; i < 3; i++) {
             try {
@@ -609,7 +611,6 @@ export default function SpecialHRInterview() {
       
       {!interviewStarted && <Navbar />}
       
-      {/* DIAGNOSTIC DEBUG OVERLAY */}
       {debugInfo && (
         <div className="fixed top-20 left-4 z-[100] p-4 glass rounded-xl border-accent/20 max-w-xs text-[9px] font-mono text-accent/80 space-y-2 pointer-events-none">
           <div className="flex items-center gap-2 mb-1">
