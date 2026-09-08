@@ -103,6 +103,22 @@ const TEMPLATES = [
   {id:'chelsea',    name:'The Chelsea',    tag:'Boxed sections',                     accent:'#8a5a2f', family:'single', variant:'v-boxed'},
 ];
 
+const SKILL_SUGGESTIONS = [
+  "Excel", "SQL", "Power BI", "Python", "Java", "JavaScript", "TypeScript",
+  "C", "C++", "C#", "Go", "Rust", "PHP", "Ruby", "Swift", "Kotlin", "Scala", "R",
+  "HTML5", "CSS3", "React.js", "Next.js", "Node.js", "Angular", "Vue.js",
+  "Django", "Flask", "Spring Boot", "Express.js", ".NET",
+  "Machine Learning", "Deep Learning", "AI", "NLP", "Computer Vision",
+  "TensorFlow", "PyTorch", "Scikit-learn", "Pandas", "NumPy",
+  "AWS", "Azure", "Google Cloud", "Docker", "Kubernetes", "CI/CD",
+  "Git", "Linux", "Jenkins", "Terraform",
+  "MongoDB", "PostgreSQL", "MySQL", "Redis", "Firebase",
+  "Data Analysis", "Data Visualization", "Tableau", "OOPS",
+  "REST API", "GraphQL", "Agile", "Scrum", "Project Management",
+  "Figma", "Photoshop", "Illustrator", "UI/UX Design",
+  "Communication", "Leadership", "Problem Solving", "Team Collaboration"
+];
+
 const INITIAL_DATA: ResumeData = {
   title: "New Resume",
   name: "",
@@ -229,6 +245,8 @@ export default function ResumeAtelierPage() {
   const [isAtsLoading, setIsAtsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
+  const [skillInputValue, setSkillInputValue] = useState("");
+  const [showSkillDropdown, setShowSkillDropdown] = useState(false);
 
   // Unified ATS Modal State
   const [isAtsModalOpen, setIsAtsModalOpen] = useState(false);
@@ -249,6 +267,15 @@ export default function ResumeAtelierPage() {
   }, [db, user?.uid]);
 
   const { data: savedResumes, loading: resumesLoading } = useCollection(resumesQuery);
+
+  const filteredSkillSuggestions = useMemo(() => {
+    const q = skillInputValue.trim().toLowerCase();
+    if (!q) return [];
+    return SKILL_SUGGESTIONS
+      .filter(s => s.toLowerCase().includes(q))
+      .filter(s => !data.skills.some(existing => existing.toLowerCase() === s.toLowerCase()))
+      .slice(0, 6);
+  }, [skillInputValue, data.skills]);
 
   // Auto-save logic
   useEffect(() => {
@@ -286,6 +313,19 @@ export default function ResumeAtelierPage() {
     } catch (e) {
       toast({ variant: "destructive", title: "Creation Failed", description: "Could not initialize new resume." });
     }
+  };
+
+  const addSkill = (skill: string) => {
+    const trimmed = skill.trim();
+    if (!trimmed) return;
+    if (data.skills.some(existing => existing.toLowerCase() === trimmed.toLowerCase())) {
+      setSkillInputValue("");
+      setShowSkillDropdown(false);
+      return;
+    }
+    setData({ ...data, skills: [...data.skills, trimmed] });
+    setSkillInputValue("");
+    setShowSkillDropdown(false);
   };
 
   const handleEdit = (resume: any) => {
@@ -1040,13 +1080,48 @@ export default function ResumeAtelierPage() {
                                  </Badge>
                                ))}
                              </div>
-                             <div className="flex gap-2 pt-2">
-                               <Input id="skill-add" placeholder="eg:- Excel, SQL, Power BI" className="atelier-input" onKeyDown={e => {
-                                 if (e.key === 'Enter') {
-                                   const val = (e.target as HTMLInputElement).value;
-                                   if (val.trim()) { setData({...data, skills: [...data.skills, val.trim()]}); (e.target as HTMLInputElement).value = ""; }
-                                 }
-                               }} />
+                             <div className="flex gap-2 pt-2 relative">
+                               <Input 
+                                 id="skill-add" 
+                                 placeholder="eg:- Excel, SQL, Power BI" 
+                                 className="atelier-input"
+                                 value={skillInputValue}
+                                 onChange={e => {
+                                   setSkillInputValue(e.target.value);
+                                   setShowSkillDropdown(e.target.value.trim().length > 0);
+                                 }}
+                                 onFocus={() => {
+                                   if (skillInputValue.trim().length > 0) setShowSkillDropdown(true);
+                                 }}
+                                 onBlur={() => {
+                                   setTimeout(() => setShowSkillDropdown(false), 150);
+                                 }}
+                                 onKeyDown={e => {
+                                   if (e.key === 'Enter') {
+                                     e.preventDefault();
+                                     if (filteredSkillSuggestions.length > 0) {
+                                       addSkill(filteredSkillSuggestions[0]);
+                                     } else {
+                                       addSkill(skillInputValue);
+                                     }
+                                   }
+                                 }}
+                               />
+                               {showSkillDropdown && filteredSkillSuggestions.length > 0 && (
+                                 <div className="absolute top-full left-0 right-0 mt-1 bg-[#1c1814] border border-[#332c22] z-50 max-h-[220px] overflow-y-auto custom-scrollbar">
+                                   {filteredSkillSuggestions.map(s => (
+                                     <button
+                                       key={s}
+                                       type="button"
+                                       onMouseDown={e => e.preventDefault()}
+                                       onClick={() => addSkill(s)}
+                                       className="w-full text-left px-4 py-2.5 text-sm text-[#ece7db] hover:bg-[#c9a24d]/10 hover:text-[#c9a24d] transition-colors font-light"
+                                     >
+                                       {s}
+                                     </button>
+                                   ))}
+                                 </div>
+                               )}
                              </div>
                            </div>
 
