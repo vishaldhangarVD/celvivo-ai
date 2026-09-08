@@ -5,7 +5,7 @@
  * Includes detailed diagnostic logging to debug fallback repetition issues.
  */
 
-import { ai, runWithResilience, PRIMARY_MODEL } from '@/ai/genkit';
+import { ai, runWithResilience, PRIMARY_MODEL, FALLBACK_MODEL } from '@/ai/genkit';
 import { z } from 'genkit';
 
 const FALLBACK_QUESTIONS = [
@@ -84,6 +84,12 @@ const AiMockInterviewOutputSchema = z.object({
   ]),
   isInterviewComplete: z.boolean(),
   isHint: z.boolean().optional(),
+  _debug: z.object({
+    modelUsed: z.string(),
+    geminiSucceeded: z.boolean(),
+    geminiError: z.string().optional(),
+    usedFallback: z.boolean()
+  }).optional()
 });
 export type AiMockInterviewOutput = z.infer<typeof AiMockInterviewOutputSchema>;
 
@@ -132,8 +138,6 @@ const aiMockInterviewFlow = ai.defineFlow(
     try {
       console.log(`\n[Special HR] --- Turn ${input.currentMainQuestionIndex} Initialization ---`);
       console.log(`[Special HR] Target Model: ${PRIMARY_MODEL}`);
-      console.log(`[Special HR] Session ID: ${input.sessionId || 'N/A'}`);
-      console.log(`[Special HR] History Depth: ${input.history.length} exchanges`);
       
       const { output } = await runWithResilience(prompt, {
         ...input,
@@ -147,36 +151,35 @@ const aiMockInterviewFlow = ai.defineFlow(
       });
     
       if (!output) {
-        console.error("[Special HR] Neural fault: Gemini returned success but output object is undefined.");
         throw new Error("Neural synthesis failed to produce structured output.");
       }
     
-      console.log(`[Special HR] Gemini SUCCESS. Question Length: ${output.nextQuestion.length} chars`);
-      console.log(`[Special HR] Generated Question: "${output.nextQuestion.substring(0, 60)}..."`);
-      console.log("[Special HR] Using fallback? FALSE");
-      
       return {
         ...output,
         isInterviewComplete: output.isInterviewComplete || input.currentMainQuestionIndex >= 12,
+        _debug: {
+          modelUsed: PRIMARY_MODEL,
+          geminiSucceeded: true,
+          usedFallback: false
+        }
       };
     
     } catch (error: any) {
-      console.error("\n🔴 [Special HR] AI FLOW CRITICAL FAILURE:", {
-        message: error.message,
-        status: error.status || error.code,
-        index: input.currentMainQuestionIndex
-      });
+      console.error("\n🔴 [Special HR] AI FLOW CRITICAL FAILURE:", error.message);
       
-      console.log("[Special HR] Using fallback? TRUE (Triggered by catch block)");
-      
-      // DYNAMIC FALLBACK: Rotate questions to prevent repeating the same one
       const fallbackIdx = input.currentMainQuestionIndex % FALLBACK_QUESTIONS.length;
       return {
         nextQuestion: FALLBACK_QUESTIONS[fallbackIdx],
         difficulty: input.currentDifficulty || "MEDIUM",
         stage: input.currentStage || "TECHNICAL",
         isInterviewComplete: input.currentMainQuestionIndex >= 12,
-        isHint: false
+        isHint: false,
+        _debug: {
+          modelUsed: `${PRIMARY_MODEL} -> ${FALLBACK_MODEL}`,
+          geminiSucceeded: false,
+          geminiError: error.message,
+          usedFallback: true
+        }
       };
     }
   }

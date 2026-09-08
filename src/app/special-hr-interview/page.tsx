@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
@@ -24,7 +23,8 @@ import {
   Keyboard,
   Send,
   X,
-  User
+  User,
+  Bug
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
@@ -82,6 +82,7 @@ export default function SpecialHRInterview() {
   
   const [isTypeMode, setIsTypeMode] = useState(false);
   const [typedAnswer, setTypedAnswer] = useState("");
+  const [debugInfo, setDebugInfo] = useState<any>(null);
 
   const agentVideoRef = useRef<HTMLVideoElement>(null);
   const agentManagerRef = useRef<any>(null);
@@ -357,6 +358,7 @@ export default function SpecialHRInterview() {
         round1Context: round1Context 
       });
 
+      setDebugInfo(result._debug);
       setCurrentQuestion(result.nextQuestion);
       setQuestionIndex(nextIndex);
       setInterviewStage(result.stage);
@@ -368,10 +370,6 @@ export default function SpecialHRInterview() {
       if (result.isInterviewComplete && nextIndex >= MIN_QUESTIONS_BEFORE_COMPLETE) {
         setIsComplete(true);
         isCompleteRef.current = true;
-
-        // Do NOT analyze or redirect yet — just record what's needed.
-        // The actual analysis + redirect is triggered from onVideoStateChange's
-        // "STOP" handler, once the agent has fully finished speaking the closing line.
         finalTranscriptRef.current = history;
         finalStageRef.current = result.stage;
         resultProcessedRef.current = false;
@@ -453,7 +451,6 @@ export default function SpecialHRInterview() {
       setStatus("LOADING");
     }
 
-    // Manual end protocol: capture current history and finalize results
     finalTranscriptRef.current = conversationHistory;
     finalStageRef.current = interviewStage;
     await finalizeInterviewResult();
@@ -514,8 +511,6 @@ export default function SpecialHRInterview() {
                 setIsAiSpeaking(false);
                 isAiSpeakingRef.current = false;
                 if (isCompleteRef.current) {
-                  // Agent just finished speaking the closing line — now it's safe
-                  // to analyze the transcript and navigate to the result page.
                   finalizeInterviewResultRef.current();
                 } else if (interviewStartedRef.current && !isProcessingRef.current && !isCompleteRef.current && !isTypeModeRef.current) {
                   startListeningRef.current();
@@ -589,6 +584,20 @@ export default function SpecialHRInterview() {
       <div className="particles-bg" />
       
       {!interviewStarted && <Navbar />}
+      
+      {/* DIAGNOSTIC DEBUG OVERLAY */}
+      {debugInfo && (
+        <div className="fixed top-20 left-4 z-[100] p-4 glass rounded-xl border-accent/20 max-w-xs text-[9px] font-mono text-accent/80 space-y-2 pointer-events-none">
+          <div className="flex items-center gap-2 mb-1">
+             <Bug className="w-3 h-3" />
+             <span className="font-bold uppercase tracking-widest">Diagnostic Node</span>
+          </div>
+          <p>MODEL: {debugInfo.modelUsed}</p>
+          <p>SUCCESS: {debugInfo.geminiSucceeded ? "YES" : "NO"}</p>
+          <p>FALLBACK: {debugInfo.usedFallback ? "YES" : "NO"}</p>
+          {debugInfo.geminiError && <p className="text-red-400">ERROR: {debugInfo.geminiError}</p>}
+        </div>
+      )}
       
       <main className={cn(
         "flex-1 relative flex flex-col items-center justify-center",
