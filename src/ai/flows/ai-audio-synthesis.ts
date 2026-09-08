@@ -1,7 +1,9 @@
+
 'use server';
 /**
  * @fileOverview Nexvoro AI Neural Voice Synthesis (TTS).
  * Converts interviewer text into high-fidelity audio streams for the realistic avatar.
+ * Now logs character usage for cost tracking.
  */
 
 import { ai } from '@/ai/genkit';
@@ -9,14 +11,18 @@ import { googleAI } from '@genkit-ai/google-genai';
 import { z } from 'genkit';
 import wav from 'wav';
 
-const AudioSynthesisInputSchema = z.string().describe("The text to be converted to speech.");
+const AudioSynthesisInputSchema = z.object({
+  text: z.string().describe("The text to be converted to speech."),
+  userId: z.string().optional(),
+  sessionId: z.string().optional(),
+});
 
 const AudioSynthesisOutputSchema = z.object({
   audioUri: z.string().describe("The generated audio as a data URI."),
 });
 
-export async function synthesizeAudio(text: string): Promise<string> {
-  const result = await audioSynthesisFlow(text);
+export async function synthesizeAudio(text: string, userId?: string, sessionId?: string): Promise<string> {
+  const result = await audioSynthesisFlow({ text, userId, sessionId });
   return result.audioUri;
 }
 
@@ -26,7 +32,7 @@ const audioSynthesisFlow = ai.defineFlow(
     inputSchema: AudioSynthesisInputSchema,
     outputSchema: AudioSynthesisOutputSchema,
   },
-  async (text) => {
+  async (input) => {
     try {
       const { media } = await ai.generate({
         model: googleAI.model('gemini-2.5-flash-preview-tts'),
@@ -38,7 +44,14 @@ const audioSynthesisFlow = ai.defineFlow(
             },
           },
         },
-        prompt: text,
+        prompt: input.text,
+        metadata: {
+          feature: 'tts',
+          provider: 'gemini',
+          userId: input.userId,
+          sessionId: input.sessionId,
+          characterCount: input.text.length
+        }
       });
 
       if (!media) {

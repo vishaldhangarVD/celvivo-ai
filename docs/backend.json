@@ -1,3 +1,4 @@
+
 {
   "entities": {
     "UserProfile": {
@@ -46,6 +47,23 @@
         "duration": { "type": "number" },
         "hiringRecommendation": { "type": "string" },
         "createdAt": { "type": "string", "format": "date-time" }
+      }
+    },
+    "UsageLog": {
+      "title": "Usage Log",
+      "description": "Records AI API token and character usage for cost auditing.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "sessionId": { "type": "string" },
+        "feature": { "type": "string" },
+        "model": { "type": "string" },
+        "provider": { "type": "string" },
+        "inputTokens": { "type": "number" },
+        "outputTokens": { "type": "number" },
+        "characterCount": { "type": "number" },
+        "videoDurationSeconds": { "type": "number" },
+        "timestamp": { "type": "string", "format": "date-time" }
       }
     },
     "CodingQuestion": {
@@ -131,6 +149,10 @@
     "/users/{userId}/daily_challenges/{challengeId}": {
       "schema": "#/entities/DailyChallenge",
       "description": "Stores individual daily challenge records."
+    },
+    "/usage_logs/{logId}": {
+      "schema": "#/entities/UsageLog",
+      "description": "Global log of AI API usage for cost tracking."
     },
     "/codingQuestions/{questionId}": {
       "schema": "#/entities/CodingQuestion",
