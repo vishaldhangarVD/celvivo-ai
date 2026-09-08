@@ -25,7 +25,7 @@ const apiKey = (
 
 // Global Model Protocol
 export const PRIMARY_MODEL = 'googleai/gemini-2.5-flash';
-export const FALLBACK_MODEL = 'googleai/gemini-2.0-flash';
+export const FALLBACK_MODEL = 'googleai/gemini-1.5-flash';
 
 // Runtime Diagnostic Sequence (Server-side only)
 if (typeof window === 'undefined') {
