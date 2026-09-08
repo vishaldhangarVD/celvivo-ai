@@ -47,14 +47,16 @@ function CodingResultContent() {
 
   const attemptRef = useMemo(() => {
     if (!db || !user?.uid) return null;
-    const idToUse = attemptId || journey?.sessionId;
+    // PROTOCOL: Prioritize the authoritative current journey sessionId over the URL param
+    const idToUse = journey?.sessionId || attemptId;
     if (!idToUse) return null;
     return doc(db, 'users', user.uid, 'coding_attempts', idToUse);
   }, [db, user?.uid, attemptId, journey?.sessionId]);
 
   const { data: attemptDoc, loading: attemptLoading } = useDoc(attemptRef);
 
-  const activeId = attemptId || journey?.sessionId;
+  // Authoritative ID for results lookup - syncs with the loaded attempt document
+  const activeId = journey?.sessionId || attemptId;
 
   const resultsQuery = useMemo(() => {
     if (!db || !user?.uid || !activeId) return null;
@@ -68,6 +70,7 @@ function CodingResultContent() {
   const { data: questionResults, loading: resultsLoading } = useCollection(resultsQuery);
 
   const displayQuestions = useMemo(() => {
+    // Prioritize the snapshot of questions saved with the attempt itself
     return attemptDoc?.questions || journey?.codingQuestions || [];
   }, [attemptDoc, journey]);
 
@@ -75,7 +78,7 @@ function CodingResultContent() {
     if (attemptDoc?.score !== undefined) return attemptDoc;
     
     const total = 8;
-    // Calculate real-time score from results associated strictly with this attempt
+    // Fallback: Calculate real-time score from results associated strictly with this active session
     if (questionResults && questionResults.length > 0) {
       const solved = questionResults.filter((r: any) => r.status === 'Solved').length;
       const failed = questionResults.filter((r: any) => r.status === 'Failed').length;
