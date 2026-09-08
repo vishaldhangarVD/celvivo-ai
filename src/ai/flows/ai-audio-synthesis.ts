@@ -1,9 +1,7 @@
-
 'use server';
 /**
  * @fileOverview Nexvoro AI Neural Voice Synthesis (TTS).
- * Converts interviewer text into high-fidelity audio streams for the realistic avatar.
- * Now logs character usage for cost tracking.
+ * Updated to use stable Gemini 1.5 Flash for audio generation.
  */
 
 import { ai } from '@/ai/genkit';
@@ -35,7 +33,8 @@ const audioSynthesisFlow = ai.defineFlow(
   async (input) => {
     try {
       const { media } = await ai.generate({
-        model: googleAI.model('gemini-2.5-flash-preview-tts'),
+        // Using stable Gemini 1.5 Flash for audio synthesis
+        model: 'googleai/gemini-1.5-flash',
         config: {
           responseModalities: ['AUDIO'],
           speechConfig: {

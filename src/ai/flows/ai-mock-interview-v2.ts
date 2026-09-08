@@ -1,15 +1,20 @@
-
 'use server';
 /**
- * @fileOverview Nexvoro AI Virtual Interview Agent (Elite Senior Interviewer v11.0).
+ * @fileOverview Nexvoro AI Virtual Interview Agent (Elite Senior Interviewer v12.0).
  * MASTER PROTOCOL: Calibrated for multi-round intelligence.
- * Integrates Round 1 (Aptitude, Coding, Technical) + Round 2 (Special HR Resume).
- * Implements granular stage progression with cross-round context awareness.
- * Now includes telemetry identifiers for usage tracking.
+ * Includes improved fallback diversity to prevent repeated questions during neural drift.
  */
 
 import { ai, runWithResilience } from '@/ai/genkit';
 import { z } from 'genkit';
+
+const FALLBACK_QUESTIONS = [
+  "Thank you for that context. Could you elaborate more on how you handled the technical trade-offs in your most recent project?",
+  "That's a solid perspective. Moving forward, how do you typically approach learning a new complex technology under a tight deadline?",
+  "I appreciate the detail. Let's shift gears slightly—tell me about a time you had to resolve a significant conflict within a technical team.",
+  "Very interesting. In your experience, what are the most critical factors for maintaining high-quality code in a fast-paced environment?",
+  "Understood. Let's explore your professional growth—where do you see your technical expertise evolving over the next few years?"
+];
 
 const Round1ContextSchema = z.object({
   resumeSummary: z.string().optional(),
@@ -58,7 +63,6 @@ const AiMockInterviewInputSchema = z.object({
   ]).optional(),
   currentDifficulty: z.enum(["EASY", "MEDIUM", "HARD"]).optional(),
   round1Context: Round1ContextSchema.optional(),
-  // TELEMETRY
   userId: z.string().optional(),
   sessionId: z.string().optional(),
 });
@@ -94,43 +98,28 @@ const prompt = ai.definePrompt({
   prompt: `You are an elite human Senior Interviewer conducting a high-fidelity Special HR Interview for a {{{role}}} candidate at {{{targetCompany}}}.
 
 CORE INTERVIEW RULE:
-Every question must be intelligently connected to the candidate's uploaded resume, the candidate's previous answer, or a directly related concept required to validate a resume claim.
+Every question must be intelligently connected to the candidate's uploaded resume, previous answers, or Round 1 performance nodes.
 
 MANDATORY FIRST-TURN RULE:
-If Current Turn is 0, OR the current interview history is empty, you MUST ask a short, warm, professional introduction question.
+If current interview history is empty, ask a warm, professional introduction.
 
-==================================================
-CANDIDATE RESUME — PRIMARY SOURCE
-==================================================
-Resume Summary: {{{resumeSummary}}}
-Resume Skills: {{#each resumeSkills}}{{{this}}}, {{/each}}
-Resume Projects: {{#each resumeProjects}}{{{this}}}, {{/each}}
-Candidate Name: {{{candidateName}}}
-Role: {{{role}}}
-Experience: {{{experienceLevel}}}
+RESUME DATA:
+Summary: {{{resumeSummary}}}
+Skills: {{#each resumeSkills}}{{{this}}}, {{/each}}
+Projects: {{#each resumeProjects}}{{{this}}}, {{/each}}
 
-==================================================
-CURRENT SPECIAL HR INTERVIEW HISTORY
-==================================================
+ROUND 1 PERFORMANCE:
+Aptitude: {{{aptitudeScore}}}%
+Coding: {{{codingScore}}}%
+
+HISTORY:
 {{#each history}}
 Interviewer: {{{this.question}}}
 Candidate: {{{this.answer}}}
 {{/each}}
-Latest Candidate Answer: {{{userAnswer}}}
+Latest Answer: {{{userAnswer}}}
 
-==================================================
-QUESTION GENERATION PRIORITY
-==================================================
-1. UPLOADED RESUME: Ask about specific claims, projects, or contribution.
-2. ANSWER FOLLOW-UP: Analyze answer for architectural or professional details.
-3. RELATED TECHNICAL: Logical connections to claimed skills.
-
-==================================================
-IMPORTANT SPOKEN OUTPUT RULE
-==================================================
-Return ONLY the natural spoken interviewer dialogue. No JSON, no labels.
-
-Generate the next interviewer dialogue now.`
+Return ONLY the natural spoken interviewer dialogue in JSON.`
 });
 
 const aiMockInterviewFlow = ai.defineFlow(
@@ -140,27 +129,16 @@ const aiMockInterviewFlow = ai.defineFlow(
     outputSchema: AiMockInterviewOutputSchema,
   },
   async (input) => {
-    if (input.debugMode) {
-      return {
-        nextQuestion: "Hello, welcome to Nexvoro AI. Identity node synchronized. How are you today?",
-        difficulty: "EASY",
-        stage: "INTRODUCTION",
-        isInterviewComplete: input.currentMainQuestionIndex >= 12,
-        isHint: false
-      }; 
-    }
-
     try {
       const { output } = await runWithResilience(prompt, {
         ...input,
         askedQuestions: input.askedQuestions || [],
         currentStage: input.currentStage || "INTRODUCTION",
         currentDifficulty: input.currentDifficulty || "MEDIUM",
-        hintUsed: input.hintUsed || false
       }, {
         userId: input.userId,
         sessionId: input.sessionId,
-        feature: input.roundType === 'Special HR Interview' ? 'special_interview' : 'interview'
+        feature: 'special_interview'
       });
     
       if (!output) throw new Error("Neural synthesis failed.");
@@ -172,8 +150,10 @@ const aiMockInterviewFlow = ai.defineFlow(
     
     } catch (error) {
       console.error("\n🔴 AI MOCK INTERVIEW ERROR", error);
+      // DYNAMIC FALLBACK: Rotate questions to prevent repeating the same one
+      const fallbackIdx = input.currentMainQuestionIndex % FALLBACK_QUESTIONS.length;
       return {
-        nextQuestion: "Thank you for that context. Let's explore your professional background further.",
+        nextQuestion: FALLBACK_QUESTIONS[fallbackIdx],
         difficulty: input.currentDifficulty || "MEDIUM",
         stage: input.currentStage || "TECHNICAL",
         isInterviewComplete: input.currentMainQuestionIndex >= 12,
