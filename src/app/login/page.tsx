@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useEffect, Suspense, useCallback, useRef } from 'react';
@@ -7,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Command, ArrowLeft, Chrome, Loader2, AlertCircle, Zap, ShieldCheck, Mail, Lock, UserCheck, Eye, EyeOff } from 'lucide-react';
+import { ArrowLeft, Chrome, Loader2, Zap, ShieldCheck, Mail, Lock, UserCheck, Eye, EyeOff } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth, useUser, useFirestore } from '@/firebase';
@@ -317,9 +316,9 @@ function LoginContent() {
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
             whileHover={{ rotate: 90 }}
-            className="w-20 h-20 rounded-[2rem] bg-gradient-to-br from-purple-600 to-blue-600 flex items-center justify-center mx-auto mb-8 shadow-[0_0_50px_rgba(147,51,234,0.3)] cursor-pointer"
+            className="w-20 h-20 rounded-[2rem] overflow-hidden flex items-center justify-center mx-auto mb-8 shadow-[0_0_50px_rgba(147,51,234,0.3)] cursor-pointer"
           >
-            <Command className="text-white w-10 h-10" />
+            <img src="/LOGO.png" alt="Celvivo AI" className="w-full h-full object-contain" />
           </motion.div>
           <motion.div
             initial={{ opacity: 0 }}
@@ -352,7 +351,7 @@ function LoginContent() {
                   <motion.div 
                     key="confirm-name"
                     initial={{ opacity: 0, x: 20 }}
-                    animate={{ opacity: 1, x: 0 }}
+                    animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, x: -20 }}
                     className="space-y-8"
                   >

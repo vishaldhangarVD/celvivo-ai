@@ -1,11 +1,9 @@
-
 'use client';
 
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { 
-  Command, 
   LayoutDashboard, 
   Award, 
   Bell, 
@@ -128,9 +126,9 @@ export default function Navbar() {
           <Link href="/" className="flex items-center gap-4 group">
             <motion.div 
               whileHover={{ rotate: 90 }}
-              className="w-10 h-10 rounded-xl bg-gradient-to-br from-purple-600 to-blue-600 flex items-center justify-center shadow-lg shadow-purple-500/20 border border-white/10"
+              className="w-10 h-10 rounded-xl overflow-hidden flex items-center justify-center shadow-lg shadow-purple-500/20 border border-white/10"
             >
-              <Command className="text-white w-5 h-5" />
+              <img src="/LOGO.png" alt="Celvivo AI" className="w-full h-full object-contain" />
             </motion.div>
             <div className="flex flex-col">
               <span className="font-headline font-bold text-xl tracking-tighter uppercase text-premium leading-none">

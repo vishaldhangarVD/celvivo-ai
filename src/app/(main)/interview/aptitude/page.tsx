@@ -8,7 +8,6 @@ import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { 
-  Command, 
   CheckCircle2, 
   ShieldCheck, 
   ChevronRight, 
@@ -492,12 +491,12 @@ export default function AptitudeEnginePage() {
       <div className="flex-1 flex flex-col min-h-0">
         <header className="h-20 shrink-0 border-b border-white/5 bg-[#0b0e1a]/95 backdrop-blur-xl flex items-center justify-between px-8 z-40">
           <div className="flex items-center gap-6">
-            <div className="w-10 h-10 rounded-xl bg-accent/10 flex items-center justify-center text-accent border border-accent/20">
-              <Command className="w-5 h-5" />
+            <div className="w-10 h-10 rounded-xl overflow-hidden flex items-center justify-center border border-white/5">
+              <img src="/LOGO.png" alt="Celvivo AI" className="w-full h-full object-contain" />
             </div>
             <div>
               <h1 className="text-sm font-black uppercase tracking-widest text-premium">CELVIVO AI</h1>
-              <p className="text-[9px] font-bold text-white/40 uppercase tracking-widest mt-0.5">APTITUDE TEST IN PROGRESS</p>
+              <p className="text-[9px] font-black text-white/40 uppercase tracking-widest mt-0.5">APTITUDE TEST IN PROGRESS</p>
             </div>
           </div>
 

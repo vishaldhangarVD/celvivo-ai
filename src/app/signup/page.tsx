@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, Suspense } from 'react';
@@ -7,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Command, ArrowLeft, ShieldCheck, Loader2, AlertCircle, Eye, EyeOff, Chrome } from 'lucide-react';
+import { ArrowLeft, ShieldCheck, Loader2, AlertCircle, Eye, EyeOff, Chrome, Zap } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth, useUser, useFirestore } from '@/firebase';
@@ -214,8 +213,8 @@ function SignupContent() {
         className="w-full max-w-xl"
       >
         <div className="text-center mb-12">
-          <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-purple-600 to-blue-600 flex items-center justify-center mx-auto mb-8 shadow-2xl shadow-purple-500/20">
-            <Command className="text-white w-8 h-8" />
+          <div className="w-16 h-16 rounded-2xl overflow-hidden flex items-center justify-center mx-auto mb-8 shadow-2xl shadow-purple-500/20">
+            <img src="/LOGO.png" alt="Celvivo AI" className="w-full h-full object-contain" />
           </div>
           <h1 className="text-4xl font-bold tracking-tighter mb-4">Welcome to CELVIVO AI.</h1>
           <p className="text-muted-foreground font-light">Join the elite network of performance-ready engineers.</p>

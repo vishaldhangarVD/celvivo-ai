@@ -1,4 +1,3 @@
-
 "use client";
 
 import { motion } from 'framer-motion';
@@ -22,7 +21,6 @@ import {
   Twitter,
   Linkedin,
   Github,
-  Command,
   ArrowUpRight
 } from 'lucide-react';
 import { useUser, useFirestore, useCollection } from '@/firebase';
@@ -97,7 +95,7 @@ const itemVariants = {
   visible: { 
     opacity: 1, 
     y: 0,
-    transition: { duration: 0.5, ease: "easeOut"as const }
+    transition: { duration: 0.5, ease: "easeOut" as const }
   }
 };
 
@@ -478,8 +476,8 @@ export default function LandingPage() {
         <div className="grid md:grid-cols-4 gap-16 mb-10">
             <div className="md:col-span-1 space-y-8">
               <Link href="/" className="flex items-center gap-4 group">
-                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-purple-600 to-blue-600 flex items-center justify-center shadow-lg shadow-purple-500/20 border border-white/10 group-hover:rotate-90 transition-transform duration-500">
-                  <Command className="text-white w-5 h-5" />
+                <div className="w-10 h-10 rounded-xl overflow-hidden flex items-center justify-center shadow-lg shadow-purple-500/20 border border-white/10 group-hover:rotate-90 transition-transform duration-500">
+                  <img src="/LOGO.png" alt="Celvivo AI" className="w-full h-full object-contain" />
                 </div>
                 <span className="font-headline font-bold text-2xl tracking-tighter uppercase text-premium">
                   CELVIVO <span className="text-accent">AI</span>
