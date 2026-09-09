@@ -866,7 +866,7 @@ export default function ResumeAtelierPage() {
                           </div>
                           <div className="space-y-1">
                             <p className="text-base font-bold text-white/90">Select Resume File</p>
-                            <p className="text-[9px] font-mono uppercase tracking-widest text-[#8a723a]">PDF / DOCX &middot; MAX 5MB</p>
+                            <p className="text-[10px] font-mono uppercase tracking-widest text-[#8a723a]">PDF / DOCX &middot; MAX 5MB</p>
                           </div>
                         </>
                       )}
@@ -1378,10 +1378,10 @@ export default function ResumeAtelierPage() {
                                       >
                                         <input type="file" id="ext-cert-file" className="hidden" accept=".jpg,.jpeg,.png,.pdf" onChange={e => {
                                           const file = e.target.files?.[0];
-                                          if (file && file.size <= 5 * 1024 * 1024) setExternalCertForm({...externalCertForm, file});
-                                          else if (file) toast({ variant: "destructive", title: "Error", description: "File too large (5MB limit)" });
+                                          if (file && file.size <= 10 * 1024 * 1024) setExternalCertForm({...externalCertForm, file});
+                                          else if (file) toast({ variant: "destructive", title: "Error", description: "File too large (10MB limit)" });
                                         }} />
-                                        <p className="text-[8px] font-mono uppercase text-[#cfc7b4]/40">{externalCertForm.file ? externalCertForm.file.name : "Select JPG/PDF"}</p>
+                                        <p className="text-[8px] font-mono uppercase text-[#cfc7b4]/40">{externalCertForm.file ? externalCertForm.file.name : "Select JPG/PDF · Max 10MB"}</p>
                                       </div>
                                     </div>
                                     <div className="flex gap-2">
