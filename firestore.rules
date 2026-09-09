@@ -48,5 +48,13 @@ service cloud.firestore {
       allow read: if request.auth != null;
       allow write: if isFounder();
     }
+
+    // Global log of AI API usage for cost auditing.
+    match /usage_logs/{logId} {
+      // Allow creation from server actions (which may be unauthenticated in the client SDK context)
+      allow create: if true;
+      // Strictly restrict reading to founders
+      allow read: if isFounder();
+    }
   }
 }

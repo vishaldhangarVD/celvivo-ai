@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { logUsage } from '@/services/usage-logger';
 
 /**
  * @fileOverview JDoodle Neural Execution Gateway v10.0 (Standardized Validation).
@@ -152,7 +153,7 @@ export async function POST(req: Request) {
     const body = await req.json().catch(() => null);
     if (!body) return NextResponse.json({ error: "Empty logic payload." }, { status: 400 });
 
-    const { source_code, language, stdin, testCases, expectedOutput } = body;
+    const { source_code, language, stdin, testCases, expectedOutput, userId, sessionId } = body;
     const config = LANGUAGE_CONFIG[language];
 
     const clientId = process.env.JDOODLE_CLIENT_ID;
@@ -172,11 +173,11 @@ export async function POST(req: Request) {
       let targetVersion = config.versionIndex;
       let finalStdin = stdin || "";
 
-      // Special handling for TypeScript to ensure Node APIs compile and run correctly via bash proxy
+      // Special handling for TypeScript
       if (language === 'typescript') {
         targetLang = 'bash';
         targetVersion = '4';
-        finalStdin = ""; // Passed via HEREDOC in bash script
+        finalStdin = ""; 
         script = `cat << 'NEXVORO_CODE_EOF' > solution.ts\n${source_code}\nNEXVORO_CODE_EOF\n\ntsc solution.ts --target es2017 --module commonjs --moduleResolution node --skipLibCheck 2> compile_errors.txt\nif [ $? -ne 0 ]; then\n  cat compile_errors.txt\n  exit 0\nfi\nnode solution.js << 'NEXVORO_INPUT_EOF'\n${stdin || ""}\nNEXVORO_INPUT_EOF\n`;
       }
 
@@ -195,6 +196,14 @@ export async function POST(req: Request) {
 
       const data = await response.json();
       if (data.error) return NextResponse.json({ error: data.error }, { status: 500 });
+
+      // Log technical interaction telemetry
+      logUsage({
+        userId,
+        sessionId,
+        feature: 'coding',
+        provider: 'jdoodle'
+      });
 
       const stdout = data.output || "";
       const actualNormalized = normalizeOutput(stdout);
@@ -257,6 +266,14 @@ export async function POST(req: Request) {
 
     const data = await response.json();
     if (data.error) return NextResponse.json({ error: data.error }, { status: 500 });
+
+    // Log technical interaction telemetry
+    logUsage({
+      userId,
+      sessionId,
+      feature: 'coding',
+      provider: 'jdoodle'
+    });
 
     const output = data.output || "";
     

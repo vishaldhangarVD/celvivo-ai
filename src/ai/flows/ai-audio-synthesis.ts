@@ -1,4 +1,3 @@
-
 'use server';
 /**
  * @fileOverview Nexvoro AI Neural Voice Synthesis (TTS).
@@ -8,6 +7,7 @@
 import { ai, PRIMARY_MODEL } from '@/ai/genkit';
 import { z } from 'genkit';
 import wav from 'wav';
+import { logUsage } from '@/services/usage-logger';
 
 const AudioSynthesisInputSchema = z.object({
   text: z.string().describe("The text to be converted to speech."),
@@ -32,7 +32,7 @@ const audioSynthesisFlow = ai.defineFlow(
   },
   async (input) => {
     try {
-      const { media } = await ai.generate({
+      const result = await ai.generate({
         // Using central PRIMARY_MODEL for consistency
         model: PRIMARY_MODEL,
         config: {
@@ -53,9 +53,22 @@ const audioSynthesisFlow = ai.defineFlow(
         }
       });
 
+      const { media, usage } = result;
+
       if (!media) {
         throw new Error('Neural voice synthesis failed: No media returned.');
       }
+
+      // Record technical usage telemetry
+      logUsage({
+        userId: input.userId,
+        sessionId: input.sessionId,
+        feature: 'tts',
+        provider: 'gemini',
+        characterCount: input.text.length,
+        inputTokens: usage?.promptTokenCount,
+        outputTokens: usage?.candidatesTokenCount
+      });
 
       const pcmBase64 = media.url.substring(media.url.indexOf(',') + 1);
       const audioBuffer = Buffer.from(pcmBase64, 'base64');

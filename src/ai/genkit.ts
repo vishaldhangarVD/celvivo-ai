@@ -1,4 +1,3 @@
-
 import { genkit } from 'genkit';
 import { googleAI } from '@genkit-ai/google-genai';
 import { config } from 'dotenv';
@@ -39,6 +38,7 @@ async function logGeminiUsage(data: any) {
     const { firestore } = initializeFirebase();
     await addDoc(collection(firestore, 'usage_logs'), {
       ...data,
+      provider: data.provider || 'gemini',
       timestamp: serverTimestamp()
     });
   } catch (e) {
@@ -68,10 +68,15 @@ export async function runWithResilience(promptFn: any, input: any, metadata?: an
         const result = await promptFn(input, { model, metadata });
         
         if (result?.usage) {
+          // Add metadata intelligence: Extract feature, userId, and sessionId if not explicitly provided
+          const feature = metadata?.feature || promptFn.name || 'unknown';
+          const userId = metadata?.userId || input?.userId;
+          const sessionId = metadata?.sessionId || input?.sessionId;
+
           logGeminiUsage({
-            userId: metadata?.userId,
-            sessionId: metadata?.sessionId,
-            feature: metadata?.feature || 'unknown',
+            userId,
+            sessionId,
+            feature,
             model: model,
             inputTokens: result.usage.promptTokenCount,
             outputTokens: result.usage.candidatesTokenCount
