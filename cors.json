@@ -1,12 +1,8 @@
 [
   {
-    "origin": [
-      "https://6000-firebase-studio-1780936922869.cluster-cd3bsnf6r5bemwki2bxljme5as.cloudworkstations.dev",
-      "https://*.hosted.app",
-      "https://celvivo.ai"
-    ],
-    "method": ["GET", "POST", "PUT", "DELETE", "OPTIONS", "HEAD"],
+    "origin": ["*"],
+    "method": ["GET", "POST", "PUT", "DELETE", "HEAD"],
     "maxAgeSeconds": 3600,
-    "responseHeader": ["Content-Type", "Authorization", "Content-Length", "x-goog-resumable", "x-goog-meta-*"]
+    "responseHeader": ["Content-Type", "Authorization", "Content-Length", "x-goog-resumable"]
   }
 ]
