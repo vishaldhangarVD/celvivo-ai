@@ -2,8 +2,9 @@
 
 import { useState, useEffect, useMemo, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useUser, useFirestore, useCollection } from '@/firebase';
+import { useUser, useFirestore, useCollection, useStorage } from '@/firebase';
 import { collection, query, orderBy, doc, setDoc, deleteDoc, addDoc, serverTimestamp } from 'firebase/firestore';
+import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
 import { useRouter } from 'next/navigation';
 import NavigationControls from '@/components/NavigationControls';
 import { Button } from '@/components/ui/button';
@@ -50,7 +51,9 @@ import {
   FileUp,
   X,
   Download,
-  RotateCcw
+  RotateCcw,
+  Award,
+  ExternalLink
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { runAtsCheck } from '@/ai/flows/ai-resume-ats-check';
@@ -92,7 +95,7 @@ const TEMPLATES = [
   {id:'windsor',    name:'The Windsor',    tag:'Centered · Serif · Timeless',        accent:'#7a2531', family:'single'},
   {id:'savile',     name:'The Savile',     tag:'Dark bureau · Two columns',          accent:'#3a5a40', family:'sidebar-l'},
   {id:'regent',     name:'The Regent',     tag:'Ink band · Executive split',         accent:'#8a723a', family:'band'},
-  {id:'bond',       name:'The Bond',       tag:'Chronological thread',               accent:'#4a4e69', family:'timeline'},
+  {id:'bond',       name:'The Bond',       tag:'Chronological thread',               accent:'#4a4438', family:'timeline'},
   {id:'harrow',     name:'The Harrow',     tag:'Minimal · ATS-safest',               accent:'#4a4438', family:'single', variant:'v-minimal'},
   {id:'kensington', name:'The Kensington', tag:'Light sidebar · Right column',       accent:'#2f6f6f', family:'sidebar-r'},
   {id:'oxford',     name:'The Oxford',     tag:'Equal split · Light aside',          accent:'#2f4f6f', family:'twocol'},
@@ -236,6 +239,7 @@ export default function ResumeAtelierPage() {
   const router = useRouter();
   const { user, loading: authLoading } = useUser();
   const db = useFirestore();
+  const storage = useStorage();
   const { toast } = useToast();
 
   const [view, setView] = useState<'list' | 'editor'>('list');
@@ -260,6 +264,16 @@ export default function ResumeAtelierPage() {
   const [atsModalResult, setAtsModalResult] = useState<any>(null);
   const [isAtsModalLoading, setIsAtsModalLoading] = useState(false);
 
+  // External Certificates State (for Step 5 Modal)
+  const [isExternalCertModalOpen, setIsExternalCertModalOpen] = useState(false);
+  const [isExternalUploading, setIsExternalUploading] = useState(false);
+  const [isExternalCertFormOpen, setIsExternalCertFormOpen] = useState(false);
+  const [externalCertForm, setExternalCertForm] = useState({
+    title: '',
+    issuer: '',
+    file: null as File | null
+  });
+
   const resumePaperRef = useRef<HTMLDivElement>(null);
 
   // Firestore Queries
@@ -269,6 +283,12 @@ export default function ResumeAtelierPage() {
   }, [db, user?.uid]);
 
   const { data: savedResumes, loading: resumesLoading } = useCollection(resumesQuery);
+
+  const externalCertsQuery = useMemo(() => {
+    if (!db || !user?.uid) return null;
+    return query(collection(db, 'users', user.uid, 'external_certificates'), orderBy('createdAt', 'desc'));
+  }, [db, user?.uid]);
+  const { data: externalCerts, loading: externalCertsLoading } = useCollection(externalCertsQuery);
 
   const filteredSkillSuggestions = useMemo(() => {
     const q = skillInputValue.trim().toLowerCase();
@@ -495,6 +515,54 @@ export default function ResumeAtelierPage() {
     }
   };
 
+  /* External Certificates Handlers */
+  const handleExternalFileUpload = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!user || !db || !storage || !externalCertForm.file || !externalCertForm.title) return;
+
+    setIsExternalUploading(true);
+    try {
+      const fileName = `${Date.now()}_${externalCertForm.file.name}`;
+      const storageRef = ref(storage, `users/${user.uid}/external_certificates/${fileName}`);
+      
+      const uploadResult = await uploadBytes(storageRef, externalCertForm.file);
+      const fileUrl = await getDownloadURL(uploadResult.ref);
+      const fileType = externalCertForm.file.type.includes('pdf') ? 'pdf' : 'image';
+
+      await addDoc(collection(db, 'users', user.uid, 'external_certificates'), {
+        title: externalCertForm.title,
+        issuer: externalCertForm.issuer || '',
+        fileUrl,
+        fileType,
+        createdAt: serverTimestamp()
+      });
+
+      toast({ title: "Certificate Added", description: "External credential has been preserved." });
+      setIsExternalCertFormOpen(false);
+      setExternalCertForm({ title: '', issuer: '', file: null });
+    } catch (e: any) {
+      console.error(e);
+      toast({ variant: "destructive", title: "Upload Fault", description: e.message });
+    } finally {
+      setIsExternalUploading(false);
+    }
+  };
+
+  const handleExternalDelete = async (e: React.MouseEvent, cert: any) => {
+    e.stopPropagation();
+    if (!user || !db || !storage || !confirm("Are you sure you want to delete this certificate?")) return;
+
+    try {
+      const fileRef = ref(storage, cert.fileUrl);
+      await deleteObject(fileRef).catch(() => console.warn("File already missing in storage"));
+      await deleteDoc(doc(db, 'users', user.uid, 'external_certificates', cert.id));
+      toast({ title: "Certificate Purged", description: "Credential removed from archive." });
+    } catch (e: any) {
+      console.error(e);
+      toast({ variant: "destructive", title: "Action Failed", description: e.message });
+    }
+  };
+
   if (authLoading || resumesLoading) return (
     <div className="min-h-screen bg-[#0c0b09] flex items-center justify-center">
       <Loader2 className="w-12 h-12 text-[#c9a24d] animate-spin" />
@@ -707,7 +775,7 @@ export default function ResumeAtelierPage() {
                   <p className="text-sm text-[#cfc7b4] font-light">Calibrate your career blueprint against specific hiring protocols.</p>
                 </DialogHeader>
 
-                <Tabs value={atsTab} onValueChange={(v: any) => setAtsTab(v)} className="w-full">
+                <Tabs value={atsTab} onValueChange={(v: any) => set_atsTab(v)} className="w-full">
                   <TabsList className="grid grid-cols-2 mb-8 glass border-white/5 p-1 rounded-2xl h-14 bg-white/5">
                     <TabsTrigger value="saved" disabled={!savedResumes || savedResumes.length === 0} className="rounded-xl data-[state=active]:bg-[#c9a24d] data-[state=active]:text-black text-[10px] font-bold uppercase tracking-widest transition-all">Use Saved Blueprint</TabsTrigger>
                     <TabsTrigger value="upload" className="rounded-xl data-[state=active]:bg-[#c9a24d] data-[state=active]:text-black text-[10px] font-bold uppercase tracking-widest transition-all">Upload External File</TabsTrigger>
@@ -1246,15 +1314,121 @@ export default function ResumeAtelierPage() {
                           </motion.div>
                         )}
 
-                        <div className="flex gap-4 pt-4">
-                          <Button onClick={() => setCurrentStep(4)} variant="outline" className="flex-1 h-14 border-[#332c22] rounded-none font-mono text-[11px] uppercase">← Back</Button>
-                          <Button 
-                            onClick={handleDownloadPdf} 
-                            disabled={isExporting}
-                            className="flex-[2] h-14 bg-[#7a2531] text-white hover:bg-red-800 rounded-none font-mono text-[11px] uppercase tracking-widest shadow-xl flex items-center justify-center gap-3"
-                          >
-                            {isExporting ? <><Loader2 className="w-4 h-4 animate-spin" /> Synthesizing PDF...</> : <><Download className="w-4 h-4" /> Download PDF →</>}
-                          </Button>
+                        <div className="pt-4 space-y-4">
+                          <Dialog open={isExternalCertModalOpen} onOpenChange={setIsExternalCertModalOpen}>
+                            <DialogTrigger asChild>
+                              <Button variant="ghost" className="w-full h-14 border border-[#332c22] rounded-none font-mono text-[10px] uppercase tracking-widest text-[#8a723a] hover:text-[#c9a24d] hover:bg-white/5 flex gap-3">
+                                <Award className="w-4 h-4" /> My Other Certificates
+                              </Button>
+                            </DialogTrigger>
+                            <DialogContent className="bg-[#0b0e1a] border-[#332c22] text-[#ece7db] max-w-4xl rounded-[2.5rem] overflow-hidden custom-scrollbar max-h-[90vh] overflow-y-auto">
+                              <DialogHeader className="mb-8">
+                                <div className="flex items-center gap-6 mb-2">
+                                  <div className="w-10 h-10 rounded-xl bg-[#c9a24d]/10 flex items-center justify-center text-[#c9a24d]">
+                                     <Award className="w-6 h-6" />
+                                  </div>
+                                  <DialogTitle className="font-disp text-3xl">My Other Certificates</DialogTitle>
+                                </div>
+                                <p className="text-sm text-[#cfc7b4] font-light italic">Certificates you've earned elsewhere — self-uploaded, not AI-verified.</p>
+                              </DialogHeader>
+
+                              <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+                                {/* Form / Add Card */}
+                                {!isExternalCertFormOpen ? (
+                                  <Card 
+                                    onClick={() => setIsExternalCertFormOpen(true)}
+                                    className="h-[240px] bg-transparent border-dashed border-2 border-[#332c22] hover:border-[#c9a24d]/40 transition-all flex flex-col items-center justify-center cursor-pointer group rounded-2xl"
+                                  >
+                                    <Plus className="w-6 h-6 text-[#8a723a] group-hover:scale-110 transition-transform" />
+                                    <p className="mt-3 font-mono text-[9px] uppercase tracking-widest text-[#8a723a]">Add Certificate</p>
+                                  </Card>
+                                ) : (
+                                  <Card className="h-[240px] bg-[#1c1814] border-[#c9a24d]/30 p-6 flex flex-col justify-between rounded-2xl animate-in fade-in zoom-in duration-300">
+                                    <div className="space-y-3">
+                                      <input 
+                                        value={externalCertForm.title}
+                                        onChange={e => setExternalCertForm({...externalCertForm, title: e.target.value})}
+                                        placeholder="Title (Required)"
+                                        className="ghost-input"
+                                        required
+                                      />
+                                      <input 
+                                        value={externalCertForm.issuer}
+                                        onChange={e => setExternalCertForm({...externalCertForm, issuer: e.target.value})}
+                                        placeholder="Issuer (Optional)"
+                                        className="ghost-input"
+                                      />
+                                      <div 
+                                        onClick={() => document.getElementById('ext-cert-file')?.click()}
+                                        className={cn(
+                                          "py-3 border-2 border-dashed rounded-xl text-center cursor-pointer transition-all",
+                                          externalCertForm.file ? "border-green-500/40 bg-green-500/5" : "border-white/10 hover:border-[#c9a24d]/40"
+                                        )}
+                                      >
+                                        <input type="file" id="ext-cert-file" className="hidden" accept=".jpg,.jpeg,.png,.pdf" onChange={e => {
+                                          const file = e.target.files?.[0];
+                                          if (file && file.size <= 5 * 1024 * 1024) setExternalCertForm({...externalCertForm, file});
+                                          else if (file) toast({ variant: "destructive", title: "Error", description: "File too large (5MB limit)" });
+                                        }} />
+                                        <p className="text-[8px] font-mono uppercase text-[#cfc7b4]/40">{externalCertForm.file ? externalCertForm.file.name : "Select JPG/PDF"}</p>
+                                      </div>
+                                    </div>
+                                    <div className="flex gap-2">
+                                      <Button onClick={() => setIsExternalCertFormOpen(false)} variant="ghost" className="flex-1 h-9 rounded-xl text-[9px] font-bold uppercase tracking-widest">Cancel</Button>
+                                      <Button 
+                                        onClick={handleExternalFileUpload} 
+                                        disabled={isExternalUploading || !externalCertForm.file || !externalCertForm.title}
+                                        className="flex-[2] h-9 bg-[#c9a24d] text-black rounded-xl text-[9px] font-bold uppercase tracking-widest"
+                                      >
+                                        {isExternalUploading ? <Loader2 className="w-3 h-3 animate-spin" /> : "Upload"}
+                                      </Button>
+                                    </div>
+                                  </Card>
+                                )}
+
+                                {/* Existing Certs */}
+                                {externalCerts?.map((cert: any) => (
+                                  <Card key={cert.id} className="h-[240px] bg-[#151210] border-[#332c22] p-5 flex flex-col justify-between hover:border-[#cfc7b4]/20 transition-all rounded-2xl group relative overflow-hidden">
+                                    <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity flex gap-1">
+                                      <button onClick={(e) => handleExternalDelete(e, cert)} className="w-8 h-8 rounded-full bg-[#7a2531]/20 text-[#7a2531] hover:bg-[#7a2531] hover:text-white transition-all flex items-center justify-center"><Trash2 className="w-3.5 h-3.5" /></button>
+                                    </div>
+                                    <div className="flex-1 min-h-0 mb-4 bg-black/20 rounded-xl overflow-hidden relative">
+                                       {cert.fileType === 'pdf' ? (
+                                         <div className="w-full h-full flex flex-col items-center justify-center gap-2">
+                                            <FileText className="w-8 h-8 text-white/10" />
+                                            <span className="text-[7px] font-mono uppercase text-white/20">PDF Archive</span>
+                                         </div>
+                                       ) : (
+                                         <img src={cert.fileUrl} alt={cert.title} className="w-full h-full object-cover grayscale opacity-60 group-hover:grayscale-0 transition-all duration-700" />
+                                       )}
+                                       <a href={cert.fileUrl} target="_blank" rel="noopener noreferrer" className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 bg-black/40 transition-opacity">
+                                          <ExternalLink className="w-6 h-6 text-white" />
+                                       </a>
+                                    </div>
+                                    <div className="space-y-1">
+                                      <div className="flex items-center justify-between">
+                                        <Badge className="bg-white/5 text-[#cfc7b4]/40 border-none text-[7px] font-bold uppercase tracking-widest px-2 py-0">Self-Uploaded</Badge>
+                                        <span className="text-[7px] font-mono text-white/10">{cert.createdAt?.seconds ? new Date(cert.createdAt.seconds * 1000).toLocaleDateString() : 'Recent'}</span>
+                                      </div>
+                                      <h4 className="font-disp text-sm text-white/90 line-clamp-1">{cert.title}</h4>
+                                      {cert.issuer && <p className="text-[8px] font-mono text-[#8a723a] uppercase tracking-widest">{cert.issuer}</p>}
+                                    </div>
+                                  </Card>
+                                ))}
+                              </div>
+                            </DialogContent>
+                          </Dialog>
+
+                          <div className="flex gap-4">
+                            <Button onClick={() => setCurrentStep(4)} variant="outline" className="flex-1 h-14 border-[#332c22] rounded-none font-mono text-[11px] uppercase">← Back</Button>
+                            <Button 
+                              onClick={handleDownloadPdf} 
+                              disabled={isExporting}
+                              className="flex-[2] h-14 bg-[#7a2531] text-white hover:bg-red-800 rounded-none font-mono text-[11px] uppercase tracking-widest shadow-xl flex items-center justify-center gap-3"
+                            >
+                              {isExporting ? <><Loader2 className="w-4 h-4 animate-spin" /> Synthesizing PDF...</> : <><Download className="w-4 h-4" /> Download PDF →</>}
+                            </Button>
+                          </div>
                         </div>
                       </motion.div>
                     )}
@@ -1488,3 +1662,4 @@ function ResumePreview({ data, theme }: { data: ResumeData, theme: string }) {
     </div>
   );
 }
+

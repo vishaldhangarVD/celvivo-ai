@@ -1,8 +1,6 @@
 'use client';
 
 import { motion } from 'framer-motion';
-import { Card } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import { 
   Download, 
   ShieldCheck, 
@@ -15,26 +13,11 @@ import {
   Award,
   Zap,
   Linkedin,
-  Sparkles,
-  Plus,
-  Trash2,
-  FileText,
-  ExternalLink,
-  Upload
+  Sparkles
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { 
-  Dialog, 
-  DialogContent, 
-  DialogHeader, 
-  DialogTitle, 
-  DialogTrigger 
-} from '@/components/ui/dialog';
-import { useUser, useFirestore, useCollection, useDoc, useStorage } from '@/firebase';
-import { collection, query, orderBy, doc, addDoc, serverTimestamp, deleteDoc } from 'firebase/firestore';
-import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
+import { useUser, useFirestore, useCollection, useDoc } from '@/firebase';
+import { collection, query, orderBy, doc } from 'firebase/firestore';
 import { useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
@@ -52,15 +35,6 @@ type SessionRecord = {
   stream: 'standard' | 'special';
   round?: string;
   [key: string]: any;
-};
-
-type ExternalCertificate = {
-  id: string;
-  title: string;
-  issuer?: string;
-  fileUrl: string;
-  fileType: 'image' | 'pdf';
-  createdAt: { seconds: number };
 };
 
 const CertificateTemplate = ({ data }: { data: any }) => {
@@ -166,16 +140,8 @@ const CertificateTemplate = ({ data }: { data: any }) => {
 export default function CertificatesPage() {
   const { user, loading: authLoading } = useUser();
   const db = useFirestore();
-  const storage = useStorage();
   const { toast } = useToast();
   const [isExporting, setIsExporting] = useState(false);
-  const [isUploading, setIsUploading] = useState(false);
-  const [isUploadDialogOpen, setIsUploadDialogOpen] = useState(false);
-  const [uploadData, setUploadData] = useState({
-    title: '',
-    issuer: '',
-    file: null as File | null
-  });
   const router = useRouter();
 
   // Fetch Full Name from Profile
@@ -200,14 +166,8 @@ export default function CertificatesPage() {
     return query(collection(db, 'users', user.uid, 'specialHRInterviews'), orderBy('createdAt', 'desc'));
   }, [db, user?.uid]);
 
-  const externalCertsQuery = useMemo(() => {
-    if (!db || !user?.uid) return null;
-    return query(collection(db, 'users', user.uid, 'external_certificates'), orderBy('createdAt', 'desc'));
-  }, [db, user?.uid]);
-
   const { data: standardData, loading: standardLoading } = useCollection(standardInterviewsQuery);
   const { data: specialData, loading: specialLoading } = useCollection(specialHRQuery);
-  const { data: externalCerts, loading: externalLoading } = useCollection(externalCertsQuery);
 
   const allSessions = useMemo((): SessionRecord[] => {
     const combined: SessionRecord[] = [
@@ -250,56 +210,6 @@ export default function CertificatesPage() {
   const handleShareToLinkedIn = (cert: any) => {
     const url = `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent('https://celvivo.ai')}`;
     window.open(url, '_blank');
-  };
-
-  const handleExternalFileUpload = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!user || !db || !storage || !uploadData.file || !uploadData.title) return;
-
-    setIsUploading(true);
-    try {
-      const fileName = `${Date.now()}_${uploadData.file.name}`;
-      const storageRef = ref(storage, `users/${user.uid}/external_certificates/${fileName}`);
-      
-      const uploadResult = await uploadBytes(storageRef, uploadData.file);
-      const fileUrl = await getDownloadURL(uploadResult.ref);
-      const fileType = uploadData.file.type.includes('pdf') ? 'pdf' : 'image';
-
-      await addDoc(collection(db, 'users', user.uid, 'external_certificates'), {
-        title: uploadData.title,
-        issuer: uploadData.issuer || '',
-        fileUrl,
-        fileType,
-        createdAt: serverTimestamp()
-      });
-
-      toast({ title: "Certificate Added", description: "External credential has been preserved." });
-      setIsUploadDialogOpen(false);
-      setUploadData({ title: '', issuer: '', file: null });
-    } catch (e: any) {
-      console.error(e);
-      toast({ variant: "destructive", title: "Upload Fault", description: e.message });
-    } finally {
-      setIsUploading(false);
-    }
-  };
-
-  const handleDeleteExternal = async (cert: any) => {
-    if (!user || !db || !storage || !confirm("Are you sure you want to delete this certificate?")) return;
-
-    try {
-      // 1. Delete from Storage
-      const fileRef = ref(storage, cert.fileUrl);
-      await deleteObject(fileRef).catch(() => console.warn("File already missing in storage"));
-
-      // 2. Delete from Firestore
-      await deleteDoc(doc(db, 'users', user.uid, 'external_certificates', cert.id));
-      
-      toast({ title: "Certificate Purged", description: "Credential removed from archive." });
-    } catch (e: any) {
-      console.error(e);
-      toast({ variant: "destructive", title: "Action Failed", description: e.message });
-    }
   };
 
   if (authLoading) return (
@@ -399,169 +309,6 @@ export default function CertificatesPage() {
                 )}
               </section>
 
-              {/* My Other Certificates Section */}
-              <section className="space-y-10">
-                <div className="px-4 space-y-1">
-                  <h3 className="text-xl font-bold text-white flex items-center gap-3">
-                    <ShieldCheck className="w-6 h-6 text-white/40" /> My Other Certificates
-                  </h3>
-                  <p className="text-xs text-white/30 font-light">Certificates you've earned elsewhere — these are self-uploaded and not AI-verified.</p>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                  {/* Add Certificate Card */}
-                  <Dialog open={isUploadDialogOpen} onOpenChange={setIsUploadDialogOpen}>
-                    <DialogTrigger asChild>
-                      <Card className="h-[280px] bg-transparent border-dashed border-2 border-white/5 hover:border-white/20 transition-all flex flex-col items-center justify-center cursor-pointer group rounded-[2.5rem]">
-                        <div className="w-14 h-14 rounded-2xl bg-white/5 flex items-center justify-center group-hover:scale-110 transition-transform">
-                          <Plus className="w-6 h-6 text-white/20" />
-                        </div>
-                        <p className="mt-4 text-[9px] font-black uppercase tracking-[0.2em] text-white/20">Add Certificate</p>
-                      </Card>
-                    </DialogTrigger>
-                    <DialogContent className="glass border-white/10 bg-[#0b0e1a] text-white max-w-xl rounded-[2.5rem] overflow-hidden">
-                      <DialogHeader className="mb-8">
-                        <DialogTitle className="text-3xl font-bold tracking-tighter">Register External Credential</DialogTitle>
-                        <p className="text-sm text-white/40 font-light">Add certificates from Coursera, Udemy, or other platforms to your profile.</p>
-                      </DialogHeader>
-
-                      <form onSubmit={handleExternalFileUpload} className="space-y-8 p-1">
-                        <div className="space-y-6">
-                          <div className="space-y-3">
-                            <Label className="text-[10px] font-bold uppercase tracking-widest text-white/40 ml-1">Certificate Title</Label>
-                            <Input 
-                              value={uploadData.title}
-                              onChange={e => setUploadData({...uploadData, title: e.target.value})}
-                              placeholder="e.g. Google Data Analytics"
-                              className="h-14 glass border-white/10 bg-transparent rounded-2xl px-6 focus:border-accent"
-                              required
-                            />
-                          </div>
-                          <div className="space-y-3">
-                            <Label className="text-[10px] font-bold uppercase tracking-widest text-white/40 ml-1">Issuer / Platform</Label>
-                            <Input 
-                              value={uploadData.issuer}
-                              onChange={e => setUploadData({...uploadData, issuer: e.target.value})}
-                              placeholder="e.g. Coursera"
-                              className="h-14 glass border-white/10 bg-transparent rounded-2xl px-6 focus:border-accent"
-                            />
-                          </div>
-                          <div className="space-y-3">
-                            <Label className="text-[10px] font-bold uppercase tracking-widest text-white/40 ml-1">Identity File</Label>
-                            <div 
-                              onClick={() => document.getElementById('cert-upload-input')?.click()}
-                              className={cn(
-                                "h-32 border-2 border-dashed rounded-3xl transition-all cursor-pointer flex flex-col items-center justify-center gap-2",
-                                uploadData.file ? "border-accent bg-accent/5" : "border-white/10 hover:border-white/20 hover:bg-white/[0.01]"
-                              )}
-                            >
-                              <input 
-                                id="cert-upload-input"
-                                type="file" 
-                                className="hidden" 
-                                accept=".jpg,.jpeg,.png,.pdf"
-                                onChange={(e) => {
-                                  const file = e.target.files?.[0];
-                                  if (file) {
-                                    if (file.size > 5 * 1024 * 1024) {
-                                      toast({ variant: "destructive", title: "File Too Large", description: "Max limit: 5MB" });
-                                      return;
-                                    }
-                                    setUploadData({...uploadData, file});
-                                  }
-                                }}
-                              />
-                              {uploadData.file ? (
-                                <>
-                                  <CheckCircle2 className="w-6 h-6 text-accent" />
-                                  <p className="text-[10px] font-bold text-white truncate max-w-[200px]">{uploadData.file.name}</p>
-                                </>
-                              ) : (
-                                <>
-                                  <Upload className="w-6 h-6 text-white/10" />
-                                  <p className="text-[9px] font-black uppercase tracking-widest text-white/20">Select JPG, PNG, or PDF</p>
-                                </>
-                              )}
-                            </div>
-                          </div>
-                        </div>
-
-                        <div className="flex gap-4">
-                          <Button 
-                            type="button" 
-                            variant="ghost" 
-                            onClick={() => setIsUploadDialogOpen(false)}
-                            className="flex-1 h-14 rounded-2xl glass border-white/10 text-[10px] font-bold uppercase tracking-widest"
-                          >
-                            Cancel
-                          </Button>
-                          <Button 
-                            type="submit"
-                            disabled={isUploading || !uploadData.file || !uploadData.title}
-                            className="flex-[2] h-14 btn-premium rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] shadow-2xl"
-                          >
-                            {isUploading ? <Loader2 className="w-4 h-4 animate-spin" /> : "Preserve Credential"}
-                          </Button>
-                        </div>
-                      </form>
-                    </DialogContent>
-                  </Dialog>
-
-                  {/* Render External Certificates */}
-                  <AnimatePresence>
-                    {externalCerts?.map((cert: any) => (
-                      <motion.div 
-                        key={cert.id}
-                        initial={{ opacity: 0, scale: 0.95 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        exit={{ opacity: 0, scale: 0.9 }}
-                      >
-                        <Card className="h-[280px] glass bg-white/[0.01] border-white/5 hover:border-white/10 transition-all rounded-[2.5rem] flex flex-col p-6 relative group overflow-hidden">
-                          <div className="absolute top-4 right-4 z-20 flex gap-2">
-                             <button 
-                               onClick={() => handleDeleteExternal(cert)}
-                               className="w-8 h-8 rounded-full bg-red-500/10 text-red-500 border border-red-500/20 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-500 hover:text-white"
-                             >
-                               <Trash2 className="w-3.5 h-3.5" />
-                             </button>
-                          </div>
-
-                          <div className="flex-1 relative rounded-2xl overflow-hidden bg-black/20 border border-white/5 mb-6 group-hover:scale-[1.02] transition-transform">
-                             {cert.fileType === 'pdf' ? (
-                               <div className="w-full h-full flex flex-col items-center justify-center gap-3">
-                                  <FileText className="w-10 h-10 text-white/10" />
-                                  <span className="text-[8px] font-bold text-white/20 uppercase tracking-widest">PDF DOCUMENT</span>
-                               </div>
-                             ) : (
-                               <img src={cert.fileUrl} alt={cert.title} className="w-full h-full object-cover grayscale opacity-60 group-hover:grayscale-0 group-hover:opacity-100 transition-all duration-700" />
-                             )}
-                             <a 
-                               href={cert.fileUrl} 
-                               target="_blank" 
-                               rel="noopener noreferrer"
-                               className="absolute inset-0 z-10 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black/40 backdrop-blur-[2px]"
-                             >
-                                <div className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center text-white border border-white/10">
-                                   <ExternalLink className="w-4 h-4" />
-                                </div>
-                             </a>
-                          </div>
-
-                          <div className="space-y-1">
-                             <div className="flex items-center justify-between gap-2">
-                                <Badge className="bg-white/5 text-white/30 border-none text-[7px] font-black uppercase px-2 py-0.5 tracking-tighter">Self-Uploaded</Badge>
-                                <span className="text-[8px] font-bold text-white/10 uppercase tracking-widest">{cert.createdAt?.seconds ? new Date(cert.createdAt.seconds * 1000).toLocaleDateString() : 'Recent'}</span>
-                             </div>
-                             <h4 className="font-bold text-sm text-white/90 line-clamp-1 group-hover:text-accent transition-colors">{cert.title}</h4>
-                             {cert.issuer && <p className="text-[9px] font-mono text-white/30 uppercase tracking-widest">{cert.issuer}</p>}
-                          </div>
-                        </Card>
-                      </motion.div>
-                    ))}
-                  </AnimatePresence>
-                </div>
-              </section>
-
               <section className="space-y-10">
                 <div className="flex items-center justify-between px-4">
                    <h3 className="text-xl font-bold flex items-center gap-3 text-white">
@@ -646,3 +393,4 @@ export default function CertificatesPage() {
     </div>
   );
 }
+
