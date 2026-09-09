@@ -17,7 +17,8 @@ import {
   DialogContent, 
   DialogHeader, 
   DialogTitle, 
-  DialogTrigger 
+  DialogTrigger,
+  DialogDescription
 } from '@/components/ui/dialog';
 import {
   Tabs,
@@ -388,8 +389,8 @@ export default function ResumeAtelierPage() {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    if (file.size > 5 * 1024 * 1024) {
-      toast({ variant: "destructive", title: "File Too Large", description: "Limit: 5MB" });
+    if (file.size > 10 * 1024 * 1024) {
+      toast({ variant: "destructive", title: "File Too Large", description: "Limit: 10MB" });
       return;
     }
 
@@ -783,7 +784,7 @@ export default function ResumeAtelierPage() {
                     </div>
                     <DialogTitle className="font-disp text-3xl">Neural ATS Audit</DialogTitle>
                   </div>
-                  <p className="text-sm text-[#cfc7b4] font-light">Calibrate your career blueprint against specific hiring protocols.</p>
+                  <DialogDescription className="text-sm text-[#cfc7b4] font-light">Calibrate your career blueprint against specific hiring protocols.</DialogDescription>
                 </DialogHeader>
 
                 <Tabs value={atsTab} onValueChange={(v: any) => setAtsTab(v)} className="w-full">
@@ -866,7 +867,7 @@ export default function ResumeAtelierPage() {
                           </div>
                           <div className="space-y-1">
                             <p className="text-base font-bold text-white/90">Select Resume File</p>
-                            <p className="text-[10px] font-mono uppercase tracking-widest text-[#8a723a]">PDF / DOCX &middot; MAX 5MB</p>
+                            <p className="text-[10px] font-mono uppercase tracking-widest text-[#8a723a]">PDF / DOCX &middot; MAX 10MB</p>
                           </div>
                         </>
                       )}
@@ -1340,7 +1341,7 @@ export default function ResumeAtelierPage() {
                                   </div>
                                   <DialogTitle className="font-disp text-3xl">My Other Certificates</DialogTitle>
                                 </div>
-                                <p className="text-sm text-[#cfc7b4] font-light italic">Certificates you've earned elsewhere — self-uploaded, not AI-verified.</p>
+                                <DialogDescription className="text-sm text-[#cfc7b4] font-light italic">Certificates you've earned elsewhere — self-uploaded, not AI-verified.</DialogDescription>
                               </DialogHeader>
 
                               <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
