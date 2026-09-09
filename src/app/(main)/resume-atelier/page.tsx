@@ -49,7 +49,8 @@ import {
   Upload,
   FileUp,
   X,
-  Download
+  Download,
+  RotateCcw
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { runAtsCheck } from '@/ai/flows/ai-resume-ats-check';
@@ -64,6 +65,7 @@ interface ResumeEntry {
   desc?: string;
   school?: string;
   degree?: string;
+  type?: 'work' | 'internship';
 }
 
 interface ResumeData {
@@ -129,7 +131,7 @@ const INITIAL_DATA: ResumeData = {
   summary: "",
   skills: [],
   experience: [
-    { company: "", role: "", dates: "", bullets: "" }
+    { company: "", role: "", dates: "", bullets: "", type: "work" }
   ],
   projects: [],
   education: [
@@ -635,7 +637,7 @@ export default function ResumeAtelierPage() {
               <div className="space-y-4">
                 <Badge className="bg-[#c9a24d]/20 text-[#c9a24d] border-none px-6 py-1 font-mono text-[10px] tracking-[0.4em] uppercase">Private Collection</Badge>
                 <h1 className="font-disp text-6xl font-medium text-[#f7f2e6] tracking-tight">The Atelier Archive</h1>
-                <p className="text-[#cfc7b4] font-light max-w-xl">Access your bespoke career blueprints. Every document is cut to measure and preserved in the cloud matrix.</p>
+                <p className="text-[#cfc7b4] font-light max-xl">Access your bespoke career blueprints. Every document is cut to measure and preserved in the cloud matrix.</p>
               </div>
               <div className="flex gap-4">
                 <Button 
@@ -992,8 +994,8 @@ export default function ResumeAtelierPage() {
                       <motion.div key="step3" initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, x: 10 }} className="space-y-8">
                         <div className="space-y-1">
                           <p className="font-mono text-[9px] tracking-[0.3em] text-[#c9a24d] uppercase">Step 3 of 5</p>
-                          <h3 className="font-disp text-3xl font-medium">Your Experience</h3>
-                          <p className="text-[#cfc7b4] text-sm font-light italic">Add your work experience and projects in a format ATS systems can scan cleanly.</p>
+                          <h3 className="font-disp text-3xl font-medium">Experience & Internships</h3>
+                          <p className="text-[#cfc7b4] text-sm font-light italic">Add your work experience or internships and projects in a format ATS systems can scan cleanly. If you're a fresher, add your internship(s) here instead.</p>
                         </div>
                         
                         <div className="space-y-6">
@@ -1004,16 +1006,30 @@ export default function ResumeAtelierPage() {
                                   const n = [...data.experience]; n.splice(i, 1); setData({...data, experience: n});
                                 }} className="absolute top-4 right-4 text-[#cfc7b4]/40 hover:text-[#7a2531]"><Trash2 className="w-4 h-4" /></button>
                               )}
+                              <div className="flex gap-2 mb-5">
+                                <button type="button" onClick={() => {
+                                  const n = [...data.experience]; n[i].type = 'work'; setData({...data, experience: n});
+                                }} className={cn(
+                                  "px-4 py-1.5 text-[9px] font-mono uppercase tracking-widest border transition-all",
+                                  (exp.type || 'work') === 'work' ? "bg-[#c9a24d] text-[#0c0b09] border-[#c9a24d]" : "border-[#332c22] text-[#8a723a] hover:border-[#8a723a]"
+                                )}>Work Experience</button>
+                                <button type="button" onClick={() => {
+                                  const n = [...data.experience]; n[i].type = 'internship'; setData({...data, experience: n});
+                                }} className={cn(
+                                  "px-4 py-1.5 text-[9px] font-mono uppercase tracking-widest border transition-all",
+                                  exp.type === 'internship' ? "bg-[#c9a24d] text-[#0c0b09] border-[#c9a24d]" : "border-[#332c22] text-[#8a723a] hover:border-[#8a723a]"
+                                )}>Internship</button>
+                              </div>
                               <div className="grid grid-cols-2 gap-4">
                                 <div>
-                                  <Label className="text-[8px] font-mono uppercase text-[#8a723a]">Company</Label>
-                                  <input value={exp.company} placeholder="eg:- Vaultly Fintech" onChange={e => {
+                                  <Label className="text-[8px] font-mono uppercase text-[#8a723a]">{exp.type === 'internship' ? 'Company / Organization' : 'Company'}</Label>
+                                  <input value={exp.company} placeholder={exp.type === 'internship' ? "eg:- Infosys (Internship)" : "eg:- Vaultly Fintech"} onChange={e => {
                                     const n = [...data.experience]; n[i].company = e.target.value; setData({...data, experience: n});
                                   }} className="ghost-input" />
                                 </div>
                                 <div>
-                                  <Label className="text-[8px] font-mono uppercase text-[#8a723a]">Title</Label>
-                                  <input value={exp.role} placeholder="eg:- Data Analyst" onChange={e => {
+                                  <Label className="text-[8px] font-mono uppercase text-[#8a723a]">{exp.type === 'internship' ? 'Internship Title' : 'Title'}</Label>
+                                  <input value={exp.role} placeholder={exp.type === 'internship' ? "eg:- Data Analyst Intern" : "eg:- Data Analyst"} onChange={e => {
                                     const n = [...data.experience]; n[i].role = e.target.value; setData({...data, experience: n});
                                   }} className="ghost-input" />
                                 </div>
@@ -1032,7 +1048,7 @@ export default function ResumeAtelierPage() {
                               </div>
                             </div>
                           ))}
-                          <button onClick={() => setData({...data, experience: [...data.experience, {company:"",role:"",dates:"",bullets:""}]})} className="w-full py-4 border border-dashed border-[#332c22] text-[#8a723a] text-[10px] font-mono uppercase tracking-widest hover:border-[#c9a24d]/40">+ Add Another Position</button>
+                          <button onClick={() => setData({...data, experience: [...data.experience, {company:"",role:"",dates:"",bullets:"",type:"work"}]})} className="w-full py-4 border border-dashed border-[#332c22] text-[#8a723a] text-[10px] font-mono uppercase tracking-widest hover:border-[#c9a24d]/40">+ Add Another Position / Internship</button>
                         </div>
                         <div id="proj-list" className="space-y-6">
                            <Label className="text-[9px] font-mono uppercase text-[#8a723a]">Projects (Optional)</Label>
@@ -1304,7 +1320,7 @@ function ResumePreview({ data, theme }: { data: ResumeData, theme: string }) {
 
   const expItems = () => (data.experience || []).map((e, i) => (
     <div key={i} className="doc-job">
-      <div className="doc-jobhead"><span>{e.role || 'Title'}{e.company ? `, ${e.company}` : ''}</span><span>{e.dates}</span></div>
+      <div className="doc-jobhead"><span>{e.role || 'Title'}{e.company ? `, ${e.company}` : ''}{e.type === 'internship' ? ' (Internship)' : ''}</span><span>{e.dates}</span></div>
       {bulletsHtml(e.bullets || '')}
     </div>
   ));
@@ -1332,7 +1348,7 @@ function ResumePreview({ data, theme }: { data: ResumeData, theme: string }) {
 
   const timelineItems = () => {
     const items = [
-      ...(data.experience || []).map(e => ({ head: `${e.role || 'Title'}${e.company ? ', ' + e.company : ''}`, dates: e.dates, bullets: e.bullets })),
+      ...(data.experience || []).map(e => ({ head: `${e.role || 'Title'}${e.company ? ', ' + e.company : ''}${e.type === 'internship' ? ' (Internship)' : ''}`, dates: e.dates, bullets: e.bullets })),
       ...(data.education || []).map(ed => ({ head: `${ed.degree}${ed.degree && ed.school ? ', ' + ed.school : ''}`, dates: ed.dates, bullets: '' })),
     ];
     return items.map((it, i) => (
