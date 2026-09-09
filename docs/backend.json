@@ -1,4 +1,3 @@
-
 {
   "entities": {
     "UserProfile": {
@@ -124,6 +123,19 @@
         "score": { "type": "number" },
         "completedAt": { "type": "string", "format": "date-time" }
       }
+    },
+    "ExternalCertificate": {
+      "title": "External Certificate",
+      "description": "A certificate uploaded by the user from an external source.",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string" },
+        "issuer": { "type": "string" },
+        "fileUrl": { "type": "string" },
+        "fileType": { "type": "string", "enum": ["image", "pdf"] },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["title", "fileUrl", "fileType"]
     }
   },
   "auth": {
@@ -150,9 +162,13 @@
       "schema": "#/entities/DailyChallenge",
       "description": "Stores individual daily challenge records."
     },
+    "/users/{userId}/external_certificates/{certId}": {
+      "schema": "#/entities/ExternalCertificate",
+      "description": "Stores user-uploaded external certificates."
+    },
     "/usage_logs/{logId}": {
       "schema": "#/entities/UsageLog",
-      "description": "Global log of AI API usage for cost tracking."
+      "description": "Global log of AI API usage for cost auditing."
     },
     "/codingQuestions/{questionId}": {
       "schema": "#/entities/CodingQuestion",
