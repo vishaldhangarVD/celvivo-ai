@@ -148,10 +148,10 @@ export default function Dashboard() {
           >
             <div>
               <div className="flex items-center gap-4 mb-4">
-                <Badge className="bg-accent/20 text-accent border-none px-4 py-1 text-[10px] tracking-widest font-bold uppercase">Mission Briefing</Badge>
+                <Badge className="bg-accent/20 text-accent border-none px-4 py-1 text-[10px] tracking-widest font-bold uppercase">Status Briefing</Badge>
               </div>
               <h1 className="text-5xl font-bold tracking-tighter text-premium">Welcome back, {formattedName}</h1>
-              <p className="text-muted-foreground font-light mt-2">Neural synchronization complete. Your combined career metrics are live.</p>
+              <p className="text-muted-foreground font-light mt-2">Data synchronization complete. Your combined career metrics are live.</p>
             </div>
             <div className="flex gap-4">
               <FeedbackDialog />

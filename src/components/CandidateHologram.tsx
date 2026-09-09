@@ -52,7 +52,7 @@ export default function CandidateHologram({
     if (currentQuestionIndex !== undefined && totalQuestions !== undefined) {
       return `QUESTION ${currentQuestionIndex} OF ${totalQuestions}`;
     }
-    return "Neural Interface Active";
+    return "AI Interview System Active";
   }, [isLoader, currentQuestionIndex, totalQuestions]);
 
   // Set mounted state for boot animation
@@ -291,7 +291,7 @@ export default function CandidateHologram({
           <div className="w-1.5 h-1.5 rounded-full animate-pulse" style={{ backgroundColor: themeColor }} />
           <span className="text-[8px] font-bold uppercase tracking-widest text-white">Encrypted Node</span>
         </div>
-        <span className="text-[8px] font-bold uppercase tracking-widest text-white">Status: Optimal</span>
+        <span className="text-[8px] font-bold uppercase tracking-widest text-white">Status: Ready</span>
       </div>
 
       <style jsx>{`

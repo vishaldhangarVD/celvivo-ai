@@ -318,7 +318,7 @@ export default function InterviewSetupPage() {
 
   const handleProceed = async (targetPath: 'aptitude' | 'interview') => {
     if (!db || !user?.uid || !resumeBase64) {
-      toast({ variant: "destructive", title: "Calibration Incomplete", description: "Please upload your resume to begin." });
+      toast({ variant: "destructive", title: "Setup Incomplete", description: "Please upload your resume to begin." });
       return;
     }
 
@@ -364,7 +364,7 @@ export default function InterviewSetupPage() {
       }
     } catch (e) {
       console.error(e);
-      toast({ variant: "destructive", title: "Protocol Fault", description: "Failed to persist identity node." });
+      toast({ variant: "destructive", title: "System Error", description: "Failed to persist identity node." });
       setLoadingTarget(null);
     }
   };

@@ -119,16 +119,16 @@ const HeroSection = memo(({ onStart, onEnterRoom }: { onStart: () => void, onEnt
               className="inline-flex items-center gap-3 px-4 py-1.5 rounded-full glass border-white/10"
             >
               <div className="w-2 h-2 rounded-full bg-accent animate-pulse" />
-              <span className="text-[9px] font-bold tracking-[0.5em] uppercase text-white/60">Neural Matrix v5.0 Active</span>
+              <span className="text-[9px] font-bold tracking-[0.5em] uppercase text-white/60">AI Interview System Active</span>
             </motion.div>
             
             <div className="space-y-4">
               <h1 className="text-6xl md:text-7xl font-bold tracking-tighter leading-[0.95] text-premium">
-                Ace Every <br />
+                Prepare for Every <br />
                 <span className="text-gradient-purple">Interview.</span>
               </h1>
               <p className="max-w-md text-xl text-muted-foreground font-light leading-relaxed">
-                Deploy high-fidelity simulations calibrated for elite IT standards. Bridge the gap between technical potential and executive reality.
+                Deploy realistic interview simulations designed for modern IT interviews. Turn your skills into interview confidence.
               </p>
             </div>
           </div>
@@ -175,18 +175,18 @@ const HeroSection = memo(({ onStart, onEnterRoom }: { onStart: () => void, onEnt
             <div className="md:w-[50%] p-10 flex flex-col justify-between relative z-10">
               <div className="space-y-8">
                 <div className="space-y-1">
-                  <h2 className="text-3xl font-bold tracking-tighter text-premium">Simulation Protocol</h2>
+                  <h2 className="text-3xl font-bold tracking-tighter text-premium">Interview Process</h2>
                   <p className="text-[9px] text-accent font-bold uppercase tracking-[0.5em] flex items-center gap-3">
-                    <Rocket className="w-3.5 h-3.5" /> INTERVIEW EVALUATION PIPELINE
+                    <Rocket className="w-3.5 h-3.5" /> Your Interview Journey
                   </p>
                 </div>
                 
                 <div className="space-y-3 pl-1">
                   {[
-                    { label: "RESUME CALIBRATION", desc: "IDENTITY & SKILL SYNC", color: "text-blue-400" },
-                    { label: "APTITUDE SCREENING", desc: "LOGICAL & QUANTITATIVE ASSESSMENT", color: "text-emerald-400" },
-                    { label: "SYNTAX MATRIX", desc: "CODING & IMPLEMENTATION TEST", color: "text-accent" },
-                    { label: "NEURAL ARENA", desc: "AI VIRTUAL HR INTERVIEW", color: "text-amber-400" }
+                    { label: "Resume Analysis", desc: "Profile & Skills Analysis", color: "text-blue-400" },
+                    { label: "Aptitude Test", desc: "Logic & Numerical Skills", color: "text-emerald-400" },
+                    { label: "Coding Test", desc: "Programming Skills Assessment", color: "text-accent" },
+                    { label: "AI HR Interview", desc: "Realistic HR Interview with AI", color: "text-amber-400" }
                   ].map((step, idx, arr) => (
                     <div key={idx} className="flex flex-col">
                       <motion.div 
@@ -537,14 +537,14 @@ export default function LandingPage() {
 
           <div className="pt-12 mt-auto border-t border-white/5 flex flex-col md:flex-row justify-between items-center gap-8">
             <p className="text-[10px] font-bold text-white/20 uppercase tracking-[0.3em]">
-              © 2026 CELVIVO AI PROTOCOLS. ALL RIGHTS RESERVED.
+              © 2026 CELVIVO AI PLATFORM. ALL RIGHTS RESERVED.
             </p>
             <div className="flex items-center gap-6">
               <div className="flex items-center gap-2 px-3 py-1 glass rounded-full border-green-500/20">
                 <div className="w-1.5 h-1.5 rounded-full bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.8)]" />
-                <span className="text-[8px] font-black text-green-400 uppercase tracking-widest">System Optimal</span>
+                <span className="text-[8px] font-black text-green-400 uppercase tracking-widest">System Ready</span>
               </div>
-              <p className="text-[8px] font-black text-white/20 uppercase tracking-widest">v5.0.2 Deployment</p>
+              <p className="text-[8px] font-black text-white/20 uppercase tracking-widest">Version 5.0.2</p>
             </div>
           </div>
         </div>

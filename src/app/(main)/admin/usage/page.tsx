@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useMemo } from 'react';
@@ -135,9 +134,9 @@ export default function UsageAnalyticsPage() {
           
           <header className="flex flex-col md:flex-row justify-between items-end gap-8">
             <div className="space-y-4">
-              <Badge className="bg-purple-500/20 text-purple-400 border-none px-4 py-1 text-[10px] tracking-widest font-bold uppercase">Restricted: System Intelligence</Badge>
+              <Badge className="bg-purple-500/20 text-purple-400 border-none px-4 py-1 text-[10px] tracking-widest font-bold uppercase">Restricted: System Analytics</Badge>
               <h1 className="text-6xl font-bold tracking-tighter text-premium leading-tight">Usage <br /><span className="text-gradient-purple">Analytics.</span></h1>
-              <p className="text-xl text-muted-foreground font-light max-w-xl">Real-time audit of AI API consumption and infrastructure overhead.</p>
+              <p className="text-xl text-muted-foreground font-light max-xl">Real-time audit of AI API consumption and infrastructure overhead.</p>
             </div>
             
             <div className="flex gap-4 glass p-2 rounded-2xl border-white/5">
@@ -193,7 +192,7 @@ export default function UsageAnalyticsPage() {
               </div>
               <div>
                 <p className="text-3xl font-bold tabular-nums">{stats?.ttsChars.toLocaleString()}</p>
-                <p className="text-[10px] uppercase font-bold text-white/30 tracking-widest mt-2">Total Vocal Units</p>
+                <p className="text-[10px] uppercase font-bold text-white/30 tracking-widest mt-2">Total Voice Characters</p>
               </div>
             </Card>
 
@@ -206,7 +205,7 @@ export default function UsageAnalyticsPage() {
               </div>
               <div>
                 <p className="text-3xl font-bold tabular-nums">{stats?.didMinutes.toFixed(1)} Min</p>
-                <p className="text-[10px] uppercase font-bold text-white/30 tracking-widest mt-2">Neural Avatar Streams</p>
+                <p className="text-[10px] uppercase font-bold text-white/30 tracking-widest mt-2">AI Avatar Usage</p>
               </div>
             </Card>
           </div>
@@ -238,7 +237,7 @@ export default function UsageAnalyticsPage() {
                           <p className="text-[11px] font-mono">{Math.round(data.input / 1000)}k / {Math.round(data.output / 1000)}k</p>
                         </div>
                         <div className="space-y-1 text-center">
-                          <p className="text-[8px] uppercase font-bold text-white/20">Vocal Chars</p>
+                          <p className="text-[8px] uppercase font-bold text-white/20">Voice Chars</p>
                           <p className="text-[11px] font-mono">{data.chars}</p>
                         </div>
                         <div className="space-y-1 text-center">
