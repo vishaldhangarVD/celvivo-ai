@@ -1,3 +1,4 @@
+
 'use server';
 /**
  * @fileOverview Nexvoro AI Virtual Interview Agent.
@@ -167,9 +168,17 @@ const aiMockInterviewFlow = ai.defineFlow(
     
     } catch (error: any) {
       console.error("[Special HR] Critical Failure:", error.message);
+      
+      // Determine if this is a quota issue to show an honest message
+      const isQuotaError = error.message?.includes("429") || error.message?.includes("Quota");
       const fallbackIdx = input.currentMainQuestionIndex % FALLBACK_QUESTIONS.length;
+      
+      const fallbackMsg = isQuotaError 
+        ? "My apologies, our AI connection is experiencing high demand due to free-tier limits. I'm carefully analyzing your points—please allow me a brief moment to synchronize our next discussion node."
+        : FALLBACK_QUESTIONS[fallbackIdx];
+
       return {
-        nextQuestion: FALLBACK_QUESTIONS[fallbackIdx],
+        nextQuestion: fallbackMsg,
         difficulty: input.currentDifficulty || "MEDIUM",
         stage: input.currentStage || "TECHNICAL",
         isInterviewComplete: input.currentMainQuestionIndex >= 12,
