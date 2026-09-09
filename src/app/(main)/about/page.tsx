@@ -1,8 +1,6 @@
-
 'use client';
 
 import { motion, useMotionValue, useSpring, useTransform } from 'framer-motion';
-import NavigationControls from '@/components/NavigationControls';
 import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
 import { BrainCircuit, ShieldCheck, Zap } from 'lucide-react';
@@ -41,7 +39,6 @@ export default function AboutPage() {
   return (
     <div className="min-h-screen bg-[#050816] flex flex-col relative overflow-hidden">
       <div className="particles-bg" />
-      <NavigationControls />
 
       <div className="absolute top-[-10%] left-[-10%] w-[500px] h-[500px] bg-purple-600/10 rounded-full blur-[120px] pointer-events-none" />
       <div className="absolute bottom-[-10%] right-[-10%] w-[600px] h-[600px] bg-blue-600/10 rounded-full blur-[150px] pointer-events-none" />

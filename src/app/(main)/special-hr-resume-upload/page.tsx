@@ -2,8 +2,7 @@
 
 import { useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
-import { motion, AnimatePresence } from 'framer-motion';
-import NavigationControls from '@/components/NavigationControls';
+import { AnimatePresence, motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -16,8 +15,7 @@ import {
   ArrowRight,
   RotateCcw,
   Sparkles,
-  Cpu,
-  Trash2
+  Cpu
 } from 'lucide-react';
 import { useUser, useFirestore } from '@/firebase';
 import { doc, updateDoc, serverTimestamp } from 'firebase/firestore';
@@ -109,8 +107,6 @@ export default function SpecialHRResumeUpload() {
       <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-[600px] h-[600px] bg-purple-500/10 rounded-full blur-[120px] pointer-events-none" />
       <div className="absolute bottom-0 right-1/4 w-[400px] h-[400px] bg-accent/10 rounded-full blur-[100px] pointer-events-none" />
       
-      <NavigationControls onHome={() => router.push('/')} />
-
       <main className="flex-1 container mx-auto px-6 flex flex-col items-center justify-center pt-16 relative z-10">
         <div className="max-w-4xl w-full">
           <header className="text-center mb-16 space-y-4">
@@ -120,7 +116,7 @@ export default function SpecialHRResumeUpload() {
               <span className="text-[9px] font-black tracking-[0.5em] uppercase text-purple-300 relative z-10">Phase 02 Calibration</span>
             </div>
             <h1 className="text-6xl font-bold tracking-tighter text-premium">Special HR <span className="text-gradient-purple">Setup.</span></h1>
-            <p className="text-xl text-muted-foreground font-light leading-relaxed max-w-xl mx-auto">
+            <p className="text-xl text-muted-foreground font-light leading-relaxed max-xl mx-auto">
               Upload your career blueprint. Our neural engine will architect a personalized, resume-aware interview session.
             </p>
           </header>

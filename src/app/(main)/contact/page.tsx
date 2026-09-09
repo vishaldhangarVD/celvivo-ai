@@ -2,7 +2,6 @@
 
 import { useState } from 'react';
 import { motion } from 'framer-motion';
-import NavigationControls from '@/components/NavigationControls';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -59,7 +58,6 @@ export default function ContactPage() {
   return (
     <div className="min-h-screen bg-[#050816]">
       <div className="particles-bg" />
-      <NavigationControls />
 
       <main className="container mx-auto px-6 pt-40 pb-32">
         <div className="max-w-4xl mx-auto text-center mb-24">

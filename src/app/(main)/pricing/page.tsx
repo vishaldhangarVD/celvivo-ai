@@ -2,7 +2,6 @@
 
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import NavigationControls from '@/components/NavigationControls';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
@@ -204,7 +203,6 @@ export default function PricingPage() {
     <div className="min-h-screen bg-[#050816] pb-32">
       <Script src="https://checkout.razorpay.com/v1/checkout.js" strategy="lazyOnload" />
       <div className="particles-bg" />
-      <NavigationControls />
       
       <main className="container mx-auto px-6 pt-40">
         <header className="max-w-4xl mx-auto text-center mb-16 space-y-6">

@@ -3,7 +3,6 @@
 import { useEffect, useState, useMemo } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
-import NavigationControls from '@/components/NavigationControls';
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -144,7 +143,7 @@ export default function PersonalizedRoadmapPage() {
      <div className="h-screen flex flex-col items-center justify-center bg-[#050816] p-12 text-center">
         <AlertCircle className="w-16 h-16 text-red-400 mb-6" />
         <h2 className="text-2xl font-bold">Insufficient Assessment Data</h2>
-        <p className="text-muted-foreground mt-2 max-w-sm">Complete a full interview session to generate a personalized roadmap.</p>
+        <p className="text-muted-foreground mt-2 max-sm mx-auto">Complete a full interview session to generate a personalized roadmap.</p>
         <Button onClick={() => router.push('/dashboard')} className="mt-8">Return to Dashboard</Button>
      </div>
   );
@@ -157,7 +156,6 @@ export default function PersonalizedRoadmapPage() {
   return (
     <div className="min-h-screen bg-[#050816] pb-32">
       <div className="particles-bg" />
-      <NavigationControls />
       
       <main className="container mx-auto px-6 pt-40">
         <div className="max-w-7xl mx-auto space-y-12">
@@ -166,7 +164,7 @@ export default function PersonalizedRoadmapPage() {
             <div className="space-y-4">
               <Badge className="bg-accent/20 text-accent border-none px-4 py-1 text-[10px] tracking-widest font-bold uppercase">Evidence-Based Growth Path</Badge>
               <h1 className="text-6xl font-bold tracking-tighter text-premium leading-tight">Career <br /><span className="text-gradient-purple">Roadmap.</span></h1>
-              <p className="text-xl text-muted-foreground font-light max-w-xl">A 5-phase evolution roadmap calibrated from your simulation performance.</p>
+              <p className="text-xl text-muted-foreground font-light max-xl">A 5-phase evolution roadmap calibrated from your simulation performance.</p>
             </div>
             <div className="flex flex-col items-end gap-2">
               <div className="text-4xl font-bold text-accent">{roadmap.estimatedTimeToReadiness}</div>
@@ -317,13 +315,13 @@ export default function PersonalizedRoadmapPage() {
                             </div>
 
                             <div className="grid md:grid-cols-2 gap-6 pt-6 border-t border-white/5">
-                               <div className="p-6 glass rounded-[2rem] border-purple-500/10 space-y-3">
+                               <div className="p-6 glass rounded-[2.5rem] border-purple-500/10 space-y-3">
                                   <h4 className="text-[9px] font-black uppercase tracking-widest text-purple-400 flex items-center gap-2">
                                     <Rocket className="w-3 h-3" /> Project Laboratory
                                   </h4>
                                   <p className="text-xs font-light text-white/70 leading-relaxed">{module.realWorldProject}</p>
                                </div>
-                               <div className="p-6 glass rounded-[2rem] border-green-500/10 space-y-3">
+                               <div className="p-6 glass rounded-[2.5rem] border-green-500/10 space-y-3">
                                   <h4 className="text-[9px] font-black uppercase tracking-widest text-green-400 flex items-center gap-2">
                                     <CheckCircle2 className="w-3 h-3" /> Validation Goal
                                   </h4>

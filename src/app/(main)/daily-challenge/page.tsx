@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import NavigationControls from '@/components/NavigationControls';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -168,7 +167,6 @@ export default function DailyChallengePage() {
   return (
     <div className="min-h-screen bg-[#050816] pb-32">
       <div className="particles-bg" />
-      <NavigationControls />
 
       <main className="container mx-auto px-6 pt-40">
         <div className="max-w-4xl mx-auto space-y-12">
@@ -176,7 +174,7 @@ export default function DailyChallengePage() {
           <header className="text-center space-y-4">
             <Badge className="bg-accent/20 text-accent mb-4 border-none px-6 py-1.5 font-bold tracking-[0.4em] text-[10px] uppercase">Neural Habit Protocol</Badge>
             <h1 className="text-6xl font-bold tracking-tighter text-premium">Daily <span className="text-gradient-purple">Challenge.</span></h1>
-            <p className="text-xl text-muted-foreground font-light max-w-xl mx-auto leading-relaxed">
+            <p className="text-xl text-muted-foreground font-light max-xl mx-auto leading-relaxed">
               Complete one strategic prompt every 24 hours to maintain cognitive momentum and expand your neural streak.
             </p>
           </header>

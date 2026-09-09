@@ -2,7 +2,6 @@
 
 import { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import NavigationControls from '@/components/NavigationControls';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -10,33 +9,23 @@ import { Input } from '@/components/ui/input';
 import { 
   Trophy, 
   Target, 
-  Activity, 
-  FileText, 
   Loader2, 
   ShieldAlert, 
   History,
-  ArrowRight,
   TrendingUp,
-  BrainCircuit,
   Award,
   Search,
-  Filter,
-  ArrowUpDown,
   Building2,
   Calendar,
   Zap,
   LayoutGrid,
   ChevronRight,
-  Cpu,
-  BarChart3,
   Clock
 } from 'lucide-react';
 import Link from 'next/link';
 import { useUser, useFirestore, useCollection } from '@/firebase';
 import { collection, query, orderBy } from 'firebase/firestore';
 import { 
-  LineChart, 
-  Line, 
   XAxis, 
   YAxis, 
   CartesianGrid, 
@@ -135,7 +124,6 @@ export default function InterviewHistoryPage() {
   return (
     <div className="min-h-screen bg-[#050816] pb-32">
       <div className="particles-bg" />
-      <NavigationControls />
       
       <main className="container mx-auto px-6 pt-32">
         <div className="max-w-7xl mx-auto space-y-12">
@@ -144,7 +132,7 @@ export default function InterviewHistoryPage() {
             <div className="space-y-4">
               <Badge className="bg-accent/20 text-accent border-none px-4 py-1 text-[10px] tracking-widest font-bold uppercase">Archive Matrix v4.2</Badge>
               <h1 className="text-6xl font-bold tracking-tighter text-premium">Performance <span className="text-gradient-purple">History.</span></h1>
-              <p className="text-xl text-muted-foreground font-light max-xl">Deep-dive into your simulation archives and track your evolution trajectory.</p>
+              <p className="text-xl text-muted-foreground font-light max-xl mx-auto">Deep-dive into your simulation archives and track your evolution trajectory.</p>
             </div>
             <Link href="/interview">
               <Button className="h-16 px-10 btn-premium flex gap-3 text-xs font-bold tracking-widest uppercase">
@@ -217,7 +205,7 @@ export default function InterviewHistoryPage() {
                     </ResponsiveContainer>
                   ) : (
                     <div className="h-full flex flex-col items-center justify-center text-center space-y-4">
-                      <BarChart3 className="w-16 h-16 text-white/5" />
+                      <Activity className="w-16 h-16 text-white/5" />
                       <p className="text-muted-foreground font-light max-w-xs italic">Complete multiple sessions to visualize your neural growth trajectory.</p>
                     </div>
                   )}
@@ -324,7 +312,7 @@ export default function InterviewHistoryPage() {
                 <div className="py-32 text-center glass rounded-[3rem] border-white/5 border-dashed">
                   <LayoutGrid className="w-16 h-16 text-white/5 mx-auto mb-6" />
                   <h3 className="text-2xl font-bold mb-2">Archive Set Empty</h3>
-                  <p className="text-muted-foreground font-light max-w-sm mx-auto">
+                  <p className="text-muted-foreground font-light max-sm mx-auto">
                     No session archives found matching your criteria. Initialize a new simulation to begin tracking your trajectory.
                   </p>
                 </div>

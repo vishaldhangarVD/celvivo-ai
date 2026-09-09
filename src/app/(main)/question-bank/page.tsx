@@ -2,7 +2,6 @@
 
 import { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import NavigationControls from '@/components/NavigationControls';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -115,7 +114,6 @@ export default function QuestionBankPage() {
   return (
     <div className="min-h-screen bg-[#050816] pb-32">
       <div className="particles-bg" />
-      <NavigationControls />
 
       <main className="container mx-auto px-6 pt-40">
         <div className="max-w-6xl mx-auto space-y-12">
@@ -123,7 +121,7 @@ export default function QuestionBankPage() {
           <header className="text-center space-y-4">
             <Badge className="bg-accent/20 text-accent mb-4 border-none px-6 py-1.5 font-bold tracking-[0.4em] text-[10px] uppercase">Technical Intelligence Repository</Badge>
             <h1 className="text-6xl font-bold tracking-tighter text-premium">Question <span className="text-gradient-purple">Bank.</span></h1>
-            <p className="text-xl text-muted-foreground font-light max-w-2xl mx-auto leading-relaxed">
+            <p className="text-xl text-muted-foreground font-light max-xl mx-auto leading-relaxed">
               Master core engineering nodes through our curated technical repository.
             </p>
           </header>

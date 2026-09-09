@@ -3,7 +3,6 @@
 import { useState, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useRouter } from 'next/navigation';
-import NavigationControls from '@/components/NavigationControls';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -93,7 +92,6 @@ export default function CreateHologramPage() {
   return (
     <div className="min-h-screen bg-[#050816] flex flex-col relative overflow-hidden selection:bg-accent/30">
       <div className="particles-bg" />
-      <NavigationControls />
 
       <main className="flex-1 container mx-auto px-6 pt-32 pb-16 flex flex-col items-center">
         <div className="max-w-5xl w-full grid lg:grid-cols-12 gap-12 items-center">

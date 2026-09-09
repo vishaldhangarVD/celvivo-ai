@@ -3,7 +3,6 @@
 import { useMemo, useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
-import NavigationControls from '@/components/NavigationControls';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -97,7 +96,6 @@ export default function CareerRoadmapDetail() {
   return (
     <div className="min-h-screen bg-[#050816] pb-32">
       <div className="particles-bg" />
-      <NavigationControls />
 
       <main className="container mx-auto px-6 pt-40">
         <div className="max-w-5xl mx-auto">
@@ -114,7 +112,7 @@ export default function CareerRoadmapDetail() {
               <h1 className="text-6xl font-bold tracking-tighter text-premium">
                 {roadmap.title} <span className="text-gradient-purple">Intelligence.</span>
               </h1>
-              <p className="text-xl text-muted-foreground font-light max-w-xl">
+              <p className="text-xl text-muted-foreground font-light max-xl">
                 Master the curriculum nodes sequentially to achieve {roadmap.title} elite certification.
               </p>
             </motion.div>
@@ -253,7 +251,7 @@ export default function CareerRoadmapDetail() {
                 </div>
                 <div>
                   <h2 className="text-4xl font-bold tracking-tighter">Mission Success.</h2>
-                  <p className="text-muted-foreground font-light max-w-sm mx-auto mt-2">
+                  <p className="text-muted-foreground font-light max-sm mx-auto mt-2">
                     You have achieved 100% mastery on the {roadmap.title} track.
                   </p>
                 </div>

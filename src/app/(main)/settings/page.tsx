@@ -4,7 +4,6 @@ import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useUser, useFirestore, useAuth, useDoc } from '@/firebase';
 import { motion } from 'framer-motion';
-import NavigationControls from '@/components/NavigationControls';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -212,8 +211,7 @@ export default function SettingsPage() {
   return (
     <div className="min-h-screen bg-[#050816]">
       <div className="particles-bg" />
-      <NavigationControls />
-      
+
       <main className="container mx-auto px-6 pt-32 pb-32">
         <div className="max-w-6xl mx-auto">
           <header className="mb-16">

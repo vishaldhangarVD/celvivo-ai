@@ -6,7 +6,6 @@ import { useUser, useFirestore, useCollection, useStorage } from '@/firebase';
 import { collection, query, orderBy, doc, setDoc, deleteDoc, addDoc, serverTimestamp } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
 import { useRouter } from 'next/navigation';
-import NavigationControls from '@/components/NavigationControls';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -516,9 +515,19 @@ export default function ResumeAtelierPage() {
   };
 
   /* External Certificates Handlers */
-  const handleExternalFileUpload = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!user || !db || !storage || !externalCertForm.file || !externalCertForm.title) return;
+  const handleExternalFileUpload = async () => {
+    if (!externalCertForm.title.trim()) {
+      toast({ variant: "destructive", title: "Missing Title", description: "Please enter a title for the certificate." });
+      return;
+    }
+    if (!externalCertForm.file) {
+      toast({ variant: "destructive", title: "File Missing", description: "Please select a certificate file." });
+      return;
+    }
+    if (!user || !db || !storage) {
+      toast({ variant: "destructive", title: "Connection Error", description: "Identity node or storage service unavailable." });
+      return;
+    }
 
     setIsExternalUploading(true);
     try {
@@ -542,7 +551,11 @@ export default function ResumeAtelierPage() {
       setExternalCertForm({ title: '', issuer: '', file: null });
     } catch (e: any) {
       console.error(e);
-      toast({ variant: "destructive", title: "Upload Fault", description: e.message });
+      toast({ 
+        variant: "destructive", 
+        title: "Upload Fault", 
+        description: e.message || "Failed to transmit file to cloud storage." 
+      });
     } finally {
       setIsExternalUploading(false);
     }
@@ -696,8 +709,6 @@ export default function ResumeAtelierPage() {
         }
       `}</style>
 
-      <NavigationControls />
-
       <div className="max-w-[1220px] mx-auto px-6 pt-24 pb-32">
         {view === 'list' ? (
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-12">
@@ -775,7 +786,7 @@ export default function ResumeAtelierPage() {
                   <p className="text-sm text-[#cfc7b4] font-light">Calibrate your career blueprint against specific hiring protocols.</p>
                 </DialogHeader>
 
-                <Tabs value={atsTab} onValueChange={(v: any) => set_atsTab(v)} className="w-full">
+                <Tabs value={atsTab} onValueChange={(v: any) => setAtsTab(v)} className="w-full">
                   <TabsList className="grid grid-cols-2 mb-8 glass border-white/5 p-1 rounded-2xl h-14 bg-white/5">
                     <TabsTrigger value="saved" disabled={!savedResumes || savedResumes.length === 0} className="rounded-xl data-[state=active]:bg-[#c9a24d] data-[state=active]:text-black text-[10px] font-bold uppercase tracking-widest transition-all">Use Saved Blueprint</TabsTrigger>
                     <TabsTrigger value="upload" className="rounded-xl data-[state=active]:bg-[#c9a24d] data-[state=active]:text-black text-[10px] font-bold uppercase tracking-widest transition-all">Upload External File</TabsTrigger>
@@ -1377,7 +1388,7 @@ export default function ResumeAtelierPage() {
                                       <Button onClick={() => setIsExternalCertFormOpen(false)} variant="ghost" className="flex-1 h-9 rounded-xl text-[9px] font-bold uppercase tracking-widest">Cancel</Button>
                                       <Button 
                                         onClick={handleExternalFileUpload} 
-                                        disabled={isExternalUploading || !externalCertForm.file || !externalCertForm.title}
+                                        disabled={isExternalUploading}
                                         className="flex-[2] h-9 bg-[#c9a24d] text-black rounded-xl text-[9px] font-bold uppercase tracking-widest"
                                       >
                                         {isExternalUploading ? <Loader2 className="w-3 h-3 animate-spin" /> : "Upload"}
@@ -1662,4 +1673,3 @@ function ResumePreview({ data, theme }: { data: ResumeData, theme: string }) {
     </div>
   );
 }
-

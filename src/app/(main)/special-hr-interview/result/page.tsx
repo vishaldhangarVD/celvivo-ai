@@ -1,28 +1,20 @@
 'use client';
 
-import React, { useEffect, useState, useMemo, Suspense } from 'react';
+import React, { useMemo, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { useUser, useFirestore, useDoc } from '@/firebase';
 import { doc } from 'firebase/firestore';
 import { 
-  Trophy, 
-  Target, 
-  Zap, 
   MessageSquare, 
   History, 
-  ChevronRight, 
   LayoutDashboard,
-  ShieldCheck,
-  Star,
-  Award,
   Loader2,
   Clock,
-  ArrowRight,
   AlertCircle
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
+import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 
@@ -72,7 +64,7 @@ function ResultContent() {
             <div className="space-y-4">
               <Badge className="bg-purple-500/20 text-purple-400 border-none px-4 py-1 text-[10px] tracking-widest font-bold uppercase">Simulation Archive v5.0</Badge>
               <h1 className="text-6xl font-bold tracking-tighter text-premium leading-tight">Special HR <br /><span className="text-gradient-purple">Report.</span></h1>
-              <p className="text-xl text-muted-foreground font-light max-w-xl">Deep-dive into your real-time neural avatar interaction archives.</p>
+              <p className="text-xl text-muted-foreground font-light max-xl">Deep-dive into your real-time neural avatar interaction archives.</p>
             </div>
             <div className="flex gap-4">
               <Button onClick={() => router.push('/dashboard')} className="h-16 px-10 glass border-white/10 rounded-2xl flex gap-3 text-xs font-bold tracking-widest uppercase">

@@ -1,4 +1,3 @@
-
 "use client";
 import { Suspense, useEffect, useState, useRef, useMemo, useCallback } from "react";
 import { useRouter, useParams } from "next/navigation";
@@ -10,16 +9,15 @@ import {
   Mic, 
   Home, 
   MessageSquare, 
-  PhoneOff, 
   MicOff, 
   ChevronRight, 
-  Timer, 
   Video, 
   VideoOff,
   Activity, 
   Award, 
   Clock,
-  User
+  User,
+  X
 } from "lucide-react";
 import { aiMockInterview, type AiMockInterviewOutput } from "@/ai/flows/ai-mock-interview-v2";
 import { generateInterviewFeedback } from "@/ai/flows/ai-interview-feedback";

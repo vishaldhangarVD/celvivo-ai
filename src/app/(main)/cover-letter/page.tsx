@@ -2,7 +2,6 @@
 
 import { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import NavigationControls from '@/components/NavigationControls';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -116,7 +115,6 @@ export default function CoverLetterPage() {
   return (
     <div className="min-h-screen bg-[#050816] pb-32">
       <div className="particles-bg" />
-      <NavigationControls />
 
       <main className="container mx-auto px-6 pt-40">
         <div className="max-w-7xl mx-auto">
@@ -240,7 +238,7 @@ export default function CoverLetterPage() {
                       <Sparkles className="w-10 h-10 text-white/20" />
                     </div>
                     <h3 className="text-2xl font-bold mb-4">Awaiting Signal</h3>
-                    <p className="text-muted-foreground font-light max-w-sm">
+                    <p className="text-muted-foreground font-light max-sm">
                       Input company and role parameters to synthesize your professional narrative.
                     </p>
                   </div>

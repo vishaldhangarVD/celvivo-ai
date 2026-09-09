@@ -1,8 +1,6 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
-import Navbar from "@/components/layout/Navbar";
-import NavigationControls from "@/components/NavigationControls";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -15,7 +13,6 @@ import {
   Volume2,
   Play,
   Square,
-  Brain,
   MessageSquare,
   MicOff,
   AlertCircle,
@@ -609,27 +606,10 @@ export default function SpecialHRInterview() {
     )}>
       <div className="particles-bg" />
       
-      {!interviewStarted && <Navbar />}
-      
-      {debugInfo && (
-        <div className="fixed top-20 left-4 z-[100] p-4 glass rounded-xl border-accent/20 max-w-xs text-[9px] font-mono text-accent/80 space-y-2 pointer-events-none">
-          <div className="flex items-center gap-2 mb-1">
-             <Bug className="w-3 h-3" />
-             <span className="font-bold uppercase tracking-widest">Diagnostic Node</span>
-          </div>
-          <p>MODEL: {debugInfo.modelUsed}</p>
-          <p>SUCCESS: {debugInfo.geminiSucceeded ? "YES" : "NO"}</p>
-          <p>FALLBACK: {debugInfo.usedFallback ? "YES" : "NO"}</p>
-          {debugInfo.geminiError && <p className="text-red-400">ERROR: {debugInfo.geminiError}</p>}
-        </div>
-      )}
-      
       <main className={cn(
         "flex-1 relative flex flex-col items-center justify-center",
         interviewStarted ? "h-screen w-screen p-0 m-0" : "container mx-auto px-6 pt-32 pb-16"
       )}>
-        {!interviewStarted && <NavigationControls />}
-
         <div className={cn(
           "bg-black overflow-hidden relative",
           interviewStarted 
