@@ -10,7 +10,8 @@
     "start": "next start",
     "lint": "next lint",
     "typecheck": "tsc --noEmit",
-    "deploy:preview": "firebase hosting:channel:deploy preview"
+    "deploy:preview": "firebase hosting:channel:deploy preview",
+    "clean": "rm -rf .next node_modules/.cache avatar-service/temp/* && npm prune"
   },
   "dependencies": {
     "@d-id/client-sdk": "^2.0.6",
