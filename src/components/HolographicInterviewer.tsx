@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useEffect, useState, useRef } from 'react';
@@ -62,9 +61,29 @@ export default function HolographicInterviewer({
         
         // 3. Voice selection logic
         const voices = synth.getVoices();
+        
+        // Refined selection priority for en-IN female/high-quality voices
         const preferredVoice = 
-          voices.find(v => v.lang === 'en-IN') ||
-          voices.find(v => v.lang.startsWith('en') && (v.name.includes('Google') || v.name.includes('Neural'))) ||
+          // Priority 1: Indian English specific female/natural names
+          voices.find(v => (v.lang === 'en-IN' || v.lang === 'en_IN') && (
+            v.name.toLowerCase().includes('female') || 
+            v.name.toLowerCase().includes('heera') || 
+            v.name.toLowerCase().includes('kalpana') || 
+            v.name.toLowerCase().includes('neerja')
+          )) ||
+          // Priority 2: Indian English Google/Neural
+          voices.find(v => (v.lang === 'en-IN' || v.lang === 'en_IN') && (
+            v.name.toLowerCase().includes('google') || 
+            v.name.toLowerCase().includes('neural')
+          )) ||
+          // Priority 3: Any Indian English
+          voices.find(v => v.lang === 'en-IN' || v.lang === 'en_IN') ||
+          // Priority 4: High quality English (Global)
+          voices.find(v => v.lang.startsWith('en') && (
+            v.name.includes('Google') || 
+            v.name.includes('Neural')
+          )) ||
+          // Priority 5: Standard English Fallback
           voices.find(v => v.lang.startsWith('en'));
 
         if (preferredVoice) {
@@ -72,7 +91,7 @@ export default function HolographicInterviewer({
         }
         
         utterance.lang = 'en-IN';
-        utterance.rate = 0.92;
+        utterance.rate = 0.92; // Slightly slower for clearer pacing
         utterance.pitch = 1;
 
         // 4. Reactive visual feedback
