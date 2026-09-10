@@ -72,7 +72,7 @@ export default function HolographicInterviewer({
         }
         
         utterance.lang = 'en-IN';
-        utterance.rate = 1.05;
+        utterance.rate = 0.92;
         utterance.pitch = 1;
 
         // 4. Reactive visual feedback
