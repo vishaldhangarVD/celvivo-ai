@@ -1,4 +1,3 @@
-
 'use server';
 
 import { initializeFirebase } from '@/firebase/init';
@@ -27,11 +26,18 @@ export interface UsageLogData {
 export async function logUsage(data: UsageLogData) {
   try {
     const { firestore } = initializeFirebase();
+    
+    // Validate required nodes before write
+    if (!data.feature) data.feature = 'unknown_feature';
+    
     await addDoc(collection(firestore, 'usage_logs'), {
       ...data,
       timestamp: serverTimestamp()
     });
+    
+    console.log(`[UsageLogger] Successfully archived telemetry for: ${data.feature}`);
   } catch (error) {
+    // Avoid circular logging of logging errors
     console.error('[UsageLogger] Failed to record usage node:', error);
   }
 }

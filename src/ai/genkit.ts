@@ -1,8 +1,7 @@
 import { genkit } from 'genkit';
 import { googleAI } from '@genkit-ai/google-genai';
 import { config } from 'dotenv';
-import { initializeFirebase } from '@/firebase/init';
-import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import { logUsage } from '@/services/usage-logger';
 
 // Ensure environment variables are loaded for server-side AI initialization
 if (typeof window === 'undefined') {
@@ -33,19 +32,6 @@ if (typeof window === 'undefined') {
   console.log('-----------------------------------------------\n');
 }
 
-async function logGeminiUsage(data: any) {
-  try {
-    const { firestore } = initializeFirebase();
-    await addDoc(collection(firestore, 'usage_logs'), {
-      ...data,
-      provider: data.provider || 'gemini',
-      timestamp: serverTimestamp()
-    });
-  } catch (e) {
-    if (process.env.NODE_ENV === 'development') console.error("[Usage Middleware] Error:", e);
-  }
-}
-
 export const ai = genkit({
   plugins: [
     googleAI(apiKey ? { apiKey } : {}),
@@ -64,22 +50,24 @@ export async function runWithResilience(promptFn: any, input: any, metadata?: an
   async function attemptExecution(model: string) {
     for (let i = 0; i <= 3; i++) {
       try {
-        console.log(`[Neural] Executing: ${model} (Attempt ${i + 1}/4)`);
+        console.log(`[Neural] Executing Turn: ${model} (Attempt ${i + 1}/4)`);
         const result = await promptFn(input, { model, metadata });
         
         if (result?.usage) {
-          // Add metadata intelligence: Extract feature, userId, and sessionId if not explicitly provided
-          const feature = metadata?.feature || promptFn.name || 'unknown';
+          // Standardize metadata extraction
+          const feature = metadata?.feature || 'unspecified_flow';
           const userId = metadata?.userId || input?.userId;
           const sessionId = metadata?.sessionId || input?.sessionId;
 
-          logGeminiUsage({
+          // LOGGING PROTOCOL: Using standardized Genkit 1.x usage field names
+          logUsage({
             userId,
             sessionId,
             feature,
             model: model,
-            inputTokens: result.usage.promptTokenCount,
-            outputTokens: result.usage.candidatesTokenCount
+            inputTokens: result.usage.inputTokens,
+            outputTokens: result.usage.outputTokens,
+            provider: 'gemini'
           });
         }
         
@@ -88,23 +76,19 @@ export async function runWithResilience(promptFn: any, input: any, metadata?: an
         const status = e.status || e.code;
         const message = e.message || "";
         
-        // 429 Rate Limit Logic
         if (status === 429 && i < 3) {
           const match = message.match(/retry in (\d+\.?\d*)s/i);
-          let delay = match ? parseFloat(match[1]) * 1000 : 20000; // Parse Google's suggested wait or default to 20s
-          
-          console.warn(`[Gemini] 429 Rate Limit Hit. Free-tier quota exceeded. Waiting ${Math.ceil(delay/1000)}s before attempt ${i + 2}/4...`);
-          await new Promise(r => setTimeout(r, delay + 500)); // Add 500ms safety buffer
+          let delay = match ? parseFloat(match[1]) * 1000 : 20000;
+          console.warn(`[Gemini] 429 Rate Limit. Waiting ${Math.ceil(delay/1000)}s...`);
+          await new Promise(r => setTimeout(r, delay + 500));
           continue;
         }
 
         const isOverloaded = status === 503 || message.includes("UNAVAILABLE") || message.includes("high demand");
-
-        console.warn(`[Neural] Attempt ${i + 1} Failed for ${model}:`, e.message);
+        console.warn(`[Neural] Attempt ${i + 1} Failed:`, e.message);
 
         if ((isOverloaded || retryableStatuses.includes(status)) && i < 3) {
           const delay = delays[i];
-          console.log(`[Gemini] Retry attempt ${i + 2} after ${isOverloaded ? 'overload' : status}, waiting ${delay}ms`);
           await new Promise(r => setTimeout(r, delay));
           continue;
         }
