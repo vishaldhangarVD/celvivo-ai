@@ -11,7 +11,7 @@
     "lint": "next lint",
     "typecheck": "tsc --noEmit",
     "deploy:preview": "firebase hosting:channel:deploy preview",
-    "clean": "rm -rf .next node_modules/.cache avatar-service/temp/* /tmp/puppeteer_dev_profile* && npm prune",
+    "clean": "rm -rf .next node_modules/.cache avatar-service/temp/* /tmp/puppeteer_dev_profile* /ephemeral/puppeteer* /ephemeral/tmp* /ephemeral/*.pdf && npm prune",
     "disk-audit": "du -sh /ephemeral/* /home/studio/* 2>/dev/null | sort -rh | head -20"
   },
   "dependencies": {

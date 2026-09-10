@@ -201,7 +201,7 @@ export default function UsageAnalyticsPage() {
                 <div className="w-12 h-12 rounded-xl bg-orange-500/10 flex items-center justify-center text-orange-400">
                   <Video className="w-6 h-6" />
                 </div>
-                <Badge variant="outline" className="text-[8px] border-white/10 text-white/40">D-ID VIDEO</Badge>
+                <Badge variant="outline" className="text-[8px] border-white/10 text-white/40">AI Avatar Usage</Badge>
               </div>
               <div>
                 <p className="text-3xl font-bold tabular-nums">{stats?.didMinutes.toFixed(1)} Min</p>
@@ -262,7 +262,7 @@ export default function UsageAnalyticsPage() {
                   <div className="flex gap-4 items-start p-4 glass rounded-2xl border-yellow-500/10">
                     <AlertCircle className="w-5 h-5 text-yellow-500 shrink-0 mt-0.5" />
                     <p className="text-[11px] text-white/60 leading-relaxed font-light">
-                      Costs are calculated based on public tier rates. Actual billing may vary by enterprise quota or free-tier grants.
+                      Costs are calculated based on public tier rates for Gemini 3.6. Actual billing may vary by enterprise quota or free-tier grants.
                     </p>
                   </div>
                   <div className="flex gap-4 items-start p-4 glass rounded-2xl border-accent/10">
