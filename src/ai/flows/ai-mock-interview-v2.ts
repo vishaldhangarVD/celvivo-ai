@@ -1,8 +1,8 @@
-
 'use server';
 /**
  * @fileOverview Nexvoro AI Virtual Interview Agent.
  * Unified with central model protocol to prevent 404 mismatches.
+ * Includes explicit telemetry for turn-by-turn debugging.
  */
 
 import { ai, runWithResilience, PRIMARY_MODEL } from '@/ai/genkit';
@@ -85,10 +85,10 @@ const AiMockInterviewOutputSchema = z.object({
   isInterviewComplete: z.boolean(),
   isHint: z.boolean().optional(),
   _debug: z.object({
-    modelUsed: z.string(),
-    geminiSucceeded: z.boolean(),
+    modelUsed: string,
+    geminiSucceeded: boolean,
     geminiError: z.string().optional(),
-    usedFallback: z.boolean()
+    usedFallback: boolean
   }).optional()
 });
 export type AiMockInterviewOutput = z.infer<typeof AiMockInterviewOutputSchema>;
@@ -105,7 +105,13 @@ const prompt = ai.definePrompt({
 
 CORE INTERVIEW RULE:
 Every question must be intelligently connected to the candidate's resume, previous answers, or Round 1 performance nodes.
-CRITICAL: DO NOT repeat any question that has already been asked in this session.
+
+MANDATORY: DO NOT REPEAT ANY OF THESE QUESTIONS (EVEN BY REPHRASING):
+{{#each askedQuestions}}
+- {{{this}}}
+{{/each}}
+
+SEMANTIC IDENTITY CHECK: Before outputting, ensure the core concept of your next question is entirely different from the questions listed above.
 
 RESUME DATA:
 Summary: {{{resumeSummary}}}
@@ -115,11 +121,6 @@ Projects: {{#each resumeProjects}}{{{this}}}, {{/each}}
 ROUND 1 PERFORMANCE:
 Aptitude: {{{aptitudeScore}}}%
 Coding: {{{codingScore}}}%
-
-PREVIOUSLY ASKED QUESTIONS (DO NOT REPEAT):
-{{#each askedQuestions}}
-- {{{this}}}
-{{/each}}
 
 CONVERSATION HISTORY:
 {{#each history}}
@@ -142,6 +143,11 @@ const aiMockInterviewFlow = ai.defineFlow(
     outputSchema: AiMockInterviewOutputSchema,
   },
   async (input) => {
+    const turnNumber = input.currentMainQuestionIndex;
+    const askedCount = input.askedQuestions?.length || 0;
+    
+    console.log(`[Special HR] Turn ${turnNumber} - Starting Neural Synthesis. History Size: ${input.history.length}. Previously Asked: ${askedCount}`);
+
     try {
       const { output } = await runWithResilience(prompt, {
         ...input,
@@ -156,6 +162,8 @@ const aiMockInterviewFlow = ai.defineFlow(
     
       if (!output) throw new Error("Neural synthesis empty.");
     
+      console.log(`[Special HR] Turn ${turnNumber} - Gemini SUCCESS. Generated: "${output.nextQuestion.substring(0, 60)}..."`);
+
       return {
         ...output,
         isInterviewComplete: output.isInterviewComplete || input.currentMainQuestionIndex >= 12,
@@ -167,9 +175,8 @@ const aiMockInterviewFlow = ai.defineFlow(
       };
     
     } catch (error: any) {
-      console.error("[Special HR] Critical Failure:", error.message);
+      console.error(`[Special HR] Turn ${turnNumber} - Neural FAILURE:`, error.message);
       
-      // Determine if this is a quota issue to show an honest message
       const isQuotaError = error.message?.includes("429") || error.message?.includes("Quota");
       const fallbackIdx = input.currentMainQuestionIndex % FALLBACK_QUESTIONS.length;
       

@@ -332,8 +332,6 @@ export default function SpecialHRInterview() {
         ? [...conversationHistory, { question: currentQuestion, answer: userAnswer }]
         : conversationHistory;
       
-      console.log(`[Interview] Turn ${nextIndex}: Processing answer "${userAnswer}" for question "${currentQuestion}"`);
-      
       if (userAnswer) setConversationHistory(history);
 
       const result: AiMockInterviewOutput = await aiMockInterview({
@@ -354,11 +352,10 @@ export default function SpecialHRInterview() {
         currentStage: interviewStage,
         currentDifficulty: interviewDifficulty,
         hintUsed: false,
-        round1Context: round1Context 
+        round1Context: round1Context,
+        userId: user?.uid,
+        sessionId: journey?.sessionId
       });
-
-      console.log(`[Interview] Turn ${nextIndex}: Gemini generated NEW question: "${result.nextQuestion}"`);
-      console.log(`[Interview] Next Stage: ${result.stage}, Difficulty: ${result.difficulty}`);
 
       setDebugInfo(result._debug);
       setCurrentQuestion(result.nextQuestion);
@@ -821,6 +818,43 @@ export default function SpecialHRInterview() {
                  {isProcessing ? <Loader2 className="w-3 h-3 mr-2 animate-spin" /> : <Square className="w-3 h-3 mr-2 fill-current" />} End Interview
                </Button>
             </div>
+            
+            {/* Diagnostic Overlay */}
+            <AnimatePresence>
+              {debugInfo && (
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="fixed bottom-24 right-8 z-[100] w-80 glass border-white/20 p-4 rounded-2xl shadow-2xl space-y-3 pointer-events-auto backdrop-blur-xl"
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Bug className="w-4 h-4 text-accent" />
+                      <span className="text-[10px] font-black uppercase tracking-widest text-white">Neural Diagnostic</span>
+                    </div>
+                    <button onClick={() => setDebugInfo(null)} className="text-white/40 hover:text-white"><X className="w-3 h-3" /></button>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div className="p-2 bg-white/5 rounded-lg border border-white/5">
+                      <p className="text-[7px] font-bold text-white/40 uppercase">Status</p>
+                      <p className={cn("text-[9px] font-bold uppercase", debugInfo.geminiSucceeded ? "text-green-400" : "text-red-400")}>
+                        {debugInfo.geminiSucceeded ? "Success" : "Fallback"}
+                      </p>
+                    </div>
+                    <div className="p-2 bg-white/5 rounded-lg border border-white/5">
+                      <p className="text-[7px] font-bold text-white/40 uppercase">Model</p>
+                      <p className="text-[9px] font-bold text-accent truncate">{debugInfo.modelUsed?.split('/').pop() || 'Primary'}</p>
+                    </div>
+                  </div>
+                  {!debugInfo.geminiSucceeded && debugInfo.geminiError && (
+                    <div className="p-2 bg-red-500/10 rounded-lg border border-red-500/20">
+                      <p className="text-[7px] font-bold text-red-400 uppercase">Error Details</p>
+                      <p className="text-[8px] text-white/70 line-clamp-2">{debugInfo.geminiError}</p>
+                    </div>
+                  )}
+                </motion.div>
+              )}
+            </AnimatePresence>
           </div>
         )}
       </main>
@@ -829,6 +863,9 @@ export default function SpecialHRInterview() {
         html, body {
           height: 100%;
           ${interviewStarted ? 'overflow: hidden !important;' : ''}
+        }
+        @keyframes shimmer {
+          100% { transform: translateX(100%); }
         }
       `}</style>
     </div>
