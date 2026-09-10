@@ -357,7 +357,16 @@ export default function ResumeAtelierPage() {
 
   const handleEdit = (resume: any) => {
     setActiveResumeId(resume.id);
-    setData(resume);
+    // CRITICAL FIX: Ensure all arrays are initialized to prevent map crashes on older records
+    setData({
+      ...INITIAL_DATA,
+      ...resume,
+      skills: resume.skills || [],
+      experience: resume.experience || [],
+      projects: resume.projects || [],
+      education: resume.education || [],
+      certifications: resume.certifications || []
+    });
     setView('editor');
     setCurrentStep(1);
     setAtsResult(null);
@@ -1083,7 +1092,7 @@ export default function ResumeAtelierPage() {
                         </div>
                         
                         <div className="space-y-6">
-                          {data.experience.map((exp, i) => (
+                          {(data.experience || []).map((exp, i) => (
                             <div key={i} className="p-6 border border-[#332c22] bg-[#1c1814] relative group">
                               {data.experience.length > 1 && (
                                 <button onClick={() => {
@@ -1132,11 +1141,11 @@ export default function ResumeAtelierPage() {
                               </div>
                             </div>
                           ))}
-                          <button onClick={() => setData({...data, experience: [...data.experience, {company:"",role:"",dates:"",bullets:"",type:"work"}]})} className="w-full py-4 border border-dashed border-[#332c22] text-[#8a723a] text-[10px] font-mono uppercase tracking-widest hover:border-[#c9a24d]/40">+ Add Another Position / Internship</button>
+                          <button onClick={() => setData({...data, experience: [...(data.experience || []), {company:"",role:"",dates:"",bullets:"",type:"work"}]})} className="w-full py-4 border border-dashed border-[#332c22] text-[#8a723a] text-[10px] font-mono uppercase tracking-widest hover:border-[#c9a24d]/40">+ Add Another Position / Internship</button>
                         </div>
                         <div id="proj-list" className="space-y-6">
                            <Label className="text-[9px] font-mono uppercase text-[#8a723a]">Projects (Optional)</Label>
-                           {data.projects.map((p, i) => (
+                           {(data.projects || []).map((p, i) => (
                              <div key={i} className="p-6 border border-[#332c22] bg-[#1c1814] relative group">
                                <button onClick={() => {
                                  const n = [...data.projects]; n.splice(i, 1); setData({...data, projects: n});
@@ -1151,7 +1160,7 @@ export default function ResumeAtelierPage() {
                                }} className="ghost-textarea" rows={2} /></div>
                              </div>
                            ))}
-                           <button onClick={() => setData({...data, projects: [...data.projects, {name:"",desc:""}]})} className="w-full py-4 border border-dashed border-[#332c22] text-[#8a723a] text-[10px] font-mono uppercase tracking-widest hover:border-[#c9a24d]/40">+ Add a Project</button>
+                           <button onClick={() => setData({...data, projects: [...(data.projects || []), {name:"",desc:""}]})} className="w-full py-4 border border-dashed border-[#332c22] text-[#8a723a] text-[10px] font-mono uppercase tracking-widest hover:border-[#c9a24d]/40">+ Add a Project</button>
                         </div>
                         <div className="flex gap-4">
                           <Button onClick={() => setCurrentStep(2)} variant="outline" className="flex-1 h-14 border-[#332c22] text-[#cfc7b4] rounded-none font-mono text-[11px] uppercase tracking-widest">← Back</Button>
@@ -1172,7 +1181,7 @@ export default function ResumeAtelierPage() {
                            <div className="space-y-2">
                              <Label className="text-[9px] font-mono uppercase text-[#8a723a]">Skills Archive</Label>
                              <div className="flex flex-wrap gap-2">
-                               {data.skills.map((s, i) => (
+                               {(data.skills || []).map((s, i) => (
                                  <Badge key={i} className="bg-transparent border border-[#332c22] text-[#cfc7b4] px-3 py-1.5 rounded-none font-light gap-2">
                                    {s} <button onClick={() => {
                                      const n = [...data.skills]; n.splice(i, 1); setData({...data, skills: n});
@@ -1227,7 +1236,7 @@ export default function ResumeAtelierPage() {
 
                            <div className="space-y-4">
                              <Label className="text-[9px] font-mono uppercase text-[#8a723a]">Education</Label>
-                             {data.education.map((ed, i) => (
+                             {(data.education || []).map((ed, i) => (
                                <div key={i} className="p-4 border border-[#332c22] bg-[#1c1814] relative">
                                  {data.education.length > 1 && (
                                    <button onClick={() => {
@@ -1250,12 +1259,12 @@ export default function ResumeAtelierPage() {
                                  </div>
                                </div>
                              ))}
-                             <button onClick={() => setData({...data, education: [...data.education, {school:"",degree:"",dates:""}]})} className="w-full py-3 border border-dashed border-[#332c22] text-[9px] font-mono text-[#8a723a] uppercase">+ Add Education</button>
+                             <button onClick={() => setData({...data, education: [...(data.education || []), {school:"",degree:"",dates:""}]})} className="w-full py-3 border border-dashed border-[#332c22] text-[9px] font-mono text-[#8a723a] uppercase">+ Add Education</button>
                            </div>
 
                            <div className="space-y-4">
                              <Label className="text-[9px] font-mono uppercase text-[#8a723a]">Certifications (Optional)</Label>
-                             {data.certifications.map((cert, i) => (
+                             {(data.certifications || []).map((cert, i) => (
                                <div key={i} className="p-4 border border-[#332c22] bg-[#1c1814] relative">
                                  <button onClick={() => {
                                    const n = [...data.certifications]; n.splice(i, 1); setData({...data, certifications: n});
@@ -1276,7 +1285,7 @@ export default function ResumeAtelierPage() {
                                  </div>
                                </div>
                              ))}
-                             <button onClick={() => setData({...data, certifications: [...data.certifications, {title:"",issuer:"",date:""}]})} className="w-full py-3 border border-dashed border-[#332c22] text-[9px] font-mono text-[#8a723a] uppercase">+ Add Certification</button>
+                             <button onClick={() => setData({...data, certifications: [...(data.certifications || []), {title:"",issuer:"",date:""}]})} className="w-full py-3 border border-dashed border-[#332c22] text-[9px] font-mono text-[#8a723a] uppercase">+ Add Certification</button>
                            </div>
                         </div>
 
@@ -1536,7 +1545,7 @@ function ResumePreview({ data, theme }: { data: ResumeData, theme: string }) {
 
   const expItems = () => (data.experience || []).map((e, i) => (
     <div key={i} className="doc-job">
-      <div className="doc-jobhead"><span>{e.role || 'Title'}{e.company ? `, ${e.company}` : ''}{e.type === 'internship' ? ' (Internship)' : ''}</span><span>{e.dates}</span></div>
+      <div className="doc-jobhead"><span>{e.role || 'Title'}{e.company ? `, ${e.company}` : ''}{(e.type || 'work') === 'internship' ? ' (Internship)' : ''}</span><span>{e.dates}</span></div>
       {bulletsHtml(e.bullets || '')}
     </div>
   ));
@@ -1570,7 +1579,7 @@ function ResumePreview({ data, theme }: { data: ResumeData, theme: string }) {
 
   const timelineItems = () => {
     const items = [
-      ...(data.experience || []).map(e => ({ head: `${e.role || 'Title'}${e.company ? ', ' + e.company : ''}${e.type === 'internship' ? ' (Internship)' : ''}`, dates: e.dates, bullets: e.bullets })),
+      ...(data.experience || []).map(e => ({ head: `${e.role || 'Title'}${e.company ? ', ' + e.company : ''}${(e.type || 'work') === 'internship' ? ' (Internship)' : ''}`, dates: e.dates, bullets: e.bullets })),
       ...(data.education || []).map(ed => ({ head: `${ed.degree}${ed.degree && ed.school ? ', ' + ed.school : ''}`, dates: ed.dates, bullets: '' })),
     ];
     return items.map((it, i) => (

@@ -16,6 +16,8 @@ import {
   Sparkles
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Card } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
 import { useUser, useFirestore, useCollection, useDoc } from '@/firebase';
 import { collection, query, orderBy, doc } from 'firebase/firestore';
 import { useMemo, useState } from 'react';
@@ -288,7 +290,7 @@ export default function CertificatesPage() {
                       </div>
                       <div className="space-y-2">
                         <h3 className="text-2xl font-bold tracking-tight text-white">No AI-Verified Certificates Yet</h3>
-                        <p className="text-muted-foreground font-light max-w-md mx-auto text-sm">
+                        <p className="text-muted-foreground font-light max-md mx-auto text-sm">
                           Score 70% or higher in an interview simulation to earn an AI-verified credential.
                         </p>
                       </div>
@@ -322,7 +324,7 @@ export default function CertificatesPage() {
                     {allSessions.map((session: any, i: number) => {
                       const isCertified = (session.overallScore || 0) >= MASTERY_THRESHOLD;
                       return (
-                        <motion.div key={session.id} initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: (i % 10) * 0.05 }}>
+                        <motion.div key={session.id} initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: (i % 10) * 0.05 }}>
                           <Card className="glass px-8 py-6 rounded-2xl border-white/5 hover:border-accent/30 transition-all flex flex-col md:flex-row items-center justify-between gap-6 group">
                             <div className="flex items-center gap-8 w-full md:w-auto">
                               <div className={cn(
@@ -393,4 +395,3 @@ export default function CertificatesPage() {
     </div>
   );
 }
-
