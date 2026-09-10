@@ -20,8 +20,7 @@ import {
   Keyboard,
   Send,
   X,
-  User,
-  Bug
+  User
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
@@ -79,7 +78,6 @@ export default function SpecialHRInterview() {
   
   const [isTypeMode, setIsTypeMode] = useState(false);
   const [typedAnswer, setTypedAnswer] = useState("");
-  const [debugInfo, setDebugInfo] = useState<any>(null);
 
   const agentVideoRef = useRef<HTMLVideoElement>(null);
   const agentManagerRef = useRef<any>(null);
@@ -357,7 +355,6 @@ export default function SpecialHRInterview() {
         sessionId: journey?.sessionId
       });
 
-      setDebugInfo(result._debug);
       setCurrentQuestion(result.nextQuestion);
       setQuestionIndex(nextIndex);
       setInterviewStage(result.stage);
@@ -658,7 +655,7 @@ export default function SpecialHRInterview() {
                      </div>
                      <div className="space-y-4">
                        <h3 className="text-3xl font-bold tracking-tighter text-white">You're Ready</h3>
-                       <p className="text-muted-foreground font-light max-w-xs mx-auto">Your camera and microphone are ready. This interview will feel like a real video interview.</p>
+                       <p className="text-muted-foreground font-light max-xs mx-auto">Your camera and microphone are ready. This interview will feel like a real video interview.</p>
                      </div>
 
                      {isAudioBlocked ? (
@@ -818,43 +815,6 @@ export default function SpecialHRInterview() {
                  {isProcessing ? <Loader2 className="w-3 h-3 mr-2 animate-spin" /> : <Square className="w-3 h-3 mr-2 fill-current" />} End Interview
                </Button>
             </div>
-            
-            {/* Diagnostic Overlay */}
-            <AnimatePresence>
-              {debugInfo && (
-                <motion.div
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  className="fixed bottom-24 right-8 z-[100] w-80 glass border-white/20 p-4 rounded-2xl shadow-2xl space-y-3 pointer-events-auto backdrop-blur-xl"
-                >
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <Bug className="w-4 h-4 text-accent" />
-                      <span className="text-[10px] font-black uppercase tracking-widest text-white">Neural Diagnostic</span>
-                    </div>
-                    <button onClick={() => setDebugInfo(null)} className="text-white/40 hover:text-white"><X className="w-3 h-3" /></button>
-                  </div>
-                  <div className="grid grid-cols-2 gap-2">
-                    <div className="p-2 bg-white/5 rounded-lg border border-white/5">
-                      <p className="text-[7px] font-bold text-white/40 uppercase">Status</p>
-                      <p className={cn("text-[9px] font-bold uppercase", debugInfo.geminiSucceeded ? "text-green-400" : "text-red-400")}>
-                        {debugInfo.geminiSucceeded ? "Success" : "Fallback"}
-                      </p>
-                    </div>
-                    <div className="p-2 bg-white/5 rounded-lg border border-white/5">
-                      <p className="text-[7px] font-bold text-white/40 uppercase">Model</p>
-                      <p className="text-[9px] font-bold text-accent truncate">{debugInfo.modelUsed?.split('/').pop() || 'Primary'}</p>
-                    </div>
-                  </div>
-                  {!debugInfo.geminiSucceeded && debugInfo.geminiError && (
-                    <div className="p-2 bg-red-500/10 rounded-lg border border-red-500/20">
-                      <p className="text-[7px] font-bold text-red-400 uppercase">Error Details</p>
-                      <p className="text-[8px] text-white/70 line-clamp-2">{debugInfo.geminiError}</p>
-                    </div>
-                  )}
-                </motion.div>
-              )}
-            </AnimatePresence>
           </div>
         )}
       </main>
