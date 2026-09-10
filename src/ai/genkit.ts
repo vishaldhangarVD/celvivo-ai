@@ -1,3 +1,4 @@
+
 import { genkit } from 'genkit';
 import { googleAI } from '@genkit-ai/google-genai';
 import { config } from 'dotenv';
@@ -60,7 +61,8 @@ export async function runWithResilience(promptFn: any, input: any, metadata?: an
           const sessionId = metadata?.sessionId || input?.sessionId;
 
           // LOGGING PROTOCOL: Using standardized Genkit 1.x usage field names
-          logUsage({
+          // AWAIT is critical here to prevent the server process from exiting before the write finishes.
+          await logUsage({
             userId,
             sessionId,
             feature,

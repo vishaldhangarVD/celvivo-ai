@@ -1,7 +1,8 @@
+
 'use server';
 
 import { initializeFirebase } from '@/firebase/init';
-import { collection, addDoc, serverTimestamp, query, where, getDocs, orderBy, Timestamp } from 'firebase/firestore';
+import { collection, addDoc, serverTimestamp, Timestamp } from 'firebase/firestore';
 
 /**
  * @fileOverview Nexvoro AI Central Usage Logging Service.
@@ -29,37 +30,24 @@ export async function logUsage(data: UsageLogData) {
     
     // Validate required nodes before write
     if (!data.feature) data.feature = 'unknown_feature';
-    
-    await addDoc(collection(firestore, 'usage_logs'), {
+
+    // Ensure numeric fields are actually numbers to avoid Firestore silent rejection
+    const sanitizedData = {
       ...data,
+      inputTokens: typeof data.inputTokens === 'number' ? data.inputTokens : 0,
+      outputTokens: typeof data.outputTokens === 'number' ? data.outputTokens : 0,
+      characterCount: typeof data.characterCount === 'number' ? data.characterCount : 0,
       timestamp: serverTimestamp()
-    });
+    };
     
-    console.log(`[UsageLogger] Successfully archived telemetry for: ${data.feature}`);
+    console.log(`[UsageLogger] Attempting to write log for feature: ${data.feature}...`);
+    
+    const docRef = await addDoc(collection(firestore, 'usage_logs'), sanitizedData);
+    
+    console.log(`[UsageLogger] SUCCESS. Document ID: ${docRef.id} archived.`);
+    return docRef.id;
   } catch (error) {
-    // Avoid circular logging of logging errors
-    console.error('[UsageLogger] Failed to record usage node:', error);
+    console.error('[UsageLogger] CRITICAL FAULT - Write failed:', error);
+    throw error;
   }
-}
-
-/**
- * Aggregates logs for a specific timeframe.
- */
-export async function getUsageLogs(days = 30) {
-  const { firestore } = initializeFirebase();
-  const cutoff = new Date();
-  cutoff.setDate(cutoff.getDate() - days);
-
-  const q = query(
-    collection(firestore, 'usage_logs'),
-    where('timestamp', '>=', Timestamp.fromDate(cutoff)),
-    orderBy('timestamp', 'desc')
-  );
-
-  const snap = await getDocs(q);
-  return snap.docs.map(doc => ({
-    id: doc.id,
-    ...doc.data(),
-    timestamp: (doc.data().timestamp as Timestamp)?.toDate()
-  }));
 }
