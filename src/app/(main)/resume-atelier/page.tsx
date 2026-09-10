@@ -69,6 +69,9 @@ interface ResumeEntry {
   school?: string;
   degree?: string;
   type?: 'work' | 'internship';
+  title?: string;
+  issuer?: string;
+  date?: string;
 }
 
 interface ResumeData {
@@ -84,6 +87,7 @@ interface ResumeData {
   experience: ResumeEntry[];
   projects: ResumeEntry[];
   education: ResumeEntry[];
+  certifications: ResumeEntry[];
   theme: string;
 }
 
@@ -140,6 +144,7 @@ const INITIAL_DATA: ResumeData = {
   education: [
     { school: "", degree: "", dates: "" }
   ],
+  certifications: [],
   theme: "windsor"
 };
 
@@ -515,7 +520,6 @@ export default function ResumeAtelierPage() {
     }
   };
 
-  /* External Certificates Handlers */
   const handleExternalFileUpload = async () => {
     if (!externalCertForm.title.trim()) {
       toast({ variant: "destructive", title: "Missing Title", description: "Please enter a title for the certificate." });
@@ -1248,6 +1252,32 @@ export default function ResumeAtelierPage() {
                              ))}
                              <button onClick={() => setData({...data, education: [...data.education, {school:"",degree:"",dates:""}]})} className="w-full py-3 border border-dashed border-[#332c22] text-[9px] font-mono text-[#8a723a] uppercase">+ Add Education</button>
                            </div>
+
+                           <div className="space-y-4">
+                             <Label className="text-[9px] font-mono uppercase text-[#8a723a]">Certifications (Optional)</Label>
+                             {data.certifications.map((cert, i) => (
+                               <div key={i} className="p-4 border border-[#332c22] bg-[#1c1814] relative">
+                                 <button onClick={() => {
+                                   const n = [...data.certifications]; n.splice(i, 1); setData({...data, certifications: n});
+                                 }} className="absolute top-4 right-4 text-[#cfc7b4]/40 hover:text-[#7a2531]"><Trash2 className="w-4 h-4" /></button>
+                                 <Label className="text-[8px] font-mono uppercase text-[#8a723a]">Title</Label>
+                                 <input value={cert.title} placeholder="eg:- Google Data Analytics Certificate" onChange={e => {
+                                   const n = [...data.certifications]; n[i].title = e.target.value; setData({...data, certifications: n});
+                                 }} className="ghost-input font-bold" />
+                                 <div className="grid grid-cols-2 gap-4 mt-2">
+                                   <div><Label className="text-[8px] font-mono uppercase text-[#8a723a]">Issuer</Label>
+                                   <input value={cert.issuer} placeholder="eg:- Coursera" onChange={e => {
+                                     const n = [...data.certifications]; n[i].issuer = e.target.value; setData({...data, certifications: n});
+                                   }} className="ghost-input text-xs" /></div>
+                                   <div><Label className="text-[8px] font-mono uppercase text-[#8a723a]">Date</Label>
+                                   <input value={cert.date} placeholder="eg:- Jan 2025" onChange={e => {
+                                     const n = [...data.certifications]; n[i].date = e.target.value; setData({...data, certifications: n});
+                                   }} className="ghost-input text-xs text-right" /></div>
+                                 </div>
+                               </div>
+                             ))}
+                             <button onClick={() => setData({...data, certifications: [...data.certifications, {title:"",issuer:"",date:""}]})} className="w-full py-3 border border-dashed border-[#332c22] text-[9px] font-mono text-[#8a723a] uppercase">+ Add Certification</button>
+                           </div>
                         </div>
 
                         <div className="flex gap-4">
@@ -1518,6 +1548,12 @@ function ResumePreview({ data, theme }: { data: ResumeData, theme: string }) {
     </div>
   ));
 
+  const certItems = () => (data.certifications || []).map((c, i) => (
+    <div key={i} className="doc-jobhead" style={{ marginBottom: '8px' }}>
+      <span>{c.title || 'Certification'}{c.issuer ? `, ${c.issuer}` : ''}</span><span>{c.date}</span>
+    </div>
+  ));
+
   const eduItems = () => (data.education || []).map((ed, i) => (
     <div key={i} className="doc-jobhead" style={{ marginBottom: '8px' }}>
       <span>{ed.degree}{ed.degree && ed.school ? ', ' : ''}{ed.school}</span><span>{ed.dates}</span>
@@ -1585,6 +1621,7 @@ function ResumePreview({ data, theme }: { data: ResumeData, theme: string }) {
               {data.summary && <div className="doc-sec" style={{ marginTop: 0 }}><div className="doc-sectitle">Summary</div><div className="doc-summary" style={{ marginTop: 0 }}>{data.summary}</div></div>}
               <div className="doc-sec"><div className="doc-sectitle">Experience</div>{expItems()}</div>
               {data.projects && data.projects.length > 0 && <div className="doc-sec"><div className="doc-sectitle">Projects</div>{projItems()}</div>}
+              {data.certifications && data.certifications.length > 0 && <div className="doc-sec"><div className="doc-sectitle">Certifications</div>{certItems()}</div>}
             </div>
           </div>
         );
@@ -1595,6 +1632,7 @@ function ResumePreview({ data, theme }: { data: ResumeData, theme: string }) {
               {headerBasic}
               <div className="doc-sec"><div className="doc-sectitle">Experience</div>{expItems()}</div>
               {data.projects && data.projects.length > 0 && <div className="doc-sec"><div className="doc-sectitle">Projects</div>{projItems()}</div>}
+              {data.certifications && data.certifications.length > 0 && <div className="doc-sec"><div className="doc-sectitle">Certifications</div>{certItems()}</div>}
             </div>
             <div className="doc-side-light">
               <div className="doc-avatar doc-avatar-lg" style={{ margin: '0 auto 14px' }}>{getInitials(data.name)}</div>
@@ -1623,6 +1661,7 @@ function ResumePreview({ data, theme }: { data: ResumeData, theme: string }) {
                 <div className="doc-sec" style={{ marginTop: 0 }}><div className="doc-sectitle">Skills</div>{skillsItems()}</div>
                 <div className="doc-sec"><div className="doc-sectitle">Education</div>{eduItems()}</div>
                 {data.projects && data.projects.length > 0 && <div className="doc-sec"><div className="doc-sectitle">Projects</div>{projItems()}</div>}
+                {data.certifications && data.certifications.length > 0 && <div className="doc-sec"><div className="doc-sectitle">Certifications</div>{certItems()}</div>}
               </div>
             </div>
           </div>
@@ -1634,6 +1673,7 @@ function ResumePreview({ data, theme }: { data: ResumeData, theme: string }) {
             <div className="doc-sectitle" style={{ marginTop: '20px' }}>Experience & Education</div>
             <div className="doc-tl">{timelineItems()}</div>
             <div className="doc-sec"><div className="doc-sectitle">Skills</div>{skillsItems()}</div>
+            {data.certifications && data.certifications.length > 0 && <div className="doc-sec"><div className="doc-sectitle">Certifications</div>{certItems()}</div>}
           </div>
         );
       case 'twocol':
@@ -1651,6 +1691,7 @@ function ResumePreview({ data, theme }: { data: ResumeData, theme: string }) {
               {data.summary && <div className="doc-sec" style={{ marginTop: 0 }}><div className="doc-sectitle">Summary</div><div className="doc-summary" style={{ marginTop: 0 }}>{data.summary}</div></div>}
               <div className="doc-sec"><div className="doc-sectitle">Experience</div>{expItems()}</div>
               {data.projects && data.projects.length > 0 && <div className="doc-sec"><div className="doc-sectitle">Projects</div>{projItems()}</div>}
+              {data.certifications && data.certifications.length > 0 && <div className="doc-sec"><div className="doc-sectitle">Certifications</div>{certItems()}</div>}
             </div>
           </div>
         );
@@ -1661,6 +1702,7 @@ function ResumePreview({ data, theme }: { data: ResumeData, theme: string }) {
             {variant === 'v-tagcloud' && <div className="doc-sec" style={{ marginTop: '12px' }}>{skillsItems()}</div>}
             <div className="doc-sec"><div className="doc-sectitle">Experience</div>{expItems()}</div>
             {data.projects && data.projects.length > 0 && <div className="doc-sec"><div className="doc-sectitle">Projects</div>{projItems()}</div>}
+            {data.certifications && data.certifications.length > 0 && <div className="doc-sec"><div className="doc-sectitle">Certifications</div>{certItems()}</div>}
             <div className="doc-sec"><div className="doc-sectitle">Education</div>{eduItems()}</div>
             {variant !== 'v-tagcloud' && <div className="doc-sec"><div className="doc-sectitle">Skills</div>{skillsItems()}</div>}
           </div>
