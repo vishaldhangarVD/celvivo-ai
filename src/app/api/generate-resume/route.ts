@@ -3,7 +3,7 @@ import { NextResponse } from 'next/server';
 /**
  * @fileOverview Server-side Resume PDF Generator.
  * Optimized for Custom Container deployments using the official Puppeteer image.
- * Uses dynamic imports to keep development build times fast.
+ * Includes explicit process management to prevent disk bloat on /ephemeral.
  */
 
 export const maxDuration = 60;
@@ -54,7 +54,7 @@ export async function POST(req: Request) {
             <div class="job">
               <div class="job-head"><span>${e.role} @ ${e.company}</span><span>${e.dates}</span></div>
               <div class="job-sub">${e.role}</div>
-              ${e.bullets.split('\n').map((b: string) => `<div class="bullet">• ${b}</div>`).join('')}
+              ${(e.bullets || '').split('\n').map((b: string) => `<div class="bullet">• ${b}</div>`).join('')}
             </div>
           `).join('')}
         </div>
@@ -76,7 +76,12 @@ export async function POST(req: Request) {
 
     browser = await puppeteer.launch({
       headless: true,
-      args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage'],
+      args: [
+        '--no-sandbox', 
+        '--disable-setuid-sandbox', 
+        '--disable-dev-shm-usage',
+        '--disable-gpu'
+      ],
       executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || undefined,
     });
 
@@ -89,8 +94,6 @@ export async function POST(req: Request) {
       margin: { top: '20mm', bottom: '20mm', left: '15mm', right: '15mm' }
     });
 
-    await browser.close();
-
     return new Response(pdf, {
       headers: {
         'Content-Type': 'application/pdf',
@@ -99,7 +102,10 @@ export async function POST(req: Request) {
     });
   } catch (error: any) {
     console.error("[API Resume] Fatal fault:", error);
-    if (browser) await browser.close();
     return NextResponse.json({ error: "Resume Synthesis Failed", details: error.message }, { status: 500 });
+  } finally {
+    if (browser) {
+      await browser.close().catch(e => console.error("[Puppeteer] Failed to close browser:", e));
+    }
   }
 }
