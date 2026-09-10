@@ -1,5 +1,3 @@
-'use client';
-
 export const firebaseConfig = {
   apiKey: 'AIzaSyCxUg934d4CMTDuKE_6tr9qNVvtO5m7srA',
   authDomain: 'nexvoroai.firebaseapp.com',

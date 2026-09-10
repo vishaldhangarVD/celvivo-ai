@@ -85,10 +85,10 @@ const AiMockInterviewOutputSchema = z.object({
   isInterviewComplete: z.boolean(),
   isHint: z.boolean().optional(),
   _debug: z.object({
-    modelUsed: string,
-    geminiSucceeded: boolean,
+    modelUsed: z.string(),
+    geminiSucceeded: z.boolean(),
     geminiError: z.string().optional(),
-    usedFallback: boolean
+    usedFallback: z.boolean()
   }).optional()
 });
 export type AiMockInterviewOutput = z.infer<typeof AiMockInterviewOutputSchema>;

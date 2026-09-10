@@ -11,10 +11,10 @@ if (typeof window === 'undefined') {
 
 /**
  * Global Model Protocol.
- * Using 'gemini-3.6-flash' as the verified ground-truth model.
+ * Using 'gemini-1.5-flash' as the verified stable model.
  */
-export const PRIMARY_MODEL = 'googleai/gemini-3.6-flash';
-export const FALLBACK_MODEL = 'googleai/gemini-3.6-flash';
+export const PRIMARY_MODEL = 'googleai/gemini-1.5-flash';
+export const FALLBACK_MODEL = 'googleai/gemini-1.5-flash';
 
 const apiKey = (
   process.env.GOOGLE_GENAI_API_KEY || 
@@ -55,7 +55,7 @@ export const ai = genkit({
 
 /**
  * Resilient execution wrapper.
- * Optimized for gemini-3.6-flash execution with exponential backoff for 503/Overload and 429/RateLimit errors.
+ * Optimized for gemini-1.5-flash execution with exponential backoff for 503/Overload and 429/RateLimit errors.
  */
 export async function runWithResilience(promptFn: any, input: any, metadata?: any) {
   const delays = [1000, 2000, 4000]; // Standard backoff for internal server errors

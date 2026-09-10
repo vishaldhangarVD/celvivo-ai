@@ -1,5 +1,3 @@
-'use client';
-
 /**
  * @fileOverview Firebase Barrel File
  * Exports all Firebase-related hooks and providers for application use.
