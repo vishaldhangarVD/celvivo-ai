@@ -198,11 +198,12 @@ export async function POST(req: Request) {
       if (data.error) return NextResponse.json({ error: data.error }, { status: 500 });
 
       // Log technical interaction telemetry
-      logUsage({
+      await logUsage({
         userId,
         sessionId,
-        feature: 'coding',
-        provider: 'jdoodle'
+        feature: 'jdoodle_execution',
+        provider: 'jdoodle',
+        creditsUsed: 1
       });
 
       const stdout = data.output || "";
@@ -268,11 +269,12 @@ export async function POST(req: Request) {
     if (data.error) return NextResponse.json({ error: data.error }, { status: 500 });
 
     // Log technical interaction telemetry
-    logUsage({
+    await logUsage({
       userId,
       sessionId,
-      feature: 'coding',
-      provider: 'jdoodle'
+      feature: 'jdoodle_execution',
+      provider: 'jdoodle',
+      creditsUsed: 1
     });
 
     const output = data.output || "";

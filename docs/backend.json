@@ -62,6 +62,7 @@
         "outputTokens": { "type": "number" },
         "characterCount": { "type": "number" },
         "videoDurationSeconds": { "type": "number" },
+        "creditsUsed": { "type": "number" },
         "timestamp": { "type": "string", "format": "date-time" }
       }
     },

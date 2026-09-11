@@ -19,6 +19,7 @@ export interface UsageLogData {
   outputTokens?: number;
   characterCount?: number;
   videoDurationSeconds?: number;
+  creditsUsed?: number;
 }
 
 /**
@@ -37,6 +38,7 @@ export async function logUsage(data: UsageLogData) {
       inputTokens: typeof data.inputTokens === 'number' ? data.inputTokens : 0,
       outputTokens: typeof data.outputTokens === 'number' ? data.outputTokens : 0,
       characterCount: typeof data.characterCount === 'number' ? data.characterCount : 0,
+      creditsUsed: typeof data.creditsUsed === 'number' ? data.creditsUsed : 0,
       timestamp: serverTimestamp()
     };
     

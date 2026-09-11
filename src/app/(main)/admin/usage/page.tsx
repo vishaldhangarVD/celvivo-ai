@@ -18,7 +18,8 @@ import {
   Filter,
   Download,
   ShieldCheck,
-  AlertCircle
+  AlertCircle,
+  Terminal
 } from 'lucide-react';
 import { useUser, useFirestore, useCollection } from '@/firebase';
 import { collection, query, orderBy, limit, where, Timestamp } from 'firebase/firestore';
@@ -71,6 +72,7 @@ export default function UsageAnalyticsPage() {
       geminiOutput: 0,
       ttsChars: 0,
       didMinutes: 0,
+      jdoodleCredits: 0,
       features: {},
       sessions: new Set(),
     };
@@ -80,7 +82,7 @@ export default function UsageAnalyticsPage() {
       const provider = log.provider || 'unknown';
 
       if (!summary.features[f]) {
-        summary.features[f] = { input: 0, output: 0, chars: 0, didSecs: 0, cost: 0, count: 0 };
+        summary.features[f] = { input: 0, output: 0, chars: 0, didSecs: 0, credits: 0, cost: 0, count: 0 };
       }
 
       if (log.sessionId) summary.sessions.add(log.sessionId);
@@ -120,6 +122,13 @@ export default function UsageAnalyticsPage() {
         summary.didMinutes += mins;
         summary.features[f].didSecs += log.videoDurationSeconds;
         logCost += (mins * RATES.DID_PER_MINUTE);
+      }
+
+      // 4. Calculate JDoodle Credits
+      if (log.creditsUsed) {
+        summary.jdoodleCredits += log.creditsUsed;
+        summary.features[f].credits += log.creditsUsed;
+        // Cost is not yet configured for JDoodle credits
       }
 
       summary.totalCost += logCost;
@@ -182,7 +191,7 @@ export default function UsageAnalyticsPage() {
             </div>
           )}
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-6">
             <Card className="premium-card bg-accent/5 border-accent/20 p-8 space-y-4">
               <div className="flex justify-between items-start">
                 <div className="w-12 h-12 rounded-xl bg-accent/10 flex items-center justify-center text-accent">
@@ -214,7 +223,7 @@ export default function UsageAnalyticsPage() {
                 <div className="w-12 h-12 rounded-xl bg-purple-500/10 flex items-center justify-center text-purple-400">
                   <Mic className="w-6 h-6" />
                 </div>
-                <Badge variant="outline" className="text-[8px] border-white/10 text-white/40">GOOOGLE CLOUD TTS</Badge>
+                <Badge variant="outline" className="text-[8px] border-white/10 text-white/40">G. CLOUD TTS</Badge>
               </div>
               <div>
                 <p className="text-3xl font-bold tabular-nums">{stats?.ttsChars.toLocaleString()}</p>
@@ -227,11 +236,24 @@ export default function UsageAnalyticsPage() {
                 <div className="w-12 h-12 rounded-xl bg-orange-500/10 flex items-center justify-center text-orange-400">
                   <Video className="w-6 h-6" />
                 </div>
-                <Badge variant="outline" className="text-[8px] border-white/10 text-white/40">AI Avatar Usage</Badge>
+                <Badge variant="outline" className="text-[8px] border-white/10 text-white/40">AI AVATAR</Badge>
               </div>
               <div>
                 <p className="text-3xl font-bold tabular-nums">{stats?.didMinutes.toFixed(1)} Min</p>
                 <p className="text-[10px] uppercase font-bold text-white/30 tracking-widest mt-2">D-ID Streaming</p>
+              </div>
+            </Card>
+
+            <Card className="premium-card bg-white/[0.02] border-white/5 p-8 space-y-4">
+              <div className="flex justify-between items-start">
+                <div className="w-12 h-12 rounded-xl bg-green-500/10 flex items-center justify-center text-green-400">
+                  <Terminal className="w-6 h-6" />
+                </div>
+                <Badge variant="outline" className="text-[8px] border-white/10 text-white/40">JD EXECUTION</Badge>
+              </div>
+              <div>
+                <p className="text-3xl font-bold tabular-nums">{stats?.jdoodleCredits}</p>
+                <p className="text-[10px] uppercase font-bold text-white/30 tracking-widest mt-2">JDoodle Credits</p>
               </div>
             </Card>
           </div>
@@ -267,8 +289,12 @@ export default function UsageAnalyticsPage() {
                           <p className="text-[11px] font-mono">{data.chars}</p>
                         </div>
                         <div className="space-y-1 text-center">
-                          <p className="text-[8px] uppercase font-bold text-white/20">Video Secs</p>
-                          <p className="text-[11px] font-mono">{data.didSecs}s</p>
+                          <p className="text-[8px] uppercase font-bold text-white/20">
+                            {name === 'jdoodle_execution' ? 'Credits' : 'Video Secs'}
+                          </p>
+                          <p className="text-[11px] font-mono">
+                            {name === 'jdoodle_execution' ? data.credits : `${data.didSecs}s`}
+                          </p>
                         </div>
                         <div className="space-y-1 text-right">
                           <p className="text-[8px] uppercase font-bold text-white/20">Unit Efficiency</p>
@@ -301,6 +327,12 @@ export default function UsageAnalyticsPage() {
                     <AlertCircle className="w-5 h-5 text-yellow-500 shrink-0 mt-0.5" />
                     <p className="text-[11px] text-white/60 leading-relaxed font-light">
                       <strong>D-ID</strong> rate ($0.55/min) is a plan-dependent estimate for real-time streaming - <em>verify against actual D-ID invoice for precision.</em>
+                    </p>
+                  </div>
+                  <div className="flex gap-4 items-start p-4 glass rounded-2xl border-green-500/10">
+                    <AlertCircle className="w-5 h-5 text-green-500 shrink-0 mt-0.5" />
+                    <p className="text-[11px] text-white/60 leading-relaxed font-light">
+                      <strong>JDoodle</strong> rate not yet configured - currently tracking credit count only. Add $/credit rate once you've selected a paid plan from your JDoodle billing dashboard.
                     </p>
                   </div>
                 </div>
