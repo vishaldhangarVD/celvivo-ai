@@ -24,7 +24,7 @@ import {
   ArrowUpRight
 } from 'lucide-react';
 import { useUser, useFirestore, useCollection } from '@/firebase';
-import { useState, useMemo, memo } from 'react';
+import { useState, useMemo, memo, useEffect } from 'react';
 import { collection, query, where } from 'firebase/firestore';
 import FeedbackDialog from '@/components/feedback/FeedbackDialog';
 
@@ -101,6 +101,16 @@ const itemVariants = {
 
 const HeroSection = memo(({ onStart, onEnterRoom }: { onStart: () => void, onEnterRoom: () => void }) => {
   const [isVideoMuted, setIsVideoMuted] = useState(true);
+  const [shouldPlayVideo, setShouldPlayVideo] = useState(false);
+
+  useEffect(() => {
+    const hasPlayed = sessionStorage.getItem('celvivo_home_video_played');
+
+    if (!hasPlayed) {
+      setShouldPlayVideo(true);
+      sessionStorage.setItem('celvivo_home_video_played', 'true');
+    }
+  }, []);
 
   return (
     <div className="container mx-auto max-w-7xl">
@@ -224,33 +234,25 @@ const HeroSection = memo(({ onStart, onEnterRoom }: { onStart: () => void, onEnt
             <div className="relative w-full md:w-[50%] min-h-[400px] md:min-h-full overflow-hidden rounded-r-[3rem] bg-black">
               <div className="absolute inset-0 bg-gradient-to-br from-accent/10 via-transparent to-transparent opacity-50 z-10" />
               <div className="absolute inset-0">
-                <video
-                  src="/home.mp4"
-                  autoPlay
-                  muted={isVideoMuted}
-                  playsInline
-                  controls={false}
-                  preload="metadata"
-                  onPlaying={() => {
-                    setTimeout(() => {
-                      setIsVideoMuted(false);
-                    }, 100);
-                  }}
-                  onPause={(e) => {
-                    const video = e.currentTarget;
-                    if (!video.ended && video.paused) {
-                      video.muted = true;
-                      setIsVideoMuted(true);
-                      video.play().catch(() => {});
-                    }
-                  }}
-                  onEnded={(e) => {
-                    const video = e.currentTarget;
-                    video.currentTime = 0;
-                    video.pause();
-                  }}
-                  className="h-full w-full object-cover"
-                />
+              <video
+  src="/home.mp4"
+  autoPlay={shouldPlayVideo}
+  muted={isVideoMuted}
+  playsInline
+  controls={false}
+  preload="auto"
+  onPlaying={() => {
+    setTimeout(() => {
+      setIsVideoMuted(false);
+    }, 100);
+  }}
+  onEnded={(e) => {
+    const video = e.currentTarget;
+    video.pause();
+    video.currentTime = 0;
+  }}
+  className="h-full w-full object-cover"
+/>
                 <div className="absolute inset-0 bg-gradient-to-t from-[#050816]/30 via-transparent to-transparent z-20" />
                 <div className="absolute inset-0 bg-gradient-to-r from-transparent via-cyan-500/5 to-blue-500/10 z-20" />
                 <div className="absolute inset-0 ring-1 ring-cyan-400/10 rounded-r-[3rem] z-20" />
