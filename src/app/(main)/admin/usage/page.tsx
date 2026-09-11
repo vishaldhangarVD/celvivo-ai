@@ -26,7 +26,7 @@ import { cn } from '@/lib/utils';
 
 /**
  * @fileOverview Usage Analytics Dashboard.
- * Calibrated for Gemini 3.6 Flash official introductory pricing and verified market rates.
+ * Calibrated for Gemini 3.6 Flash official introductory pricing and Google Cloud TTS Neural2 rates.
  */
 
 // COST PARAMETERS (USD)
@@ -36,8 +36,8 @@ const RATES = {
   GEMINI_INPUT: 0.75 / 1_000_000,
   GEMINI_OUTPUT: 3.75 / 1_000_000,
   
-  // TTS Consumption (Using ElevenLabs Flash/Turbo verified rate: $0.05 per 1k characters)
-  TTS_PER_CHAR: 0.05 / 1_000, 
+  // Google Cloud TTS Neural2 Pricing (Verified: $16.00 per 1M characters)
+  TTS_PER_CHAR: 16 / 1_000_000, 
   
   // D-ID Real-Time Streaming Agent Rate (Verified estimate: $0.55 per minute)
   DID_PER_MINUTE: 0.55, 
@@ -77,6 +77,8 @@ export default function UsageAnalyticsPage() {
 
     logs.forEach((log: any) => {
       const f = log.feature || 'unknown';
+      const provider = log.provider || 'unknown';
+
       if (!summary.features[f]) {
         summary.features[f] = { input: 0, output: 0, chars: 0, didSecs: 0, cost: 0, count: 0 };
       }
@@ -85,7 +87,7 @@ export default function UsageAnalyticsPage() {
 
       let logCost = 0;
       
-      // Calculate Gemini Cost (Checking both possible field mappings)
+      // 1. Calculate Gemini Token Cost
       const input = log.inputTokens || log.promptTokenCount || 0;
       const output = log.outputTokens || log.candidatesTokenCount || 0;
 
@@ -100,14 +102,19 @@ export default function UsageAnalyticsPage() {
         logCost += (output * RATES.GEMINI_OUTPUT);
       }
 
-      // Calculate TTS Cost
+      // 2. Calculate TTS Character Cost
       if (log.characterCount) {
         summary.ttsChars += log.characterCount;
         summary.features[f].chars += log.characterCount;
-        logCost += (log.characterCount * RATES.TTS_PER_CHAR);
+        
+        // DEDUPLICATION: Gemini native TTS cost is already covered by tokens.
+        // We only add character-based cost for external providers like Google Cloud.
+        if (provider !== 'gemini') {
+          logCost += (log.characterCount * RATES.TTS_PER_CHAR);
+        }
       }
 
-      // Calculate D-ID Cost
+      // 3. Calculate D-ID Video Cost
       if (log.videoDurationSeconds) {
         const mins = log.videoDurationSeconds / 60;
         summary.didMinutes += mins;
@@ -207,11 +214,11 @@ export default function UsageAnalyticsPage() {
                 <div className="w-12 h-12 rounded-xl bg-purple-500/10 flex items-center justify-center text-purple-400">
                   <Mic className="w-6 h-6" />
                 </div>
-                <Badge variant="outline" className="text-[8px] border-white/10 text-white/40">TTS CHARACTERS</Badge>
+                <Badge variant="outline" className="text-[8px] border-white/10 text-white/40">GOOOGLE CLOUD TTS</Badge>
               </div>
               <div>
                 <p className="text-3xl font-bold tabular-nums">{stats?.ttsChars.toLocaleString()}</p>
-                <p className="text-[10px] uppercase font-bold text-white/30 tracking-widest mt-2">Total Voice Characters</p>
+                <p className="text-[10px] uppercase font-bold text-white/30 tracking-widest mt-2">Neural2 Characters</p>
               </div>
             </Card>
 
@@ -224,7 +231,7 @@ export default function UsageAnalyticsPage() {
               </div>
               <div>
                 <p className="text-3xl font-bold tabular-nums">{stats?.didMinutes.toFixed(1)} Min</p>
-                <p className="text-[10px] uppercase font-bold text-white/30 tracking-widest mt-2">AI Avatar Usage</p>
+                <p className="text-[10px] uppercase font-bold text-white/30 tracking-widest mt-2">D-ID Streaming</p>
               </div>
             </Card>
           </div>
@@ -281,14 +288,19 @@ export default function UsageAnalyticsPage() {
                   <div className="flex gap-4 items-start p-4 glass rounded-2xl border-accent/10">
                     <ShieldCheck className="w-5 h-5 text-accent shrink-0 mt-0.5" />
                     <p className="text-[11px] text-white/60 leading-relaxed font-light">
-                      <strong>Gemini 3.6 Flash</strong> rates ($0.75/$3.75 per 1M) are verified against official 2026 introductory pricing.
+                      <strong>Gemini 3.6 Flash</strong> rates ($0.75/$3.75 per 1M) are verified against official introductory pricing.
+                    </p>
+                  </div>
+                  <div className="flex gap-4 items-start p-4 glass rounded-2xl border-accent/10">
+                    <ShieldCheck className="w-5 h-5 text-accent shrink-0 mt-0.5" />
+                    <p className="text-[11px] text-white/60 leading-relaxed font-light">
+                      <strong>Google Cloud TTS</strong> (Neural2) is verified at $16.00 per 1M characters.
                     </p>
                   </div>
                   <div className="flex gap-4 items-start p-4 glass rounded-2xl border-yellow-500/10">
                     <AlertCircle className="w-5 h-5 text-yellow-500 shrink-0 mt-0.5" />
                     <p className="text-[11px] text-white/60 leading-relaxed font-light">
-                      <strong>TTS</strong> and <strong>D-ID</strong> rates are verified industry estimates. 
-                      D-ID rate ($0.55/min) is a plan-dependent estimate for real-time streaming - <em>verify against actual D-ID invoice for precision.</em>
+                      <strong>D-ID</strong> rate ($0.55/min) is a plan-dependent estimate for real-time streaming - <em>verify against actual D-ID invoice for precision.</em>
                     </p>
                   </div>
                 </div>

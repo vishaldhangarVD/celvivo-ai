@@ -2,6 +2,7 @@
 /**
  * @fileOverview Nexvoro AI Neural Voice Synthesis (TTS).
  * Unified with central PRIMARY_MODEL to ensure consistency.
+ * Distinctly logs as tts_gemini_native for cost calibration.
  */
 
 import { ai, PRIMARY_MODEL } from '@/ai/genkit';
@@ -45,7 +46,7 @@ const audioSynthesisFlow = ai.defineFlow(
         },
         prompt: input.text,
         metadata: {
-          feature: 'tts',
+          feature: 'tts_gemini_native',
           provider: 'gemini',
           userId: input.userId,
           sessionId: input.sessionId,
@@ -60,14 +61,15 @@ const audioSynthesisFlow = ai.defineFlow(
       }
 
       // Record technical usage telemetry
+      // Note: Gemini audio cost is billed via tokens, which is handled by the primary token fields.
       logUsage({
         userId: input.userId,
         sessionId: input.sessionId,
-        feature: 'tts',
+        feature: 'tts_gemini_native',
         provider: 'gemini',
         characterCount: input.text.length,
-        inputTokens: usage?.promptTokenCount,
-        outputTokens: usage?.candidatesTokenCount
+        inputTokens: usage?.promptTokenCount || usage?.inputTokens,
+        outputTokens: usage?.candidatesTokenCount || usage?.outputTokens
       });
 
       const pcmBase64 = media.url.substring(media.url.indexOf(',') + 1);

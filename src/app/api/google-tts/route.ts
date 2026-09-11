@@ -1,15 +1,16 @@
 import { NextResponse } from 'next/server';
+import { logUsage } from '@/services/usage-logger';
 
 /**
  * @fileOverview Resilient Google Cloud TTS Gateway.
  * Directly utilizes the project's API key for maximum reliability in prototype environments.
- * Returns audio as base64 JSON payload.
+ * Returns audio as base64 JSON payload and logs character consumption.
  */
 
 export async function POST(req: Request) {
   try {
     const body = await req.json().catch(() => ({}));
-    const text = body.text;
+    const { text, userId, sessionId } = body;
 
     if (!text) {
       return NextResponse.json({ error: "Text payload missing." }, { status: 400 });
@@ -25,6 +26,16 @@ export async function POST(req: Request) {
     if (!apiKey) {
       return NextResponse.json({ error: "Neural vocal matrix not configured (API Key missing)." }, { status: 500 });
     }
+
+    // Record technical usage telemetry for Google Cloud TTS billing
+    // Fire and forget, don't block the audio return
+    logUsage({
+      userId,
+      sessionId,
+      feature: 'tts_google_cloud',
+      provider: 'google',
+      characterCount: text.length
+    }).catch(e => console.error("[Google TTS Gateway] Logging Fault:", e));
 
     // Use REST API with API Key - most reliable path
     const ttsUrl = `https://texttospeech.googleapis.com/v1/text:synthesize?key=${apiKey}`;
