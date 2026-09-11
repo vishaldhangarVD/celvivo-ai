@@ -119,7 +119,7 @@ export default function FinalReportPage() {
           
           <motion.div initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} className="premium-card p-12 border-glow-premium relative overflow-hidden">
             {feedback.hiringRecommendation && (
-              <div className="absolute top-6 right-12 z-10">
+              <div className="absolute top-2 right-12 z-10">
                 <Badge className={`${getScoreColor(feedback.overallScore)} border-none bg-white/5 font-black tracking-[0.4em] uppercase text-xs px-8 py-3 rounded-2xl`}>
                   RECOMMENDATION: {feedback.hiringRecommendation.toUpperCase()}
                 </Badge>

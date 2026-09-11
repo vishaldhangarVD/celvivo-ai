@@ -131,7 +131,7 @@ export default function SpecialHRSetup() {
                 <motion.div key="verifying" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-6">
                   <div className="relative w-24 h-24 mx-auto">
                     <div className="absolute inset-0 border-2 border-purple-500/10 rounded-full animate-ping" />
-                    <div className="absolute inset-0 border-b-2 border-purple-500 rounded-full animate-spin duration-[3s]" />
+                    <div className="absolute inset-0 border-b-2 border-purple-500 rounded-full animate-spin duration-[3000ms]" />
                     <div className="absolute inset-4 glass rounded-full flex items-center justify-center">
                       <Cpu className="w-10 h-10 text-purple-400 animate-pulse" />
                     </div>
