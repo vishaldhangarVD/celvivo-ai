@@ -111,52 +111,53 @@ export default function AptitudeEnginePage() {
       if (!db || !user?.uid || !journeyRef || initGuard.current || isSubmitting || justSubmittedRef.current) return;
       initGuard.current = true;
       
-      const journeySnap = await getDoc(journeyRef);
-      const data = journeySnap.data();
-      
-      if (!data) {
-        router.push('/interview');
-        return;
-      }
-      
-      if (data.aptitudeStatus === "completed" || data.currentStage === INTERVIEW_STAGES.APTITUDE_RESULT) {
-        router.replace(STAGE_ROUTES.APTITUDE_RESULT);
-        return;
-      }
-
-      const existingQuestions = data.aptitudeQuestions || [];
-      const isValidSet = existingQuestions.length === 20 && existingQuestions.every(validateAptitudeQuestion);
-
-      if (isValidSet && data.aptitudeStatus === "in_progress") {
-        setQuestions(existingQuestions);
-        setAnswers(data.aptitudeAnswers || {});
-        setCurrentIdx(data.aptitudeCurrentIndex || 0);
-        
-        let endAt = data.aptitudeTimerEndAt;
-        const localEndKey = `aptitude_timer_end_${user.uid}`;
-        const localEndAt = localStorage.getItem(localEndKey);
-        
-        if (!endAt && localEndAt) {
-          endAt = parseInt(localEndAt);
-        } else if (endAt) {
-          localStorage.setItem(localEndKey, endAt.toString());
-        }
-
-        if (endAt) {
-          const remaining = Math.max(0, Math.ceil((endAt - Date.now()) / 1000));
-          setTimeLeft(remaining);
-        } else {
-          const newEndAt = Date.now() + 30 * 60 * 1000;
-          localStorage.setItem(localEndKey, newEndAt.toString());
-          await updateDoc(journeyRef, { aptitudeTimerEndAt: newEndAt });
-          setTimeLeft(1800);
-        }
-
-        setIsInitializing(false);
-        return;
-      }
-
       try {
+        const journeySnap = await getDoc(journeyRef);
+        const data = journeySnap.data();
+        
+        if (!data) {
+          router.push('/interview/setup');
+          return;
+        }
+        
+        if (data.aptitudeStatus === "completed" || data.currentStage === INTERVIEW_STAGES.APTITUDE_RESULT) {
+          router.replace(STAGE_ROUTES.APTITUDE_RESULT);
+          return;
+        }
+
+        const existingQuestions = data.aptitudeQuestions || [];
+        const isValidSet = existingQuestions.length === 20 && existingQuestions.every(validateAptitudeQuestion);
+
+        if (isValidSet && data.aptitudeStatus === "in_progress") {
+          setQuestions(existingQuestions);
+          setAnswers(data.aptitudeAnswers || {});
+          setCurrentIdx(data.aptitudeCurrentIndex || 0);
+          
+          let endAt = data.aptitudeTimerEndAt;
+          const localEndKey = `aptitude_timer_end_${user.uid}`;
+          const localEndAt = localStorage.getItem(localEndKey);
+          
+          if (!endAt && localEndAt) {
+            endAt = parseInt(localEndAt);
+          } else if (endAt) {
+            localStorage.setItem(localEndKey, endAt.toString());
+          }
+
+          if (endAt) {
+            const remaining = Math.max(0, Math.ceil((endAt - Date.now()) / 1000));
+            setTimeLeft(remaining);
+          } else {
+            const newEndAt = Date.now() + 30 * 60 * 1000;
+            localStorage.setItem(localEndKey, newEndAt.toString());
+            await updateDoc(journeyRef, { aptitudeTimerEndAt: newEndAt });
+            setTimeLeft(1800);
+          }
+
+          setIsInitializing(false);
+          return;
+        }
+
+        // GENERATE FRESH TEST
         localStorage.removeItem(`aptitude_timer_end_${user.uid}`); 
         const userRef = doc(db, 'users', user.uid);
         const userSnap = await getDoc(userRef);
@@ -200,8 +201,9 @@ export default function AptitudeEnginePage() {
         setIsInitializing(false);
       } catch (e: any) {
         console.error("[APTITUDE SESSION] Initialization fault:", e);
-        toast({ variant: "destructive", title: "Unable to prepare your test." });
+        toast({ variant: "destructive", title: "Unable to prepare your test.", description: "A connection error occurred. Please refresh or try again later." });
         setIsInitializing(false);
+        initGuard.current = false; // Allow retry on failure
       }
     }
     init();

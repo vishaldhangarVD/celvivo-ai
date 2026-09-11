@@ -1,9 +1,8 @@
 'use server';
 /**
- * @fileOverview Nexvoro AI Master Aptitude Generator v30.0.
- * Dynamically synthesizes high-fidelity logic nodes using Google Gemini.
- * Implements persistent history awareness and semantic duplicate prevention.
- * Features a safety net to ensure 20 unique questions even under fallback conditions.
+ * @fileOverview Nexvoro AI Master Aptitude Generator v31.0.
+ * Optimized for low-latency execution to prevent 504 Gateway Timeouts.
+ * Features a single-pass neural attempt with immediate deterministic backfill.
  */
 
 import { ai, runWithResilience } from '@/ai/genkit';
@@ -61,16 +60,15 @@ const CATEGORY_MAP: Record<string, string> = {
 
 /**
  * Normalizes question text for fingerprinting.
- * Also generates a "reasoning pattern" by removing digits.
  */
 function normalizeQuestion(text: string): { fingerprint: string; pattern: string } {
   const clean = text
     .toLowerCase()
-    .replace(/[^\w\s]/g, "") // Remove punctuation
-    .replace(/\s+/g, " ")    // Normalize whitespace
+    .replace(/[^\w\s]/g, "") 
+    .replace(/\s+/g, " ")    
     .trim();
   
-  const pattern = clean.replace(/\d+/g, "X"); // Replace numbers with X to detect templates
+  const pattern = clean.replace(/\d+/g, "X"); 
   return { fingerprint: clean, pattern };
 }
 
@@ -169,7 +167,6 @@ Generate a professional 20-question Aptitude Assessment for a {{{role}}} candida
 - CS Aptitude (2)
 
 ### VARIETY PROTOCOL:
-- DO NOT generate any question that matches the logic or text of these previous questions: {{{usedQuestionFingerprints}}}
 - Ensure every question uses a unique reasoning pattern.
 - Quantitative: Include ratios, probabilities, profit/loss, and mixtures.
 - Data Interpretation: Create mini-datasets (tables) that require 2-step calculations.
@@ -200,65 +197,56 @@ const aptitudeFlow = ai.defineFlow(
     const currentFingerprints = new Set<string>();
     const currentPatterns = new Set<string>();
 
-    let attempts = 0;
-    while (attempts < 3 && validQuestions.length < 20) {
-      try {
-        console.log(`[Aptitude Flow] Synthesis Attempt ${attempts + 1} for ${input.company}`);
-        const { output } = await runWithResilience(prompt, input);
-        
-        if (output?.questions) {
-          for (const q of output.questions) {
-            if (validQuestions.length >= 20) break;
-            
-            const val = validateAptitudeQuestion(q, currentFingerprints, currentPatterns);
-            if (val.valid && val.normalized) {
-              const { fingerprint, pattern } = normalizeQuestion(val.normalized.question);
-              if (!historySet.has(fingerprint) && !historySet.has(pattern)) {
-                validQuestions.push(val.normalized);
-                currentFingerprints.add(fingerprint);
-                currentPatterns.add(pattern);
-              }
+    try {
+      // SINGLE-PASS NEURAL ATTEMPT
+      // Reduced from 3 to 1 to prevent cumulative latency/504 timeouts.
+      console.log(`[Aptitude Flow] Synthesis Attempt for ${input.company}`);
+      const { output } = await runWithResilience(prompt, input);
+      
+      if (output?.questions) {
+        for (const q of output.questions) {
+          if (validQuestions.length >= 20) break;
+          
+          const val = validateAptitudeQuestion(q, currentFingerprints, currentPatterns);
+          if (val.valid && val.normalized) {
+            const { fingerprint, pattern } = normalizeQuestion(val.normalized.question);
+            // Check against history only if history is provided
+            if (!historySet.has(fingerprint) && !historySet.has(pattern)) {
+              validQuestions.push(val.normalized);
+              currentFingerprints.add(fingerprint);
+              currentPatterns.add(pattern);
             }
           }
         }
-      } catch (e) {
-        console.error("[Aptitude Flow] Neural synthesis fault:", e);
       }
-      attempts++;
+    } catch (e) {
+      console.error("[Aptitude Flow] Neural synthesis fault:", e);
+      // Fail gracefully and let fallback logic handle the rest
     }
 
-    // FIX 2: Safety net for fallback injection
+    // IMMEDIATE DETERMINISTIC BACKFILL
+    // If AI failed or returned incomplete results, fill exactly to 20 using fallback bank.
     if (validQuestions.length < 20) {
-      console.warn("[Aptitude Flow] Insufficient dynamic nodes. Injecting unique fallback nodes.");
+      console.warn(`[Aptitude Flow] Neural undershoot (${validQuestions.length}/20). Injecting unique fallbacks.`);
+      
       const filteredFallback = FALLBACK_BANK.filter(q => {
         const { fingerprint, pattern } = normalizeQuestion(q.question);
-        // Ensure not in history AND not already in validQuestions (to avoid duplicating Gemini's work)
-        return !historySet.has(fingerprint) && !historySet.has(pattern) && !validQuestions.some(vq => vq.id === q.id);
+        return !historySet.has(fingerprint) && 
+               !historySet.has(pattern) && 
+               !validQuestions.some(vq => vq.id === q.id);
       });
       
       const needed = 20 - validQuestions.length;
       validQuestions.push(...filteredFallback.slice(0, needed));
     }
 
-    // FIX 2: Final safety net - reuse older fallback questions if user has exhausted all unique content
+    // FINAL SAFETY - If even fallbacks with history check couldn't fill 20,
+    // reuse available fallbacks regardless of history to ensure the test can start.
     if (validQuestions.length < 20) {
-      console.warn("[Aptitude] Reusing older fallback questions to complete test - user has exhausted available unique questions");
-      
-      const historyArr = input.usedQuestionFingerprints || [];
-      const remainingSlots = 20 - validQuestions.length;
-      
-      const reuseCandidates = FALLBACK_BANK
-        .filter(q => !validQuestions.some(vq => vq.id === q.id))
-        .map(q => {
-          const { fingerprint } = normalizeQuestion(q.question);
-          // Find the last index in the provided history array
-          const lastSeenIndex = historyArr.lastIndexOf(fingerprint);
-          return { question: q, lastSeenIndex };
-        })
-        // Sort by lastSeenIndex ascending (oldest first)
-        .sort((a, b) => a.lastSeenIndex - b.lastSeenIndex);
-      
-      validQuestions.push(...reuseCandidates.slice(0, remainingSlots).map(c => c.question));
+      console.warn("[Aptitude] Exhaustive fallback activation.");
+      const remainingNeeded = 20 - validQuestions.length;
+      const extraFallbacks = FALLBACK_BANK.filter(q => !validQuestions.some(vq => vq.id === q.id));
+      validQuestions.push(...extraFallbacks.slice(0, remainingNeeded));
     }
 
     return { questions: validQuestions.slice(0, 20) };
