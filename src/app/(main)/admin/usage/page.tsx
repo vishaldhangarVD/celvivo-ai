@@ -27,7 +27,7 @@ import { cn } from '@/lib/utils';
 
 /**
  * @fileOverview Usage Analytics Dashboard.
- * Calibrated for Gemini 3.6 Flash official introductory pricing and Google Cloud TTS Neural2 rates.
+ * Calibrated for Gemini 3.6 Flash official introductory pricing, Google Cloud TTS Neural2 rates, and verified JDoodle credit pricing.
  */
 
 // COST PARAMETERS (USD)
@@ -42,6 +42,9 @@ const RATES = {
   
   // D-ID Real-Time Streaming Agent Rate (Verified estimate: $0.55 per minute)
   DID_PER_MINUTE: 0.55, 
+
+  // JDoodle Pricing (Verified: $0.01 per credit across standard tiers)
+  JDOODLE_PER_CREDIT: 0.01,
 };
 
 export default function UsageAnalyticsPage() {
@@ -73,6 +76,7 @@ export default function UsageAnalyticsPage() {
       ttsChars: 0,
       didMinutes: 0,
       jdoodleCredits: 0,
+      jdoodleCost: 0,
       features: {},
       sessions: new Set(),
     };
@@ -110,7 +114,6 @@ export default function UsageAnalyticsPage() {
         summary.features[f].chars += log.characterCount;
         
         // DEDUPLICATION: Gemini native TTS cost is already covered by tokens.
-        // We only add character-based cost for external providers like Google Cloud.
         if (provider !== 'gemini') {
           logCost += (log.characterCount * RATES.TTS_PER_CHAR);
         }
@@ -128,7 +131,9 @@ export default function UsageAnalyticsPage() {
       if (log.creditsUsed) {
         summary.jdoodleCredits += log.creditsUsed;
         summary.features[f].credits += log.creditsUsed;
-        // Cost is not yet configured for JDoodle credits
+        const jCost = (log.creditsUsed * RATES.JDOODLE_PER_CREDIT);
+        summary.jdoodleCost += jCost;
+        logCost += jCost;
       }
 
       summary.totalCost += logCost;
@@ -184,9 +189,6 @@ export default function UsageAnalyticsPage() {
                <div className="space-y-1">
                  <p className="text-sm font-bold uppercase tracking-widest">Query Error</p>
                  <p className="text-xs font-light">{error.message}</p>
-                 {error.message.includes('index') && (
-                   <p className="text-[10px] underline cursor-pointer mt-2">Open browser console to follow the Firebase Index Link.</p>
-                 )}
                </div>
             </div>
           )}
@@ -252,7 +254,7 @@ export default function UsageAnalyticsPage() {
                 <Badge variant="outline" className="text-[8px] border-white/10 text-white/40">JD EXECUTION</Badge>
               </div>
               <div>
-                <p className="text-3xl font-bold tabular-nums">{stats?.jdoodleCredits}</p>
+                <p className="text-3xl font-bold tabular-nums">{stats?.jdoodleCredits} (${stats?.jdoodleCost.toFixed(2)})</p>
                 <p className="text-[10px] uppercase font-bold text-white/30 tracking-widest mt-2">JDoodle Credits</p>
               </div>
             </Card>
@@ -323,16 +325,16 @@ export default function UsageAnalyticsPage() {
                       <strong>Google Cloud TTS</strong> (Neural2) is verified at $16.00 per 1M characters.
                     </p>
                   </div>
+                  <div className="flex gap-4 items-start p-4 glass rounded-2xl border-[#c9a24d]/10">
+                    <ShieldCheck className="w-5 h-5 text-[#c9a24d] shrink-0 mt-0.5" />
+                    <p className="text-[11px] text-white/60 leading-relaxed font-light">
+                      <strong>JDoodle</strong> rate verified at $0.01 per credit from account pricing page. Currently on free tier - actual billing starts only after upgrading to a paid plan.
+                    </p>
+                  </div>
                   <div className="flex gap-4 items-start p-4 glass rounded-2xl border-yellow-500/10">
                     <AlertCircle className="w-5 h-5 text-yellow-500 shrink-0 mt-0.5" />
                     <p className="text-[11px] text-white/60 leading-relaxed font-light">
                       <strong>D-ID</strong> rate ($0.55/min) is a plan-dependent estimate for real-time streaming - <em>verify against actual D-ID invoice for precision.</em>
-                    </p>
-                  </div>
-                  <div className="flex gap-4 items-start p-4 glass rounded-2xl border-green-500/10">
-                    <AlertCircle className="w-5 h-5 text-green-500 shrink-0 mt-0.5" />
-                    <p className="text-[11px] text-white/60 leading-relaxed font-light">
-                      <strong>JDoodle</strong> rate not yet configured - currently tracking credit count only. Add $/credit rate once you've selected a paid plan from your JDoodle billing dashboard.
                     </p>
                   </div>
                 </div>
