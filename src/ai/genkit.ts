@@ -40,6 +40,31 @@ export const ai = genkit({
 });
 
 /**
+ * Robust token extraction helper.
+ * Handles various field name permutations in Genkit/SDK response objects.
+ */
+function getTokens(usage: any): { input: number; output: number } {
+  if (!usage) return { input: 0, output: 0 };
+  
+  const input = 
+    usage.inputTokens ?? 
+    usage.promptTokens ?? 
+    usage.promptTokenCount ?? 
+    usage.prompt_tokens ?? 
+    0;
+    
+  const output = 
+    usage.outputTokens ?? 
+    usage.completionTokens ?? 
+    usage.candidatesTokens ?? 
+    usage.candidatesTokenCount ?? 
+    usage.completion_tokens ?? 
+    0;
+    
+  return { input, output };
+}
+
+/**
  * Resilient execution wrapper.
  * Optimized for gemini-3.6-flash execution with exponential backoff for 503/Overload and 429/RateLimit errors.
  */
@@ -59,15 +84,16 @@ export async function runWithResilience(promptFn: any, input: any, metadata?: an
           const userId = metadata?.userId || input?.userId;
           const sessionId = metadata?.sessionId || input?.sessionId;
 
-          // LOGGING PROTOCOL: Using standardized Genkit 1.x usage field names with fallbacks
-          // AWAIT is critical here to prevent the server process from exiting before the write finishes.
+          const tokens = getTokens(result.usage);
+
+          // LOGGING PROTOCOL: Record the interaction telemetry
           await logUsage({
             userId,
             sessionId,
             feature,
             model: model,
-            inputTokens: result.usage.inputTokens ?? result.usage.promptTokenCount ?? 0,
-            outputTokens: result.usage.outputTokens ?? result.usage.candidatesTokenCount ?? 0,
+            inputTokens: tokens.input,
+            outputTokens: tokens.output,
             provider: 'gemini'
           });
         }

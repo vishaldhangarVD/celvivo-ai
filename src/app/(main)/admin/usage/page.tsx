@@ -26,25 +26,29 @@ import { collection, query, orderBy, limit, where, Timestamp } from 'firebase/fi
 import { cn } from '@/lib/utils';
 
 /**
- * @fileOverview Usage Analytics Dashboard.
- * Calibrated for Gemini 3.6 Flash official introductory pricing, Google Cloud TTS Neural2 rates, and verified JDoodle credit pricing.
+ * @fileOverview Usage Analytics Dashboard v4.0.
+ * Calibrated for Gemini 3.6 Flash official pricing and JDoodle credit mapping.
  */
 
 // COST PARAMETERS (USD)
 const RATES = {
-  // Gemini 3.6 Flash Rates (Official Introductory Pricing - valid thru Dec 31, 2026)
-  // TODO: Update starting Jan 1, 2027 ($1.50 / $7.50 per 1M)
   GEMINI_INPUT: 0.75 / 1_000_000,
   GEMINI_OUTPUT: 3.75 / 1_000_000,
-  
-  // Google Cloud TTS Neural2 Pricing (Verified: $16.00 per 1M characters)
   TTS_PER_CHAR: 16 / 1_000_000, 
-  
-  // D-ID Real-Time Streaming Agent Rate (Verified estimate: $0.55 per minute)
   DID_PER_MINUTE: 0.55, 
-
-  // JDoodle Pricing (Verified: $0.01 per credit across standard tiers)
   JDOODLE_PER_CREDIT: 0.01,
+};
+
+// Feature Display Name Mapper
+const FEATURE_MAP: Record<string, string> = {
+  'special_interview': 'Special HR Interview',
+  'ai_interview': 'AI Virtual Arena',
+  'coding_round': 'Coding Assessment',
+  'aptitude_generation': 'Aptitude Questioning',
+  'aptitude_evaluation': 'Aptitude Auditing',
+  'jdoodle_execution': 'Code Execution (JDoodle)',
+  'resume_analysis': 'Resume Intelligence',
+  'resume_ats_check': 'ATS Compatibility Check'
 };
 
 export default function UsageAnalyticsPage() {
@@ -65,7 +69,6 @@ export default function UsageAnalyticsPage() {
 
   const { data: logs, loading, error } = useCollection(usageQuery);
 
-  // AGGREGATION LOGIC
   const stats = useMemo(() => {
     if (!logs) return null;
 
@@ -93,7 +96,6 @@ export default function UsageAnalyticsPage() {
 
       let logCost = 0;
       
-      // 1. Calculate Gemini Token Cost
       const input = log.inputTokens || log.promptTokenCount || 0;
       const output = log.outputTokens || log.candidatesTokenCount || 0;
 
@@ -108,18 +110,14 @@ export default function UsageAnalyticsPage() {
         logCost += (output * RATES.GEMINI_OUTPUT);
       }
 
-      // 2. Calculate TTS Character Cost
       if (log.characterCount) {
         summary.ttsChars += log.characterCount;
         summary.features[f].chars += log.characterCount;
-        
-        // DEDUPLICATION: Gemini native TTS cost is already covered by tokens.
         if (provider !== 'gemini') {
           logCost += (log.characterCount * RATES.TTS_PER_CHAR);
         }
       }
 
-      // 3. Calculate D-ID Video Cost
       if (log.videoDurationSeconds) {
         const mins = log.videoDurationSeconds / 60;
         summary.didMinutes += mins;
@@ -127,11 +125,11 @@ export default function UsageAnalyticsPage() {
         logCost += (mins * RATES.DID_PER_MINUTE);
       }
 
-      // 4. Calculate JDoodle Credits
       if (log.creditsUsed) {
-        summary.jdoodleCredits += log.creditsUsed;
-        summary.features[f].credits += log.creditsUsed;
-        const jCost = (log.creditsUsed * RATES.JDOODLE_PER_CREDIT);
+        const count = Number(log.creditsUsed);
+        summary.jdoodleCredits += count;
+        summary.features[f].credits += count;
+        const jCost = (count * RATES.JDOODLE_PER_CREDIT);
         summary.jdoodleCost += jCost;
         logCost += jCost;
       }
@@ -215,7 +213,7 @@ export default function UsageAnalyticsPage() {
                 <Badge variant="outline" className="text-[8px] border-white/10 text-white/40">GEMINI TOKENS</Badge>
               </div>
               <div>
-                <p className="text-3xl font-bold tabular-nums">{Math.round(stats?.geminiInput / 1000)}k / {Math.round(stats?.geminiOutput / 1000)}k</p>
+                <p className="text-3xl font-bold tabular-nums">{Math.round((stats?.geminiInput || 0) / 1000)}k / {Math.round((stats?.geminiOutput || 0) / 1000)}k</p>
                 <p className="text-[10px] uppercase font-bold text-white/30 tracking-widest mt-2">Input / Output Balance</p>
               </div>
             </Card>
@@ -228,7 +226,7 @@ export default function UsageAnalyticsPage() {
                 <Badge variant="outline" className="text-[8px] border-white/10 text-white/40">G. CLOUD TTS</Badge>
               </div>
               <div>
-                <p className="text-3xl font-bold tabular-nums">{stats?.ttsChars.toLocaleString()}</p>
+                <p className="text-3xl font-bold tabular-nums">{(stats?.ttsChars || 0).toLocaleString()}</p>
                 <p className="text-[10px] uppercase font-bold text-white/30 tracking-widest mt-2">Neural2 Characters</p>
               </div>
             </Card>
@@ -241,7 +239,7 @@ export default function UsageAnalyticsPage() {
                 <Badge variant="outline" className="text-[8px] border-white/10 text-white/40">AI AVATAR</Badge>
               </div>
               <div>
-                <p className="text-3xl font-bold tabular-nums">{stats?.didMinutes.toFixed(1)} Min</p>
+                <p className="text-3xl font-bold tabular-nums">{(stats?.didMinutes || 0).toFixed(1)} Min</p>
                 <p className="text-[10px] uppercase font-bold text-white/30 tracking-widest mt-2">D-ID Streaming</p>
               </div>
             </Card>
@@ -254,14 +252,14 @@ export default function UsageAnalyticsPage() {
                 <Badge variant="outline" className="text-[8px] border-white/10 text-white/40">JD EXECUTION</Badge>
               </div>
               <div>
-                <p className="text-3xl font-bold tabular-nums">{stats?.jdoodleCredits} (${stats?.jdoodleCost.toFixed(2)})</p>
+                <p className="text-3xl font-bold tabular-nums">{stats?.jdoodleCredits || 0} (${(stats?.jdoodleCost || 0).toFixed(2)})</p>
                 <p className="text-[10px] uppercase font-bold text-white/30 tracking-widest mt-2">JDoodle Credits</p>
               </div>
             </Card>
           </div>
 
           <div className="grid lg:grid-cols-12 gap-12">
-            <div className="lg:col-span-8 space-y-8">
+            <div className="lg:col-span-12 space-y-8">
               <Card className="premium-card bg-white/[0.01] border-white/5 p-10">
                 <div className="flex items-center justify-between mb-12">
                   <h3 className="text-2xl font-bold flex items-center gap-4">
@@ -270,12 +268,12 @@ export default function UsageAnalyticsPage() {
                   <Download className="w-4 h-4 text-white/20 hover:text-white cursor-pointer transition-colors" />
                 </div>
                 
-                <div className="space-y-6">
+                <div className="grid md:grid-cols-2 gap-6">
                   {Object.entries(stats?.features || {}).map(([name, data]: [string, any]) => (
                     <div key={name} className="p-6 glass rounded-2xl border-white/5 hover:bg-white/[0.03] transition-all">
                       <div className="flex justify-between items-start mb-6">
                         <div>
-                          <p className="text-lg font-bold capitalize">{name.replace(/_/g, ' ')}</p>
+                          <p className="text-lg font-bold">{FEATURE_MAP[name] || name.replace(/_/g, ' ')}</p>
                           <p className="text-[10px] text-white/30 uppercase tracking-widest">{data.count} Interactions</p>
                         </div>
                         <p className="text-xl font-bold text-accent">${data.cost.toFixed(3)}</p>
@@ -308,11 +306,12 @@ export default function UsageAnalyticsPage() {
                 </div>
               </Card>
             </div>
+          </div>
 
-            <div className="lg:col-span-4 space-y-8">
-              <Card className="premium-card bg-white/[0.01] border-white/5 p-8">
+          <div className="max-w-4xl mx-auto">
+             <Card className="premium-card bg-white/[0.01] border-white/5 p-8">
                 <h3 className="text-lg font-bold mb-8">Infrastructure Notes</h3>
-                <div className="space-y-6">
+                <div className="grid md:grid-cols-2 gap-6">
                   <div className="flex gap-4 items-start p-4 glass rounded-2xl border-accent/10">
                     <ShieldCheck className="w-5 h-5 text-accent shrink-0 mt-0.5" />
                     <p className="text-[11px] text-white/60 leading-relaxed font-light">
@@ -328,35 +327,17 @@ export default function UsageAnalyticsPage() {
                   <div className="flex gap-4 items-start p-4 glass rounded-2xl border-[#c9a24d]/10">
                     <ShieldCheck className="w-5 h-5 text-[#c9a24d] shrink-0 mt-0.5" />
                     <p className="text-[11px] text-white/60 leading-relaxed font-light">
-                      <strong>JDoodle</strong> rate verified at $0.01 per credit from account pricing page. Currently on free tier - actual billing starts only after upgrading to a paid plan.
+                      <strong>JDoodle</strong> rate verified at $0.01 per credit. Submissions consume 2 credits, single runs consume 1.
                     </p>
                   </div>
                   <div className="flex gap-4 items-start p-4 glass rounded-2xl border-yellow-500/10">
                     <AlertCircle className="w-5 h-5 text-yellow-500 shrink-0 mt-0.5" />
                     <p className="text-[11px] text-white/60 leading-relaxed font-light">
-                      <strong>D-ID</strong> rate ($0.55/min) is a plan-dependent estimate for real-time streaming - <em>verify against actual D-ID invoice for precision.</em>
+                      <strong>D-ID</strong> rate ($0.55/min) is a plan-dependent estimate for real-time streaming.
                     </p>
                   </div>
                 </div>
               </Card>
-
-              <Card className="premium-card bg-accent/5 border-accent/10 p-8 space-y-6">
-                <div className="flex items-center gap-3">
-                  <Calendar className="w-4 h-4 text-accent" />
-                  <p className="text-xs font-bold uppercase tracking-widest">Active Horizon</p>
-                </div>
-                <div className="space-y-2">
-                  <div className="flex justify-between text-[10px]">
-                    <span className="text-white/40">Audit Start</span>
-                    <span>{new Date(Date.now() - days * 86400000).toLocaleDateString()}</span>
-                  </div>
-                  <div className="flex justify-between text-[10px]">
-                    <span className="text-white/40">Audit End</span>
-                    <span>Present Node</span>
-                  </div>
-                </div>
-              </Card>
-            </div>
           </div>
 
         </div>

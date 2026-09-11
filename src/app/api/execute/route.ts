@@ -2,9 +2,9 @@ import { NextResponse } from 'next/server';
 import { logUsage } from '@/services/usage-logger';
 
 /**
- * @fileOverview JDoodle Neural Execution Gateway v10.0 (Standardized Validation).
+ * @fileOverview JDoodle Neural Execution Gateway v11.0 (Refined Telemetry).
  * Securely proxies code execution and performs strict output validation.
- * Supports 13 languages: Python, Java, C++, JavaScript, TypeScript, C, C#, Go, Rust, Kotlin, PHP, Swift, Ruby.
+ * Optimized with robust logging for JDoodle credit tracking.
  */
 
 const JDOODLE_URL = 'https://api.jdoodle.com/v1/execute';
@@ -119,10 +119,6 @@ const LANGUAGE_CONFIG: Record<string, {
   }
 };
 
-/**
- * Normalizes output for robust logic comparison.
- * Trims each line, removes trailing empty lines, and normalizes line endings.
- */
 function normalizeOutput(output: string): string {
   if (!output) return "";
   return output
@@ -133,9 +129,6 @@ function normalizeOutput(output: string): string {
     .trim();
 }
 
-/**
- * Identifies if output contains common runtime error markers.
- */
 function detectRuntimeError(output: string): boolean {
   const lower = output.toLowerCase();
   return lower.includes("traceback") || 
@@ -166,6 +159,10 @@ export async function POST(req: Request) {
     if (!config) return NextResponse.json({ error: `Language "${language}" not supported.` }, { status: 400 });
     if (!source_code) return NextResponse.json({ error: "Implementation buffer empty." }, { status: 400 });
 
+    if (!userId || !sessionId) {
+      console.warn(`[JDoodle Gateway] Warning: Tracking identifiers missing (userId=${userId}, sessionId=${sessionId})`);
+    }
+
     // Mode A: Single Execution (Run Sample)
     if (!testCases || !Array.isArray(testCases)) {
       let script = source_code;
@@ -173,7 +170,6 @@ export async function POST(req: Request) {
       let targetVersion = config.versionIndex;
       let finalStdin = stdin || "";
 
-      // Special handling for TypeScript
       if (language === 'typescript') {
         targetLang = 'bash';
         targetVersion = '4';
@@ -197,14 +193,14 @@ export async function POST(req: Request) {
       const data = await response.json();
       if (data.error) return NextResponse.json({ error: data.error }, { status: 500 });
 
-      // Log technical interaction telemetry
-      await logUsage({
+      // Log interaction telemetry - Catching internally to prevent blocking response
+      logUsage({
         userId,
         sessionId,
         feature: 'jdoodle_execution',
         provider: 'jdoodle',
-        creditsUsed: 1
-      });
+        creditsUsed: 1 // Single runs cost 1 credit
+      }).catch(e => console.error("[JDoodle Gateway] Logging failure:", e));
 
       const stdout = data.output || "";
       const actualNormalized = normalizeOutput(stdout);
@@ -268,14 +264,14 @@ export async function POST(req: Request) {
     const data = await response.json();
     if (data.error) return NextResponse.json({ error: data.error }, { status: 500 });
 
-    // Log technical interaction telemetry
-    await logUsage({
+    // Log interaction telemetry - Catching internally
+    logUsage({
       userId,
       sessionId,
       feature: 'jdoodle_execution',
       provider: 'jdoodle',
-      creditsUsed: 1
-    });
+      creditsUsed: 2 // Submissions cost 2 credits (Standard tier estimate)
+    }).catch(e => console.error("[JDoodle Gateway] Logging failure (batch):", e));
 
     const output = data.output || "";
     
