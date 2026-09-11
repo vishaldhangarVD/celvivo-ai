@@ -24,18 +24,25 @@ import { useUser, useFirestore, useCollection } from '@/firebase';
 import { collection, query, orderBy, limit, where, Timestamp } from 'firebase/firestore';
 import { cn } from '@/lib/utils';
 
-// COST PARAMETERS
-// These constants are used to calculate the estimated infrastructure overhead.
+/**
+ * @fileOverview Usage Analytics Dashboard.
+ * Calibrated for Gemini 3.6 Flash pricing protocols.
+ */
+
+// COST PARAMETERS (USD)
 const RATES = {
-  // Gemini 3.6 Flash Rates (per 1M tokens)
-  GEMINI_INPUT: 0.10 / 1_000_000,
-  GEMINI_OUTPUT: 0.40 / 1_000_000,
+  // Gemini 3.6 Flash Rates (Standard High-Efficiency Tier)
+  // Source: Google AI Studio Pricing (Flash class)
+  GEMINI_INPUT: 0.075 / 1_000_000,
+  GEMINI_OUTPUT: 0.30 / 1_000_000,
   
-  // ElevenLabs / TTS Placeholder Rate (per character)
+  // ElevenLabs / TTS Rate (per character)
+  // Avg $0.30 per 1k characters
   ELEVENLABS_PER_CHAR: 0.0003, 
   
   // D-ID Video Rate (per minute)
-  DID_PER_MINUTE: 0.50, 
+  // Avg $1.00 per generated minute
+  DID_PER_MINUTE: 1.00, 
 };
 
 export default function UsageAnalyticsPage() {
@@ -80,16 +87,19 @@ export default function UsageAnalyticsPage() {
 
       let logCost = 0;
       
-      // Calculate Gemini Cost
-      if (log.inputTokens) {
-        summary.geminiInput += log.inputTokens;
-        summary.features[f].input += log.inputTokens;
-        logCost += (log.inputTokens * RATES.GEMINI_INPUT);
+      // Calculate Gemini Cost (Checking both possible field mappings)
+      const input = log.inputTokens || log.promptTokenCount || 0;
+      const output = log.outputTokens || log.candidatesTokenCount || 0;
+
+      if (input) {
+        summary.geminiInput += input;
+        summary.features[f].input += input;
+        logCost += (input * RATES.GEMINI_INPUT);
       }
-      if (log.outputTokens) {
-        summary.geminiOutput += log.outputTokens;
-        summary.features[f].output += log.outputTokens;
-        logCost += (log.outputTokens * RATES.GEMINI_OUTPUT);
+      if (output) {
+        summary.geminiOutput += output;
+        summary.features[f].output += output;
+        logCost += (output * RATES.GEMINI_OUTPUT);
       }
 
       // Calculate TTS Cost
@@ -160,6 +170,9 @@ export default function UsageAnalyticsPage() {
                <div className="space-y-1">
                  <p className="text-sm font-bold uppercase tracking-widest">Query Error</p>
                  <p className="text-xs font-light">{error.message}</p>
+                 {error.message.includes('index') && (
+                   <p className="text-[10px] underline cursor-pointer mt-2">Open browser console to follow the Firebase Index Link.</p>
+                 )}
                </div>
             </div>
           )}
@@ -270,7 +283,7 @@ export default function UsageAnalyticsPage() {
                   <div className="flex gap-4 items-start p-4 glass rounded-2xl border-yellow-500/10">
                     <AlertCircle className="w-5 h-5 text-yellow-500 shrink-0 mt-0.5" />
                     <p className="text-[11px] text-white/60 leading-relaxed font-light">
-                      Costs are calculated based on public tier rates for Gemini 3.6. Actual billing may vary by enterprise quota or free-tier grants.
+                      Costs are calibrated for the <strong>Gemini 3.6 Flash</strong> standard tier ($0.075/$0.30 per 1M).
                     </p>
                   </div>
                   <div className="flex gap-4 items-start p-4 glass rounded-2xl border-accent/10">
