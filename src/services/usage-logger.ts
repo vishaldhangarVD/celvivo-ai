@@ -1,4 +1,3 @@
-
 'use server';
 
 import { initializeFirebase } from '@/firebase/init';
@@ -7,6 +6,7 @@ import { collection, addDoc, serverTimestamp, Timestamp } from 'firebase/firesto
 /**
  * @fileOverview Nexvoro AI Central Usage Logging Service.
  * Provides server-side methods to record and retrieve AI API usage telemetry.
+ * Reinforced with verbose terminal logging for definitive debugging.
  */
 
 export interface UsageLogData {
@@ -40,14 +40,20 @@ export async function logUsage(data: UsageLogData) {
       timestamp: serverTimestamp()
     };
     
-    console.log(`[UsageLogger] Attempting to write log for feature: ${data.feature}...`);
+    console.log(`[UsageLogger] ATTEMPTING WRITE: feature=${data.feature}, model=${data.model}, userId=${data.userId}`);
+    console.log(`[UsageLogger] PAYLOAD: ${JSON.stringify(sanitizedData)}`);
     
     const docRef = await addDoc(collection(firestore, 'usage_logs'), sanitizedData);
     
-    console.log(`[UsageLogger] SUCCESS. Document ID: ${docRef.id} archived.`);
+    console.log(`[UsageLogger] WRITE SUCCESS: ID=${docRef.id}`);
     return docRef.id;
-  } catch (error) {
-    console.error('[UsageLogger] CRITICAL FAULT - Write failed:', error);
+  } catch (error: any) {
+    console.error('[UsageLogger] CRITICAL FAULT - Firestore write failed:', error);
+    console.error('[UsageLogger] ERROR DETAILS:', {
+      code: error.code,
+      message: error.message,
+      stack: error.stack?.split('\n')[0]
+    });
     throw error;
   }
 }

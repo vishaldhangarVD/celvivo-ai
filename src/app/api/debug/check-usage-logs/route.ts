@@ -1,4 +1,3 @@
-
 import { NextResponse } from 'next/server';
 import { initializeFirebase } from '@/firebase/init';
 import { collection, query, orderBy, limit, getDocs, getCountFromServer } from 'firebase/firestore';
@@ -12,6 +11,8 @@ export async function GET() {
     const { firestore } = initializeFirebase();
     const logsRef = collection(firestore, 'usage_logs');
 
+    console.log('[Debug API] Starting global usage log interrogation...');
+
     // 1. Get total count
     const countSnapshot = await getCountFromServer(logsRef);
     const totalCount = countSnapshot.data().count;
@@ -20,19 +21,23 @@ export async function GET() {
     const q = query(logsRef, orderBy('timestamp', 'desc'), limit(5));
     const querySnapshot = await getDocs(q);
     
-    const recentLogs = querySnapshot.docs.map(doc => ({
-      id: doc.id,
-      ...doc.data(),
-      // Format timestamp for readability
-      timestamp: doc.data().timestamp?.toDate?.()?.toISOString() || 'NULL_OR_PENDING'
-    }));
+    const recentLogs = querySnapshot.docs.map(doc => {
+      const data = doc.data();
+      return {
+        id: doc.id,
+        ...data,
+        // Format timestamp for readability
+        timestamp: data.timestamp?.toDate?.()?.toISOString() || 'NULL_OR_PENDING'
+      };
+    });
 
     return NextResponse.json({
       success: true,
       diagnostics: {
         totalCount,
         hasLogs: totalCount > 0,
-        collectionPath: 'usage_logs'
+        collectionPath: 'usage_logs',
+        checkedAt: new Date().toISOString()
       },
       recentLogs
     });
@@ -42,7 +47,8 @@ export async function GET() {
     return NextResponse.json({ 
       success: false, 
       error: error.message,
-      stack: error.stack 
+      code: error.code,
+      stack: error.stack?.split('\n').slice(0, 3)
     }, { status: 500 });
   }
 }

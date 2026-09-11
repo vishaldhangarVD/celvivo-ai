@@ -32,11 +32,9 @@ const RATES = {
   GEMINI_OUTPUT: 0.40 / 1_000_000,
   
   // ElevenLabs / TTS Placeholder Rate (per character)
-  // Current: $0.0003 per char (~$0.30 per 1k chars)
   ELEVENLABS_PER_CHAR: 0.0003, 
   
   // D-ID Video Rate (per minute)
-  // Current: $0.50 per minute of generated video
   DID_PER_MINUTE: 0.50, 
 };
 
@@ -56,7 +54,7 @@ export default function UsageAnalyticsPage() {
     );
   }, [db, days]);
 
-  const { data: logs, loading } = useCollection(usageQuery);
+  const { data: logs, loading, error } = useCollection(usageQuery);
 
   // AGGREGATION LOGIC
   const stats = useMemo(() => {
@@ -156,6 +154,16 @@ export default function UsageAnalyticsPage() {
             </div>
           </header>
 
+          {error && (
+            <div className="p-6 rounded-2xl bg-red-500/10 border border-red-500/20 flex items-center gap-4 text-red-400">
+               <AlertCircle className="w-6 h-6" />
+               <div className="space-y-1">
+                 <p className="text-sm font-bold uppercase tracking-widest">Query Error</p>
+                 <p className="text-xs font-light">{error.message}</p>
+               </div>
+            </div>
+          )}
+
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             <Card className="premium-card bg-accent/5 border-accent/20 p-8 space-y-4">
               <div className="flex justify-between items-start">
@@ -178,7 +186,7 @@ export default function UsageAnalyticsPage() {
                 <Badge variant="outline" className="text-[8px] border-white/10 text-white/40">GEMINI TOKENS</Badge>
               </div>
               <div>
-                <p className="text-3xl font-bold tabular-nums">{(stats?.geminiInput / 1000).toFixed(1)}k / {(stats?.geminiOutput / 1000).toFixed(1)}k</p>
+                <p className="text-3xl font-bold tabular-nums">{Math.round(stats?.geminiInput / 1000)}k / {Math.round(stats?.geminiOutput / 1000)}k</p>
                 <p className="text-[10px] uppercase font-bold text-white/30 tracking-widest mt-2">Input / Output Balance</p>
               </div>
             </Card>
