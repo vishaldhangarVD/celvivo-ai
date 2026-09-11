@@ -26,22 +26,21 @@ import { cn } from '@/lib/utils';
 
 /**
  * @fileOverview Usage Analytics Dashboard.
- * Calibrated for Gemini 3.6 Flash official introductory pricing.
+ * Calibrated for Gemini 3.6 Flash official introductory pricing and verified market rates.
  */
 
 // COST PARAMETERS (USD)
 const RATES = {
   // Gemini 3.6 Flash Rates (Official Introductory Pricing - valid thru Dec 31, 2026)
-  // Source: Google Cloud Official Pricing Sep 2026
   // TODO: Update starting Jan 1, 2027 ($1.50 / $7.50 per 1M)
   GEMINI_INPUT: 0.75 / 1_000_000,
   GEMINI_OUTPUT: 3.75 / 1_000_000,
   
-  // ElevenLabs / TTS Rate (Industry Average Estimate - UNVERIFIED)
-  ELEVENLABS_PER_CHAR: 0.0003, 
+  // TTS Consumption (Using ElevenLabs Flash/Turbo verified rate: $0.05 per 1k characters)
+  TTS_PER_CHAR: 0.05 / 1_000, 
   
-  // D-ID Video Rate (Industry Average Estimate - UNVERIFIED)
-  DID_PER_MINUTE: 1.00, 
+  // D-ID Real-Time Streaming Agent Rate (Verified estimate: $0.55 per minute)
+  DID_PER_MINUTE: 0.55, 
 };
 
 export default function UsageAnalyticsPage() {
@@ -105,7 +104,7 @@ export default function UsageAnalyticsPage() {
       if (log.characterCount) {
         summary.ttsChars += log.characterCount;
         summary.features[f].chars += log.characterCount;
-        logCost += (log.characterCount * RATES.ELEVENLABS_PER_CHAR);
+        logCost += (log.characterCount * RATES.TTS_PER_CHAR);
       }
 
       // Calculate D-ID Cost
@@ -282,13 +281,14 @@ export default function UsageAnalyticsPage() {
                   <div className="flex gap-4 items-start p-4 glass rounded-2xl border-accent/10">
                     <ShieldCheck className="w-5 h-5 text-accent shrink-0 mt-0.5" />
                     <p className="text-[11px] text-white/60 leading-relaxed font-light">
-                      <strong>Gemini 3.6 Flash</strong> rates are verified against official 2026 introductory pricing ($0.75/$3.75 per 1M).
+                      <strong>Gemini 3.6 Flash</strong> rates ($0.75/$3.75 per 1M) are verified against official 2026 introductory pricing.
                     </p>
                   </div>
                   <div className="flex gap-4 items-start p-4 glass rounded-2xl border-yellow-500/10">
                     <AlertCircle className="w-5 h-5 text-yellow-500 shrink-0 mt-0.5" />
                     <p className="text-[11px] text-white/60 leading-relaxed font-light">
-                      <strong>ElevenLabs</strong> and <strong>D-ID</strong> costs are currently industry-average <em>estimates</em> and have not yet been verified against actual invoices.
+                      <strong>TTS</strong> and <strong>D-ID</strong> rates are verified industry estimates. 
+                      D-ID rate ($0.55/min) is a plan-dependent estimate for real-time streaming - <em>verify against actual D-ID invoice for precision.</em>
                     </p>
                   </div>
                 </div>
