@@ -22,6 +22,8 @@ const AptitudeEvaluationInputSchema = z.object({
     correctAnswer: z.string(),
     isCorrect: z.boolean(),
   })),
+  userId: z.string().optional(),
+  sessionId: z.string().optional(),
 });
 
 const AptitudeEvaluationOutputSchema = z.object({
@@ -75,7 +77,11 @@ const aptitudeEvaluationFlow = ai.defineFlow(
   },
   async (input) => {
     try {
-      const { output } = await runWithResilience(prompt, input);
+      const { output } = await runWithResilience(prompt, input, {
+        userId: input.userId,
+        sessionId: input.sessionId,
+        feature: 'aptitude_evaluation'
+      });
       if (!output) throw new Error("Aptitude audit failed.");
       return output;
     } catch (error) {

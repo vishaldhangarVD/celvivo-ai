@@ -19,20 +19,6 @@ export default function CertificateTemplate({
   date, 
   certId 
 }: CertificateTemplateProps) {
-  const logoMark = (
-    <svg width="40" height="40" viewBox="0 0 40 40" fill="none">
-      <defs>
-        <linearGradient id="lgGrad" x1="0" y1="0" x2="40" x2="40">
-          <stop offset="0%" stopColor="#7c5cff"/>
-          <stop offset="100%" stopColor="#d8b374"/>
-        </linearGradient>
-      </defs>
-      <path d="M6 32 V8 L20 24 V8" stroke="url(#lgGrad)" strokeWidth="4.2" strokeLinecap="round" strokeLinejoin="round" fill="none"/>
-      <path d="M26 32 V8" stroke="url(#lgGrad)" strokeWidth="4.2" strokeLinecap="round" fill="none" opacity=".55"/>
-      <circle cx="34" cy="7" r="3" fill="#d8b374"/>
-    </svg>
-  );
-
   return (
     <div 
       id="certificate-render-node"
@@ -60,9 +46,13 @@ export default function CertificateTemplate({
         {/* Header */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-[#171a2e] to-[#0d0f1c] border border-[#d8b374]/25 flex items-center justify-center shrink-0">
-              {logoMark}
-            </div>
+          <div className="w-12 h-12 rounded-xl border border-[#d8b374]/25 flex items-center justify-center shrink-0 overflow-hidden bg-[#050816]">
+  <img
+    src="/LOGO.png"
+    alt="CELVIVO AI Logo"
+    className="w-[135%] h-[135%] max-w-none object-cover"
+  />
+</div>
             <div className="brand-text">
               <div className="font-headline font-bold text-[20px] tracking-widest text-[#f1eee4]">CELVIVO<span className="text-[#d8b374]">AI</span></div>
               <div className="text-[10px] tracking-[2.5px] text-[#8b8a94] uppercase mt-0.5">AI Career Platform</div>

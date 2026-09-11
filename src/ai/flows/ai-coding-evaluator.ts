@@ -13,6 +13,8 @@ const CodingEvaluationInputSchema = z.object({
   language: z.string(),
   executionOutput: z.string(),
   executionError: z.string().optional(),
+  userId: z.string().optional(),
+  sessionId: z.string().optional(),
 });
 
 const CodingEvaluationOutputSchema = z.object({
@@ -63,7 +65,11 @@ const codingEvaluationFlow = ai.defineFlow(
   },
   async (input) => {
     try {
-      const { output } = await runWithResilience(prompt, input);
+      const { output } = await runWithResilience(prompt, input, {
+        userId: input.userId,
+        sessionId: input.sessionId,
+        feature: 'coding_round'
+      });
       if (!output) throw new Error("Syntax audit failed.");
       return output;
     } catch (error) {

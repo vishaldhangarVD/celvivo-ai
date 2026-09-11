@@ -289,7 +289,9 @@ function CodingEngineContent() {
           source_code: code, 
           language: selectedLang.id, 
           stdin: currentQ.sampleInput || "",
-          expectedOutput: currentQ.sampleOutput || ""
+          expectedOutput: currentQ.sampleOutput || "",
+          userId: user?.uid,
+          sessionId: journey?.sessionId
         }),
       });
       const data = await response.json();
@@ -326,7 +328,9 @@ function CodingEngineContent() {
         body: JSON.stringify({ 
           source_code: code, 
           language: selectedLang.id, 
-          testCases: currentQ.hiddenTestCases || [] 
+          testCases: currentQ.hiddenTestCases || [],
+          userId: user?.uid,
+          sessionId: journey?.sessionId
         }),
       });
 
@@ -450,7 +454,9 @@ function CodingEngineContent() {
                 company: journey.company,
                 experienceLevel: journey.experience,
                 count: 8,
-                avoidTitles: usedTitles
+                avoidTitles: usedTitles,
+                userId: user.uid,
+                sessionId: journey.sessionId
               });
               finalQuestions = response.questions;
            } catch (genError) {

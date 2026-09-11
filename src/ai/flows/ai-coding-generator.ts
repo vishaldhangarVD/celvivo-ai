@@ -48,6 +48,8 @@ const CodingGenerationInputSchema = z.object({
   experienceLevel: z.string(),
   count: z.number().default(8),
   avoidTitles: z.array(z.string()).optional().describe("Titles of previously used questions to prevent repeats."),
+  userId: z.string().optional(),
+  sessionId: z.string().optional(),
 });
 
 const CodingGenerationOutputSchema = z.object({
@@ -91,7 +93,7 @@ Your objective is to architect a set of {{{count}}} UNIQUE, high-fidelity algori
    - Java/C++/C/C#/Rust/Kotlin/Swift: Exactly 4 spaces with standard brace style.
    - Ruby/PHP: Exactly 2 spaces.
    - Go: Standard 4-space or tab indentation.
-4. FORMATTING: Every starterCode string MUST use actual newline characters (\n) and proper indentation. NEVER return code as a single-line or condensed string using semicolons.
+4. FORMATTING: Every starterCode string MUST use actual newline characters (\\n) and proper indentation. NEVER return code as a single-line or condensed string using semicolons.
 5. HIDDEN VERIFICATION: Provide exactly 5 hidden test cases with expected outputs.
 
 Return a strictly structured JSON matching the output schema. No conversational text.`,
@@ -112,7 +114,11 @@ const codingGenerationFlow = ai.defineFlow(
     while (attempts < 2 && validQuestions.length < input.count) {
       try {
         console.log(`[Coding Flow] Synthesis Attempt ${attempts + 1} for ${input.company}`);
-        const { output } = await runWithResilience(prompt, input);
+        const { output } = await runWithResilience(prompt, input, {
+          userId: input.userId,
+          sessionId: input.sessionId,
+          feature: 'coding_round'
+        });
         
         if (output?.questions) {
           for (const q of output.questions) {

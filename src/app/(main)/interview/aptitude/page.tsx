@@ -168,7 +168,9 @@ export default function AptitudeEnginePage() {
           role: data.role,
           company: data.company,
           experienceLevel: data.experience,
-          usedQuestionFingerprints: history
+          usedQuestionFingerprints: history,
+          userId: user.uid,
+          sessionId: data.sessionId
         });
         
         const freshQuestions = response.questions;
@@ -210,15 +212,13 @@ export default function AptitudeEnginePage() {
   }, [db, user?.uid, journeyRef, router, toast, isSubmitting]);
 
   const handleSubmit = useCallback(async () => {
-    if (isSubmitting || !journeyRef) return;
+    if (isSubmitting || !journeyRef || !user?.uid) return;
     
     setIsSubmitting(true);
     setIsEvaluating(true);
     setSubmissionError(null);
 
-    if (user?.uid) {
-      localStorage.removeItem(`aptitude_timer_end_${user.uid}`);
-    }
+    localStorage.removeItem(`aptitude_timer_end_${user.uid}`);
 
     try {
       // STEP 0: Checking Answers
@@ -266,7 +266,9 @@ export default function AptitudeEnginePage() {
         experienceLevel: data?.experience || "Senior",
         timeTakenSeconds: Math.max(0, actualTimeTaken),
         totalQuestions: questions.length,
-        results: formattedResults
+        results: formattedResults,
+        userId: user.uid,
+        sessionId: data?.sessionId
       });
 
       const finalReport = {
@@ -565,7 +567,7 @@ export default function AptitudeEnginePage() {
                     variant="ghost" 
                     onClick={handleReviewLater} 
                     disabled={isSubmitting}
-                    className={cn("h-12 px-8 rounded-xl glass border-white/10 text-[10px] font-black uppercase", markedForReview.has(currentIdx) && "bg-orange-500/10 text-orange-400 shadow-[0_0_15px_rgba(249,115,22,0.3)]")}
+                    className={cn("h-12 px-8 rounded-xl glass border-white/10 text-[10px] font-black uppercase", markedForReview.has(currentIdx) && "bg-orange-500/20 text-orange-400 shadow-[0_0_15px_rgba(249,115,22,0.3)]")}
                   >
                     Skip Question
                   </Button>

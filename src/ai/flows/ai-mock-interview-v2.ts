@@ -169,7 +169,7 @@ const aiMockInterviewFlow = ai.defineFlow(
     const turnNumber = input.currentMainQuestionIndex;
     const askedCount = input.askedQuestions?.length || 0;
     
-    console.log(`[Special HR] Turn ${turnNumber} - Starting Neural Synthesis. History Size: ${input.history.length}. Previously Asked: ${askedCount}`);
+    console.log(`[Turn ${turnNumber}] Starting Neural Synthesis. History Size: ${input.history.length}. Previously Asked: ${askedCount}`);
 
     try {
       const { output } = await runWithResilience(prompt, {
@@ -180,12 +180,12 @@ const aiMockInterviewFlow = ai.defineFlow(
       }, {
         userId: input.userId,
         sessionId: input.sessionId,
-        feature: 'special_interview'
+        feature: input.roundType === 'Special HR Interview' ? 'special_interview' : 'ai_interview'
       });
     
       if (!output) throw new Error("Neural synthesis empty.");
     
-      console.log(`[Special HR] Turn ${turnNumber} - Gemini SUCCESS. Generated: "${output.nextQuestion.substring(0, 60)}..."`);
+      console.log(`[Turn ${turnNumber}] Gemini SUCCESS. Generated: "${output.nextQuestion.substring(0, 60)}..."`);
 
       return {
         ...output,
@@ -198,7 +198,7 @@ const aiMockInterviewFlow = ai.defineFlow(
       };
     
     } catch (error: any) {
-      console.error(`[Special HR] Turn ${turnNumber} - Neural FAILURE:`, error.message);
+      console.error(`[Turn ${turnNumber}] Neural FAILURE:`, error.message);
       
       const isQuotaError = error.message?.includes("429") || error.message?.includes("Quota");
       const fallbackIdx = input.currentMainQuestionIndex % FALLBACK_QUESTIONS.length;
