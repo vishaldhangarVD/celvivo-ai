@@ -8,14 +8,6 @@
 import { ai, runWithResilience, PRIMARY_MODEL } from '@/ai/genkit';
 import { z } from 'genkit';
 
-const FALLBACK_QUESTIONS = [
-  "Got it, that makes sense. Could you tell me more about how you handled the technical trade-offs in your most recent project?",
-  "That's a solid perspective. Moving forward, how do you typically approach learning a new complex technology under a tight deadline?",
-  "I appreciate the detail. Let's shift gears slightly—tell me about a time you had to resolve a significant conflict within a technical team.",
-  "Very interesting. In your experience, what are the most critical factors for maintaining high-quality code in a fast-paced environment?",
-  "Understood. Let's explore your professional growth—where do you see your technical expertise evolving over the next few years?"
-];
-
 const Round1ContextSchema = z.object({
   resumeSummary: z.string().optional(),
   resumeSkills: z.array(z.string()).optional(),
@@ -199,27 +191,8 @@ const aiMockInterviewFlow = ai.defineFlow(
     
     } catch (error: any) {
       console.error(`[Turn ${turnNumber}] Neural FAILURE:`, error.message);
-      
-      const isQuotaError = error.message?.includes("429") || error.message?.includes("Quota");
-      const fallbackIdx = input.currentMainQuestionIndex % FALLBACK_QUESTIONS.length;
-      
-      const fallbackMsg = isQuotaError 
-        ? "My apologies, our AI connection is experiencing high demand due to free-tier limits. I'm carefully analyzing your points—please allow me a brief moment to synchronize our next discussion node."
-        : FALLBACK_QUESTIONS[fallbackIdx];
-
-      return {
-        nextQuestion: fallbackMsg,
-        difficulty: input.currentDifficulty || "MEDIUM",
-        stage: input.currentStage || "TECHNICAL",
-        isInterviewComplete: input.currentMainQuestionIndex >= 12,
-        isHint: false,
-        _debug: {
-          modelUsed: PRIMARY_MODEL,
-          geminiSucceeded: false,
-          geminiError: error.message,
-          usedFallback: true
-        }
-      };
+      // Fallback behavior removed. Propagating original error to trigger UI error handling.
+      throw error;
     }
   }
 );
