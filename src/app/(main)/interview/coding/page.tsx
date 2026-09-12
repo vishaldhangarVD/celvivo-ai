@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useEffect, useMemo, useCallback, useRef, Suspense } from 'react';
@@ -83,7 +82,6 @@ function CodingEngineContent() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isFinalizing, setIsFinalizing] = useState(false);
   
-  // BUG FIX (Bug 1): Replace async state guard with synchronous Ref lock to prevent double-navigation skipping.
   const navLockRef = useRef(false);
   
   const [submitStep, setSubmitStep] = useState(0);
@@ -103,10 +101,13 @@ function CodingEngineContent() {
   const { data: journey, loading: journeyLoading } = useDoc(journeyRef);
 
   const resultsQuery = useMemo(() => {
-    if (!db || !user?.uid || !journey?.sessionId) return null;
+    // BUG B FIX: Ensure we don't query for stale results if the sessionId is invalid/generic
+    const sid = journey?.sessionId;
+    if (!db || !user?.uid || !sid || sid === "unknown" || sid.length < 5) return null;
+    
     return query(
       collection(db, 'users', user.uid, 'coding_results'),
-      where('interviewId', '==', journey.sessionId)
+      where('interviewId', '==', sid)
     );
   }, [db, user?.uid, journey?.sessionId]);
 
@@ -199,7 +200,7 @@ function CodingEngineContent() {
           status: scorePercentage >= 60 ? 'Pass' : 'Fail', 
           totalQuestions: total, 
           passedQuestions: passed, 
-          failedQuestions: failed,
+          failedQuestions: failed, 
           skippedQuestions: skipped,
           totalPassedCases,
           totalTestCases,
@@ -222,7 +223,6 @@ function CodingEngineContent() {
   }, [isFinalizing, user, db, journey, sessionResults, journeyRef, router, toast, questions]);
 
   const goToNextQuestion = useCallback(async () => {
-    // BUG FIX (Bug 1): Atomic guard to prevent skipping.
     if (navLockRef.current) return;
     navLockRef.current = true;
 
@@ -235,7 +235,6 @@ function CodingEngineContent() {
         await finalizeAssessment();
       }
     } finally {
-      // Small delay before unlocking to prevent rapid double-clicks from double-bumping the index
       setTimeout(() => {
         navLockRef.current = false;
       }, 500);
@@ -348,7 +347,11 @@ function CodingEngineContent() {
       const data = await response.json();
       const results = data.results || [];
       const passed = results.filter((r: any) => r.passed).length;
-      const total = results.length || (currentQ.hiddenTestCases?.length ?? 1);
+      
+      // BUG A FIX: Defensive total calculation to prevent 0/0 misleading results
+      const hiddenCount = currentQ.hiddenTestCases?.length || 0;
+      const total = results.length || (hiddenCount > 0 ? hiddenCount : 1);
+      
       const allPassed = passed === total && total > 0;
 
       const submissionReport = { 
@@ -413,7 +416,6 @@ function CodingEngineContent() {
         (q.starterCode?.python?.length < 50) || !q.hiddenTestCases?.length
       );
 
-      // BUG FIX (Bug 2): Check questionsSessionId matches the current sessionId to prevent serving old questions.
       if (!isCacheSuspect && Array.isArray(journey.codingQuestions) && journey.codingQuestions.length === 8 && journey.questionsSessionId === journey.sessionId) {
         setQuestions(journey.codingQuestions);
         setIsInitializing(false);
