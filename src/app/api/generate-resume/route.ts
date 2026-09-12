@@ -1,9 +1,10 @@
+
 import { NextResponse } from 'next/server';
 
 /**
  * @fileOverview Server-side Resume PDF Generator.
  * Optimized for Custom Container deployments using the official Puppeteer image.
- * Includes explicit process management to prevent disk bloat on /ephemeral.
+ * Includes explicit process management and enhanced error reporting for 500/403 faults.
  */
 
 export const maxDuration = 60;
@@ -11,8 +12,15 @@ export const maxDuration = 60;
 export async function POST(req: Request) {
   let browser = null;
   try {
+    console.log("[API Resume] Received synthesis request.");
     const data = await req.json();
-    const { name, role, email, phone, loc, summary, skills, experience, projects, education, theme } = data;
+    const { name, role, email, phone, loc, summary, skills, experience, projects, education } = data;
+
+    // Validate data payload
+    if (!name) {
+      console.error("[API Resume] Validation failed: Missing candidate name.");
+      return NextResponse.json({ error: "Candidate name required for synthesis." }, { status: 400 });
+    }
 
     // Lazy-load puppeteer to avoid heavy bundle analysis during dev navigation
     const puppeteer = await import('puppeteer');
@@ -41,59 +49,64 @@ export async function POST(req: Request) {
       <body>
         <div class="name">${name || 'Candidate Name'}</div>
         <div class="role">${role || 'Professional Title'}</div>
-        <div class="contact">${email} | ${phone} | ${loc}</div>
+        <div class="contact">${email || ''} | ${phone || ''} | ${loc || ''}</div>
         
         <div class="section">
           <div class="section-title">Summary</div>
-          <div class="summary">${summary}</div>
+          <div class="summary">${summary || ''}</div>
         </div>
 
         <div class="section">
           <div class="section-title">Experience</div>
-          ${experience.map((e: any) => `
+          ${(experience || []).map((e: any) => `
             <div class="job">
-              <div class="job-head"><span>${e.role} @ ${e.company}</span><span>${e.dates}</span></div>
-              <div class="job-sub">${e.role}</div>
-              ${(e.bullets || '').split('\n').map((b: string) => `<div class="bullet">• ${b}</div>`).join('')}
+              <div class="job-head"><span>${e.role || ''} @ ${e.company || ''}</span><span>${e.dates || ''}</span></div>
+              <div class="job-sub">${e.role || ''}</div>
+              ${(e.bullets || '').split('\n').filter((b:string) => b.trim()).map((b: string) => `<div class="bullet">• ${b}</div>`).join('')}
             </div>
           `).join('')}
         </div>
 
         <div class="section">
           <div class="section-title">Education</div>
-          ${education.map((ed: any) => `
-            <div class="job-head"><span>${ed.degree}, ${ed.school}</span><span>${ed.dates}</span></div>
+          ${(education || []).map((ed: any) => `
+            <div class="job-head"><span>${ed.degree || ''}, ${ed.school || ''}</span><span>${ed.dates || ''}</span></div>
           `).join('')}
         </div>
 
         <div class="section">
           <div class="section-title">Skills</div>
-          <div>${skills.map((s: string) => `<span class="skill-pill">${s}</span>`).join('')}</div>
+          <div>${(skills || []).map((s: string) => `<span class="skill-pill">${s}</span>`).join('')}</div>
         </div>
       </body>
       </html>
     `;
 
+    console.log("[API Resume] Launching Puppeteer browser...");
     browser = await puppeteer.launch({
       headless: true,
       args: [
         '--no-sandbox', 
         '--disable-setuid-sandbox', 
         '--disable-dev-shm-usage',
-        '--disable-gpu'
+        '--disable-gpu',
+        '--user-data-dir=/tmp/puppeteer_dev_profile'
       ],
-      executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || undefined,
+      executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || '/usr/bin/google-chrome',
     });
 
     const page = await browser.newPage();
+    console.log("[API Resume] Setting page content...");
     await page.setContent(html, { waitUntil: 'networkidle0' });
     
+    console.log("[API Resume] Generating PDF buffer...");
     const pdf = await page.pdf({
       format: 'A4',
       printBackground: true,
       margin: { top: '20mm', bottom: '20mm', left: '15mm', right: '15mm' }
     });
 
+    console.log("[API Resume] PDF generated successfully. Returning response.");
     return new Response(pdf, {
       headers: {
         'Content-Type': 'application/pdf',
@@ -101,11 +114,16 @@ export async function POST(req: Request) {
       }
     });
   } catch (error: any) {
-    console.error("[API Resume] Fatal fault:", error);
-    return NextResponse.json({ error: "Resume Synthesis Failed", details: error.message }, { status: 500 });
+    console.error("[API Resume] FATAL FAULT DURING SYNTHESIS:", error);
+    return NextResponse.json({ 
+      error: "Resume Synthesis Failed", 
+      details: error.message,
+      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+    }, { status: 500 });
   } finally {
     if (browser) {
-      await browser.close().catch(e => console.error("[Puppeteer] Failed to close browser:", e));
+      console.log("[API Resume] Closing Puppeteer browser.");
+      await browser.close().catch(e => console.error("[Puppeteer] Failed to close browser cleanly:", e));
     }
   }
 }

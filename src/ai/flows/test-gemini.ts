@@ -14,9 +14,12 @@ const testPrompt = ai.definePrompt({
 });
 
 export async function runGeminiTest() {
-  const startTime = Date.now();
+  // Defensive initialization of startTime to prevent "undefined" reading in global performance utilities
+  const startTime = typeof Date !== 'undefined' ? Date.now() : 0;
+  
   try {
     const response = await runWithResilience(testPrompt, {});
+    
     // Safety check for startTime calculation
     const current = Date.now();
     const latency = current - (startTime || current);
