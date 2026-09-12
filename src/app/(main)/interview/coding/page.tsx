@@ -89,8 +89,6 @@ function CodingEngineContent() {
   const [activeTerminalTab, setActiveTerminalTab] = useState("output");
   const [countdown, setCountdown] = useState<number | null>(null);
 
-  const hasRestoredRef = useRef(false);
-
   const isUnlockedParam = searchParams.get('unlocked') === 'true';
 
   const journeyRef = useMemo(() => {
@@ -99,42 +97,6 @@ function CodingEngineContent() {
   }, [db, user?.uid]);
 
   const { data: journey, loading: journeyLoading } = useDoc(journeyRef);
-
-  const resultsQuery = useMemo(() => {
-    const sid = journey?.sessionId;
-    if (!db || !user?.uid || !sid || sid === "unknown" || sid.length < 5) return null;
-    
-    return query(
-      collection(db, 'users', user.uid, 'coding_results'),
-      where('interviewId', '==', sid)
-    );
-  }, [db, user?.uid, journey?.sessionId]);
-
-  const { data: existingResultsData } = useCollection(resultsQuery);
-
-  useEffect(() => {
-    if (hasRestoredRef.current) return;
-    if (existingResultsData && existingResultsData.length > 0 && questions.length > 0) {
-      const restoredResults: Record<number, any> = {};
-      existingResultsData.forEach((res: any) => {
-        const qIdx = questions.findIndex(q => q.id === res.questionId);
-        if (qIdx !== -1) {
-          restoredResults[qIdx] = {
-            code: res.submittedCode,
-            results: res.auditTrace,
-            status: res.status,
-            passedCount: res.passedTestCases,
-            totalCount: res.totalTestCases || 0,
-            language: res.language
-          };
-        }
-      });
-      if (Object.keys(restoredResults).length > 0) {
-        setSessionResults(restoredResults);
-        hasRestoredRef.current = true;
-      }
-    }
-  }, [existingResultsData, questions]);
 
   const currentQ = useMemo(() => {
     if (!questions || questions.length === 0) return null;
@@ -246,6 +208,9 @@ function CodingEngineContent() {
     const sessionId = journey.sessionId || "unknown";
     const docId = `${sessionId}_${q.id}`;
     
+    // Robust calculation of total test cases
+    const total = res.totalCount || (q.hiddenTestCases?.length || 1);
+
     const executionTime = (res.results || []).length > 0 
       ? Math.max(...res.results.map((r: any) => parseFloat(r.executionTime || 0))) 
       : 0;
@@ -262,9 +227,9 @@ function CodingEngineContent() {
         userId: user.uid,
         questionId: q.id || "unknown",
         language: res.language || "Unknown",
-        score: res.totalCount > 0 ? Math.round((res.passedCount / res.totalCount) * 100) : 0,
+        score: total > 0 ? Math.round((res.passedCount / total) * 100) : 0,
         passedTestCases: res.passedCount || 0,
-        totalTestCases: res.totalCount || 0,
+        totalTestCases: total,
         status: res.status || "Unknown",
         submittedCode: res.code || "",
         executionTime,
