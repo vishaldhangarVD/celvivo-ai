@@ -101,7 +101,6 @@ function CodingEngineContent() {
   const { data: journey, loading: journeyLoading } = useDoc(journeyRef);
 
   const resultsQuery = useMemo(() => {
-    // BUG B FIX: Ensure we don't query for stale results if the sessionId is invalid/generic
     const sid = journey?.sessionId;
     if (!db || !user?.uid || !sid || sid === "unknown" || sid.length < 5) return null;
     
@@ -125,7 +124,7 @@ function CodingEngineContent() {
             results: res.auditTrace,
             status: res.status,
             passedCount: res.passedTestCases,
-            totalCount: res.totalTestCases,
+            totalCount: res.totalTestCases || 0,
             language: res.language
           };
         }
@@ -265,7 +264,7 @@ function CodingEngineContent() {
         language: res.language || "Unknown",
         score: res.totalCount > 0 ? Math.round((res.passedCount / res.totalCount) * 100) : 0,
         passedTestCases: res.passedCount || 0,
-        totalTestCases: res.totalTestCases ?? 0,
+        totalTestCases: res.totalCount || 0,
         status: res.status || "Unknown",
         submittedCode: res.code || "",
         executionTime,
@@ -348,7 +347,6 @@ function CodingEngineContent() {
       const results = data.results || [];
       const passed = results.filter((r: any) => r.passed).length;
       
-      // BUG A FIX: Defensive total calculation to prevent 0/0 misleading results
       const hiddenCount = currentQ.hiddenTestCases?.length || 0;
       const total = results.length || (hiddenCount > 0 ? hiddenCount : 1);
       
@@ -782,10 +780,22 @@ function CodingEngineContent() {
                 <TabsContent value="cases" className="p-8 h-full overflow-y-auto space-y-4">
                   {sessionResults[currentIdx] ? (
                     <div className="space-y-4">
-                      <div className={cn("p-4 rounded-xl border flex items-center justify-between", sessionResults[currentIdx].status === 'Solved' ? "bg-green-500/10 border-green-500/20" : "bg-red-500/10 border-red-500/20")}>
+                      <div className={cn(
+                        "p-4 rounded-xl border flex items-center justify-between", 
+                        sessionResults[currentIdx].status === 'Solved' ? "bg-green-500/10 border-green-500/20" : 
+                        sessionResults[currentIdx].status === 'Skipped' ? "bg-orange-500/10 border-orange-500/20" :
+                        "bg-red-500/10 border-red-500/20"
+                      )}>
                          <div className="flex items-center gap-4">
-                            <h4 className={cn("text-base font-bold", sessionResults[currentIdx].status === 'Solved' ? "text-green-400" : "text-red-400")}>
-                                {sessionResults[currentIdx].status === 'Solved' ? "ALL TESTS PASSED" : "SOME TESTS FAILED"}
+                            <h4 className={cn(
+                              "text-base font-bold", 
+                              sessionResults[currentIdx].status === 'Solved' ? "text-green-400" : 
+                              sessionResults[currentIdx].status === 'Skipped' ? "text-orange-400" :
+                              "text-red-400"
+                            )}>
+                                {sessionResults[currentIdx].status === 'Solved' ? "ALL TESTS PASSED" : 
+                                 sessionResults[currentIdx].status === 'Skipped' ? "QUESTION SKIPPED" :
+                                 "SOME TESTS FAILED"}
                             </h4>
                             <span className="text-[9px] font-black text-white/30 uppercase tracking-[0.2em]">Passes: {sessionResults[currentIdx].passedCount}/{sessionResults[currentIdx].totalCount}</span>
                          </div>
