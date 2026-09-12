@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect, useMemo, useCallback, useRef, Suspense } from 'react';
@@ -81,7 +82,10 @@ function CodingEngineContent() {
   const [isRunning, setIsRunning] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isFinalizing, setIsFinalizing] = useState(false);
-  const [isNavigating, setIsNavigating] = useState(false);
+  
+  // BUG FIX (Bug 1): Replace async state guard with synchronous Ref lock to prevent double-navigation skipping.
+  const navLockRef = useRef(false);
+  
   const [submitStep, setSubmitStep] = useState(0);
   const [terminalOutput, setTerminalOutput] = useState("WRITE YOUR CODE TO SOLVE THE PROBLEM.");
   const [activeTerminalTab, setActiveTerminalTab] = useState("output");
@@ -218,18 +222,25 @@ function CodingEngineContent() {
   }, [isFinalizing, user, db, journey, sessionResults, journeyRef, router, toast, questions]);
 
   const goToNextQuestion = useCallback(async () => {
-    if (isNavigating) return;
-    setIsNavigating(true);
+    // BUG FIX (Bug 1): Atomic guard to prevent skipping.
+    if (navLockRef.current) return;
+    navLockRef.current = true;
 
-    if (currentIdx < 7) { 
-      setCurrentIdx(prev => prev + 1);
-      setTerminalOutput("WRITE YOUR CODE TO SOLVE THE PROBLEM.");
-      setActiveTerminalTab("output");
-      setIsNavigating(false);
-    } else {
-      await finalizeAssessment();
+    try {
+      if (currentIdx < 7) { 
+        setCurrentIdx(prev => prev + 1);
+        setTerminalOutput("WRITE YOUR CODE TO SOLVE THE PROBLEM.");
+        setActiveTerminalTab("output");
+      } else {
+        await finalizeAssessment();
+      }
+    } finally {
+      // Small delay before unlocking to prevent rapid double-clicks from double-bumping the index
+      setTimeout(() => {
+        navLockRef.current = false;
+      }, 500);
     }
-  }, [currentIdx, isNavigating, finalizeAssessment]);
+  }, [currentIdx, finalizeAssessment]);
 
   const saveQuestionResult = async (idx: number, res: any) => {
     if (!user || !db || !journey || !questions || !questions[idx]) return;
@@ -248,7 +259,6 @@ function CodingEngineContent() {
       : 0;
 
     try {
-      // Use setDoc with deterministic ID to prevent duplicates and ensure attempt isolation
       await setDoc(doc(db, 'users', user.uid, 'coding_results', docId), {
         interviewId: sessionId,
         userId: user.uid,
@@ -270,7 +280,7 @@ function CodingEngineContent() {
   };
 
   const handleRunCode = async () => {
-    if (isRunning || isSubmitting || isTimeExpired || isNavigating || !currentQ || countdown !== null) return;
+    if (isRunning || isSubmitting || isTimeExpired || navLockRef.current || !currentQ || countdown !== null) return;
     
     if (!code || code.trim().length === 0) {
       toast({ variant: "destructive", title: "Empty Payload", description: "Please implement logic before running." });
@@ -310,7 +320,7 @@ function CodingEngineContent() {
   };
 
   const handleSubmitCode = async () => {
-    if (isSubmitting || isRunning || isTimeExpired || isNavigating || !currentQ || countdown !== null) return;
+    if (isSubmitting || isRunning || isTimeExpired || navLockRef.current || !currentQ || countdown !== null) return;
 
     if (!code || code.trim().length === 0) {
       toast({ variant: "destructive", title: "Empty Payload", description: "Please implement logic before submitting." });
@@ -379,7 +389,7 @@ function CodingEngineContent() {
   };
 
   const handleSkipQuestion = async () => {
-    if (isNavigating || isSubmitting || isRunning || isTimeExpired || !currentQ || countdown !== null) return;
+    if (navLockRef.current || isSubmitting || isRunning || isTimeExpired || !currentQ || countdown !== null) return;
     
     const skipReport = { 
       code: code || "// Skipped", 
@@ -403,6 +413,7 @@ function CodingEngineContent() {
         (q.starterCode?.python?.length < 50) || !q.hiddenTestCases?.length
       );
 
+      // BUG FIX (Bug 2): Check questionsSessionId matches the current sessionId to prevent serving old questions.
       if (!isCacheSuspect && Array.isArray(journey.codingQuestions) && journey.codingQuestions.length === 8 && journey.questionsSessionId === journey.sessionId) {
         setQuestions(journey.codingQuestions);
         setIsInitializing(false);
@@ -607,7 +618,9 @@ function CodingEngineContent() {
           <div className="relative mb-16 mx-auto w-40 h-40">
             <div className="absolute inset-0 rounded-full border-2 border-accent/20 border-t-accent animate-spin" />
             <div className="absolute inset-0 flex items-center justify-center">
-              <Cpu className="w-12 h-12 text-accent animate-pulse" />
+              <div className="w-12 h-12 text-accent animate-pulse">
+                 <Cpu className="w-full h-full" />
+              </div>
             </div>
           </div>
           
@@ -743,13 +756,13 @@ function CodingEngineContent() {
 
             <div className="h-24 border-t border-white/5 bg-white/[0.02] flex items-center justify-between px-10">
               <div className="flex items-center gap-6">
-                <Button onClick={handleRunCode} disabled={isRunning || isSubmitting || isTimeExpired || isNavigating} className="h-12 px-8 glass border-white/10 bg-white/5 text-[10px] font-black uppercase tracking-widest rounded-xl">
+                <Button onClick={handleRunCode} disabled={isRunning || isSubmitting || isTimeExpired || navLockRef.current} className="h-12 px-8 glass border-white/10 bg-white/5 text-[10px] font-black uppercase tracking-widest rounded-xl">
                   {isRunning ? <Loader2 className="w-4 animate-spin mr-2" /> : <Activity className="w-4 h-4 mr-2" />} RUN SAMPLE
                 </Button>
-                <Button onClick={handleSubmitCode} disabled={isSubmitting || isRunning || isTimeExpired || isNavigating} className="h-12 px-12 btn-premium rounded-xl text-[10px] font-black uppercase tracking-[0.3em] group">
+                <Button onClick={handleSubmitCode} disabled={isSubmitting || isRunning || isTimeExpired || navLockRef.current} className="h-12 px-12 btn-premium rounded-xl text-[10px] font-black uppercase tracking-[0.3em] group">
                   {isSubmitting ? <><Loader2 className="w-4 animate-spin mr-2" /> CHECKING SOLUTION...</> : <><ShieldCheck className="w-4 h-4 mr-2 group-hover:scale-110 transition-transform" /> SUBMIT SOLUTION</>}
                 </Button>
-                <Button onClick={handleSkipQuestion} disabled={isRunning || isSubmitting || isTimeExpired || isNavigating} variant="ghost" className="h-12 px-6 rounded-xl border border-white/10 text-white/40 text-[10px] font-black uppercase tracking-widest">
+                <Button onClick={handleSkipQuestion} disabled={isRunning || isSubmitting || isTimeExpired || navLockRef.current} variant="ghost" className="h-12 px-6 rounded-xl border border-white/10 text-white/40 text-[10px] font-black uppercase tracking-widest">
                   <FastForward className="w-4 h-4 mr-2" /> SKIP
                 </Button>
               </div>

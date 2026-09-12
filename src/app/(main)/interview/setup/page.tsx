@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useMemo, useEffect } from 'react';
@@ -323,7 +324,10 @@ export default function InterviewSetupPage() {
     }
 
     setLoadingTarget(targetPath);
-    const sessionId = journey?.sessionId || Math.random().toString(36).substring(7);
+    
+    // BUG FIX (Bug 2): Always generate a fresh sessionId for a new interview flow.
+    // This ensures questions are not pulled from a previous session's cache.
+    const sessionId = Math.random().toString(36).substring(7);
 
     try {
       const analysisResult = await analyzeResume({
@@ -354,7 +358,7 @@ export default function InterviewSetupPage() {
         codingUnlocked: false,
         codingQuestions: null,
         updatedAt: serverTimestamp(),
-        createdAt: journey?.createdAt || serverTimestamp()
+        createdAt: serverTimestamp() // Reset creation time for new session
       }, { merge: true });
 
       if (targetPath === 'aptitude') {
@@ -390,7 +394,7 @@ export default function InterviewSetupPage() {
               <h1 className="text-5xl font-bold tracking-tighter text-premium">
                 Set Up Your Interview.
               </h1>
-              <p className="text-sm text-muted-foreground font-light max-w-xl">
+              <p className="text-sm text-muted-foreground font-light max-xlxl">
                 Choose your company, job role, experience level, and upload your resume to get started.
               </p>
             </header>

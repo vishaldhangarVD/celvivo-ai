@@ -1,3 +1,4 @@
+
 'use server';
 /**
  * @fileOverview Nexvoro AI Coding Challenge Architect v3.0.
@@ -75,9 +76,14 @@ const prompt = ai.definePrompt({
   prompt: `You are an elite Senior Staff Software Engineer at {{{company}}}.
 Your objective is to architect a set of {{{count}}} UNIQUE, high-fidelity algorithmic coding challenges for a {{{role}}} candidate ({{{experienceLevel}}} level).
 
+### SESSION IDENTITY (VARIETY ANCHOR):
+Session ID: {{{sessionId}}}
+*Use this ID as a random seed to ensure you generate a COMPLETELY DIFFERENT set of problems than you would for any other session.*
+
 ### VARIETY PROTOCOL:
 - DO NOT generate any question that matches the logic or title of these previous questions: {{{avoidTitles}}}
 - Ensure every question uses a unique algorithmic pattern.
+- High-Entropy Requirement: Deliberately vary the themes (e.g. string manipulation vs graph vs dynamic programming).
 - Distribution Required: 3 Easy, 3 Medium, 2 Hard.
 
 ### CHALLENGE CALIBRATION (CRITICAL):
