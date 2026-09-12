@@ -170,8 +170,9 @@ const aiMockInterviewFlow = ai.defineFlow(
         currentStage: input.currentStage || "INTRODUCTION",
         currentDifficulty: input.currentDifficulty || "MEDIUM",
       }, {
-        userId: input.userId,
-        sessionId: input.sessionId,
+        // TELEMETRY PROTECTION: Ensure userId and sessionId are never undefined for the usage logger
+        userId: input.userId || 'anonymous',
+        sessionId: input.sessionId || 'unknown-session',
         feature: input.roundType === 'Special HR Interview' ? 'special_interview' : 'ai_interview'
       });
     
