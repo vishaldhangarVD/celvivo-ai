@@ -1,8 +1,8 @@
 'use server';
 /**
  * @fileOverview Nexvoro AI Virtual Interview Agent.
- * Unified with central model protocol to prevent 404 mismatches.
- * Includes explicit telemetry for turn-by-turn debugging.
+ * High-fidelity, resume-grounded interview simulation protocol.
+ * Calibrated to prioritize candidate projects and specific resume nodes.
  */
 
 import { ai, runWithResilience, PRIMARY_MODEL } from '@/ai/genkit';
@@ -104,31 +104,42 @@ TONE & STYLE PROTOCOL:
 - ASK ONLY ONE QUESTION AT A TIME.
 - VOCAL CONCISENESS: Keep questions short and impactful (2-3 sentences max).
 
-CANDIDATE DOSSIER:
-- Role: {{{role}}} ({{{experienceLevel}}} Level)
-- Summary: {{{resumeSummary}}}
-- Skills: {{#each resumeSkills}}{{{this}}}, {{/each}}
-- Projects: {{#each resumeProjects}}{{{this}}}, {{/each}}
-- Previous Scores: Aptitude: {{{aptitudeScore}}}%, Coding: {{{codingScore}}}%
+CANDIDATE RESUME — SOURCE OF TRUTH
+Summary:
+{{{resumeSummary}}}
+
+Skills:
+{{#each resumeSkills}}
+- {{{this}}}
+{{/each}}
+
+Projects:
+{{#each resumeProjects}}
+- {{{this}}}
+{{/each}}
+
+STRICT GROUNDING RULES:
+- Only reference projects, skills, or achievements explicitly listed in the 'CANDIDATE RESUME' section.
+- Never claim the candidate built a specific system or used a specific tech unless it is in the data above.
+- If the resume data is empty, default to role-based technical questioning.
 
 INTERVIEW FLOW PROTOCOL:
 
 NODE 1 (INTRODUCTION):
-If history is empty, you MUST start exactly with: "Hello. Welcome to today's interview. I hope you're doing well. I'll be conducting your interview today. Let's begin with a brief introduction. Could you please introduce yourself and tell me about yourself?"
+If history is empty AND currentMainQuestionIndex is 1, you MUST start exactly with: "Hello. Welcome to today's interview. I hope you're doing well. I'll be conducting your interview today. Let's begin with a brief introduction. Could you please introduce yourself and tell me about yourself?"
 
-NODE 2 (RESUME/PROJECT):
-Analyze the candidate's projects and skills. Pick ONE specific project, technology, or achievement literally named in their dossier. Ask a pointed question about it. 
-Example: "I noticed you built the '{{{resumeProjects.[0]}}}'—what was the most difficult technical decision you had to make during that implementation?"
+NODE 2 (RESUME / PROJECT ANCHOR):
+If currentMainQuestionIndex is 2, you MUST ask a question based on a specific project (prioritize this) or skill from the resume. You MUST mention the name of the project or skill in your question.
+Example: "I noticed you developed a 'Placement Prediction System' using ML—what was the biggest data quality challenge you faced during that project?"
 
-NODE 3 (TECHNICAL/SCENARIO):
-Ask role-specific questions. Focus on practical technical reasoning and architectural trade-offs.
+NODE 3 (PERSONALIZED TECHNICAL):
+Ask technical questions that relate to the candidate's demonstrated skills or projects. Use their experience level ({{{experienceLevel}}}) to calibrate difficulty.
 
-NODE 4 (FOLLOW_UP/CONVERSATIONAL):
-Reference a specific detail, claim, or technical term the candidate just mentioned in their LATEST RESPONSE. Build on it. 
-Example: "You mentioned using Redis for state management—why was that a better fit than a standard memory store for this use case?"
+NODE 4 (ADAPTIVE FOLLOW-UP):
+If the currentStage is FOLLOW_UP, you MUST reference a specific technical detail, decision, or claim from the candidate's LATEST RESPONSE. Probing deeper into "why" or "how" for that specific item.
 
 NODE 5 (CLOSING):
-If current index >= 12, finish naturally with: "Thank you for your time. That concludes today's interview. It was nice speaking with you."
+If currentMainQuestionIndex >= 12, finish naturally with: "Thank you for your time. That concludes today's interview. It was nice speaking with you."
 
 MANDATORY ANTI-REPETITION:
 DO NOT REPEAT ANY OF THESE QUESTIONS:
@@ -136,7 +147,10 @@ DO NOT REPEAT ANY OF THESE QUESTIONS:
 - {{{this}}}
 {{/each}}
 
-SEMANTIC IDENTITY CHECK: Ensure the core concept of your next question is entirely different from the questions listed above.
+CURRENT STATUS:
+Turn: {{{currentMainQuestionIndex}}}
+Current Stage: {{{currentStage}}}
+History Size: {{history.length}}
 
 CONVERSATION HISTORY:
 {{#each history}}
@@ -159,15 +173,30 @@ const aiMockInterviewFlow = ai.defineFlow(
   },
   async (input) => {
     const turnNumber = input.currentMainQuestionIndex;
-    const askedCount = input.askedQuestions?.length || 0;
     
-    console.log(`[Turn ${turnNumber}] Starting Neural Synthesis. History Size: ${input.history.length}. Previously Asked: ${askedCount}`);
+    // Normalize resume data
+    const cleanSkills = (input.resumeSkills || []).filter(s => s && typeof s === 'string' && s.trim() !== "");
+    const cleanProjects = (input.resumeProjects || []).filter(p => p && typeof p === 'string' && p.trim() !== "");
+    const cleanSummary = input.resumeSummary || "";
+
+    // Determine target stage based on turn number if not explicitly set
+    let targetStage = input.currentStage || "INTRODUCTION";
+    if (turnNumber === 1 && input.history.length === 0) {
+      targetStage = "INTRODUCTION";
+    } else if (turnNumber === 2) {
+      targetStage = cleanProjects.length > 0 ? "PROJECT" : "RESUME";
+    } else if (turnNumber >= 12) {
+      targetStage = "CLOSING";
+    }
 
     try {
       const { output } = await runWithResilience(prompt, {
         ...input,
+        resumeSkills: cleanSkills,
+        resumeProjects: cleanProjects,
+        resumeSummary: cleanSummary,
         askedQuestions: input.askedQuestions || [],
-        currentStage: input.currentStage || "INTRODUCTION",
+        currentStage: targetStage,
         currentDifficulty: input.currentDifficulty || "MEDIUM",
       }, {
         // TELEMETRY PROTECTION: Ensure userId and sessionId are never undefined for the usage logger
@@ -178,11 +207,9 @@ const aiMockInterviewFlow = ai.defineFlow(
     
       if (!output) throw new Error("Neural synthesis empty.");
     
-      console.log(`[Turn ${turnNumber}] Gemini SUCCESS. Generated: "${output.nextQuestion.substring(0, 60)}..."`);
-
       return {
         ...output,
-        isInterviewComplete: output.isInterviewComplete || input.currentMainQuestionIndex >= 12,
+        isInterviewComplete: output.isInterviewComplete || turnNumber >= 12,
         _debug: {
           modelUsed: PRIMARY_MODEL,
           geminiSucceeded: true,
