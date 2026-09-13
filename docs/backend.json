@@ -14,33 +14,30 @@
         "credits": {
           "type": "object",
           "properties": {
-            "aptitude": { "type": "number" },
-            "coding": { "type": "number" },
-            "interview": { "type": "number" }
+            "aptitude": { "type": "number", "default": 0 },
+            "coding": { "type": "number", "default": 0 },
+            "interview": { "type": "number", "default": 0 }
           }
         },
         "subscription": {
           "type": "object",
           "properties": {
             "plan": { "type": "string", "enum": ["starter", "pro", null] },
-            "status": { "type": "string" },
+            "status": { "type": "string", "enum": ["active", "inactive"] },
             "nextResetDate": { "type": "string", "format": "date-time" },
             "usage": {
               "type": "object",
               "properties": {
-                "aptitude": { "type": "number" },
-                "coding": { "type": "number" },
-                "interview": { "type": "number" }
+                "aptitude": { "type": "number", "default": 0 },
+                "coding": { "type": "number", "default": 0 },
+                "interview": { "type": "number", "default": 0 }
               }
             }
           }
         },
-        "plan": { "type": "string", "description": "Legacy plan field for compatibility" },
-        "jobReadinessScore": { "type": "number" },
+        "isFreeAccess": { "type": "boolean", "default": false },
         "resumeScore": { "type": "number" },
         "totalInterviews": { "type": "number" },
-        "currentStreak": { "type": "number" },
-        "bestStreak": { "type": "number" },
         "createdAt": { "type": "string", "format": "date-time" }
       },
       "required": ["uid", "email"]

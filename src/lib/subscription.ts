@@ -1,4 +1,6 @@
 
+'use client';
+
 /**
  * @fileOverview Nexvoro AI Central Subscription & Credit Intelligence.
  * Handles access gates for one-time credits and monthly subscriptions.
@@ -41,7 +43,9 @@ const QUOTAS = {
  */
 export function canStartFeature(profile: UserProfileAccess | null | undefined, feature: FeatureType): boolean {
   if (!profile) return false;
-  if (profile.isFreeAccess) return true;
+  
+  // Developer/Free Access Override
+  if (profile.isFreeAccess === true) return true;
 
   const sub = profile.subscription;
   const credits = profile.credits || { aptitude: 0, coding: 0, interview: 0 };
@@ -57,7 +61,9 @@ export function canStartFeature(profile: UserProfileAccess | null | undefined, f
   }
 
   // 3. Check One-Time Credits
-  if (credits[feature] > 0) return true;
+  if (credits && typeof credits[feature] === 'number' && credits[feature] > 0) {
+    return true;
+  }
 
   return false;
 }
@@ -71,6 +77,10 @@ export async function consumeFeatureCredit(db: Firestore, userId: string, featur
   if (!snap.exists()) return;
 
   const profile = snap.data() as UserProfileAccess;
+  
+  // Free access doesn't consume anything
+  if (profile.isFreeAccess === true) return;
+
   const sub = profile.subscription;
 
   // Pro doesn't consume anything
@@ -88,27 +98,9 @@ export async function consumeFeatureCredit(db: Firestore, userId: string, featur
   }
 
   // Finally consume one-time credit
-  if ((profile.credits?.[feature] || 0) > 0) {
+  if (profile.credits && typeof profile.credits[feature] === 'number' && profile.credits[feature] > 0) {
     await updateDoc(userRef, {
       [`credits.${feature}`]: increment(-1)
-    });
-  }
-}
-
-/**
- * Checks if usage reset is required (Monthly reset protocol).
- */
-export async function checkAndResetUsage(db: Firestore, userId: string, profile: UserProfileAccess) {
-  if (!profile.subscription?.nextResetDate || profile.subscription.status !== 'active') return;
-
-  const resetDate = new Date(profile.subscription.nextResetDate.seconds * 1000);
-  if (new Date() >= resetDate) {
-    const nextMonth = new Date();
-    nextMonth.setMonth(nextMonth.getMonth() + 1);
-
-    await updateDoc(doc(db, 'users', userId), {
-      'subscription.usage': { aptitude: 0, coding: 0, interview: 0 },
-      'subscription.nextResetDate': nextMonth
     });
   }
 }
