@@ -1,3 +1,4 @@
+
 {
   "entities": {
     "UserProfile": {
@@ -9,134 +10,40 @@
         "displayName": { "type": "string" },
         "email": { "type": "string" },
         "photoURL": { "type": "string" },
-        "role": { "type": "string", "enum": ["user", "founder"], "description": "System access level. 'founder' grants console access." },
-        "plan": { "type": "string", "enum": ["free", "pro", "premium"], "description": "The user's current subscription plan." },
-        "subscriptionStatus": { "type": "string", "description": "Status of the subscription (e.g., active, past_due)." },
-        "freeJourneyUsed": { "type": "boolean", "description": "Whether the user has completed their one allowed free interview journey." },
-        "isFreeAccess": { "type": "boolean", "description": "Override to grant unlimited free access regardless of plan usage." },
-        "subscriptionId": { "type": "string" },
-        "paymentId": { "type": "string" },
-        "subscriptionStart": { "type": "string", "format": "date-time" },
-        "subscriptionEnd": { "type": "string", "format": "date-time" },
+        "role": { "type": "string", "enum": ["user", "founder"] },
+        "credits": {
+          "type": "object",
+          "properties": {
+            "aptitude": { "type": "number" },
+            "coding": { "type": "number" },
+            "interview": { "type": "number" }
+          }
+        },
+        "subscription": {
+          "type": "object",
+          "properties": {
+            "plan": { "type": "string", "enum": ["starter", "pro", null] },
+            "status": { "type": "string" },
+            "nextResetDate": { "type": "string", "format": "date-time" },
+            "usage": {
+              "type": "object",
+              "properties": {
+                "aptitude": { "type": "number" },
+                "coding": { "type": "number" },
+                "interview": { "type": "number" }
+              }
+            }
+          }
+        },
+        "plan": { "type": "string", "description": "Legacy plan field for compatibility" },
         "jobReadinessScore": { "type": "number" },
         "resumeScore": { "type": "number" },
         "totalInterviews": { "type": "number" },
         "currentStreak": { "type": "number" },
         "bestStreak": { "type": "number" },
-        "lastChallengeDate": { "type": "string" },
         "createdAt": { "type": "string", "format": "date-time" }
       },
       "required": ["uid", "email"]
-    },
-    "InterviewSession": {
-      "title": "Interview Session",
-      "description": "A single mock interview attempt with transcript and feedback.",
-      "type": "object",
-      "properties": {
-        "userId": { "type": "string" },
-        "role": { "type": "string" },
-        "experienceLevel": { "type": "string" },
-        "round": { "type": "string" },
-        "overallScore": { "type": "number" },
-        "technicalScore": { "type": "number" },
-        "communicationScore": { "type": "number" },
-        "confidenceScore": { "type": "number" },
-        "history": { "type": "array" },
-        "feedback": { "type": "object" },
-        "duration": { "type": "number" },
-        "hiringRecommendation": { "type": "string" },
-        "createdAt": { "type": "string", "format": "date-time" }
-      }
-    },
-    "UsageLog": {
-      "title": "Usage Log",
-      "description": "Records AI API token and character usage for cost auditing.",
-      "type": "object",
-      "properties": {
-        "userId": { "type": "string" },
-        "sessionId": { "type": "string" },
-        "feature": { "type": "string" },
-        "model": { "type": "string" },
-        "provider": { "type": "string" },
-        "inputTokens": { "type": "number" },
-        "outputTokens": { "type": "number" },
-        "characterCount": { "type": "number" },
-        "videoDurationSeconds": { "type": "number" },
-        "creditsUsed": { "type": "number" },
-        "timestamp": { "type": "string", "format": "date-time" }
-      }
-    },
-    "CodingQuestion": {
-      "title": "Coding Question",
-      "description": "A technical algorithmic challenge node.",
-      "type": "object",
-      "properties": {
-        "id": { "type": "string" },
-        "title": { "type": "string" },
-        "description": { "type": "string" },
-        "difficulty": { "type": "string", "enum": ["Easy", "Medium", "Hard"] },
-        "category": { "type": "string" },
-        "company": { "type": "string" },
-        "languageSupport": { "type": "array", "items": { "type": "string" } },
-        "starterCode": { "type": "object" },
-        "sampleInput": { "type": "string" },
-        "sampleOutput": { "type": "string" },
-        "hiddenTestCases": { "type": "array" },
-        "constraints": { "type": "array", "items": { "type": "string" } },
-        "tags": { "type": "array", "items": { "type": "string" } }
-      }
-    },
-    "ResumeAudit": {
-      "title": "Resume Audit",
-      "description": "Results of a neural resume intelligence scan.",
-      "type": "object",
-      "properties": {
-        "userId": { "type": "string" },
-        "filename": { "type": "string" },
-        "targetRole": { "type": "string" },
-        "atsScore": { "type": "number" },
-        "missingSkills": { "type": "array", "items": { "type": "string" } },
-        "analysis": { "type": "object" },
-        "createdAt": { "type": "string", "format": "date-time" }
-      }
-    },
-    "JobApplication": {
-      "title": "Job Application",
-      "description": "A tracked job mission node.",
-      "type": "object",
-      "properties": {
-        "userId": { "type": "string" },
-        "companyName": { "type": "string" },
-        "role": { "type": "string" },
-        "status": { "type": "string", "enum": ["Applied", "Shortlisted", "Interview Scheduled", "Rejected", "Selected"] },
-        "appliedDate": { "type": "string" },
-        "createdAt": { "type": "string", "format": "date-time" }
-      }
-    },
-    "DailyChallenge": {
-      "title": "Daily Challenge",
-      "description": "A single daily question attempt.",
-      "type": "object",
-      "properties": {
-        "userId": { "type": "string" },
-        "question": { "type": "string" },
-        "answer": { "type": "string" },
-        "score": { "type": "number" },
-        "completedAt": { "type": "string", "format": "date-time" }
-      }
-    },
-    "ExternalCertificate": {
-      "title": "External Certificate",
-      "description": "A certificate uploaded by the user from an external source.",
-      "type": "object",
-      "properties": {
-        "title": { "type": "string" },
-        "issuer": { "type": "string" },
-        "fileUrl": { "type": "string" },
-        "fileType": { "type": "string", "enum": ["image", "pdf"] },
-        "createdAt": { "type": "string", "format": "date-time" }
-      },
-      "required": ["title", "fileUrl", "fileType"]
     }
   },
   "auth": {
@@ -145,35 +52,7 @@
   "firestore": {
     "/users/{userId}": {
       "schema": "#/entities/UserProfile",
-      "description": "Stores user profile and aggregate stats."
-    },
-    "/users/{userId}/interviews/{interviewId}": {
-      "schema": "#/entities/InterviewSession",
-      "description": "Stores individual mock interview records."
-    },
-    "/users/{userId}/resumes/{resumeId}": {
-      "schema": "#/entities/ResumeAudit",
-      "description": "Stores resume intelligence audits."
-    },
-    "/users/{userId}/job_applications/{appId}": {
-      "schema": "#/entities/JobApplication",
-      "description": "Stores tracked job application nodes."
-    },
-    "/users/{userId}/daily_challenges/{challengeId}": {
-      "schema": "#/entities/DailyChallenge",
-      "description": "Stores individual daily challenge records."
-    },
-    "/users/{userId}/external_certificates/{certId}": {
-      "schema": "#/entities/ExternalCertificate",
-      "description": "Stores user-uploaded external certificates."
-    },
-    "/usage_logs/{logId}": {
-      "schema": "#/entities/UsageLog",
-      "description": "Global log of AI API usage for cost auditing."
-    },
-    "/codingQuestions/{questionId}": {
-      "schema": "#/entities/CodingQuestion",
-      "description": "Master repository of technical coding challenges."
+      "description": "Stores user profile, credits, and subscription status."
     }
   }
 }

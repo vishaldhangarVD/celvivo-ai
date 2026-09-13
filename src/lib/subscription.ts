@@ -1,61 +1,114 @@
+
 /**
- * @fileOverview Nexvoro AI Central Subscription Intelligence.
- * Unified logic for determining user access levels and feature availability.
+ * @fileOverview Nexvoro AI Central Subscription & Credit Intelligence.
+ * Handles access gates for one-time credits and monthly subscriptions.
  */
 
-export type UserPlan = 'free' | 'pro' | 'premium';
+import { doc, updateDoc, increment, getDoc, Firestore } from 'firebase/firestore';
 
-export interface UserProfileSubscription {
-  plan?: UserPlan;
-  subscriptionStatus?: string;
-  freeJourneyUsed?: boolean;
-  subscriptionEnd?: any;
-  isFreeAccess?: boolean; // Secure override flag
+export type FeatureType = 'aptitude' | 'coding' | 'interview';
+
+export interface UserSubscription {
+  plan: 'starter' | 'pro' | null;
+  status: 'active' | 'inactive';
+  nextResetDate?: any;
+  usage: {
+    aptitude: number;
+    coding: number;
+    interview: number;
+  };
 }
 
+export interface UserCredits {
+  aptitude: number;
+  coding: number;
+  interview: number;
+}
+
+export interface UserProfileAccess {
+  subscription?: UserSubscription;
+  credits?: UserCredits;
+  isFreeAccess?: boolean;
+}
+
+const QUOTAS = {
+  starter: { aptitude: 15, coding: 10, interview: 10 },
+  pro: { aptitude: Infinity, coding: Infinity, interview: Infinity }
+};
+
 /**
- * Checks if the user is authorized to initialize a new interview journey.
- * Protocol: 
- * - Free Access Override: Highest priority, grants unlimited access.
- * - Pro/Premium: Unlimited access if active.
- * - Free: One complete journey only.
+ * Validates if a user can start a specific feature session.
  */
-export function canStartInterviewJourney(profile: UserProfileSubscription | null | undefined): boolean {
-  if (!profile) return true; // Fail-open during profile initialization to avoid race conditions
+export function canStartFeature(profile: UserProfileAccess | null | undefined, feature: FeatureType): boolean {
+  if (!profile) return false;
+  if (profile.isFreeAccess) return true;
 
-  // 1. FREE ACCESS OVERRIDE (PRIORITY 0)
-  if (profile.isFreeAccess === true) {
-    return true;
+  const sub = profile.subscription;
+  const credits = profile.credits || { aptitude: 0, coding: 0, interview: 0 };
+
+  // 1. Check Pro (Unlimited)
+  if (sub?.plan === 'pro' && sub.status === 'active') return true;
+
+  // 2. Check Starter Quota
+  if (sub?.plan === 'starter' && sub.status === 'active') {
+    const quota = QUOTAS.starter[feature];
+    const used = sub.usage?.[feature] || 0;
+    if (used < quota) return true;
   }
 
-  const plan = profile.plan || 'free';
-  const status = profile.subscriptionStatus || 'active';
-  const used = profile.freeJourneyUsed || false;
-
-  // 2. ELITE TIERS (PRIORITY 1)
-  if (plan === 'pro' || plan === 'premium') {
-    return status === 'active';
-  }
-
-  // 3. BASE TIER (PRIORITY 2)
-  if (plan === 'free') {
-    return !used;
-  }
+  // 3. Check One-Time Credits
+  if (credits[feature] > 0) return true;
 
   return false;
 }
 
-export function isPro(profile: UserProfileSubscription | null | undefined): boolean {
-  if (profile?.isFreeAccess === true) return true;
-  return profile?.plan === 'pro' || profile?.plan === 'premium';
+/**
+ * Atomically consumes a credit or increments usage counter.
+ */
+export async function consumeFeatureCredit(db: Firestore, userId: string, feature: FeatureType) {
+  const userRef = doc(db, 'users', userId);
+  const snap = await getDoc(userRef);
+  if (!snap.exists()) return;
+
+  const profile = snap.data() as UserProfileAccess;
+  const sub = profile.subscription;
+
+  // Pro doesn't consume anything
+  if (sub?.plan === 'pro' && sub.status === 'active') return;
+
+  // Starter consumes quota first
+  if (sub?.plan === 'starter' && sub.status === 'active') {
+    const used = sub.usage?.[feature] || 0;
+    if (used < QUOTAS.starter[feature]) {
+      await updateDoc(userRef, {
+        [`subscription.usage.${feature}`]: increment(1)
+      });
+      return;
+    }
+  }
+
+  // Finally consume one-time credit
+  if ((profile.credits?.[feature] || 0) > 0) {
+    await updateDoc(userRef, {
+      [`credits.${feature}`]: increment(-1)
+    });
+  }
 }
 
-export function isPremium(profile: UserProfileSubscription | null | undefined): boolean {
-  if (profile?.isFreeAccess === true) return true;
-  return profile?.plan === 'premium';
-}
+/**
+ * Checks if usage reset is required (Monthly reset protocol).
+ */
+export async function checkAndResetUsage(db: Firestore, userId: string, profile: UserProfileAccess) {
+  if (!profile.subscription?.nextResetDate || profile.subscription.status !== 'active') return;
 
-export function isFreeTrialAvailable(profile: UserProfileSubscription | null | undefined): boolean {
-  if (profile?.isFreeAccess === true) return false;
-  return profile?.plan === 'free' && !profile?.freeJourneyUsed;
+  const resetDate = new Date(profile.subscription.nextResetDate.seconds * 1000);
+  if (new Date() >= resetDate) {
+    const nextMonth = new Date();
+    nextMonth.setMonth(nextMonth.getMonth() + 1);
+
+    await updateDoc(doc(db, 'users', userId), {
+      'subscription.usage': { aptitude: 0, coding: 0, interview: 0 },
+      'subscription.nextResetDate': nextMonth
+    });
+  }
 }
