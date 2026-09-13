@@ -3,8 +3,8 @@ import { NextResponse } from 'next/server';
 
 /**
  * @fileOverview Server-side Resume PDF Generator.
- * Optimized for Custom Container deployments using the official Puppeteer image.
- * Includes explicit process management and enhanced error reporting for 500/403 faults.
+ * Optimized for Cloud environments using sparticuz-chromium and puppeteer-core.
+ * Resolves the "libglib-2.0.so.0" missing library error and TypeScript type issues.
  */
 
 export const maxDuration = 60;
@@ -22,8 +22,9 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Candidate name required for synthesis." }, { status: 400 });
     }
 
-    // Lazy-load puppeteer to avoid heavy bundle analysis during dev navigation
-    const puppeteer = await import('puppeteer');
+    // Use puppeteer-core + sparticuz-chromium to resolve missing Linux dependencies (like libglib)
+    const puppeteer = await import('puppeteer-core');
+    const chromium = (await import('@sparticuz/chromium')).default;
 
     const html = `
       <!DOCTYPE html>
@@ -62,7 +63,7 @@ export async function POST(req: Request) {
             <div class="job">
               <div class="job-head"><span>${e.role || ''} @ ${e.company || ''}</span><span>${e.dates || ''}</span></div>
               <div class="job-sub">${e.role || ''}</div>
-              ${(e.bullets || '').split('\n').filter((b:string) => b.trim()).map((b: string) => `<div class="bullet">• ${b}</div>`).join('')}
+              ${(e.bullets || '').split('\n').filter((b: string) => b.trim()).map((b: string) => `<div class="bullet">• ${b}</div>`).join('')}
             </div>
           `).join('')}
         </div>
@@ -82,20 +83,25 @@ export async function POST(req: Request) {
       </html>
     `;
 
-    console.log("[API Resume] Launching Puppeteer browser...");
+    console.log("[API Resume] Launching optimized Chromium via sparticuz...");
     browser = await puppeteer.launch({
-      headless: true,
       args: [
+        ...chromium.args,
         '--no-sandbox',
         '--disable-setuid-sandbox',
         '--disable-dev-shm-usage',
         '--disable-gpu',
         '--user-data-dir=/tmp/puppeteer_dev_profile'
       ],
+      defaultViewport: chromium.defaultViewport,
+      executablePath: await chromium.executablePath(),
+      headless: true,
     });
 
     const page = await browser.newPage();
     console.log("[API Resume] Setting page content...");
+    
+    // Use 'load' to fix TypeScript type error while ensuring font/content availability
     await page.setContent(html, { waitUntil: 'load' });
     
     console.log("[API Resume] Generating PDF buffer...");
@@ -116,12 +122,11 @@ export async function POST(req: Request) {
     console.error("[API Resume] FATAL FAULT DURING SYNTHESIS:", error);
     return NextResponse.json({ 
       error: "Resume Synthesis Failed", 
-      details: error.message,
-      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+      details: error.message
     }, { status: 500 });
   } finally {
     if (browser) {
-      console.log("[API Resume] Closing Puppeteer browser.");
+      console.log("[API Resume] Closing browser.");
       await browser.close().catch(e => console.error("[Puppeteer] Failed to close browser cleanly:", e));
     }
   }
