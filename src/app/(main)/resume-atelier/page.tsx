@@ -422,7 +422,7 @@ export default function ResumeAtelierPage() {
     const fileUri = !isSavedMode ? uploadedFileUri : null;
 
     if (isSavedMode && !resumeSource) {
-      toast({ variant: "destructive", title: "Selection Missing", description: "Please pick a saved blueprint." });
+      toast({ variant: "destructive", title: "Selection Missing", description: "Please pick a saved resume." });
       return;
     }
     if (!isSavedMode && !fileUri) {
@@ -430,7 +430,7 @@ export default function ResumeAtelierPage() {
       return;
     }
     if (!atsModalJd.trim()) {
-      toast({ variant: "destructive", title: "JD Missing", description: "Please provide the job description protocol." });
+      toast({ variant: "destructive", title: "Job Description Missing", description: "Please provide the job description." });
       return;
     }
 
@@ -455,8 +455,8 @@ export default function ResumeAtelierPage() {
     } catch (e: any) {
       toast({ 
         variant: "destructive", 
-        title: "Neural Fault", 
-        description: e.message || "Couldn't complete the ATS check — please try again." 
+        title: "Analysis Failed", 
+        description: e.message || "Couldn't complete the analysis — please try again." 
       });
     } finally {
       setIsAtsModalLoading(false);
@@ -465,7 +465,7 @@ export default function ResumeAtelierPage() {
 
   const handleRunAts = async (resume: ResumeData, jdText: string, setResults: any, setLoading: any) => {
     if (!jdText.trim()) {
-      toast({ variant: "destructive", title: "Intelligence Gap", description: "Please provide a job description protocol to calibrate the audit." });
+      toast({ variant: "destructive", title: "Missing Information", description: "Please provide a job description to start the analysis." });
       return;
     }
 
@@ -489,8 +489,8 @@ export default function ResumeAtelierPage() {
     } catch (e: any) {
       toast({ 
         variant: "destructive", 
-        title: "Neural Sync Failure", 
-        description: e.message || "Couldn't complete the ATS check — please try again." 
+        title: "Analysis Failed", 
+        description: e.message || "Couldn't complete the analysis — please try again." 
       });
     } finally {
       setLoading(false);
@@ -520,10 +520,10 @@ export default function ResumeAtelierPage() {
       link.remove();
       window.URL.revokeObjectURL(url);
 
-      toast({ title: "Blueprint Exported", description: "High-fidelity PDF synthesized successfully." });
+      toast({ title: "Resume Exported", description: "Professional PDF generated successfully." });
     } catch (e) {
       console.error("[PDF Export Error]", e);
-      toast({ variant: "destructive", title: "Synthesis Error", description: "Failed to generate professional PDF." });
+      toast({ variant: "destructive", title: "Export Failed", description: "Failed to generate professional PDF." });
     } finally {
       setIsExporting(false);
     }
@@ -539,7 +539,7 @@ export default function ResumeAtelierPage() {
       return;
     }
     if (!user || !db || !storage) {
-      toast({ variant: "destructive", title: "Connection Error", description: "Identity node or storage service unavailable." });
+      toast({ variant: "destructive", title: "Connection Error", description: "Account or storage service unavailable." });
       return;
     }
 
@@ -560,15 +560,15 @@ export default function ResumeAtelierPage() {
         createdAt: serverTimestamp()
       });
 
-      toast({ title: "Certificate Added", description: "External credential has been preserved." });
+      toast({ title: "Certificate Added", description: "Certificate has been saved." });
       setIsExternalCertFormOpen(false);
       setExternalCertForm({ title: '', issuer: '', file: null });
     } catch (e: any) {
       console.error(e);
       toast({ 
         variant: "destructive", 
-        title: "Upload Fault", 
-        description: e.message || "Failed to transmit file to cloud storage." 
+        title: "Upload Failed", 
+        description: e.message || "Failed to upload file." 
       });
     } finally {
       setIsExternalUploading(false);
@@ -583,7 +583,7 @@ export default function ResumeAtelierPage() {
       const fileRef = ref(storage, cert.fileUrl);
       await deleteObject(fileRef).catch(() => console.warn("File already missing in storage"));
       await deleteDoc(doc(db, 'users', user.uid, 'external_certificates', cert.id));
-      toast({ title: "Certificate Purged", description: "Credential removed from archive." });
+      toast({ title: "Certificate Deleted", description: "Certificate removed from your records." });
     } catch (e: any) {
       console.error(e);
       toast({ variant: "destructive", title: "Action Failed", description: e.message });
@@ -728,9 +728,9 @@ export default function ResumeAtelierPage() {
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-12">
             <header className="flex flex-col md:flex-row justify-between items-end gap-8">
               <div className="space-y-4">
-                <Badge className="bg-[#c9a24d]/20 text-[#c9a24d] border-none px-6 py-1 font-mono text-[10px] tracking-[0.4em] uppercase">Private Collection</Badge>
-                <h1 className="font-disp text-6xl font-medium text-[#f7f2e6] tracking-tight">The Atelier Archive</h1>
-                <p className="text-[#cfc7b4] font-light max-xl">Access your bespoke career blueprints. Every document is cut to measure and preserved in the cloud matrix.</p>
+                <Badge className="bg-[#c9a24d]/20 text-[#c9a24d] border-none px-6 py-1 font-mono text-[10px] tracking-[0.4em] uppercase">Your Resumes</Badge>
+                <h1 className="font-disp text-6xl font-medium text-[#f7f2e6] tracking-tight">Your Resumes</h1>
+                <p className="text-[#cfc7b4] font-light max-xl">Access your professional resumes. Every document is tailored to your goals and securely saved to your account.</p>
               </div>
               <div className="flex gap-4">
                 <Button 
@@ -738,7 +738,7 @@ export default function ResumeAtelierPage() {
                   className="h-16 px-10 rounded-2xl glass border-[#c9a24d]/20 text-[#c9a24d] hover:bg-[#c9a24d]/10 hover:border-[#c9a24d]/50 flex gap-3 text-[10px] tracking-widest uppercase transition-all shadow-2xl"
                 >
                   <Target className="w-5 h-5" />
-                  Check ATS Score
+                  Check Resume Score
                 </Button>
               </div>
             </header>
@@ -751,7 +751,7 @@ export default function ResumeAtelierPage() {
                 <div className="w-16 h-16 rounded-full bg-[#c9a24d]/10 flex items-center justify-center group-hover:scale-110 transition-transform">
                   <Plus className="w-8 h-8 text-[#c9a24d]" />
                 </div>
-                <p className="mt-6 font-mono text-[11px] tracking-[0.2em] uppercase text-[#8a723a]">Initialize New Resume</p>
+                <p className="mt-6 font-mono text-[11px] tracking-[0.2em] uppercase text-[#8a723a]">Create New Resume</p>
               </Card>
 
               {savedResumes?.map((resume: any) => (
@@ -795,15 +795,15 @@ export default function ResumeAtelierPage() {
                     <div className="w-10 h-10 rounded-xl bg-[#c9a24d]/10 flex items-center justify-center text-[#c9a24d]">
                        <Target className="w-6 h-6" />
                     </div>
-                    <DialogTitle className="font-disp text-3xl">Neural ATS Audit</DialogTitle>
+                    <DialogTitle className="font-disp text-3xl">Resume Analysis</DialogTitle>
                   </div>
-                  <DialogDescription className="text-sm text-[#cfc7b4] font-light">Calibrate your career blueprint against specific hiring protocols.</DialogDescription>
+                  <DialogDescription className="text-sm text-[#cfc7b4] font-light">Check how well your resume matches a specific job description.</DialogDescription>
                 </DialogHeader>
 
                 <Tabs value={atsTab} onValueChange={(v: any) => setAtsTab(v)} className="w-full">
                   <TabsList className="grid grid-cols-2 mb-8 glass border-white/5 p-1 rounded-2xl h-14 bg-white/5">
-                    <TabsTrigger value="saved" disabled={!savedResumes || savedResumes.length === 0} className="rounded-xl data-[state=active]:bg-[#c9a24d] data-[state=active]:text-black text-[10px] font-bold uppercase tracking-widest transition-all">Use Saved Blueprint</TabsTrigger>
-                    <TabsTrigger value="upload" className="rounded-xl data-[state=active]:bg-[#c9a24d] data-[state=active]:text-black text-[10px] font-bold uppercase tracking-widest transition-all">Upload External File</TabsTrigger>
+                    <TabsTrigger value="saved" disabled={!savedResumes || savedResumes.length === 0} className="rounded-xl data-[state=active]:bg-[#c9a24d] data-[state=active]:text-black text-[10px] font-bold uppercase tracking-widest transition-all">Use Saved Resume</TabsTrigger>
+                    <TabsTrigger value="upload" className="rounded-xl data-[state=active]:bg-[#c9a24d] data-[state=active]:text-black text-[10px] font-bold uppercase tracking-widest transition-all">Upload New File</TabsTrigger>
                   </TabsList>
 
                   <TabsContent value="saved" className="space-y-6">
@@ -814,7 +814,7 @@ export default function ResumeAtelierPage() {
                               <CheckCircle2 className="w-6 h-6" />
                             </div>
                             <div>
-                               <p className="text-[10px] font-mono text-[#8a723a] uppercase tracking-widest">Active Blueprint</p>
+                               <p className="text-[10px] font-mono text-[#8a723a] uppercase tracking-widest">Active Resume</p>
                                <p className="text-lg font-disp text-white">{(savedResumes[0] as any).title}</p>
                             </div>
                          </div>
@@ -866,7 +866,7 @@ export default function ResumeAtelierPage() {
                             <CheckCircle2 className="w-8 h-8 text-green-400" />
                           </div>
                           <div className="space-y-1">
-                            <p className="text-[9px] font-mono uppercase text-green-400/60 tracking-widest">File Identity Verified</p>
+                            <p className="text-[9px] font-mono uppercase text-green-400/60 tracking-widest">File Verified</p>
                             <p className="text-lg font-disp text-white/90 truncate max-w-[300px] mx-auto">{uploadedFile.name}</p>
                           </div>
                           <button onClick={(e) => { e.stopPropagation(); setUploadedFile(null); setUploadedFileUri(null); }} className="text-[9px] font-mono uppercase tracking-widest text-white/20 hover:text-red-400 transition-colors flex items-center gap-2 mx-auto">
@@ -891,11 +891,11 @@ export default function ResumeAtelierPage() {
                 {!atsModalResult && (
                   <div className="space-y-8 mt-8 border-t border-white/5 pt-8">
                     <div className="space-y-4">
-                      <Label className="text-[10px] font-mono uppercase text-[#8a723a] tracking-widest ml-1">Job Description Protocol</Label>
+                      <Label className="text-[10px] font-mono uppercase text-[#8a723a] tracking-widest ml-1">Job Description</Label>
                       <Textarea 
                         value={atsModalJd}
                         onChange={e => setAtsModalJd(e.target.value)}
-                        placeholder="Paste the target job requirements here to calibrate the audit..."
+                        placeholder="Paste the job requirements here..."
                         className="atelier-textarea h-40"
                       />
                       <Button 
@@ -903,7 +903,7 @@ export default function ResumeAtelierPage() {
                         disabled={isAtsModalLoading || (atsTab === 'saved' ? !selectedSavedResume : !uploadedFileUri) || !atsModalJd.trim()}
                         className="w-full h-16 bg-[#c9a24d] text-black hover:bg-[#f7f2e6] rounded-none font-mono text-[11px] uppercase tracking-[0.2em] transition-all shadow-[0_20px_50px_rgba(0,0,0,0.3)]"
                       >
-                        {isAtsModalLoading ? <><Loader2 className="w-5 h-5 animate-spin mr-3" /> Running Neural Audit...</> : "Initialize Audit Sequence →"}
+                        {isAtsModalLoading ? <><Loader2 className="w-5 h-5 animate-spin mr-3" /> Analyzing Resume...</> : "Analyze Resume →"}
                       </Button>
                     </div>
                   </div>
@@ -917,7 +917,7 @@ export default function ResumeAtelierPage() {
                           <div className="fit-ring-inner">{atsModalResult.score}%</div>
                         </div>
                         <div className="space-y-1">
-                          <p className="text-[10px] font-mono text-[#8a723a] uppercase tracking-widest">Neural Match Verdict</p>
+                          <p className="text-[10px] font-mono text-[#8a723a] uppercase tracking-widest">Analysis Result</p>
                           <h4 className="font-disp text-3xl text-[#f7f2e6] tracking-tight">{atsModalResult.verdict}</h4>
                         </div>
                       </div>
@@ -931,14 +931,14 @@ export default function ResumeAtelierPage() {
                              </div>
                            </div>
                            <div className="space-y-3">
-                             <p className="text-[9px] font-mono uppercase text-red-400/60 tracking-widest">Critical Missing Nodes</p>
+                             <p className="text-[9px] font-mono uppercase text-red-400/60 tracking-widest">Missing Skills</p>
                              <div className="flex flex-wrap gap-2">
                                {atsModalResult.missingKeywords?.map((w: string) => <span key={w} className="px-3 py-1 bg-red-500/10 text-red-400 text-[10px] border border-green-500/20">{w}</span>)}
                              </div>
                            </div>
                         </div>
                         <div className="space-y-6">
-                           <p className="text-[9px] font-mono uppercase text-[#c9a24d] tracking-widest">Strategic Remediation</p>
+                           <p className="text-[9px] font-mono uppercase text-[#c9a24d] tracking-widest">How to Improve</p>
                            <div className="space-y-4">
                              {atsModalResult.suggestions?.map((s: string, i: number) => (
                                <div key={i} className="flex gap-4 items-start group">
@@ -952,7 +952,7 @@ export default function ResumeAtelierPage() {
                     </div>
                     
                     <div className="flex gap-4">
-                      <Button variant="ghost" onClick={resetAtsModal} className="flex-1 h-14 rounded-xl border border-white/10 text-[10px] font-bold uppercase tracking-widest hover:bg-white/5">New Audit Protocol</Button>
+                      <Button variant="ghost" onClick={resetAtsModal} className="flex-1 h-14 rounded-xl border border-white/10 text-[10px] font-bold uppercase tracking-widest hover:bg-white/5">New Analysis</Button>
                       <Button onClick={() => setIsAtsModalOpen(false)} className="flex-1 h-14 bg-white/5 hover:bg-white/10 border border-white/10 text-white rounded-xl text-[10px] font-bold uppercase tracking-widest transition-all">Dismiss</Button>
                     </div>
                   </div>
@@ -964,10 +964,10 @@ export default function ResumeAtelierPage() {
           <div className="editor-view">
             <header className="flex items-center justify-between mb-12">
               <Button onClick={() => setView('list')} variant="ghost" className="text-[#8a723a] hover:text-[#c9a24d] gap-2 font-mono text-[10px] uppercase tracking-widest">
-                <ArrowLeft className="w-4 h-4" /> Back to Archive
+                <ArrowLeft className="w-4 h-4" /> Back to List
               </Button>
               <div className="flex items-center gap-4">
-                {isSaving && <span className="text-[9px] font-mono uppercase text-[#8a723a] animate-pulse">Syncing...</span>}
+                {isSaving && <span className="text-[9px] font-mono uppercase text-[#8a723a] animate-pulse">Saving...</span>}
                 <Input 
                   value={data.title}
                   onChange={e => setData({...data, title: e.target.value})}
@@ -1014,8 +1014,8 @@ export default function ResumeAtelierPage() {
                       <motion.div key="step1" initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, x: 10 }} className="space-y-8">
                         <div className="space-y-1">
                           <p className="font-mono text-[9px] tracking-[0.3em] text-[#c9a24d] uppercase">Step 1 of 5</p>
-                          <h3 className="font-disp text-3xl font-medium">Choose Your Design</h3>
-                          <p className="text-[#cfc7b4] text-sm font-light italic">Pick a resume layout before you add your details. House styles — each a unique structure for elite professional standards.</p>
+                          <h3 className="font-disp text-3xl font-medium">Choose Your Style</h3>
+                          <p className="text-[#cfc7b4] text-sm font-light italic">Pick a resume style before you add your details. Each layout is designed to meet professional standards.</p>
                         </div>
 
                         <div className="grid grid-cols-2 gap-4 max-h-[500px] overflow-y-auto pr-2 custom-scrollbar">
@@ -1037,7 +1037,7 @@ export default function ResumeAtelierPage() {
                           ))}
                         </div>
 
-                        <Button onClick={() => setCurrentStep(2)} className="w-full h-14 bg-[#c9a24d] text-[#0c0b09] hover:bg-[#f7f2e6] transition-colors rounded-none font-mono text-[11px] uppercase tracking-[0.2em]">Continue to Your Details →</Button>
+                        <Button onClick={() => setCurrentStep(2)} className="w-full h-14 bg-[#c9a24d] text-[#0c0b09] hover:bg-[#f7f2e6] transition-colors rounded-none font-mono text-[11px] uppercase tracking-[0.2em]">Next: Your Details →</Button>
                       </motion.div>
                     )}
 
@@ -1078,7 +1078,7 @@ export default function ResumeAtelierPage() {
                         </div>
                         <div className="flex gap-4">
                           <Button onClick={() => setCurrentStep(1)} variant="outline" className="flex-1 h-14 border-[#332c22] text-[#cfc7b4] rounded-none font-mono text-[11px] uppercase tracking-widest">← Back</Button>
-                          <Button onClick={() => setCurrentStep(3)} className="flex-[2] h-14 bg-[#c9a24d] text-[#0c0b09] hover:bg-[#f7f2e6] rounded-none font-mono text-[11px] uppercase tracking-widest">Continue to Experience →</Button>
+                          <Button onClick={() => setCurrentStep(3)} className="flex-[2] h-14 bg-[#c9a24d] text-[#0c0b09] hover:bg-[#f7f2e6] rounded-none font-mono text-[11px] uppercase tracking-widest">Next: Experience →</Button>
                         </div>
                       </motion.div>
                     )}
@@ -1087,8 +1087,8 @@ export default function ResumeAtelierPage() {
                       <motion.div key="step3" initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, x: 10 }} className="space-y-8">
                         <div className="space-y-1">
                           <p className="font-mono text-[9px] tracking-[0.3em] text-[#c9a24d] uppercase">Step 3 of 5</p>
-                          <h3 className="font-disp text-3xl font-medium">Experience & Internships</h3>
-                          <p className="text-[#cfc7b4] text-sm font-light italic">Add your work experience or internships and projects in a format ATS systems can scan cleanly. If you're a fresher, add your internship(s) here instead.</p>
+                          <h3 className="font-disp text-3xl font-medium">Experience & Projects</h3>
+                          <p className="text-[#cfc7b4] text-sm font-light italic">Add your work experience, internships, and projects in a format that's easy to read. If you're a student, focus on your internships and projects.</p>
                         </div>
                         
                         <div className="space-y-6">
@@ -1141,7 +1141,7 @@ export default function ResumeAtelierPage() {
                               </div>
                             </div>
                           ))}
-                          <button onClick={() => setData({...data, experience: [...(data.experience || []), {company:"",role:"",dates:"",bullets:"",type:"work"}]})} className="w-full py-4 border border-dashed border-[#332c22] text-[#8a723a] text-[10px] font-mono uppercase tracking-widest hover:border-[#c9a24d]/40">+ Add Another Position / Internship</button>
+                          <button onClick={() => setData({...data, experience: [...(data.experience || []), {company:"",role:"",dates:"",bullets:"",type:"work"}]})} className="w-full py-4 border border-dashed border-[#332c22] text-[#8a723a] text-[10px] font-mono uppercase tracking-widest hover:border-[#c9a24d]/40">+ Add Experience</button>
                         </div>
                         <div id="proj-list" className="space-y-6">
                            <Label className="text-[9px] font-mono uppercase text-[#8a723a]">Projects (Optional)</Label>
@@ -1164,7 +1164,7 @@ export default function ResumeAtelierPage() {
                         </div>
                         <div className="flex gap-4">
                           <Button onClick={() => setCurrentStep(2)} variant="outline" className="flex-1 h-14 border-[#332c22] text-[#cfc7b4] rounded-none font-mono text-[11px] uppercase tracking-widest">← Back</Button>
-                          <Button onClick={() => setCurrentStep(4)} className="flex-[2] h-14 bg-[#c9a24d] text-[#0c0b09] hover:bg-[#f7f2e6] rounded-none font-mono text-[11px] uppercase tracking-widest">Continue to Skills →</Button>
+                          <Button onClick={() => setCurrentStep(4)} className="flex-[2] h-14 bg-[#c9a24d] text-[#0c0b09] hover:bg-[#f7f2e6] rounded-none font-mono text-[11px] uppercase tracking-widest">Next: Skills →</Button>
                         </div>
                       </motion.div>
                     )}
@@ -1174,12 +1174,12 @@ export default function ResumeAtelierPage() {
                         <div className="space-y-1">
                           <p className="font-mono text-[9px] tracking-[0.3em] text-[#c9a24d] uppercase">Step 4 of 5</p>
                           <h3 className="font-disp text-3xl font-medium">Skills & Education</h3>
-                          <p className="text-[#cfc7b4] text-sm font-light italic">Skills are the first thing an ATS system searches for — add yours, then your education.</p>
+                          <p className="text-[#cfc7b4] text-sm font-light italic">List the technical and soft skills you've mastered, followed by your academic history.</p>
                         </div>
 
                         <div className="space-y-6">
                            <div className="space-y-2">
-                             <Label className="text-[9px] font-mono uppercase text-[#8a723a]">Skills Archive</Label>
+                             <Label className="text-[9px] font-mono uppercase text-[#8a723a]">Your Skills</Label>
                              <div className="flex flex-wrap gap-2">
                                {(data.skills || []).map((s, i) => (
                                  <Badge key={i} className="bg-transparent border border-[#332c22] text-[#cfc7b4] px-3 py-1.5 rounded-none font-light gap-2">
@@ -1291,7 +1291,7 @@ export default function ResumeAtelierPage() {
 
                         <div className="flex gap-4">
                           <Button onClick={() => setCurrentStep(3)} variant="outline" className="flex-1 h-14 border-[#332c22] rounded-none font-mono text-[11px] uppercase">← Back</Button>
-                          <Button onClick={() => setCurrentStep(5)} className="flex-[2] h-14 bg-[#c9a24d] text-[#0c0b09] rounded-none font-mono text-[11px] uppercase">Continue to ATS Check →</Button>
+                          <Button onClick={() => setCurrentStep(5)} className="flex-[2] h-14 bg-[#c9a24d] text-[#0c0b09] rounded-none font-mono text-[11px] uppercase">Next: Finish & Score →</Button>
                         </div>
                       </motion.div>
                     )}
@@ -1300,8 +1300,8 @@ export default function ResumeAtelierPage() {
                       <motion.div key="step5" initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, x: 10 }} className="space-y-8">
                         <div className="space-y-1">
                           <p className="font-mono text-[9px] tracking-[0.3em] text-[#c9a24d] uppercase">Step 5 of 5</p>
-                          <h3 className="font-disp text-3xl font-medium">ATS Check & Download</h3>
-                          <p className="text-[#cfc7b4] text-sm font-light italic">Paste a job description below to see how well your resume matches it.</p>
+                          <h3 className="font-disp text-3xl font-medium">Resume Analysis</h3>
+                          <p className="text-[#cfc7b4] text-sm font-light italic">Paste a job description below to check how well your resume matches the requirements.</p>
                         </div>
 
                         <div className="space-y-4">
@@ -1309,7 +1309,7 @@ export default function ResumeAtelierPage() {
                            <Textarea 
                              value={jd} 
                              onChange={e => setJd(e.target.value)} 
-                             placeholder="eg:- paste the job posting text here..." 
+                             placeholder="Paste the job posting text here..." 
                              className="atelier-textarea" 
                              rows={6} 
                            />
@@ -1318,7 +1318,7 @@ export default function ResumeAtelierPage() {
                              disabled={isAtsLoading || !jd.trim()}
                              className="w-full h-12 bg-transparent border border-[#c9a24d] text-[#c9a24d] hover:bg-[#c9a24d] hover:text-[#0c0b09] font-mono text-[10px] uppercase tracking-widest"
                            >
-                             {isAtsLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : "Run Neural Audit →"}
+                             {isAtsLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : "Run Analysis →"}
                            </Button>
                         </div>
 
@@ -1329,7 +1329,7 @@ export default function ResumeAtelierPage() {
                                 <div className="fit-ring-inner">{atsResult.score}%</div>
                               </div>
                               <div>
-                                <p className="text-[10px] font-mono text-[#8a723a] uppercase tracking-widest">Neural Verdict</p>
+                                <p className="text-[10px] font-mono text-[#8a723a] uppercase tracking-widest">Analysis Result</p>
                                 <h4 className="font-disp text-2xl text-[#f7f2e6]">{atsResult.verdict}</h4>
                               </div>
                             </div>
@@ -1343,15 +1343,15 @@ export default function ResumeAtelierPage() {
                                    </div>
                                  </div>
                                  <div className="space-y-3">
-                                   <p className="text-[9px] font-mono uppercase text-red-400/60 tracking-widest">Critical Gaps</p>
+                                   <p className="text-[9px] font-mono uppercase text-red-400/60 tracking-widest">Missing Skills</p>
                                    <div className="flex flex-wrap gap-2">
-                                     {atsResult.missingKeywords?.length > 0 ? atsResult.missingKeywords.map((w: string) => <span key={w} className="px-3 py-1 bg-[#7a2531]/20 text-red-300 text-[10px] border border-[#7a2531]/40">{w}</span>) : <span className="text-[10px] text-[#cfc7b4]/40 italic">All nodes covered</span>}
+                                     {atsResult.missingKeywords?.length > 0 ? atsResult.missingKeywords.map((w: string) => <span key={w} className="px-3 py-1 bg-[#7a2531]/20 text-red-300 text-[10px] border border-[#7a2531]/40">{w}</span>) : <span className="text-[10px] text-[#cfc7b4]/40 italic">All skills present</span>}
                                    </div>
                                  </div>
                                </div>
 
                                <div className="space-y-6">
-                                 <p className="text-[9px] font-mono uppercase text-[#c9a24d] tracking-widest">Strategic Recommendations</p>
+                                 <p className="text-[9px] font-mono uppercase text-[#c9a24d] tracking-widest">Recommendations</p>
                                  <div className="space-y-4">
                                    {atsResult.suggestions?.map((s: string, i: number) => (
                                      <div key={i} className="flex gap-4 items-start group">
@@ -1477,7 +1477,7 @@ export default function ResumeAtelierPage() {
                               disabled={isExporting}
                               className="flex-[2] h-14 bg-[#7a2531] text-white hover:bg-red-800 rounded-none font-mono text-[11px] uppercase tracking-widest shadow-xl flex items-center justify-center gap-3"
                             >
-                              {isExporting ? <><Loader2 className="w-4 h-4 animate-spin" /> Synthesizing PDF...</> : <><Download className="w-4 h-4" /> Download PDF →</>}
+                              {isExporting ? <><Loader2 className="w-4 h-4 animate-spin" /> Generating PDF...</> : <><Download className="w-4 h-4" /> Download PDF →</>}
                             </Button>
                           </div>
                         </div>

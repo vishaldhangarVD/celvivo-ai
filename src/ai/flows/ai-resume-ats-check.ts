@@ -66,13 +66,13 @@ const prompt = ai.definePrompt({
     })
   },
   output: { schema: AtsCheckOutputSchema },
-  prompt: `You are an ATS (Applicant Tracking System) resume screener. 
+  prompt: `You are an expert resume analyst. 
 Compare the following resume against the job description. 
 
-REQUISITION INTEL (Job Description):
+Job Description:
 {{{jobDescription}}}
 
-### CANDIDATE DOSSIER
+### Your Resume
 {{#if resumeText}}
 {{{resumeText}}}
 {{else}}
@@ -97,10 +97,10 @@ EDUCATION:
 {{/each}}
 {{/if}}
 
-### AUDIT REQUIREMENTS:
+### Analysis Details:
 1. SCORE: Calculate a realistic 0-100 score based on keyword match, experience depth, and role alignment.
 2. KEYWORDS: Identify specific technical and soft skills present in both, and critical ones missing from the resume.
-3. SUGGESTIONS: Provide 2-4 highly specific tips (e.g., "Add 'Docker' to skills", "Quantify the Vaultly project impact").
+3. SUGGESTIONS: Provide 2-4 highly specific tips (e.g., "Add 'Docker' to skills", "Quantify the project impact").
 
 Return ONLY a valid JSON object matching the schema.`,
 });
@@ -132,11 +132,11 @@ const runAtsCheckFlow = ai.defineFlow(
         resumeText
       });
       
-      if (!output) throw new Error("Neural auditor failed to respond.");
+      if (!output) throw new Error("The analysis timed out. Please try again.");
       return output;
     } catch (error: any) {
       console.error("[ATS Flow] Neural fault:", error);
-      throw new Error(error.message || "Couldn't complete the ATS check — please try again.");
+      throw new Error(error.message || "We couldn't analyze your resume. Please try again.");
     }
   }
 );

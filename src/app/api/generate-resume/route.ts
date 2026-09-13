@@ -1,4 +1,3 @@
-
 import { NextResponse } from 'next/server';
 import { PDFDocument, StandardFonts, rgb, PDFPage, PDFFont } from 'pdf-lib';
 
@@ -31,7 +30,7 @@ export async function POST(req: Request) {
     const { name, role, email, phone, loc, summary, skills, experience, projects, education } = data;
 
     if (!name) {
-      return NextResponse.json({ error: "Candidate name required for synthesis." }, { status: 400 });
+      return NextResponse.json({ error: "Please enter your name." }, { status: 400 });
     }
 
     const pdfDoc = await PDFDocument.create();
@@ -237,7 +236,7 @@ export async function POST(req: Request) {
   } catch (error: any) {
     console.error("[API Resume] FATAL FAULT DURING SYNTHESIS:", error);
     return NextResponse.json({ 
-      error: "Resume Synthesis Failed", 
+      error: "We couldn't create your resume. Please try again.", 
       details: error.message
     }, { status: 500 });
   }
