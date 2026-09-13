@@ -235,24 +235,24 @@ const HeroSection = memo(({ onStart, onEnterRoom }: { onStart: () => void, onEnt
               <div className="absolute inset-0 bg-gradient-to-br from-accent/10 via-transparent to-transparent opacity-50 z-10" />
               <div className="absolute inset-0">
               <video
-  src="/home.mp4"
-  autoPlay={shouldPlayVideo}
-  muted={isVideoMuted}
-  playsInline
-  controls={false}
-  preload="auto"
-  onPlaying={() => {
-    setTimeout(() => {
-      setIsVideoMuted(false);
-    }, 100);
-  }}
-  onEnded={(e) => {
-    const video = e.currentTarget;
-    video.pause();
-    video.currentTime = 0;
-  }}
-  className="h-full w-full object-cover"
-/>
+                src="/home.mp4"
+                autoPlay={shouldPlayVideo}
+                muted={isVideoMuted}
+                playsInline
+                controls={false}
+                preload="auto"
+                onPlaying={() => {
+                  setTimeout(() => {
+                    setIsVideoMuted(false);
+                  }, 100);
+                }}
+                onEnded={(e) => {
+                  const video = e.currentTarget;
+                  video.pause();
+                  video.currentTime = 0;
+                }}
+                className="h-full w-full object-cover"
+              />
                 <div className="absolute inset-0 bg-gradient-to-t from-[#050816]/30 via-transparent to-transparent z-20" />
                 <div className="absolute inset-0 bg-gradient-to-r from-transparent via-cyan-500/5 to-blue-500/10 z-20" />
                 <div className="absolute inset-0 ring-1 ring-cyan-400/10 rounded-r-[3rem] z-20" />
@@ -457,6 +457,7 @@ export default function LandingPage() {
                         src={t.image} 
                         alt={t.name} 
                         fill 
+                        unoptimized
                         className="object-cover" 
                         sizes="48px"
                       />

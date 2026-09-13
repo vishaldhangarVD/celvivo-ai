@@ -23,6 +23,7 @@ const nextConfig: NextConfig = {
     '*.firebaseapp.com',
   ],
   images: {
+    dangerouslyAllowSVG: true,
     remotePatterns: [
       {
         protocol: 'https',

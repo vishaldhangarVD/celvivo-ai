@@ -1,11 +1,7 @@
-
 /**
- * @fileOverview Conflict placeholder.
- * This file is now inert as the Landing Page has been restored to src/app/page.tsx.
+ * @fileOverview Purged to resolve route collision with src/app/page.tsx.
+ * Next.js App Router does not allow multiple page.tsx files mapping to the same route.
  */
-import { redirect } from 'next/navigation';
-
 export default function ConflictedPage() {
-  redirect('/');
   return null;
 }
