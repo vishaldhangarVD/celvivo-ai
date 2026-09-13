@@ -31,6 +31,8 @@ export interface UserProfileAccess {
   subscription?: UserSubscription;
   credits?: UserCredits;
   isFreeAccess?: boolean;
+  // Legacy support for root-level plan strings
+  plan?: string; 
 }
 
 const QUOTAS = {
@@ -40,28 +42,34 @@ const QUOTAS = {
 
 /**
  * Validates if a user can start a specific feature session.
+ * Priority: 
+ * 1. isFreeAccess (Master Key)
+ * 2. Pro Plan (Unlimited)
+ * 3. Starter Plan (Monthly Quota)
+ * 4. One-Time Credits
  */
 export function canStartFeature(profile: UserProfileAccess | null | undefined, feature: FeatureType): boolean {
   if (!profile) return false;
   
-  // Developer/Free Access Override
+  // 1. Master Override (Developer/Free Access)
+  // This is checked FIRST to ensure legacy or trial users aren't blocked.
   if (profile.isFreeAccess === true) return true;
 
   const sub = profile.subscription;
   const credits = profile.credits || { aptitude: 0, coding: 0, interview: 0 };
 
-  // 1. Check Pro (Unlimited)
+  // 2. Check Pro (Unlimited)
   if (sub?.plan === 'pro' && sub.status === 'active') return true;
 
-  // 2. Check Starter Quota
+  // 3. Check Starter Quota
   if (sub?.plan === 'starter' && sub.status === 'active') {
     const quota = QUOTAS.starter[feature];
     const used = sub.usage?.[feature] || 0;
     if (used < quota) return true;
   }
 
-  // 3. Check One-Time Credits
-  if (credits && typeof credits[feature] === 'number' && credits[feature] > 0) {
+  // 4. Check One-Time Credits
+  if (credits && typeof (credits as any)[feature] === 'number' && (credits as any)[feature] > 0) {
     return true;
   }
 
@@ -82,6 +90,7 @@ export async function consumeFeatureCredit(db: Firestore, userId: string, featur
   if (profile.isFreeAccess === true) return;
 
   const sub = profile.subscription;
+  const credits = profile.credits;
 
   // Pro doesn't consume anything
   if (sub?.plan === 'pro' && sub.status === 'active') return;
@@ -98,7 +107,7 @@ export async function consumeFeatureCredit(db: Firestore, userId: string, featur
   }
 
   // Finally consume one-time credit
-  if (profile.credits && typeof profile.credits[feature] === 'number' && profile.credits[feature] > 0) {
+  if (credits && typeof (credits as any)[feature] === 'number' && (credits as any)[feature] > 0) {
     await updateDoc(userRef, {
       [`credits.${feature}`]: increment(-1)
     });
