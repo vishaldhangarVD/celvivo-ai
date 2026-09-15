@@ -78,16 +78,20 @@ export async function runWithResilience(promptFn: any, input: any, metadata?: an
     for (let i = 0; i < MAX_ATTEMPTS; i++) {
       try {
         console.log(`[Neural] Executing Turn: ${model} (Attempt ${i + 1}/${MAX_ATTEMPTS})`);
+        const startTime = Date.now();
         const result = await promptFn(input, { model, metadata });
+        const duration = Date.now() - startTime;
         
+        console.log(`[Neural] Success: ${metadata?.feature || 'turn'} completed in ${duration}ms`);
+
         // Asynchronous non-blocking usage logging
         if (result?.usage) {
           const feature = metadata?.feature || 'unspecified_flow';
-          const userId = metadata?.userId || input?.userId;
-          const sessionId = metadata?.sessionId || input?.sessionId;
+          const userId = metadata?.userId || input?.userId || 'anonymous';
+          const sessionId = metadata?.sessionId || input?.sessionId || 'unknown';
           const tokens = getTokens(result.usage);
 
-          // LOGGING PROTOCOL: Do not await, and catch errors to prevent LLM retries on telemetry failure
+          // FIRE-AND-FORGET: No await, catch errors internally to prevent AI retries
           logUsage({
             userId,
             sessionId,
@@ -97,7 +101,8 @@ export async function runWithResilience(promptFn: any, input: any, metadata?: an
             outputTokens: tokens.output,
             provider: 'gemini'
           }).catch(logError => {
-            console.warn(`[UsageLogger] Telemetry failure (non-fatal): ${logError.message}`);
+            // Log only, do not throw. 403s here should not break the user flow.
+            console.warn(`[UsageLogger] Telemetry suppressed (Code ${logError.code || 'unknown'}).`);
           });
         }
         
@@ -107,27 +112,25 @@ export async function runWithResilience(promptFn: any, input: any, metadata?: an
         const message = e.message || "Unknown Provider Error";
         const isLastAttempt = i === MAX_ATTEMPTS - 1;
 
-        console.warn(`[Neural] Attempt ${i + 1} Failed. Status: ${status} | Message: ${message}`);
+        console.warn(`[Neural Warning] Batch ${metadata?.batch || ''} Attempt ${i + 1} Failed. Status: ${status}`);
 
         if (!isLastAttempt) {
+          // If it's a 429, wait briefly. If it's a 504, it's likely we've already lost the client connection.
           if (status === 429) {
-            const match = message.match(/retry in (\d+\.?\d*)s/i);
-            const delay = match ? parseFloat(match[1]) * 1000 : 15000;
-            console.warn(`[Gemini] 429 Rate Limit. Waiting ${Math.ceil(delay/1000)}s...`);
-            await new Promise(r => setTimeout(r, delay + 500));
+            const delay = 2000; 
+            console.log(`[Gemini] Rate Limit hit. Retrying in ${delay}ms...`);
+            await new Promise(r => setTimeout(r, delay));
             continue;
           }
 
-          const isOverloaded = status === 503 || message.includes("UNAVAILABLE") || message.includes("high demand");
-          if (isOverloaded || retryableStatuses.includes(status)) {
-            const delay = 2000; 
-            await new Promise(r => setTimeout(r, delay));
+          if (retryableStatuses.includes(status)) {
+            await new Promise(r => setTimeout(r, 1000));
             continue;
           }
         }
 
-        // Final failure log for terminal visibility
-        console.error(`[Neural Critical] Final attempt failed for ${metadata?.feature || 'unknown'}. Status: ${status}`);
+        // Final failure log
+        console.error(`[Neural Critical] Final attempt failed for ${metadata?.feature || 'unknown'}. Status: ${status} | Msg: ${message}`);
         throw e;
       }
     }
