@@ -1,8 +1,8 @@
 'use server';
 /**
- * @fileOverview Nexvoro AI Master Aptitude Generator v32.0.
+ * @fileOverview Nexvoro AI Master Aptitude Generator v33.0.
  * Optimized for reliability by batching AI generation into 4 segments of 5 questions.
- * Eliminates deterministic fallbacks to ensure 100% neural synthesis.
+ * Decoupled retries from Genkit resilience layer to prevent Gateway Timeouts.
  */
 
 import { ai, runWithResilience } from '@/ai/genkit';
@@ -184,14 +184,15 @@ const aptitudeFlow = ai.defineFlow(
     for (const config of BATCH_CONFIGS) {
       let batchSuccess = false;
       let attempts = 0;
+      const MAX_BATCH_ATTEMPTS = 2; // Controlled retry to prevent aggregate timeout
 
-      while (!batchSuccess && attempts < 3) {
+      while (!batchSuccess && attempts < MAX_BATCH_ATTEMPTS) {
         attempts++;
         try {
-          console.log(`[Aptitude Flow] Generating ${config.name} (Attempt ${attempts})...`);
+          console.log(`[Aptitude Flow] Processing ${config.name} (Batch Attempt ${attempts})...`);
           
           const combinedAvoid = [
-            ...Array.from(historySet).slice(-50), // Keep history check limited to most recent to avoid context bloat
+            ...Array.from(historySet).slice(-50), 
             ...Array.from(currentFingerprints),
             ...Array.from(currentPatterns)
           ];
@@ -201,7 +202,7 @@ const aptitudeFlow = ai.defineFlow(
             company: input.company,
             experienceLevel: input.experienceLevel,
             batchInstructions: config.instructions,
-            avoidFingerprints: combinedAvoid.slice(-30) // Only pass the most critical unique patterns
+            avoidFingerprints: combinedAvoid.slice(-30)
           }, {
             userId: input.userId,
             sessionId: input.sessionId,
@@ -218,7 +219,6 @@ const aptitudeFlow = ai.defineFlow(
               if (val.valid && val.normalized) {
                 const { fingerprint, pattern } = normalizeQuestion(val.normalized.question);
                 
-                // Final check against history
                 if (!historySet.has(fingerprint) && !historySet.has(pattern)) {
                   batchQuestions.push(val.normalized);
                   currentFingerprints.add(fingerprint);
@@ -230,10 +230,10 @@ const aptitudeFlow = ai.defineFlow(
             if (batchQuestions.length === 5) {
               validQuestions.push(...batchQuestions);
               batchSuccess = true;
-              console.log(`[Aptitude Flow] ${config.name} successful.`);
+              console.log(`[Aptitude Flow] ${config.name} verified.`);
             } else {
-              console.warn(`[Aptitude Flow] ${config.name} underproduced valid questions (${batchQuestions.length}/5). Retrying...`);
-              // Clean up any partial fingerprints from this failed attempt to allow fresh generation
+              console.warn(`[Aptitude Flow] ${config.name} produced insufficient valid items (${batchQuestions.length}/5).`);
+              // Cleanup keys from this failed attempt to allow fresh generation in retry
               batchQuestions.forEach(q => {
                 const { fingerprint, pattern } = normalizeQuestion(q.question);
                 currentFingerprints.delete(fingerprint);
@@ -241,19 +241,20 @@ const aptitudeFlow = ai.defineFlow(
               });
             }
           }
-        } catch (e) {
-          console.error(`[Aptitude Flow] Neural synthesis fault in ${config.name}:`, e);
-          if (attempts >= 3) throw e;
+        } catch (e: any) {
+          console.error(`[Aptitude Flow] Critical failure in ${config.name}:`, e.message);
+          // Propagate critical network or provider errors immediately
+          throw e; 
         }
       }
 
       if (!batchSuccess) {
-        throw new Error(`Aptitude generation failed for ${config.name} after multiple attempts. Neural link unstable.`);
+        throw new Error(`Aptitude generation failed for ${config.name}. Maximum retry capacity exceeded.`);
       }
     }
 
     if (validQuestions.length !== 20) {
-      throw new Error(`Aptitude generation produced inconsistent results (${validQuestions.length}/20). Aborting session.`);
+      throw new Error(`Aptitude generation consistency fault (${validQuestions.length}/20).`);
     }
 
     return { questions: validQuestions };
