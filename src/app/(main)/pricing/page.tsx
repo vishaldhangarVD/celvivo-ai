@@ -12,6 +12,7 @@ import { doc, updateDoc, serverTimestamp, increment } from 'firebase/firestore';
 import { useRouter } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
 import Script from 'next/script';
+import { cn } from '@/lib/utils';
 
 const CREDIT_PACKS = [
   { id: 'aptitude_1', name: 'Aptitude Test', price: 15, desc: '1 Aptitude Credit', icon: Star },
@@ -33,55 +34,177 @@ export default function PricingPage() {
   const [loadingId, setLoadingId] = useState<string | null>(null);
 
   const handlePurchase = async (pack: any, type: 'order' | 'subscription') => {
-    if (!user) return router.push('/login?redirectTo=/pricing');
+    if (!user) {
+      return router.push('/login?redirectTo=/pricing');
+    }
+  
     setLoadingId(pack.id);
-
+  
     try {
-      const endpoint = type === 'order' ? '/api/payment/create-order' : '/api/payment/create-subscription';
-      const body = type === 'order' ? { packId: pack.id } : { planType: pack.id };
-
-      const res = await fetch(endpoint, { method: 'POST', body: JSON.stringify(body) });
-      const { orderId, subscriptionId, keyId } = await res.json();
-
+      const endpoint =
+        type === 'order'
+          ? '/api/payment/create-order'
+          : '/api/payment/create-subscription';
+  
+          const body =
+          type === 'order'
+            ? { packId: pack.id }
+            : {
+                planType: pack.id,
+                userId: user.uid,
+              };
+  
+      const res = await fetch(endpoint, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(body),
+      });
+  
+      const data = await res.json();
+  
+      if (!res.ok) {
+        throw new Error(
+          data?.details ||
+          data?.error ||
+          `Payment failed (${res.status})`
+        );
+      }
+  
+      const { orderId, subscriptionId, keyId } = data;
+  
+      if (!keyId) {
+        throw new Error('Razorpay Key ID is missing');
+      }
+  
+      if (type === 'subscription' && !subscriptionId) {
+        throw new Error('Razorpay Subscription ID is missing');
+      }
+  
+      if (type === 'order' && !orderId) {
+        throw new Error('Razorpay Order ID is missing');
+      }
+  
       const options = {
         key: keyId,
         amount: type === 'order' ? pack.price * 100 : undefined,
         order_id: orderId,
         subscription_id: subscriptionId,
-        name: "Nexvoro AI",
+        name: 'Nexvoro AI',
+  
         handler: async (response: any) => {
-          const verifyRes = await fetch('/api/payment/verify', {
-            method: 'POST',
-            body: JSON.stringify({ ...response, type })
-          });
-          const { verified } = await verifyRes.json();
-
-          if (verified && db) {
-            const userRef = doc(db, 'users', user.uid);
-            if (type === 'order') {
-              const credits = pack.id === 'bundle_1' 
-                ? { 'credits.aptitude': increment(1), 'credits.coding': increment(1), 'credits.interview': increment(1) }
-                : { [`credits.${pack.id.split('_')[0]}`]: increment(1) };
-              await updateDoc(userRef, { ...credits, updatedAt: serverTimestamp() });
-            } else {
-              const nextReset = new Date(); nextReset.setMonth(nextReset.getMonth() + 1);
-              await updateDoc(userRef, {
-                subscription: { plan: pack.id, status: 'active', usage: { aptitude: 0, coding: 0, interview: 0 }, nextResetDate: nextReset },
-                updatedAt: serverTimestamp()
-              });
+          try {
+            const verifyRes = await fetch('/api/payment/verify', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                ...response,
+                type,
+              }),
+            });
+  
+            const verifyData = await verifyRes.json();
+  
+            if (!verifyRes.ok) {
+              throw new Error(
+                verifyData?.details ||
+                verifyData?.error ||
+                'Payment verification failed'
+              );
             }
-            toast({ title: "Purchase Success", description: "Your account has been updated." });
-            router.push('/dashboard');
+  
+            const { verified } = verifyData;
+  
+            if (verified && db) {
+              const userRef = doc(db, 'users', user.uid);
+  
+              if (type === 'order') {
+                const credits =
+                  pack.id === 'bundle_1'
+                    ? {
+                        'credits.aptitude': increment(1),
+                        'credits.coding': increment(1),
+                        'credits.interview': increment(1),
+                      }
+                    : {
+                        [`credits.${pack.id.split('_')[0]}`]: increment(1),
+                      };
+  
+                await updateDoc(userRef, {
+                  ...credits,
+                  updatedAt: serverTimestamp(),
+                });
+              } else {
+                const nextReset = new Date();
+                nextReset.setMonth(nextReset.getMonth() + 1);
+  
+                await updateDoc(userRef, {
+                  subscription: {
+                    plan: pack.id,
+                    status: 'active',
+                    usage: {
+                      aptitude: 0,
+                      coding: 0,
+                      interview: 0,
+                    },
+                    nextResetDate: nextReset,
+                  },
+                  updatedAt: serverTimestamp(),
+                });
+              }
+  
+              toast({
+                title: 'Purchase Success',
+                description: 'Your account has been updated.',
+              });
+  
+              router.push('/dashboard');
+            } else {
+              throw new Error('Payment could not be verified');
+            }
+          } catch (error: any) {
+            console.error('VERIFICATION ERROR:', error);
+  
+            toast({
+              variant: 'destructive',
+              title: 'Verification Error',
+              description:
+                error?.message || 'Payment verification failed',
+            });
+          } finally {
+            setLoadingId(null);
           }
-          setLoadingId(null);
         },
-        prefill: { email: user.email },
-        theme: { color: "#22d3ee" }
+  
+        prefill: {
+          email: user.email || '',
+        },
+  
+        theme: {
+          color: '#22d3ee',
+        },
       };
-
-      new (window as any).Razorpay(options).open();
-    } catch (e) {
-      toast({ variant: "destructive", title: "Gateway Error" });
+  
+      const Razorpay = (window as any).Razorpay;
+  
+      if (!Razorpay) {
+        throw new Error('Razorpay checkout is not loaded');
+      }
+  
+      new Razorpay(options).open();
+    } catch (e: any) {
+      console.error('PAYMENT ERROR:', e);
+  
+      toast({
+        variant: 'destructive',
+        title: 'Gateway Error',
+        description:
+          e?.message || 'Payment request failed',
+      });
+  
       setLoadingId(null);
     }
   };
