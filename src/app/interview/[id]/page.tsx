@@ -1,4 +1,3 @@
-
 "use client";
 import { Suspense, useEffect, useState, useRef, useMemo, useCallback } from "react";
 import { useRouter, useParams } from "next/navigation";
@@ -67,6 +66,7 @@ function VirtualArenaContent() {
   const [attentionWarnings, setAttentionWarnings] = useState(0);
   const [isFaceModelsLoaded, setIsFaceModelsLoaded] = useState(false);
   const consecutiveAwayCountRef = useRef(0);
+  const attentionLossActiveRef = useRef(false);
 
   const mediaStreamRef = useRef<MediaStream | null>(null);
   const localVideoRef = useRef<HTMLVideoElement>(null);
@@ -201,25 +201,25 @@ function VirtualArenaContent() {
       }
 
       if (isLookingAway) {
-        consecutiveAwayCountRef.current += 1;
-        
-        if (consecutiveAwayCountRef.current >= 5) {
-          consecutiveAwayCountRef.current = 0; 
-          
+        if (!attentionLossActiveRef.current) {
+          attentionLossActiveRef.current = true;
+      
           const nextWarnings = attentionWarnings + 1;
           setAttentionWarnings(nextWarnings);
-
+      
           if (nextWarnings >= 3) {
             handleCheatingDetected(undefined, "Attention");
           } else {
             toast({
               variant: "destructive",
-              title: "Attention Warning",
-              description: "Please keep your attention on the screen. Repeated violations will end the session.",
+              title: "Please Stay Focused",
+              description:
+                "Please keep your eyes on the screen. If you leave the screen repeatedly, your test will end.",
             });
           }
         }
       } else {
+        attentionLossActiveRef.current = false;
         consecutiveAwayCountRef.current = 0;
       }
     };
