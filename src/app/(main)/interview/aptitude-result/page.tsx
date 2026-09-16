@@ -65,10 +65,28 @@ export default function AptitudeResultPage() {
     if (!result?.details) return [];
     const stats: Record<string, { total: number, correct: number }> = {};
     result.details.forEach((d: any) => {
-      const diff = d.difficulty || 'Medium';
-      if (!stats[diff]) stats[diff] = { total: 0, correct: 0 };
+      const rawDifficulty = String(d.difficulty || 'Medium')
+        .trim()
+        .toLowerCase();
+    
+      const diff =
+        rawDifficulty === 'easy'
+          ? 'Easy'
+          : rawDifficulty === 'medium'
+            ? 'Medium'
+            : rawDifficulty === 'hard'
+              ? 'Hard'
+              : 'Medium';
+    
+      if (!stats[diff]) {
+        stats[diff] = { total: 0, correct: 0 };
+      }
+    
       stats[diff].total++;
-      if (d.isCorrect === true) stats[diff].correct++;
+    
+      if (d.isCorrect === true) {
+        stats[diff].correct++;
+      }
     });
     return ['Easy', 'Medium', 'Hard'].map(level => ({
       level,

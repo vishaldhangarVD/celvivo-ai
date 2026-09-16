@@ -116,8 +116,8 @@ export default function AptitudeEnginePage() {
 
     toast({
       variant: "destructive",
-      title: "Security Violation",
-      description: "Copying is not allowed during the aptitude test. Your test has been terminated.",
+      title: "Copying Detected",
+      description: "Copying is not allowed during the aptitude test. Your test has been stopped.",
     });
 
     if (user?.uid) {

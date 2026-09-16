@@ -62,6 +62,7 @@ function VirtualArenaContent() {
   const mediaStreamRef = useRef<MediaStream | null>(null);
   const localVideoRef = useRef<HTMLVideoElement>(null);
   const recognitionRef = useRef<any>(null);
+  const isTerminatingRef = useRef(false);
 
   // Refs to track state for speech recognition event handlers (avoiding stale closures)
   const isMicOnRef = useRef(isMicOn);
@@ -89,6 +90,48 @@ function VirtualArenaContent() {
     const name = user.displayName || user.email?.split('@')[0] || 'Candidate';
     return name.charAt(0).toUpperCase() + name.slice(1);
   }, [user, journey]);
+
+  const handleCheatingDetected = useCallback(async (e: Event) => {
+    if (isTerminatingRef.current || isInitializing || isSimulationComplete || isGeneratingReport) return;
+    
+    isTerminatingRef.current = true;
+    e.preventDefault();
+
+    toast({
+      variant: "destructive",
+      title: "Copying Detected",
+      description: "Copying is not allowed during the interview. Your interview has been stopped.",
+    });
+
+    if (journeyRef) {
+      updateDoc(journeyRef, {
+        interviewStatus: "terminated_cheating",
+        updatedAt: serverTimestamp()
+      }).catch(err => console.error("Error logging cheating termination:", err));
+    }
+
+    router.replace('/dashboard');
+  }, [isInitializing, isSimulationComplete, isGeneratingReport, journeyRef, router, toast]);
+
+  useEffect(() => {
+    const handleCopy = (e: ClipboardEvent) => {
+      handleCheatingDetected(e);
+    };
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'c') {
+        handleCheatingDetected(e);
+      }
+    };
+
+    window.addEventListener('copy', handleCopy as any);
+    window.addEventListener('keydown', handleKeyDown);
+
+    return () => {
+      window.removeEventListener('copy', handleCopy as any);
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [handleCheatingDetected]);
 
   // Speech Recognition Initialization
   useEffect(() => {
@@ -137,7 +180,7 @@ function VirtualArenaContent() {
 
         recognitionRef.current.onend = () => {
           isRecognitionActiveRef.current = false;
-          const shouldRestart = isMicOnRef.current && !isProcessingRef.current && !isSimulationCompleteRef.current && !isAiSpeakingRef.current;
+          const shouldRestart = isMicOnRef.current && !isProcessingRef.current && !isSimulationCompleteRef.current && !isAiSpeakingRef.current && !isTerminatingRef.current;
           console.log("[Speech] Recognition session ended, restarting:", shouldRestart);
           
           // Automatically restart if conditions are still met
@@ -162,7 +205,7 @@ function VirtualArenaContent() {
   // Control recognition based on mic state and processing state
   useEffect(() => {
     if (recognitionRef.current) {
-      const shouldRun = isMicOn && !isProcessing && !isSimulationComplete && !isAiSpeaking;
+      const shouldRun = isMicOn && !isProcessing && !isSimulationComplete && !isAiSpeaking && !isTerminatingRef.current;
       
       if (shouldRun) {
         if (!isRecognitionActiveRef.current) {
@@ -181,7 +224,7 @@ function VirtualArenaContent() {
   }, [isMicOn, isProcessing, isSimulationComplete, isAiSpeaking]);
 
   useEffect(() => {
-    if (isInitializing || isSimulationComplete || isGeneratingReport) return;
+    if (isInitializing || isSimulationComplete || isGeneratingReport || isTerminatingRef.current) return;
     const interval = setInterval(() => {
       setTimeLeft((prev) => Math.max(0, prev - 1));
     }, 1000);
@@ -264,7 +307,7 @@ function VirtualArenaContent() {
   }, []);
 
   const finalizeSession = useCallback(async (currentTranscript: any[]) => {
-    if (isGeneratingReport) return;
+    if (isGeneratingReport || !db || !user?.uid || !journey || !journeyRef || isTerminatingRef.current) return;
     setIsGeneratingReport(true);
     try {
       const finalAudit = await generateInterviewFeedback({
@@ -314,7 +357,7 @@ function VirtualArenaContent() {
 
   // Monitor for completion triggers
   useEffect(() => {
-    if (pendingFinalize && !isAiSpeaking) {
+    if (pendingFinalize && !isAiSpeaking && !isTerminatingRef.current) {
       finalizeSession(pendingFinalize);
       setPendingFinalize(null);
     }
@@ -324,7 +367,7 @@ function VirtualArenaContent() {
   useEffect(() => {
     if (!pendingFinalize) return;
     const fallback = setTimeout(() => {
-      if (pendingFinalize) {
+      if (pendingFinalize && !isTerminatingRef.current) {
         finalizeSession(pendingFinalize);
         setPendingFinalize(null);
       }
@@ -333,7 +376,7 @@ function VirtualArenaContent() {
   }, [pendingFinalize, finalizeSession]);
 
   const handleSend = async () => {
-    if (!userAnswer.trim() || isProcessing || isSimulationComplete) return;
+    if (!userAnswer.trim() || isProcessing || isSimulationComplete || isTerminatingRef.current) return;
     setIsProcessing(true);
     const newTranscript = [...transcript, { role: 'candidate' as const, text: userAnswer }];
     setTranscript(newTranscript);
@@ -521,7 +564,7 @@ function VirtualArenaContent() {
                     muted
                     playsInline
                     style={{ filter: 'none' }}
-                    className="w-full h-full object-cover transition-all duration-700"
+                    className="w-full h-full object-cover transition-all duration-700 scale-x-[-1]"
                   />
                 ) : (
                   <div className="w-full h-full flex flex-col items-center justify-center bg-[#050816] gap-4">
@@ -564,7 +607,7 @@ function VirtualArenaContent() {
       </div>
 
       <AnimatePresence>
-        {isGeneratingReport && (
+        {(isGeneratingReport || isTerminatingRef.current) && (
           <motion.div 
             initial={{ opacity: 0 }} 
             animate={{ opacity: 1 }} 
@@ -574,8 +617,12 @@ function VirtualArenaContent() {
                 <div className="w-40 h-40 rounded-full border-2 border-accent/20 border-t-accent animate-spin" />
                 <Award className="w-12 h-12 text-accent absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 animate-pulse" />
              </div>
-             <h2 className="text-4xl font-bold tracking-tighter text-premium uppercase">INTERVIEW COMPLETED</h2>
-             <p className="text-[10px] font-black uppercase tracking-[0.6em] text-accent animate-pulse mt-4">PREPARING YOUR INTERVIEW RESULTS...</p>
+             <h2 className="text-4xl font-bold tracking-tighter text-premium uppercase">
+               {isTerminatingRef.current ? "INTERVIEW TERMINATED" : "INTERVIEW COMPLETED"}
+             </h2>
+             <p className="text-[10px] font-black uppercase tracking-[0.6em] text-accent animate-pulse mt-4">
+               {isTerminatingRef.current ? "RETURNING TO DASHBOARD..." : "PREPARING YOUR INTERVIEW RESULTS..."}
+             </p>
           </motion.div>
         )}
       </AnimatePresence>
