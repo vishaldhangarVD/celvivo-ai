@@ -137,9 +137,9 @@ function VirtualArenaContent() {
   
     toast({
       variant: "destructive",
-      title: reason === "Attention" ? "Attention Lost" : "Copying Detected",
+      title: reason === "Attention" ? "You Left the Screen" : "Copying Detected",
       description: reason === "Attention" 
-        ? "The interview was terminated due to repeated attention loss."
+        ? "You left the screen multiple times, so your interview has been stopped."
         : "Copying is not allowed during the interview. Your interview has been stopped.",
     });
   

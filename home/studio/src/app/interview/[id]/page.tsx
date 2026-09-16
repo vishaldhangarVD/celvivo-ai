@@ -65,14 +65,15 @@ function VirtualArenaContent() {
   
   // Attention Monitoring State
   const [attentionWarnings, setAttentionWarnings] = useState(0);
-  const attentionWarningsRef = useRef(0);
   const [isFaceModelsLoaded, setIsFaceModelsLoaded] = useState(false);
   const consecutiveAwayCountRef = useRef(0);
+  const attentionLossActiveRef = useRef(false);
 
   const mediaStreamRef = useRef<MediaStream | null>(null);
   const localVideoRef = useRef<HTMLVideoElement>(null);
   const recognitionRef = useRef<any>(null);
   const isTerminatingRef = useRef(false);
+  const initLockRef = useRef(false);
 
   // Refs for speech and processing to avoid stale closures
   const isMicOnRef = useRef(isMicOn);
@@ -137,9 +138,9 @@ function VirtualArenaContent() {
   
     toast({
       variant: "destructive",
-      title: reason === "Attention" ? "Attention Lost" : "Copying Detected",
+      title: reason === "Attention" ? "You Left the Screen" : "Copying Detected",
       description: reason === "Attention" 
-        ? "The interview was terminated due to repeated attention loss."
+        ? "You left the screen multiple times, so your interview has been stopped."
         : "Copying is not allowed during the interview. Your interview has been stopped.",
     });
   
@@ -175,26 +176,21 @@ function VirtualArenaContent() {
       let isLookingAway = false;
 
       if (!detection) {
-        // No face detected at all
         isLookingAway = true;
       } else {
         const landmarks = detection.landmarks;
-        const noseTip = landmarks.getNose()[3]; // Tip of nose
-        const jawLeft = landmarks.getJawOutline()[0]; // Far left jaw
-        const jawRight = landmarks.getJawOutline()[16]; // Far right jaw
-        const chin = landmarks.getJawOutline()[8]; // Chin tip
-        const leftEye = landmarks.getLeftEye()[0]; // Far left eye
-        const rightEye = landmarks.getRightEye()[3]; // Far right eye
+        const noseTip = landmarks.getNose()[3]; 
+        const jawLeft = landmarks.getJawOutline()[0]; 
+        const jawRight = landmarks.getJawOutline()[16]; 
+        const chin = landmarks.getJawOutline()[8]; 
+        const leftEye = landmarks.getLeftEye()[0]; 
+        const rightEye = landmarks.getRightEye()[3]; 
 
-        // Yaw estimation (Left/Right)
-        // Normalize nose tip position between 0 (far left) and 1 (far right)
         const faceWidth = jawRight.x - jawLeft.x;
         const noseXRel = (noseTip.x - jawLeft.x) / faceWidth;
         const turnedLeft = noseXRel < 0.32;
         const turnedRight = noseXRel > 0.68;
 
-        // Pitch estimation (Up/Down)
-        // Ratio of distance from eye-level to nose vs eye-level to chin
         const eyeLevelY = (leftEye.y + rightEye.y) / 2;
         const faceHeight = chin.y - eyeLevelY;
         const noseYRel = (noseTip.y - eyeLevelY) / faceHeight;
@@ -207,62 +203,46 @@ function VirtualArenaContent() {
 
       if (isLookingAway) {
         consecutiveAwayCountRef.current += 1;
-        
-        // Continuous away threshold: 5 seconds
-        if (consecutiveAwayCountRef.current >= 5) {
-          consecutiveAwayCountRef.current = 0; 
-          
-          // SIDE EFFECT SAFETY: Perform side effects outside of state updates to avoid React concurrent update warnings
-          const nextCount = attentionWarningsRef.current + 1;
-          attentionWarningsRef.current = nextCount;
-          setAttentionWarnings(nextCount);
 
-          if (nextCount >= 3) {
+        if (
+          consecutiveAwayCountRef.current >= 2 &&
+          !attentionLossActiveRef.current
+        ) {
+          attentionLossActiveRef.current = true;
+
+          const nextWarnings = attentionWarnings + 1;
+          setAttentionWarnings(nextWarnings);
+
+          if (nextWarnings >= 3) {
             handleCheatingDetected(undefined, "Attention");
           } else {
             toast({
               variant: "destructive",
-              title: "Attention Warning",
-              description: "Please keep your attention on the screen. Repeated violations will end the session.",
+              title: "Please Stay Focused",
+              description:
+                "Please keep your eyes on the screen. If you leave the screen repeatedly, your test will end.",
             });
           }
         }
       } else {
+        attentionLossActiveRef.current = false;
         consecutiveAwayCountRef.current = 0;
       }
     };
 
     const interval = setInterval(monitorAttention, 1000);
     return () => clearInterval(interval);
-  }, [isFaceModelsLoaded, isCameraOn, isInitializing, isSimulationComplete, isGeneratingReport, isTerminated, handleCheatingDetected, toast]);
+  }, [isFaceModelsLoaded, isCameraOn, isInitializing, isSimulationComplete, isGeneratingReport, isTerminated, attentionWarnings, handleCheatingDetected, toast]);
 
   // Anti-Copy Logic
   useEffect(() => {
     const handleCopy = (e: ClipboardEvent) => {
-      if (isTerminatingRef.current || isInitializing || isSimulationComplete || isGeneratingReport) return;
-      
-      isTerminatingRef.current = true;
-      e.preventDefault();
-      
-      toast({
-        variant: "destructive",
-        title: "Copying Detected",
-        description: "Copying is not allowed during the interview. Your interview has been stopped.",
-      });
-
-      if (journeyRef) {
-        updateDoc(journeyRef, {
-          interviewStatus: "terminated_cheating",
-          updatedAt: serverTimestamp()
-        }).catch(err => console.error("Error logging cheating termination:", err));
-      }
-
-      router.replace('/dashboard');
+      handleCheatingDetected(e, "Copying");
     };
 
     const handleKeyDown = (e: KeyboardEvent) => {
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'c') {
-        handleCopy(e as any);
+        handleCheatingDetected(e, "Copying");
       }
     };
 
@@ -273,7 +253,7 @@ function VirtualArenaContent() {
       window.removeEventListener('copy', handleCopy as any);
       window.removeEventListener('keydown', handleKeyDown);
     };
-  }, [isInitializing, isSimulationComplete, isGeneratingReport, journeyRef, router, toast]);
+  }, [handleCheatingDetected]);
 
   // Speech Recognition Initialization
   useEffect(() => {
@@ -381,9 +361,10 @@ function VirtualArenaContent() {
 
   useEffect(() => {
     async function init() {
-      if (!user || !db || !journey) return;
+      if (!user || !db || !journey || initLockRef.current) return;
       
       if (transcript.length === 0) {
+        initLockRef.current = true;
         try {
           const response = await aiMockInterview({
             role: journey.role, 
