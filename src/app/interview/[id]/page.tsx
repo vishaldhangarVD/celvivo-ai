@@ -61,7 +61,7 @@ function VirtualArenaContent() {
 
   const [isMicOn, setIsMicOn] = useState(true);
   const [isCameraOn, setIsCameraOn] = useState(true);
-  const [askedQuestions, setAskedQuestions] = useState<string[]>(askQuestionsFromHistory());
+  const [askedQuestions, setAskedQuestions] = useState<string[]>([]);
   
   // Attention Monitoring State
   const [attentionWarnings, setAttentionWarnings] = useState(0);
@@ -79,10 +79,6 @@ function VirtualArenaContent() {
   const isSimulationCompleteRef = useRef(isSimulationComplete);
   const isAiSpeakingRef = useRef(isAiSpeaking);
   const isRecognitionActiveRef = useRef(false);
-
-  function askQuestionsFromHistory() {
-    return [];
-  }
 
   useEffect(() => { isMicOnRef.current = isMicOn; }, [isMicOn]);
   useEffect(() => { isProcessingRef.current = isProcessing; }, [isProcessing]);
@@ -104,13 +100,14 @@ function VirtualArenaContent() {
     return name.charAt(0).toUpperCase() + name.slice(1);
   }, [user, journey]);
 
-  // Load face detection models
+  // Load face detection and landmark models
   useEffect(() => {
     const loadModels = async () => {
       try {
         const MODEL_URL = 'https://cdn.jsdelivr.net/gh/justadudewhohacks/face-api.js@master/weights/';
         await Promise.all([
           faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL),
+          faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL),
         ]);
         setIsFaceModelsLoaded(true);
       } catch (err) {
@@ -162,7 +159,7 @@ function VirtualArenaContent() {
     }, 2000);
   }, [isInitializing, isSimulationComplete, isGeneratingReport, journeyRef, router, toast]);
 
-  // Attention Monitoring Loop
+  // Attention & Orientation Monitoring Loop
   useEffect(() => {
     if (!isFaceModelsLoaded || !isCameraOn || isInitializing || isSimulationComplete || isGeneratingReport || isTerminated) return;
 
@@ -172,14 +169,47 @@ function VirtualArenaContent() {
       const detection = await faceapi.detectSingleFace(
         localVideoRef.current, 
         new faceapi.TinyFaceDetectorOptions()
-      );
+      ).withFaceLandmarks();
+
+      let isLookingAway = false;
 
       if (!detection) {
+        // No face detected at all
+        isLookingAway = true;
+      } else {
+        const landmarks = detection.landmarks;
+        const noseTip = landmarks.getNose()[3]; // Tip of nose
+        const jawLeft = landmarks.getJawOutline()[0]; // Far left jaw
+        const jawRight = landmarks.getJawOutline()[16]; // Far right jaw
+        const chin = landmarks.getJawOutline()[8]; // Chin tip
+        const leftEye = landmarks.getLeftEye()[0]; // Far left eye
+        const rightEye = landmarks.getRightEye()[3]; // Far right eye
+
+        // Yaw estimation (Left/Right)
+        // Normalize nose tip position between 0 (far left) and 1 (far right)
+        const faceWidth = jawRight.x - jawLeft.x;
+        const noseXRel = (noseTip.x - jawLeft.x) / faceWidth;
+        const turnedLeft = noseXRel < 0.32;
+        const turnedRight = noseXRel > 0.68;
+
+        // Pitch estimation (Up/Down)
+        // Ratio of distance from eye-level to nose vs eye-level to chin
+        const eyeLevelY = (leftEye.y + rightEye.y) / 2;
+        const faceHeight = chin.y - eyeLevelY;
+        const noseYRel = (noseTip.y - eyeLevelY) / faceHeight;
+        const lookingDown = noseYRel > 0.60;
+
+        if (turnedLeft || turnedRight || lookingDown) {
+          isLookingAway = true;
+        }
+      }
+
+      if (isLookingAway) {
         consecutiveAwayCountRef.current += 1;
         
-        // After 5 seconds of continuous looking away
-        if (consecutiveAwayCountRef.current === 5) {
-          consecutiveAwayCountRef.current = 0; // Reset for the next violation period
+        // Continuous away threshold: 5 seconds
+        if (consecutiveAwayCountRef.current >= 5) {
+          consecutiveAwayCountRef.current = 0; 
           
           setAttentionWarnings(prev => {
             const next = prev + 1;
@@ -191,7 +221,7 @@ function VirtualArenaContent() {
             toast({
               variant: "destructive",
               title: "Attention Warning",
-              description: "Please keep your attention on the interview screen.",
+              description: "Please keep your attention on the screen. Repeated violations will end the session.",
             });
             return next;
           });
@@ -205,6 +235,7 @@ function VirtualArenaContent() {
     return () => clearInterval(interval);
   }, [isFaceModelsLoaded, isCameraOn, isInitializing, isSimulationComplete, isGeneratingReport, isTerminated, handleCheatingDetected, toast]);
 
+  // Anti-Copy Logic
   useEffect(() => {
     const handleCopy = (e: ClipboardEvent) => {
       handleCheatingDetected(e, "Copying");
@@ -351,12 +382,12 @@ function VirtualArenaContent() {
             askedQuestions: [],
             currentStage: "INTRODUCTION",
             currentDifficulty: "MEDIUM",
-            hintUsed: false
+            hintUsed: false,
+            userId: user.uid,
+            sessionId: journey.sessionId
           });
           
           setTranscript([{ role: 'interviewer', text: response.nextQuestion }]);
-          setAskedQuestions([response.nextQuestion]);
-          setCurrentSimStage(response.stage);
           setIsAiSpeaking(true);
 
           await updateDoc(journeyRef!, { currentStage: INTERVIEW_STAGES.HR_INTERVIEW });
@@ -472,7 +503,9 @@ function VirtualArenaContent() {
         codingScore: journey?.codingReport?.score || 0,
         askedQuestions: askedQuestions,
         currentStage: currentSimStage as any,
-        currentDifficulty: "MEDIUM"
+        currentDifficulty: "MEDIUM",
+        userId: user?.uid,
+        sessionId: journey?.sessionId
       });
 
       const updatedTranscript = [...newTranscript, { role: 'interviewer' as const, text: response.nextQuestion }];
@@ -673,7 +706,7 @@ function VirtualArenaContent() {
       </div>
 
       <AnimatePresence>
-  {(isGeneratingReport || isTerminated) && (
+        {(isGeneratingReport || isTerminated) && (
           <motion.div 
             initial={{ opacity: 0 }} 
             animate={{ opacity: 1 }} 
@@ -684,10 +717,10 @@ function VirtualArenaContent() {
                 <Award className="w-12 h-12 text-accent absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 animate-pulse" />
              </div>
              <h2 className="text-4xl font-bold tracking-tighter text-premium uppercase">
-             {isTerminated ? "INTERVIEW TERMINATED" : "INTERVIEW COMPLETED"}
+               {isTerminated ? "INTERVIEW TERMINATED" : "INTERVIEW COMPLETED"}
              </h2>
              <p className="text-[10px] font-black uppercase tracking-[0.6em] text-accent animate-pulse mt-4">
-             {isTerminated ? "RETURNING TO DASHBOARD..." : "PREPARING YOUR INTERVIEW RESULTS..."}
+               {isTerminated ? "RETURNING TO DASHBOARD..." : "PREPARING YOUR INTERVIEW RESULTS..."}
              </p>
           </motion.div>
         )}
