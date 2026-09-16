@@ -12,16 +12,17 @@ const nextConfig: NextConfig = {
     serverActions: {
       bodySizeLimit: '10mb',
     },
+    allowedDevOrigins: [
+      '*.cloudworkstations.dev',
+      '*.firebase-studio.com',
+      '*.web.app',
+      '*.firebaseapp.com',
+      '6000-firebase-studio-1780936922869.cluster-cd3bsnf6r5bemwki2bxljme5as.cloudworkstations.dev'
+    ],
   },
   // Optimize development performance by excluding heavy native modules from the bundle
   serverExternalPackages: ['puppeteer', 'puppeteer-core'],
   
-  allowedDevOrigins: [
-    '*.cloudworkstations.dev',
-    '*.firebase-studio.com',
-    '*.web.app',
-    '*.firebaseapp.com',
-  ],
   images: {
     dangerouslyAllowSVG: true,
     remotePatterns: [

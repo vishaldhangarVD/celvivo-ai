@@ -51,6 +51,7 @@ function VirtualArenaContent() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [isInitializing, setIsInitializing] = useState(true);
   const [isGeneratingReport, setIsGeneratingReport] = useState(false);
+  const [isTerminated, setIsTerminated] = useState(false);
   
   const [currentSimStage, setCurrentSimStage] = useState<string>("INTRODUCTION");
   const [isAiSpeaking, setIsAiSpeaking] = useState(false);
@@ -92,26 +93,62 @@ function VirtualArenaContent() {
   }, [user, journey]);
 
   const handleCheatingDetected = useCallback(async (e: Event) => {
-    if (isTerminatingRef.current || isInitializing || isSimulationComplete || isGeneratingReport) return;
-    
+    if (
+      isTerminatingRef.current ||
+      isInitializing ||
+      isSimulationComplete ||
+      isGeneratingReport
+    ) {
+      return;
+    }
+  
     isTerminatingRef.current = true;
+    setIsTerminated(true);
     e.preventDefault();
-
+  
+    // Stop speech recognition immediately
+    if (recognitionRef.current) {
+      try {
+        recognitionRef.current.stop();
+      } catch {}
+    }
+  
+    // Stop camera and microphone
+    if (mediaStreamRef.current) {
+      mediaStreamRef.current.getTracks().forEach((track) => track.stop());
+    }
+  
     toast({
       variant: "destructive",
       title: "Copying Detected",
-      description: "Copying is not allowed during the interview. Your interview has been stopped.",
+      description:
+        "Copying is not allowed during the interview. Your interview has been stopped.",
     });
-
-    if (journeyRef) {
-      updateDoc(journeyRef, {
-        interviewStatus: "terminated_cheating",
-        updatedAt: serverTimestamp()
-      }).catch(err => console.error("Error logging cheating termination:", err));
+  
+    try {
+      if (journeyRef) {
+        await updateDoc(journeyRef, {
+          interviewStatus: "terminated_cheating",
+          currentStage: "TERMINATED",
+          updatedAt: serverTimestamp(),
+        });
+      }
+    } catch (error) {
+      console.error("Error logging cheating termination:", error);
     }
-
-    router.replace('/dashboard');
-  }, [isInitializing, isSimulationComplete, isGeneratingReport, journeyRef, router, toast]);
+  
+    // Keep termination screen visible before returning to dashboard
+    setTimeout(() => {
+      router.replace("/dashboard");
+    }, 2000);
+  }, [
+    isInitializing,
+    isSimulationComplete,
+    isGeneratingReport,
+    journeyRef,
+    router,
+    toast,
+  ]);
 
   useEffect(() => {
     const handleCopy = (e: ClipboardEvent) => {
@@ -607,7 +644,7 @@ function VirtualArenaContent() {
       </div>
 
       <AnimatePresence>
-        {(isGeneratingReport || isTerminatingRef.current) && (
+  {(isGeneratingReport || isTerminated) && (
           <motion.div 
             initial={{ opacity: 0 }} 
             animate={{ opacity: 1 }} 
@@ -618,10 +655,10 @@ function VirtualArenaContent() {
                 <Award className="w-12 h-12 text-accent absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 animate-pulse" />
              </div>
              <h2 className="text-4xl font-bold tracking-tighter text-premium uppercase">
-               {isTerminatingRef.current ? "INTERVIEW TERMINATED" : "INTERVIEW COMPLETED"}
+             {isTerminated ? "INTERVIEW TERMINATED" : "INTERVIEW COMPLETED"}
              </h2>
              <p className="text-[10px] font-black uppercase tracking-[0.6em] text-accent animate-pulse mt-4">
-               {isTerminatingRef.current ? "RETURNING TO DASHBOARD..." : "PREPARING YOUR INTERVIEW RESULTS..."}
+             {isTerminated ? "RETURNING TO DASHBOARD..." : "PREPARING YOUR INTERVIEW RESULTS..."}
              </p>
           </motion.div>
         )}
