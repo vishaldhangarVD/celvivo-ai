@@ -312,7 +312,7 @@ export default function InterviewSetupPage() {
       setTimeout(() => {
         setIsUploaded(true);
         setIsVerifying(false);
-        toast({ title: "Blueprint Detected", description: "Identity file loaded successfully." });
+        toast({ title: "Resume Uploaded Successfully", description: "Your resume has been uploaded and is ready. You can continue to the next step." });
       }, 1000);
     }
   };

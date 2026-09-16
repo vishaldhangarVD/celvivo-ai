@@ -12,8 +12,8 @@ if (typeof window === 'undefined') {
  * Global Model Protocol.
  * Using 'gemini-3.6-flash' as the verified stable model for this environment.
  */
-export const PRIMARY_MODEL = 'googleai/gemini-3.6-flash';
-export const FALLBACK_MODEL = 'googleai/gemini-3.6-flash';
+export const PRIMARY_MODEL = 'googleai/gemini-flash-latest';
+export const FALLBACK_MODEL = 'googleai/gemini-flash-latest';
 
 const apiKey = (
   process.env.GOOGLE_GENAI_API_KEY || 

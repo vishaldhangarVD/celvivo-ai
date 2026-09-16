@@ -521,24 +521,39 @@ export default function SpecialHRInterview() {
                 }
               }
             },
-            onError: (error: any) => { 
-              if (!error.message?.includes("session_id")) setStatus("ERROR"); 
+            onError: (error: any) => {
+              console.warn("[D-ID] Temporary connection error:", error);
+            
+              // Do not immediately show CONNECTION FAILED.
+              // The connection retry logic will handle temporary 503/WebSocket errors.
+              if (error.message?.includes("session_id")) return;
+            
+              // Keep the page in LOADING while D-ID retries.
+              setStatus((current) => current === "READY" ? "READY" : "LOADING");
             },
           },
         });
         agentManagerRef.current = manager;
         
         const tryConnect = async () => {
-          for (let i = 0; i < 3; i++) {
+          for (let i = 0; i < 5; i++) {
             try {
               await manager.connect();
-              return;
+              console.log("[D-ID] Connection established.");
+              return true;
             } catch (e) {
-              console.warn(`[D-ID] Initial connection failed, retry ${i+1}`);
-              await new Promise(r => setTimeout(r, 3000));
+              console.warn(`[D-ID] Connection attempt ${i + 1} failed. Retrying...`);
+        
+              if (i < 4) {
+                await new Promise(r => setTimeout(r, 3000));
+              }
             }
           }
+        
+          console.error("[D-ID] All connection attempts failed.");
+          return false;
         };
+        
         tryConnect();
         
       } catch (error) { 
