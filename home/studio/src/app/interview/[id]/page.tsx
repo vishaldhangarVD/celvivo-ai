@@ -212,7 +212,7 @@ function VirtualArenaContent() {
         if (consecutiveAwayCountRef.current >= 5) {
           consecutiveAwayCountRef.current = 0; 
           
-          // SIDE EFFECT SAFETY: Perform side effects outside of state updates
+          // SIDE EFFECT SAFETY: Perform side effects outside of state updates to avoid React concurrent update warnings
           const nextCount = attentionWarningsRef.current + 1;
           attentionWarningsRef.current = nextCount;
           setAttentionWarnings(nextCount);
@@ -574,7 +574,7 @@ function VirtualArenaContent() {
   }
 
   return (
-    <div className="h-screen w-full max-h-screen bg-[#050816] flex flex-col relative overflow-hidden">
+    <div className="h-screen w-full max-h-screen bg-[#050816] font-body flex flex-col relative overflow-hidden">
       <div className="particles-bg" />
       
       <header className="h-16 border-b border-white/5 bg-[#0b0e1a] flex items-center justify-between px-6 shrink-0 z-50">
