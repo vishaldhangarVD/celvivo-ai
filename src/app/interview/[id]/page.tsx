@@ -65,6 +65,7 @@ function VirtualArenaContent() {
   
   // Attention Monitoring State
   const [attentionWarnings, setAttentionWarnings] = useState(0);
+  const attentionWarningsRef = useRef(0);
   const [isFaceModelsLoaded, setIsFaceModelsLoaded] = useState(false);
   const consecutiveAwayCountRef = useRef(0);
 
@@ -72,6 +73,7 @@ function VirtualArenaContent() {
   const localVideoRef = useRef<HTMLVideoElement>(null);
   const recognitionRef = useRef<any>(null);
   const isTerminatingRef = useRef(false);
+  const initializationLockRef = useRef(false);
 
   // Refs for speech and processing to avoid stale closures
   const isMicOnRef = useRef(isMicOn);
@@ -186,14 +188,12 @@ function VirtualArenaContent() {
         const rightEye = landmarks.getRightEye()[3]; // Far right eye
 
         // Yaw estimation (Left/Right)
-        // Normalize nose tip position between 0 (far left) and 1 (far right)
         const faceWidth = jawRight.x - jawLeft.x;
         const noseXRel = (noseTip.x - jawLeft.x) / faceWidth;
         const turnedLeft = noseXRel < 0.32;
         const turnedRight = noseXRel > 0.68;
 
         // Pitch estimation (Up/Down)
-        // Ratio of distance from eye-level to nose vs eye-level to chin
         const eyeLevelY = (leftEye.y + rightEye.y) / 2;
         const faceHeight = chin.y - eyeLevelY;
         const noseYRel = (noseTip.y - eyeLevelY) / faceHeight;
@@ -211,20 +211,18 @@ function VirtualArenaContent() {
         if (consecutiveAwayCountRef.current >= 5) {
           consecutiveAwayCountRef.current = 0; 
           
-          setAttentionWarnings(prev => {
-            const next = prev + 1;
-            if (next >= 3) {
-              handleCheatingDetected(undefined, "Attention");
-              return next;
-            }
+          const nextWarnings = attentionWarnings + 1;
+          setAttentionWarnings(nextWarnings);
 
+          if (nextWarnings >= 3) {
+            handleCheatingDetected(undefined, "Attention");
+          } else {
             toast({
               variant: "destructive",
               title: "Attention Warning",
               description: "Please keep your attention on the screen. Repeated violations will end the session.",
             });
-            return next;
-          });
+          }
         }
       } else {
         consecutiveAwayCountRef.current = 0;
@@ -233,17 +231,35 @@ function VirtualArenaContent() {
 
     const interval = setInterval(monitorAttention, 1000);
     return () => clearInterval(interval);
-  }, [isFaceModelsLoaded, isCameraOn, isInitializing, isSimulationComplete, isGeneratingReport, isTerminated, handleCheatingDetected, toast]);
+  }, [isFaceModelsLoaded, isCameraOn, isInitializing, isSimulationComplete, isGeneratingReport, isTerminated, attentionWarnings, handleCheatingDetected, toast]);
 
   // Anti-Copy Logic
   useEffect(() => {
     const handleCopy = (e: ClipboardEvent) => {
-      handleCheatingDetected(e, "Copying");
+      if (isTerminatingRef.current || isInitializing || isSimulationComplete || isGeneratingReport) return;
+      
+      isTerminatingRef.current = true;
+      e.preventDefault();
+      
+      toast({
+        variant: "destructive",
+        title: "Copying Detected",
+        description: "Copying is not allowed during the interview. Your interview has been stopped.",
+      });
+
+      if (journeyRef) {
+        updateDoc(journeyRef, {
+          interviewStatus: "terminated_cheating",
+          updatedAt: serverTimestamp()
+        }).catch(err => console.error("Error logging cheating termination:", err));
+      }
+
+      router.replace('/dashboard');
     };
 
     const handleKeyDown = (e: KeyboardEvent) => {
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'c') {
-        handleCheatingDetected(e, "Copying");
+        handleCopy(e as any);
       }
     };
 
@@ -254,7 +270,7 @@ function VirtualArenaContent() {
       window.removeEventListener('copy', handleCopy as any);
       window.removeEventListener('keydown', handleKeyDown);
     };
-  }, [handleCheatingDetected]);
+  }, [isInitializing, isSimulationComplete, isGeneratingReport, journeyRef, router, toast]);
 
   // Speech Recognition Initialization
   useEffect(() => {
@@ -362,9 +378,11 @@ function VirtualArenaContent() {
 
   useEffect(() => {
     async function init() {
-      if (!user || !db || !journey) return;
+      if (!user || !db || !journey || isTerminatingRef.current) return;
+      if (initializationLockRef.current) return;
       
       if (transcript.length === 0) {
+        initializationLockRef.current = true;
         try {
           const response = await aiMockInterview({
             role: journey.role, 
@@ -453,7 +471,7 @@ function VirtualArenaContent() {
       setIsGeneratingReport(false);
       toast({ variant: "destructive", title: "Audit Generation Failed" });
     }
-  }, [db, journey, journeyRef, router, toast, user, isGeneratingReport]);
+  }, [db, journey, journeyRef, router, toast, user]);
 
   useEffect(() => {
     if (pendingFinalize && !isAiSpeaking && !isTerminatingRef.current) {
@@ -555,7 +573,7 @@ function VirtualArenaContent() {
   }
 
   return (
-    <div className="h-screen w-full max-h-screen bg-[#050816] flex flex-col relative overflow-hidden">
+    <div className="h-screen w-full max-h-screen bg-[#050816] font-body flex flex-col relative overflow-hidden">
       <div className="particles-bg" />
       
       <header className="h-16 border-b border-white/5 bg-[#0b0e1a] flex items-center justify-between px-6 shrink-0 z-50">
