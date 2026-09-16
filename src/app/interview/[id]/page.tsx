@@ -1,3 +1,4 @@
+
 "use client";
 import { Suspense, useEffect, useState, useRef, useMemo, useCallback } from "react";
 import { useRouter, useParams } from "next/navigation";
@@ -31,6 +32,7 @@ import { cn } from "@/lib/utils";
 import CandidateHologram from "@/components/CandidateHologram";
 import HolographicInterviewer from "@/components/HolographicInterviewer";
 import { INTERVIEW_STAGES } from "@/lib/interview-stages";
+import * as faceapi from 'face-api.js';
 
 const MAX_QUESTIONS = 12;
 
@@ -59,18 +61,28 @@ function VirtualArenaContent() {
 
   const [isMicOn, setIsMicOn] = useState(true);
   const [isCameraOn, setIsCameraOn] = useState(true);
-  const [askedQuestions, setAskedQuestions] = useState<string[]>([]);
+  const [askedQuestions, setAskedQuestions] = useState<string[]>(askQuestionsFromHistory());
+  
+  // Attention Monitoring State
+  const [attentionWarnings, setAttentionWarnings] = useState(0);
+  const [isFaceModelsLoaded, setIsFaceModelsLoaded] = useState(false);
+  const consecutiveAwayCountRef = useRef(0);
+
   const mediaStreamRef = useRef<MediaStream | null>(null);
   const localVideoRef = useRef<HTMLVideoElement>(null);
   const recognitionRef = useRef<any>(null);
   const isTerminatingRef = useRef(false);
 
-  // Refs to track state for speech recognition event handlers (avoiding stale closures)
+  // Refs for speech and processing to avoid stale closures
   const isMicOnRef = useRef(isMicOn);
   const isProcessingRef = useRef(isProcessing);
   const isSimulationCompleteRef = useRef(isSimulationComplete);
   const isAiSpeakingRef = useRef(isAiSpeaking);
   const isRecognitionActiveRef = useRef(false);
+
+  function askQuestionsFromHistory() {
+    return [];
+  }
 
   useEffect(() => { isMicOnRef.current = isMicOn; }, [isMicOn]);
   useEffect(() => { isProcessingRef.current = isProcessing; }, [isProcessing]);
@@ -92,37 +104,45 @@ function VirtualArenaContent() {
     return name.charAt(0).toUpperCase() + name.slice(1);
   }, [user, journey]);
 
-  const handleCheatingDetected = useCallback(async (e: Event) => {
-    if (
-      isTerminatingRef.current ||
-      isInitializing ||
-      isSimulationComplete ||
-      isGeneratingReport
-    ) {
-      return;
-    }
+  // Load face detection models
+  useEffect(() => {
+    const loadModels = async () => {
+      try {
+        const MODEL_URL = 'https://cdn.jsdelivr.net/gh/justadudewhohacks/face-api.js@master/weights/';
+        await Promise.all([
+          faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL),
+        ]);
+        setIsFaceModelsLoaded(true);
+      } catch (err) {
+        console.error("Face models loading failed", err);
+      }
+    };
+    loadModels();
+  }, []);
+
+  const handleCheatingDetected = useCallback(async (e?: Event, reason: "Copying" | "Attention" = "Copying") => {
+    if (isTerminatingRef.current || isInitializing || isSimulationComplete || isGeneratingReport) return;
   
     isTerminatingRef.current = true;
     setIsTerminated(true);
-    e.preventDefault();
+    if (e) e.preventDefault();
   
-    // Stop speech recognition immediately
     if (recognitionRef.current) {
       try {
         recognitionRef.current.stop();
       } catch {}
     }
   
-    // Stop camera and microphone
     if (mediaStreamRef.current) {
       mediaStreamRef.current.getTracks().forEach((track) => track.stop());
     }
   
     toast({
       variant: "destructive",
-      title: "Copying Detected",
-      description:
-        "Copying is not allowed during the interview. Your interview has been stopped.",
+      title: reason === "Attention" ? "Attention Lost" : "Copying Detected",
+      description: reason === "Attention" 
+        ? "The interview was terminated due to repeated attention loss."
+        : "Copying is not allowed during the interview. Your interview has been stopped.",
     });
   
     try {
@@ -137,27 +157,62 @@ function VirtualArenaContent() {
       console.error("Error logging cheating termination:", error);
     }
   
-    // Keep termination screen visible before returning to dashboard
     setTimeout(() => {
       router.replace("/dashboard");
     }, 2000);
-  }, [
-    isInitializing,
-    isSimulationComplete,
-    isGeneratingReport,
-    journeyRef,
-    router,
-    toast,
-  ]);
+  }, [isInitializing, isSimulationComplete, isGeneratingReport, journeyRef, router, toast]);
+
+  // Attention Monitoring Loop
+  useEffect(() => {
+    if (!isFaceModelsLoaded || !isCameraOn || isInitializing || isSimulationComplete || isGeneratingReport || isTerminated) return;
+
+    const monitorAttention = async () => {
+      if (!localVideoRef.current || localVideoRef.current.paused || localVideoRef.current.ended) return;
+
+      const detection = await faceapi.detectSingleFace(
+        localVideoRef.current, 
+        new faceapi.TinyFaceDetectorOptions()
+      );
+
+      if (!detection) {
+        consecutiveAwayCountRef.current += 1;
+        
+        // After 5 seconds of continuous looking away
+        if (consecutiveAwayCountRef.current === 5) {
+          consecutiveAwayCountRef.current = 0; // Reset for the next violation period
+          
+          setAttentionWarnings(prev => {
+            const next = prev + 1;
+            if (next >= 3) {
+              handleCheatingDetected(undefined, "Attention");
+              return next;
+            }
+
+            toast({
+              variant: "destructive",
+              title: "Attention Warning",
+              description: "Please keep your attention on the interview screen.",
+            });
+            return next;
+          });
+        }
+      } else {
+        consecutiveAwayCountRef.current = 0;
+      }
+    };
+
+    const interval = setInterval(monitorAttention, 1000);
+    return () => clearInterval(interval);
+  }, [isFaceModelsLoaded, isCameraOn, isInitializing, isSimulationComplete, isGeneratingReport, isTerminated, handleCheatingDetected, toast]);
 
   useEffect(() => {
     const handleCopy = (e: ClipboardEvent) => {
-      handleCheatingDetected(e);
+      handleCheatingDetected(e, "Copying");
     };
 
     const handleKeyDown = (e: KeyboardEvent) => {
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'c') {
-        handleCheatingDetected(e);
+        handleCheatingDetected(e, "Copying");
       }
     };
 
@@ -182,24 +237,16 @@ function VirtualArenaContent() {
 
         recognitionRef.current.onstart = () => {
           isRecognitionActiveRef.current = true;
-          console.log("[Speech] Recognition session started");
         };
 
         recognitionRef.current.onresult = (event: any) => {
           let finalTranscript = '';
-          let interimTranscript = '';
           for (let i = event.resultIndex; i < event.results.length; ++i) {
             if (event.results[i].isFinal) {
               finalTranscript += event.results[i][0].transcript;
-            } else {
-              interimTranscript += event.results[i][0].transcript;
             }
           }
           
-          if (finalTranscript || interimTranscript) {
-            console.log("[Speech] Transcript detected:", { final: finalTranscript, interim: interimTranscript });
-          }
-
           if (finalTranscript) {
             setUserAnswer(prev => {
               const cleanedBase = prev.trim();
@@ -208,25 +255,14 @@ function VirtualArenaContent() {
           }
         };
 
-        recognitionRef.current.onerror = (event: any) => {
-          console.log("[Speech] Recognition error:", event.error);
-          if (event.error === 'no-speech' || event.error === 'aborted') {
-            return;
-          }
-        };
-
         recognitionRef.current.onend = () => {
           isRecognitionActiveRef.current = false;
           const shouldRestart = isMicOnRef.current && !isProcessingRef.current && !isSimulationCompleteRef.current && !isAiSpeakingRef.current && !isTerminatingRef.current;
-          console.log("[Speech] Recognition session ended, restarting:", shouldRestart);
           
-          // Automatically restart if conditions are still met
           if (shouldRestart) {
             try {
               recognitionRef.current.start();
-            } catch (e) {
-              console.warn("[Speech] Auto-restart failed:", e);
-            }
+            } catch (e) {}
           }
         };
       }
@@ -239,7 +275,6 @@ function VirtualArenaContent() {
     };
   }, []);
 
-  // Control recognition based on mic state and processing state
   useEffect(() => {
     if (recognitionRef.current) {
       const shouldRun = isMicOn && !isProcessing && !isSimulationComplete && !isAiSpeaking && !isTerminatingRef.current;
@@ -248,9 +283,7 @@ function VirtualArenaContent() {
         if (!isRecognitionActiveRef.current) {
           try {
             recognitionRef.current.start();
-          } catch (e) {
-            console.warn("[Speech] Start attempted but failed:", e);
-          }
+          } catch (e) {}
         }
       } else {
         if (isRecognitionActiveRef.current) {
@@ -261,12 +294,12 @@ function VirtualArenaContent() {
   }, [isMicOn, isProcessing, isSimulationComplete, isAiSpeaking]);
 
   useEffect(() => {
-    if (isInitializing || isSimulationComplete || isGeneratingReport || isTerminatingRef.current) return;
+    if (isInitializing || isSimulationComplete || isGeneratingReport || isTerminated) return;
     const interval = setInterval(() => {
       setTimeLeft((prev) => Math.max(0, prev - 1));
     }, 1000);
     return () => clearInterval(interval);
-  }, [isInitializing, isSimulationComplete, isGeneratingReport]);
+  }, [isInitializing, isSimulationComplete, isGeneratingReport, isTerminated]);
 
   const startCamera = async () => {
     try {
@@ -290,7 +323,6 @@ function VirtualArenaContent() {
     };
   }, []);
 
-  // Ensure stream is attached to local video when camera is toggled or init completes
   useEffect(() => {
     if (isCameraOn && localVideoRef.current && mediaStreamRef.current && !isInitializing) {
       localVideoRef.current.srcObject = mediaStreamRef.current;
@@ -392,7 +424,6 @@ function VirtualArenaContent() {
     }
   }, [db, journey, journeyRef, router, toast, user, isGeneratingReport]);
 
-  // Monitor for completion triggers
   useEffect(() => {
     if (pendingFinalize && !isAiSpeaking && !isTerminatingRef.current) {
       finalizeSession(pendingFinalize);
@@ -400,7 +431,6 @@ function VirtualArenaContent() {
     }
   }, [pendingFinalize, isAiSpeaking, finalizeSession]);
 
-  // Fallback safety for completion
   useEffect(() => {
     if (!pendingFinalize) return;
     const fallback = setTimeout(() => {
@@ -581,7 +611,6 @@ function VirtualArenaContent() {
              </Card>
 
              <div className="flex-1 min-h-[300px] relative rounded-2xl overflow-hidden border border-white/5 shadow-2xl bg-black/40 group h-full">
-                {/* Hidden Interviewer for Audio Logic Execution */}
                 <div className="absolute w-0 h-0 overflow-hidden opacity-0 pointer-events-none">
                   <HolographicInterviewer 
                     isSpeaking={isAiSpeaking}
