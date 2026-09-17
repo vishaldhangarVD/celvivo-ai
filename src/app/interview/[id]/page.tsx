@@ -224,7 +224,7 @@ function VirtualArenaContent() {
       }
     };
 
-    const interval = setInterval(monitorAttention, 1000);
+    const interval = setInterval(monitorAttention, 2000);
     return () => clearInterval(interval);
   }, [isFaceModelsLoaded, isCameraOn, isInitializing, isSimulationComplete, isGeneratingReport, isTerminated, attentionWarnings, handleCheatingDetected, toast]);
 

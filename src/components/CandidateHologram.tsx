@@ -55,7 +55,7 @@ export default function CandidateHologram({
     return "AI Interview System Active";
   }, [isLoader, currentQuestionIndex, totalQuestions]);
 
-  // Set mounted state for boot animation
+      // Set mounted state for boot animation
   useEffect(() => {
     setIsMounted(true);
   }, []);
@@ -72,23 +72,26 @@ export default function CandidateHologram({
   // Helper to round coordinates to prevent hydration mismatches
   const round = (num: number) => Math.round(num * 100) / 100;
 
-  // Drive arc bursts when speaking
+      // Drive arc bursts when speaking
   useEffect(() => {
-    let arcInterval: NodeJS.Timeout;
-
+    let arcInterval: NodeJS.Timeout | undefined;
+  
     if (speaking) {
       arcInterval = setInterval(() => {
-        const newSegments = new Array(12).fill(false).map(() => Math.random() > 0.5);
-        setLitSegments(newSegments);
+        setLitSegments(
+          new Array(12).fill(false).map(() => Math.random() > 0.5)
+        );
         setRayFlicker(Math.random() > 0.3);
-      }, 90);
+      }, 150);
     } else {
       setLitSegments(new Array(12).fill(false));
       setRayFlicker(false);
     }
-
+  
     return () => {
-      clearInterval(arcInterval);
+      if (arcInterval) {
+        clearInterval(arcInterval);
+      }
     };
   }, [speaking]);
 
@@ -131,7 +134,7 @@ export default function CandidateHologram({
             {/* Outer Tick Ring */}
             <g 
               style={{ transformOrigin: '100px 100px', color: speaking ? themeColor : 'rgba(255, 255, 255, 0.1)' }}
-              className={cn("transition-all duration-700 animate-rotate-slow")}
+              className={cn("transition-colors duration-700 animate-rotate-slow")}
             >
               <circle cx="100" cy="100" r="95" fill="none" stroke="currentColor" strokeWidth="0.5" strokeDasharray="1 4" />
               {[...Array(36)].map((_, i) => (
@@ -172,13 +175,13 @@ export default function CandidateHologram({
               strokeWidth="1" 
               strokeDasharray="10 5" 
               style={{ transformOrigin: '100px 100px', opacity: speaking ? 0.3 : 0.1 }}
-              className="animate-rotate-fast transition-all duration-700" 
+              className="animate-rotate-fast transition-colors duration-700" 
             />
           </svg>
 
           {/* Central Wireframe polygon */}
           <div className={cn(
-            "relative w-24 h-24 flex items-center justify-center transition-all duration-300",
+            "relative w-24 h-24 flex items-center justify-center transition-colors duration-300",
             speaking ? "scale-110" : "scale-100",
             pulse && "scale-125 brightness-150",
             isMounted ? "animate-boot-signature" : "opacity-0 scale-0"
@@ -194,7 +197,7 @@ export default function CandidateHologram({
                   filter: speaking ? `drop-shadow(0 0 8px ${themeColor})` : 'none', 
                   transformOrigin: '50px 50px' 
                 }} 
-                className="animate-rotate-counter transition-all duration-700" 
+                className="animate-rotate-counter transition-colors duration-700" 
               />
               
               {/* Brand Seal Ring (Interior) */}
@@ -242,7 +245,7 @@ export default function CandidateHologram({
 
             {/* Etched Brand Name below hexagon */}
             <div className="absolute -bottom-8 text-[7px] font-bold tracking-[0.6em] text-white/20 uppercase select-none">
-              NEXVOROAI
+              CELVIVOAI
             </div>
           </div>
 
@@ -270,7 +273,7 @@ export default function CandidateHologram({
               {[...Array(12)].map((_, i) => (
                 <motion.div 
                   key={i}
-                  animate={{ height: speaking ? [4, Math.random() * 12 + 4, 4] : 2 }}
+                  animate={{ height: speaking ? [4, 10, 6, 12, 4] : 2 }}
                   transition={{ duration: 0.2, repeat: Infinity, delay: i * 0.05 }}
                   className={cn("w-1 rounded-t-sm transition-colors duration-700")}
                   style={{ backgroundColor: themeColor, opacity: speaking ? 0.6 : 0.1 }}

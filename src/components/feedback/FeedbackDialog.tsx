@@ -355,7 +355,7 @@ export default function FeedbackDialog() {
                     className="mt-1 border-white/20 data-[state=checked]:bg-accent data-[state=checked]:text-black"
                   />
                   <Label htmlFor="consent" className="text-[10px] leading-relaxed text-white/40 cursor-pointer">
-                    I agree that NexvoroAI may display my name, role, and feedback in the Success Stories section to help other candidates.
+                    I agree that CelvivoAI may display my name, role, and feedback in the Success Stories section to help other candidates.
                   </Label>
                 </div>
 
