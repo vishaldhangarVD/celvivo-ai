@@ -66,10 +66,11 @@ import {
 } from 'lucide-react';
 import { useUser, useFirestore, useDoc } from '@/firebase';
 import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
+import { errorEmitter } from '@/firebase/error-emitter';
+import { FirestorePermissionError } from '@/firebase/errors';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { INTERVIEW_STAGES, STAGE_ROUTES } from '@/lib/interview-stages';
-import { analyzeResume } from '@/ai/flows/ai-resume-analysis';
 
 const COMPANIES = [
   { name: "Google", domain: "google.com" },
@@ -318,36 +319,64 @@ export default function InterviewSetupPage() {
   };
 
   const handleProceed = async (targetPath: 'aptitude' | 'interview') => {
+    console.log("🟢 [STEP 1] handleProceed called with:", targetPath);
+
     if (!db || !user?.uid || !resumeBase64) {
+      console.log("🔴 [ABORT] Missing db/user/resumeBase64", { db: !!db, uid: user?.uid, hasResume: !!resumeBase64 });
       toast({ variant: "destructive", title: "Setup Incomplete", description: "Please upload your resume to begin." });
       return;
     }
 
+    console.log("🟢 [STEP 2] All checks passed, setting loading state");
     setLoadingTarget(targetPath);
-    
-    // BUG FIX (Bug 2): Always generate a fresh sessionId for a new interview flow.
-    // This ensures questions are not pulled from a previous session's cache.
+
     const sessionId = Math.random().toString(36).substring(7);
+    console.log("🟢 [STEP 3] Generated sessionId:", sessionId);
 
     try {
-      const analysisResult = await analyzeResume({
-        resumeDataUri: resumeBase64,
-        targetRole: role,
-        experienceLevel: experience,
-        targetCompany: company
+      console.log("🟡 [STEP 4] Calling /api/analyze-resume... resumeBase64 length:", resumeBase64.length);
+      const startTime = Date.now();
+
+      const response = await fetch('/api/analyze-resume', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          resumeDataUri: resumeBase64,
+          targetRole: role,
+          experienceLevel: experience,
+          targetCompany: company
+        }),
       });
+
+      if (!response.ok) {
+        const errData = await response.json().catch(() => ({}));
+        throw new Error(errData.error || "Neural synthesis rejected.");
+      }
+      
+      const analysisResult = await response.json();
+      console.log("🟢 [STEP 5] analyzeResume() returned in", Date.now() - startTime, "ms. Result:", analysisResult);
 
       const finalStage = targetPath === 'aptitude' ? INTERVIEW_STAGES.APTITUDE : INTERVIEW_STAGES.HR_INTERVIEW;
       const step = targetPath === 'aptitude' ? 4 : 8;
 
-      await setDoc(journeyRef!, {
+      console.log("🟡 [STEP 6] journeyRef exists?", !!journeyRef, "path:", journeyRef?.path);
+
+      // undefined values Firestore la chalat nahit, tyamule saaf karto
+      const cleanAnalysis = JSON.parse(JSON.stringify(analysisResult));
+      console.log("🟡 [STEP 6b] Cleaned analysisResult (undefined removed)");
+
+      console.log("🟡 [STEP 6c] Writing to Firestore journey doc...");
+      
+      // FIRE-AND-FORGET: No await here to prevent UI hangs on workstation latency. 
+      // Firestore will queue the operation and update local cache immediately.
+      setDoc(journeyRef!, {
         sessionId,
         role,
         experience,
         company,
         resumeName: file?.name || "resume.pdf",
         resumeBase64: resumeBase64,
-        resumeAnalysis: analysisResult,
+        resumeAnalysis: cleanAnalysis,
         currentStage: finalStage,
         step,
         aptitudeStatus: "not_started",
@@ -358,17 +387,29 @@ export default function InterviewSetupPage() {
         codingUnlocked: false,
         codingQuestions: null,
         updatedAt: serverTimestamp(),
-        createdAt: serverTimestamp() // Reset creation time for new session
-      }, { merge: true });
+        createdAt: serverTimestamp()
+      }, { merge: true }).catch(async (serverError) => {
+        // Create the rich, contextual error asynchronously.
+        const permissionError = new FirestorePermissionError({
+          path: journeyRef!.path,
+          operation: 'write',
+          requestResourceData: { sessionId, role, company },
+        });
+
+        // Emit the error with the global error emitter
+        errorEmitter.emit('permission-error', permissionError);
+      });
+
+      console.log("🟢 [STEP 7] Mutation initiated, navigating immediately.");
 
       if (targetPath === 'aptitude') {
         router.push(STAGE_ROUTES.APTITUDE);
       } else {
         router.push(`${STAGE_ROUTES.HR_INTERVIEW}${sessionId}`);
       }
-    } catch (e) {
-      console.error(e);
-      toast({ variant: "destructive", title: "System Error", description: "Failed to persist identity node." });
+    } catch (e: any) {
+      console.error("🔴 [FAILURE] Error caught in handleProceed:", e?.message || e, e);
+      toast({ variant: "destructive", title: "System Error", description: e?.message || "Failed to persist identity node." });
       setLoadingTarget(null);
     }
   };

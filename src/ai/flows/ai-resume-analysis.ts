@@ -153,12 +153,21 @@ const aiResumeAnalysisFlow = ai.defineFlow(
     outputSchema: AiResumeAnalysisOutputSchema,
   },
   async (input) => {
+    console.log("🟡 [SERVER] Flow started. targetRole:", input.targetRole, "| dataUri length:", input.resumeDataUri?.length);
     try {
+      console.log("🟡 [SERVER] Calling runWithResilience...");
+      const startTime = Date.now();
       const { output } = await runWithResilience(prompt, input);
-      if (!output) return generateFallbackAnalysis(input.targetRole);
+      console.log("🟢 [SERVER] runWithResilience returned in", Date.now() - startTime, "ms");
+
+      if (!output) {
+        console.log("🔴 [SERVER] output is null/undefined — using fallback");
+        return generateFallbackAnalysis(input.targetRole);
+      }
+      console.log("🟢 [SERVER] Success, returning real analysis");
       return { ...output, isOffline: false };
     } catch (error) {
-      console.error("===== RESUME ANALYSIS ERROR =====", error);
+      console.error("🔴 [SERVER] ===== RESUME ANALYSIS ERROR =====", error);
       return generateFallbackAnalysis(input.targetRole);
     }
   }
