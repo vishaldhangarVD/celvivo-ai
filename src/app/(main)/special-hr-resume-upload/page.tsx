@@ -21,7 +21,6 @@ import { useUser, useFirestore } from '@/firebase';
 import { doc, updateDoc, serverTimestamp } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
-import { analyzeResume } from '@/ai/flows/ai-resume-analysis';
 
 export default function SpecialHRResumeUpload() {
   const router = useRouter();
@@ -47,16 +46,15 @@ export default function SpecialHRResumeUpload() {
         return;
       }
 
-      if (selected.size > 10 * 1024 * 1024) {
-        toast({ variant: "destructive", title: "File Too Large", description: "Limit: 10MB" });
+      if (selected.size > 15 * 1024 * 1024) {
+        toast({ variant: "destructive", title: "File Too Large", description: "Limit: 15MB" });
         return;
       }
 
       setFile(selected);
       setIsUploaded(true);
-      toast({ title: "Resume Uploaded Successfully", description: "Your resume has been uploaded and is ready. You can continue to the next step." });
+      toast({ title: "Resume Uploaded Successfully", description: "Your resume has been uploaded and is ready." });
 
-      // Auto-proceed to analysis shortly after upload
       setTimeout(() => {
         handleProceedWithFile(selected);
       }, 900);
@@ -74,13 +72,19 @@ export default function SpecialHRResumeUpload() {
         reader.readAsDataURL(fileToProcess);
       });
 
-      // Background Analysis specifically for HR context
-      const analysisResult = await analyzeResume({
-        resumeDataUri: base64,
-        targetRole: "Senior Executive"
+      // Refactored to API to handle workstation constraints
+      const response = await fetch('/api/analyze-resume', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          resumeDataUri: base64,
+          targetRole: "Senior Executive"
+        }),
       });
 
-      // SAVE TO SEPARATE FIELDS TO PRESERVE ROUND-1 DATA
+      if (!response.ok) throw new Error("Neural synthesis rejected.");
+      const analysisResult = await response.json();
+
       await updateDoc(journeyRef, {
         specialHRResumeName: fileToProcess.name,
         specialHRResumeBase64: base64,
@@ -94,7 +98,7 @@ export default function SpecialHRResumeUpload() {
       toast({ 
         variant: "destructive", 
         title: "Calibration Failed", 
-        description: "Neural engine could not parse dossier. Please ensure the PDF is readable." 
+        description: "Neural engine could not parse dossier. Please try a different file." 
       });
     } finally {
       setIsVerifying(false);
