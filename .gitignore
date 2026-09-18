@@ -37,4 +37,4 @@ next-env.d.ts
 avatar-service/temp/
 avatar-service/SadTalker/results/
 avatar-service/SadTalker/venv/
-avatar-service/SadTalker/checkpoints/
+avatar-service/SadTalker/checkpoints/.env
