@@ -366,46 +366,53 @@ export default function InterviewSetupPage() {
       console.log("🟡 [STEP 6b] Cleaned analysisResult (undefined removed)");
 
       console.log("🟡 [STEP 6c] Writing to Firestore journey doc...");
-      
-      // FIRE-AND-FORGET: No await here to prevent UI hangs on workstation latency. 
-      // Firestore will queue the operation and update local cache immediately.
-      setDoc(journeyRef!, {
-        sessionId,
-        role,
-        experience,
-        company,
-        resumeName: file?.name || "resume.pdf",
-        resumeBase64: resumeBase64,
-        resumeAnalysis: cleanAnalysis,
-        currentStage: finalStage,
-        step,
-        aptitudeStatus: "not_started",
-        aptitudeReport: null,
-        aptitudeQuestions: null,
-        aptitudeAnswers: null,
-        codingReport: null,
-        codingUnlocked: false,
-        codingQuestions: null,
-        updatedAt: serverTimestamp(),
-        createdAt: serverTimestamp()
-      }, { merge: true }).catch(async (serverError) => {
-        // Create the rich, contextual error asynchronously.
+
+      try {
+        // Use Promise.race to prevent indefinite hanging during the Firestore write
+        const writePromise = setDoc(journeyRef!, {
+          sessionId,
+          role,
+          experience,
+          company,
+          resumeName: file?.name || "resume.pdf",
+          resumeBase64: resumeBase64,
+          resumeAnalysis: cleanAnalysis,
+          currentStage: finalStage,
+          step,
+          aptitudeStatus: "not_started",
+          aptitudeReport: null,
+          aptitudeQuestions: null,
+          aptitudeAnswers: null,
+          codingReport: null,
+          codingUnlocked: false,
+          codingQuestions: null,
+          updatedAt: serverTimestamp(),
+          createdAt: serverTimestamp()
+        }, { merge: true });
+
+        const timeoutPromise = new Promise((_, reject) => 
+          setTimeout(() => reject(new Error("TIMEOUT: setDoc did not respond in 15s")), 15000)
+        );
+
+        await Promise.race([writePromise, timeoutPromise]);
+
+        console.log("🟢 [STEP 7] Write confirmed, navigating now.");
+
+        if (targetPath === 'aptitude') {
+          router.push(STAGE_ROUTES.APTITUDE);
+        } else {
+          router.push(`${STAGE_ROUTES.HR_INTERVIEW}${sessionId}`);
+        }
+      } catch (serverError) {
         const permissionError = new FirestorePermissionError({
           path: journeyRef!.path,
           operation: 'write',
           requestResourceData: { sessionId, role, company },
         });
-
-        // Emit the error with the global error emitter
         errorEmitter.emit('permission-error', permissionError);
-      });
-
-      console.log("🟢 [STEP 7] Mutation initiated, navigating immediately.");
-
-      if (targetPath === 'aptitude') {
-        router.push(STAGE_ROUTES.APTITUDE);
-      } else {
-        router.push(`${STAGE_ROUTES.HR_INTERVIEW}${sessionId}`);
+        toast({ variant: "destructive", title: "System Error", description: "Failed to save your data. Please try again." });
+        setLoadingTarget(null);
+        return;
       }
     } catch (e: any) {
       console.error("🔴 [FAILURE] Error caught in handleProceed:", e?.message || e, e);
@@ -514,7 +521,7 @@ export default function InterviewSetupPage() {
               </div>
 
               <div className="space-y-2 mt-6">
-  <h3 className="text-[9px] font-black uppercase tracking-[0.4em] text-white/40 ml-2">SELECTED CONFIGURATION</h3>
+                <h3 className="text-[9px] font-black uppercase tracking-[0.4em] text-white/40 ml-2">SELECTED CONFIGURATION</h3>
                 <div className="grid grid-cols-3 gap-3">
                   {[
                     { label: "COMPANY", val: company, icon: Building2 },
@@ -647,3 +654,4 @@ export default function InterviewSetupPage() {
     </div>
   );
 }
+

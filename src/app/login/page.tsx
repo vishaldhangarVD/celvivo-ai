@@ -210,7 +210,7 @@ function LoginContent() {
     } catch (error: any) {
       console.error("[Auth] Google Login Attempt Error:", error.code, error.message);
       
-      if (error.code === 'auth/popup-blocked' || error.code === 'auth/popup-closed-by-user') {
+      if (error.code === 'auth/popup-blocked') {
         try {
           await signInWithRedirect(auth, provider);
           return;
@@ -223,7 +223,7 @@ function LoginContent() {
           });
           setIsLoading(false);
         }
-      } else if (error.code === 'auth/cancelled-popup-request') {
+      } else if (error.code === 'auth/popup-closed-by-user' || error.code === 'auth/cancelled-popup-request') {
         setIsLoading(false);
       } else {
         toast({
@@ -263,7 +263,8 @@ function LoginContent() {
   };
 
   const handleForgotPassword = async () => {
-    if (!auth || !email) {
+    const trimmedEmail = email.trim().toLowerCase();
+    if (!auth || !trimmedEmail) {
       toast({
         variant: "destructive",
         title: "Input Required",
@@ -273,7 +274,7 @@ function LoginContent() {
     }
     setIsResetting(true);
     try {
-      await sendPasswordResetEmail(auth, email);
+      await sendPasswordResetEmail(auth, trimmedEmail);
       toast({ title: "Recovery Protocol Sent", description: "Check your terminal (inbox) for reset instructions." });
     } catch (error: any) {
       toast({ variant: "destructive", title: "Transmission Failed", description: error.message });
@@ -351,7 +352,7 @@ function LoginContent() {
                   <motion.div 
                     key="confirm-name"
                     initial={{ opacity: 0, x: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
+                    animate={{ opacity: 1, x: 0 }}
                     exit={{ opacity: 0, x: -20 }}
                     className="space-y-8"
                   >

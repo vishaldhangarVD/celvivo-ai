@@ -1,28 +1,35 @@
 import { initializeApp, getApps, getApp, FirebaseApp } from 'firebase/app';
-import { initializeFirestore, Firestore } from 'firebase/firestore';
+import { initializeFirestore, getFirestore, Firestore } from 'firebase/firestore';
 import { getAuth, Auth } from 'firebase/auth';
 import { getStorage, FirebaseStorage } from 'firebase/storage';
 import { firebaseConfig } from './config';
 
-/**
- * Initializes Firebase App, Firestore, Auth, and Storage instances as singletons.
- * This is isolated from the barrel file to prevent circular dependencies.
- */
-export function initializeFirebase(): { 
-  firebaseApp: FirebaseApp; 
-  firestore: Firestore; 
-  auth: Auth; 
-  storage: FirebaseStorage 
+let firestoreInstance: Firestore | undefined;
+
+export function initializeFirebase(): {
+  firebaseApp: FirebaseApp;
+  firestore: Firestore;
+  auth: Auth;
+  storage: FirebaseStorage;
 } {
   const firebaseApp = !getApps().length
     ? initializeApp(firebaseConfig)
     : getApp();
 
-    const firestore = initializeFirestore(firebaseApp, {
-      experimentalForceLongPolling: true,
-    });
+  if (!firestoreInstance) {
+    try {
+      firestoreInstance = initializeFirestore(firebaseApp, {
+        experimentalForceLongPolling: true,
+        experimentalAutoDetectLongPolling: true,
+      });
+    } catch {
+      // HMR मुळे आधीच initialize झालेलं असल्यास, existing instance वापरा
+      firestoreInstance = getFirestore(firebaseApp);
+    }
+  }
+
   const auth = getAuth(firebaseApp);
   const storage = getStorage(firebaseApp);
 
-  return { firebaseApp, firestore, auth, storage };
+  return { firebaseApp, firestore: firestoreInstance, auth, storage };
 }
