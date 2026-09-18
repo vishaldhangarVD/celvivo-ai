@@ -38,3 +38,5 @@ avatar-service/temp/
 avatar-service/SadTalker/results/
 avatar-service/SadTalker/venv/
 avatar-service/SadTalker/checkpoints/.env
+.env
+.env
