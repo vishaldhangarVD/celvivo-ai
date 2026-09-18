@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useMemo, useEffect } from 'react';
@@ -365,6 +364,10 @@ export default function InterviewSetupPage() {
       const cleanAnalysis = JSON.parse(JSON.stringify(analysisResult));
       console.log("🟡 [STEP 6b] Cleaned analysisResult (undefined removed)");
 
+      // Force token refresh to avoid stale auth state race conditions
+      await user.getIdToken(true);
+      console.log("🟡 [STEP 6c-pre] Forced ID token refresh");
+
       console.log("🟡 [STEP 6c] Writing to Firestore journey doc...");
 
       try {
@@ -654,4 +657,3 @@ export default function InterviewSetupPage() {
     </div>
   );
 }
-
