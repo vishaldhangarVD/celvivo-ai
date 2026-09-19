@@ -72,7 +72,6 @@ export default function SpecialHRResumeUpload() {
         reader.readAsDataURL(fileToProcess);
       });
 
-      // Refactored to API to handle workstation constraints
       const response = await fetch('/api/analyze-resume', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -146,8 +145,8 @@ export default function SpecialHRResumeUpload() {
                 <motion.div key="verifying" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-8">
                   <div className="relative w-28 h-28 mx-auto">
                     <div className="absolute inset-0 border-2 border-purple-500/10 rounded-full animate-ping" />
-                    <div className="absolute inset-0 border-b-2 border-r-2 border-purple-500 rounded-full animate-spin duration-[2500ms]" />
-                    <div className="absolute inset-2 border-t-2 border-accent/40 rounded-full animate-spin duration-[1800ms] [animation-direction:reverse]" />
+                    <div className="absolute inset-0 border-b-2 border-r-2 border-purple-500 rounded-full animate-spin" style={{ animationDuration: '2500ms' }} />
+                    <div className="absolute inset-2 border-t-2 border-accent/40 rounded-full animate-spin" style={{ animationDuration: '1800ms', animationDirection: 'reverse' }} />
                     <div className="absolute inset-6 glass rounded-full flex items-center justify-center shadow-[0_0_30px_rgba(168,85,247,0.2)]">
                       <Cpu className="w-9 h-9 text-purple-400 animate-pulse" />
                     </div>

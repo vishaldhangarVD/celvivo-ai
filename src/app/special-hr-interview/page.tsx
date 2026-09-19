@@ -85,11 +85,7 @@ export default function SpecialHRInterview() {
   const agentStreamRef = useRef<MediaStream | null>(null);
   const initializationStartedRef = useRef(false);
   const connectionReadyRef = useRef(false);
-  const didConnectionStateRef = useRef<string>("disconnected");
   
-  const userVideoRef = useRef<HTMLVideoElement>(null);
-  const userStreamRef = useRef<MediaStream | null>(null);
-
   const recognitionRef = useRef<SpeechRecognition | null>(null);
   const silenceTimerRef = useRef<NodeJS.Timeout | null>(null);
   const transcriptRef = useRef("");
@@ -98,7 +94,6 @@ export default function SpecialHRInterview() {
   const interviewStartedRef = useRef(false);
   const isCompleteRef = useRef(false);
   const answerSubmissionPendingRef = useRef(false);
-  const isSpeakingRequestRef = useRef(false);
   const isTypeModeRef = useRef(false);
 
   const agentId = "v2_agt_5A5V9r-C";
@@ -308,7 +303,6 @@ export default function SpecialHRInterview() {
             onSrcObjectReady: (stream: MediaStream) => {
               const video = agentVideoRef.current;
               if (!video) return;
-              agentStreamRef.current = stream;
               video.srcObject = stream;
               setStatus("READY");
               requestAnimationFrame(() => video.play().catch(() => {}));

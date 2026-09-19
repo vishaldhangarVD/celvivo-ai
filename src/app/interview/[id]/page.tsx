@@ -101,22 +101,35 @@ function VirtualArenaContent() {
     return name.charAt(0).toUpperCase() + name.slice(1);
   }, [user, journey]);
 
-  // Load face detection and landmark models
-  useEffect(() => {
-    const loadModels = async () => {
-      try {
-        const MODEL_URL = 'https://cdn.jsdelivr.net/gh/justadudewhohacks/face-api.js@master/weights/';
-        await Promise.all([
-          faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL),
-          faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL),
-        ]);
-        setIsFaceModelsLoaded(true);
-      } catch (err) {
-        console.error("Face models loading failed", err);
-      }
-    };
-    loadModels();
-  }, []);
+    // Load face detection and landmark models
+    useEffect(() => {
+      const loadModels = async () => {
+        try {
+          const MODEL_URL = 'https://cdn.jsdelivr.net/gh/justadudewhohacks/face-api.js@master/weights/';
+          await Promise.all([
+            faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL),
+            faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL),
+          ]);
+  
+          // Warm-up: GPU shaders आधीच compile करून घे, जेणेकरून पहिल्या real detection वेळी UI अडकणार नाही
+          try {
+            const warmupCanvas = document.createElement('canvas');
+            warmupCanvas.width = 160;
+            warmupCanvas.height = 120;
+            await faceapi
+              .detectSingleFace(warmupCanvas, new faceapi.TinyFaceDetectorOptions())
+              .withFaceLandmarks();
+          } catch {
+            // dummy canvas वर face सापडणं अपेक्षितच नाही, ignore कर
+          }
+  
+          setIsFaceModelsLoaded(true);
+        } catch (err) {
+          console.error("Face models loading failed", err);
+        }
+      };
+      loadModels();
+    }, []);
 
   const handleCheatingDetected = useCallback(async (e?: Event, reason: "Copying" | "Attention" = "Copying") => {
     if (isTerminatingRef.current || isInitializing || isSimulationComplete || isGeneratingReport) return;
@@ -160,73 +173,96 @@ function VirtualArenaContent() {
     }, 2000);
   }, [isInitializing, isSimulationComplete, isGeneratingReport, journeyRef, router, toast]);
 
-  // Attention & Orientation Monitoring Loop
-  useEffect(() => {
-    if (!isFaceModelsLoaded || !isCameraOn || isInitializing || isSimulationComplete || isGeneratingReport || isTerminated) return;
-
-    const monitorAttention = async () => {
-      if (!localVideoRef.current || localVideoRef.current.paused || localVideoRef.current.ended) return;
-
-      const detection = await faceapi.detectSingleFace(
-        localVideoRef.current, 
-        new faceapi.TinyFaceDetectorOptions()
-      ).withFaceLandmarks();
-
-      let isLookingAway = false;
-
-      if (!detection) {
-        isLookingAway = true;
-      } else {
-        const landmarks = detection.landmarks;
-        const noseTip = landmarks.getNose()[3]; 
-        const jawLeft = landmarks.getJawOutline()[0]; 
-        const jawRight = landmarks.getJawOutline()[16]; 
-        const chin = landmarks.getJawOutline()[8]; 
-        const leftEye = landmarks.getLeftEye()[0]; 
-        const rightEye = landmarks.getRightEye()[3]; 
-
-        const faceWidth = jawRight.x - jawLeft.x;
-        const noseXRel = (noseTip.x - jawLeft.x) / faceWidth;
-        const turnedLeft = noseXRel < 0.32;
-        const turnedRight = noseXRel > 0.68;
-
-        const eyeLevelY = (leftEye.y + rightEye.y) / 2;
-        const faceHeight = chin.y - eyeLevelY;
-        const noseYRel = (noseTip.y - eyeLevelY) / faceHeight;
-        const lookingDown = noseYRel > 0.60;
-
-        if (turnedLeft || turnedRight || lookingDown) {
-          isLookingAway = true;
+    // Attention & Orientation Monitoring Loop
+    useEffect(() => {
+      if (!isFaceModelsLoaded || !isCameraOn || isInitializing || isSimulationComplete || isGeneratingReport || isTerminated) return;
+  
+      let cancelled = false;
+      let timeoutId: ReturnType<typeof setTimeout>;
+  
+      const monitorAttention = async () => {
+        if (cancelled) return;
+  
+        if (!localVideoRef.current || localVideoRef.current.paused || localVideoRef.current.ended) {
+          timeoutId = setTimeout(monitorAttention, 1000);
+          return;
         }
-      }
-
-      if (isLookingAway) {
-        if (!attentionLossActiveRef.current) {
-          attentionLossActiveRef.current = true;
-      
-          const nextWarnings = attentionWarnings + 1;
-          setAttentionWarnings(nextWarnings);
-      
-          if (nextWarnings >= 3) {
-            handleCheatingDetected(undefined, "Attention");
-          } else {
-            toast({
-              variant: "destructive",
-              title: "Please Stay Focused",
-              description:
-                "Please keep your eyes on the screen. If you leave the screen repeatedly, your test will end.",
-            });
+  
+        const detection = await faceapi.detectSingleFace(
+          localVideoRef.current, 
+          new faceapi.TinyFaceDetectorOptions()
+        ).withFaceLandmarks();
+  
+        let isLookingAway = false;
+  
+        if (!detection) {
+          isLookingAway = true;
+        } else {
+          const landmarks = detection.landmarks;
+          const noseTip = landmarks.getNose()[3]; 
+          const jawLeft = landmarks.getJawOutline()[0]; 
+          const jawRight = landmarks.getJawOutline()[16]; 
+          const chin = landmarks.getJawOutline()[8]; 
+          const leftEye = landmarks.getLeftEye()[0]; 
+          const rightEye = landmarks.getRightEye()[3]; 
+  
+          const faceWidth = jawRight.x - jawLeft.x;
+          const noseXRel = (noseTip.x - jawLeft.x) / faceWidth;
+          const turnedLeft = noseXRel < 0.32;
+          const turnedRight = noseXRel > 0.68;
+  
+          const eyeLevelY = (leftEye.y + rightEye.y) / 2;
+          const faceHeight = chin.y - eyeLevelY;
+          const noseYRel = (noseTip.y - eyeLevelY) / faceHeight;
+          const lookingDown = noseYRel > 0.60;
+  
+          if (turnedLeft || turnedRight || lookingDown) {
+            isLookingAway = true;
           }
         }
-      } else {
-        attentionLossActiveRef.current = false;
-        consecutiveAwayCountRef.current = 0;
-      }
-    };
+  
+        if (isLookingAway) {
+          consecutiveAwayCountRef.current += 1;
+  
+          if (
+            consecutiveAwayCountRef.current >= 2 &&
+            !attentionLossActiveRef.current
+          ) {
+            attentionLossActiveRef.current = true;
+  
+            const nextWarnings = attentionWarnings + 1;
+            setAttentionWarnings(nextWarnings);
+  
+            if (nextWarnings >= 3) {
+              handleCheatingDetected(undefined, "Attention");
+            } else {
+              toast({
+                variant: "destructive",
+                title: "Please Stay Focused",
+                description:
+                  "Please keep your eyes on the screen. If you leave the screen repeatedly, your test will end.",
+              });
+            }
+          }
+        } else {
+          attentionLossActiveRef.current = false;
+          consecutiveAwayCountRef.current = 0;
+        }
+  
+        if (!cancelled) {
+          timeoutId = setTimeout(monitorAttention, 1000);
+        }
+      };
+  
+          // पहिला detection call लगेच न करता, 2.5 सेकंद उशिराने सुरू कर —
+    // जेणेकरून तो camera-init आणि पहिल्या AI speech synthesis बरोबर एकाच क्षणी आदळणार नाही
+    timeoutId = setTimeout(monitorAttention, 2500);
 
-    const interval = setInterval(monitorAttention, 2000);
-    return () => clearInterval(interval);
-  }, [isFaceModelsLoaded, isCameraOn, isInitializing, isSimulationComplete, isGeneratingReport, isTerminated, attentionWarnings, handleCheatingDetected, toast]);
+    return () => {
+      cancelled = true;
+      clearTimeout(timeoutId);
+    };
+    }, [isFaceModelsLoaded, isCameraOn, isInitializing, isSimulationComplete, isGeneratingReport, isTerminated, attentionWarnings, handleCheatingDetected, toast]);
 
   // Anti-Copy Logic
   useEffect(() => {
@@ -264,6 +300,9 @@ function VirtualArenaContent() {
         };
 
         recognitionRef.current.onresult = (event: any) => {
+          // AI अजूनही बोलत असेल, तर हा capture झालेला echo असू शकतो — ignore कर
+          if (isAiSpeakingRef.current) return;
+
           let finalTranscript = '';
           for (let i = event.resultIndex; i < event.results.length; ++i) {
             if (event.results[i].isFinal) {
@@ -300,19 +339,25 @@ function VirtualArenaContent() {
   }, []);
 
   useEffect(() => {
-    if (recognitionRef.current) {
-      const shouldRun = isMicOn && !isProcessing && !isSimulationComplete && !isAiSpeaking && !isTerminatingRef.current;
-      
-      if (shouldRun) {
+    if (!recognitionRef.current) return;
+
+    const shouldRun = isMicOn && !isProcessing && !isSimulationComplete && !isAiSpeaking && !isTerminatingRef.current;
+
+    if (shouldRun) {
+      // AI चं बोलणं संपल्यावर लगेच mic सुरू न करता, 600ms बफर ठेव —
+      // जेणेकरून speaker मधून येणारा शेवटचा आवाज mic मध्ये echo म्हणून पकडला जाणार नाही
+      const startTimer = setTimeout(() => {
         if (!isRecognitionActiveRef.current) {
           try {
             recognitionRef.current.start();
           } catch (e) {}
         }
-      } else {
-        if (isRecognitionActiveRef.current) {
-          recognitionRef.current.stop();
-        }
+      }, 600);
+
+      return () => clearTimeout(startTimer);
+    } else {
+      if (isRecognitionActiveRef.current) {
+        recognitionRef.current.stop();
       }
     }
   }, [isMicOn, isProcessing, isSimulationComplete, isAiSpeaking]);

@@ -137,19 +137,7 @@ export default function HolographicInterviewer({
     };
   }, [currentQuestion, isSpeaking]);
 
-  return (
-    <div className={cn("h-full w-full", className)}>
-      <CandidateHologram
-        active={true}
-        speaking={isSpeaking}
-        pulse={pulse}
-        isLoader={isGenerating}
-        stage={stage}
-        sessionId={sessionId}
-        currentQuestionIndex={currentQuestionIndex}
-        totalQuestions={totalQuestions}
-        className="w-full h-full"
-      />
-    </div>
-  );
+    // फक्त speech synthesis साठी वापरलं जातं — visual output काहीच render करू नये,
+  // कारण page.tsx मध्ये हा नेहमीच opacity-0 / w-0 h-0 मध्ये hidden असतो.
+  return null;
 }

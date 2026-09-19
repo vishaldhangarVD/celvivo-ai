@@ -1,284 +1,118 @@
 'use server';
 
 /**
- * @fileOverview Nexvoro AI Master Aptitude Generator v34.0.
- * Optimized for gateway reliability by using one compact AI generation request.
- * Preserves dynamic AI generation, duplicate prevention, difficulty/category
- * requirements, history tracking, and telemetry.
+ * @fileOverview HR Interview Result Analyzer.
+ * Analyzes a completed Special HR interview transcript and produces
+ * a structured evaluation: overall score, strengths, weaknesses,
+ * and stage-wise feedback.
  */
 
 import { ai, runWithResilience } from '@/ai/genkit';
 import { z } from 'genkit';
 
-const AptitudeQuestionSchema = z.object({
-  id: z.string().describe('Unique identifier.'),
-  question: z.string().describe('Question text.'),
-  options: z.array(z.string()).length(4).describe('Exactly 4 options.'),
-  correctOptionIndex: z.number().min(0).max(3).describe('Correct option index from 0 to 3.'),
-  category: z.string().describe('Question category.'),
-  difficulty: z.string().describe('Question difficulty.'),
-  explanation: z.string().optional().describe('Short explanation.'),
+const TranscriptEntrySchema = z.object({
+  stage: z.string(),
+  question: z.string(),
+  answer: z.string(),
 });
 
-export type AptitudeQuestion = z.infer<typeof AptitudeQuestionSchema>;
-
-const AptitudeInputSchema = z.object({
+const HRInterviewResultInputSchema = z.object({
+  candidateName: z.string(),
   role: z.string(),
-  company: z.string(),
-  experienceLevel: z.string(),
-  usedQuestionFingerprints: z.array(z.string()).optional(),
-  userId: z.string().optional(),
-  sessionId: z.string().optional(),
+  targetCompany: z.string(),
+  resumeSummary: z.string().optional(),
+  transcript: z.array(TranscriptEntrySchema),
 });
 
-const AptitudeOutputSchema = z.object({
-  questions: z.array(AptitudeQuestionSchema),
+const HRInterviewResultOutputSchema = z.object({
+  overallScore: z.number().min(0).max(100).describe('Overall performance score out of 100.'),
+  verdict: z.string().describe('One-line hiring verdict, e.g. "Strong Hire", "Hire", "No Hire".'),
+  summary: z.string().describe('2-3 sentence overall summary of the candidate performance.'),
+  strengths: z.array(z.string()).describe('Key strengths observed during the interview.'),
+  weaknesses: z.array(z.string()).describe('Key weaknesses or areas for improvement.'),
+  communicationScore: z.number().min(0).max(100).describe('Communication skills score.'),
+  confidenceScore: z.number().min(0).max(100).describe('Confidence level score.'),
+  stageWiseFeedback: z.array(
+    z.object({
+      stage: z.string(),
+      feedback: z.string(),
+    })
+  ).describe('Short feedback per interview stage.'),
 });
 
-const AptitudeGenerationInputSchema = z.object({
-  role: z.string(),
-  company: z.string(),
-  experienceLevel: z.string(),
-  avoidFingerprints: z.array(z.string()),
-});
+export type HRInterviewResult = z.infer<typeof HRInterviewResultOutputSchema>;
+export type HRInterviewResultInput = z.infer<typeof HRInterviewResultInputSchema>;
 
-const FORBIDDEN_CONCEPTS = [
-  'velocity doubles',
-  'growth doubles',
-  'doubles every',
-  'triples every',
-  '25% complete',
-  'percentage completion',
-  'missing information',
-];
-
-const VALID_CATEGORIES = [
-  'Quantitative Aptitude',
-  'Logical Reasoning',
-  'English Communication',
-  'Analytical Reasoning',
-  'Data Interpretation',
-  'CS Aptitude',
-];
-
-function normalizeQuestion(text: string): {
-  fingerprint: string;
-  pattern: string;
-} {
-  const clean = text
-    .toLowerCase()
-    .replace(/[^\w\s]/g, '')
-    .replace(/\s+/g, ' ')
-    .trim();
-
-  const pattern = clean.replace(/\d+/g, 'X');
-
-  return {
-    fingerprint: clean,
-    pattern,
-  };
+export async function analyzeHRInterviewResult(
+  input: HRInterviewResultInput
+): Promise<HRInterviewResult> {
+  return hrInterviewResultFlow(input);
 }
 
-function validateAptitudeQuestion(
-  q: any,
-  existingFingerprints: Set<string>
-): boolean {
-  if (!q?.question || q.question.trim().length < 20) {
-    return false;
-  }
-
-  if (!Array.isArray(q.options) || q.options.length !== 4) {
-    return false;
-  }
-
-  const uniqueOptions = new Set(
-    q.options.map((o: any) => String(o).trim().toLowerCase())
-  );
-
-  if (uniqueOptions.size !== 4) {
-    return false;
-  }
-
-  if (
-    typeof q.correctOptionIndex !== 'number' ||
-    q.correctOptionIndex < 0 ||
-    q.correctOptionIndex > 3
-  ) {
-    return false;
-  }
-
-  const { fingerprint } = normalizeQuestion(q.question);
-
-  if (existingFingerprints.has(fingerprint)) {
-    return false;
-  }
-
-  for (const concept of FORBIDDEN_CONCEPTS) {
-    if (fingerprint.includes(concept)) {
-      return false;
-    }
-  }
-
-  return true;
-}
-
-export async function generateAptitudeTest(
-  input: z.infer<typeof AptitudeInputSchema>
-) {
-  return aptitudeFlow(input);
-}
-
-const aptitudePrompt = ai.definePrompt({
-  name: 'aptitudeMasterGeneratorPrompt',
+const hrInterviewResultPrompt = ai.definePrompt({
+  name: 'hrInterviewResultPrompt',
   input: {
-    schema: AptitudeGenerationInputSchema,
+    schema: HRInterviewResultInputSchema,
   },
   output: {
-    schema: AptitudeOutputSchema,
+    schema: HRInterviewResultOutputSchema,
   },
-  prompt: `You are an elite aptitude-test designer and technical recruiter at {{{company}}}.
+  prompt: `You are a senior HR interview evaluator at {{{targetCompany}}}.
 
-Generate EXACTLY 20 high-quality aptitude questions for a {{{role}}} candidate at {{{experienceLevel}}} level.
+Analyze the following completed HR interview transcript for candidate {{{candidateName}}}, applying for the role of {{{role}}}.
 
-IMPORTANT:
-The questions must be genuinely generated for this candidate profile.
-Do not use placeholder questions.
-Do not copy or repeat questions from the excluded list.
+CANDIDATE RESUME SUMMARY:
+{{{resumeSummary}}}
 
-QUESTION DISTRIBUTION:
-1. Quantitative Aptitude: 4 questions
-2. Logical Reasoning: 4 questions
-3. English Communication: 3 questions
-4. Analytical Reasoning: 3 questions
-5. Data Interpretation: 3 questions
-6. CS Aptitude: 3 questions
+INTERVIEW TRANSCRIPT:
+{{#each transcript}}
+[{{this.stage}}]
+Q: {{this.question}}
+A: {{this.answer}}
 
-DIFFICULTY:
-- Questions 1-5: EASY
-- Questions 6-13: MEDIUM
-- Questions 14-20: HARD
-
-QUALITY RULES:
-- Every question must have exactly 4 unique options.
-- correctOptionIndex must be 0, 1, 2, or 3.
-- Only one option may be correct.
-- Questions must be complete and solvable from the information provided.
-- Do not create ambiguous questions.
-- Do not create duplicate or near-duplicate questions.
-- Do not use "velocity doubles".
-- Do not use "growth doubles".
-- Do not use "doubles every".
-- Do not use "triples every".
-- Do not use "25% complete".
-- Do not use "percentage completion".
-- Do not use "missing information".
-- Do not ask questions requiring information that is not provided.
-- Keep explanations short.
-- Use valid categories only:
-  Quantitative Aptitude,
-  Logical Reasoning,
-  English Communication,
-  Analytical Reasoning,
-  Data Interpretation,
-  CS Aptitude.
-
-EXCLUDED QUESTIONS:
-{{#each avoidFingerprints}}
-- {{{this}}}
 {{/each}}
 
-RETURN EXACTLY 20 QUESTIONS.
-RETURN ONLY THE REQUIRED JSON STRUCTURE.`,
+Evaluate the candidate's overall performance based on:
+- Clarity and relevance of answers
+- Communication skills
+- Confidence and composure
+- Alignment with the role requirements
+- Depth of experience demonstrated
+
+Provide an honest, constructive, and professional evaluation.
+Return ONLY the required JSON structure.`,
 });
 
-const aptitudeFlow = ai.defineFlow(
+const hrInterviewResultFlow = ai.defineFlow(
   {
-    name: 'aptitudeFlow',
-    inputSchema: AptitudeInputSchema,
-    outputSchema: AptitudeOutputSchema,
+    name: 'hrInterviewResultFlow',
+    inputSchema: HRInterviewResultInputSchema,
+    outputSchema: HRInterviewResultOutputSchema,
   },
   async (input) => {
-    const historySet = new Set(input.usedQuestionFingerprints || []);
-    const generatedFingerprints = new Set<string>();
-    const validQuestions: AptitudeQuestion[] = [];
-
     console.log(
-      `[Aptitude Flow] Initializing 20-question sequence for ${input.role}`
+      `[HR Interview Result Flow] Analyzing interview for ${input.candidateName} (${input.role})`
     );
-
-    const avoidFingerprints = Array.from(historySet).slice(-40);
 
     try {
       const { output } = await runWithResilience(
-        aptitudePrompt,
+        hrInterviewResultPrompt,
+        input,
         {
-          role: input.role,
-          company: input.company,
-          experienceLevel: input.experienceLevel,
-          avoidFingerprints,
-        },
-        {
-          userId: input.userId,
-          sessionId: input.sessionId,
-          feature: 'aptitude_generation',
+          feature: 'hr_interview_result_analysis',
         }
       );
 
-      if (!output?.questions || !Array.isArray(output.questions)) {
-        throw new Error('Aptitude AI returned an invalid question set.');
+      if (!output) {
+        throw new Error('HR Interview evaluator returned an empty result.');
       }
 
-      for (const q of output.questions) {
-        const normalized = normalizeQuestion(q.question);
-
-        if (
-          VALID_CATEGORIES.length > 0 &&
-          !VALID_CATEGORIES.includes(q.category)
-        ) {
-          console.warn(
-            `[Aptitude Flow] Invalid category rejected: ${q.category}`
-          );
-          continue;
-        }
-
-        if (
-          validateAptitudeQuestion(
-            q,
-            new Set([...historySet, ...generatedFingerprints])
-          )
-        ) {
-          validQuestions.push({
-            ...q,
-            id:
-              q.id ||
-              `apt-${Date.now()}-${Math.random()
-                .toString(36)
-                .substring(2, 8)}`,
-          });
-
-          generatedFingerprints.add(normalized.fingerprint);
-        }
-      }
-
-      console.log(
-        `[Aptitude Flow] AI generated ${output.questions.length} questions; ${validQuestions.length} passed validation.`
-      );
-
-      if (validQuestions.length < 20) {
-        throw new Error(
-          `Aptitude synthesis produced only ${validQuestions.length}/20 valid questions.`
-        );
-      }
-
-      return {
-        questions: validQuestions.slice(0, 20),
-      };
+      return output;
     } catch (error: any) {
       console.error(
-        `[Aptitude Flow] Generation failure:`,
+        `[HR Interview Result Flow] Generation failure:`,
         error?.message || error
       );
-
       throw error;
     }
   }
