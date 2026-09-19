@@ -19,6 +19,10 @@ const nextConfig: NextConfig = {
       bodySizeLimit: '25mb',
     },
   },
+  onDemandEntries: {
+    maxInactiveAge: 25 * 1000,
+    pagesBufferLength: 2,
+  },
   serverExternalPackages: ['puppeteer', 'puppeteer-core'],
   images: {
     dangerouslyAllowSVG: true,
@@ -29,7 +33,13 @@ const nextConfig: NextConfig = {
       { protocol: 'https', hostname: 'ui-avatars.com', port: '', pathname: '/**' },
     ],
   },
-  webpack: (config, { isServer }) => {
+  webpack: (config, { isServer, dev }) => {
+    // Disable persistent caching in development to resolve ENOENT: no such file or directory issues
+    // with corrupted .next/cache/webpack packs in cloud workstation environments.
+    if (dev) {
+      config.cache = false;
+    }
+
     if (!isServer) {
       config.resolve.fallback = {
         ...config.resolve.fallback,

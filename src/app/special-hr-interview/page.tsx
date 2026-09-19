@@ -266,7 +266,8 @@ export default function SpecialHRInterview() {
       if (agentManagerRef.current && connectionReadyRef.current) {
         await agentManagerRef.current.speak({ type: "text", input: result.nextQuestion });
       }
-    } catch (error) {
+    } catch (error: any) {
+      console.error("🔴 [Interview Turn Error]", error?.message || error, error);
       toast({ variant: "destructive", title: "Interview Error" });
     } finally {
       setIsProcessing(false);
@@ -292,17 +293,24 @@ export default function SpecialHRInterview() {
   };
 
   useEffect(() => {
-    if (initializationStartedRef.current) return;
-    initializationStartedRef.current = true;
+    let cancelled = false;
+    let localManager: any = null;
+
     const initializeDIDAgency = async () => {
       try {
         const { createAgentManager } = await import("@d-id/client-sdk");
+
+        // जर याच effect चा cleanup आधीच चालून गेला असेल (Strict Mode double-invoke),
+        // तर आता नव्याने connect करण्यात अर्थ नाही — थांबव
+        if (cancelled) return;
+
         const manager = await createAgentManager(agentId, {
           auth: { type: "key", clientKey },
           callbacks: {
             onSrcObjectReady: (stream: MediaStream) => {
               const video = agentVideoRef.current;
               if (!video) return;
+              agentStreamRef.current = stream;
               video.srcObject = stream;
               setStatus("READY");
               requestAnimationFrame(() => video.play().catch(() => {}));
@@ -323,13 +331,30 @@ export default function SpecialHRInterview() {
             },
           },
         });
+
+        // manager तयार होईपर्यंत जर cleanup आधीच चालून गेला असेल,
+        // तर हा manager लगेच बंद करून टाक — तो वापरात न घेता
+        if (cancelled) {
+          manager.disconnect().catch(() => {});
+          return;
+        }
+
+        localManager = manager;
         agentManagerRef.current = manager;
         await manager.connect();
-      } catch (error) { setStatus("ERROR"); }
+      } catch (error: any) {
+        console.error("🔴 [D-ID Init Error]", error?.message || error, error);
+        if (!cancelled) setStatus("ERROR");
+      }
     };
+
     initializeDIDAgency();
+
     return () => {
-      if (agentManagerRef.current) agentManagerRef.current.disconnect().catch(() => {});
+      cancelled = true;
+      if (localManager) {
+        localManager.disconnect().catch(() => {});
+      }
     };
   }, [stopListening, startListening]);
 
