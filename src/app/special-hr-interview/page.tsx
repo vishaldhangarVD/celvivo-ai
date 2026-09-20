@@ -135,10 +135,16 @@ export default function SpecialHRInterview() {
         video.srcObject.getAudioTracks().forEach(track => { track.enabled = true; });
       }
       try {
-        await video.play();
+        // video.play() कधीकधी कायमचं pending राहू शकतं (विशेषतः overlapping calls मुळे) —
+        // म्हणून 3 सेकंदांनंतर आपोआप पुढे जाऊ दे, अडकून राहू नये
+        await Promise.race([
+          video.play(),
+          new Promise((_, reject) => setTimeout(() => reject(new Error("video.play() timed out after 3s")), 3000)),
+        ]);
         console.log("🟡 [Audio] video.play() succeeded");
       } catch (e) {
-        console.log("🟡 [Audio] video.play() failed/blocked:", e);
+        console.log("🟡 [Audio] video.play() failed/blocked/timed-out:", e);
+        // हा error असूनही पुढे जाऊ दे — ऑडिओ/व्हिडिओ आधीच dिसत असू शकतो, फक्त play() promise अडकलं असेल
       }
     } else {
       console.log("🔴 [Audio] video ref is null!");
@@ -197,12 +203,14 @@ export default function SpecialHRInterview() {
   }, []);
 
   const finalizeInterviewResult = useCallback(async (history: any[], stage: string) => {
+    console.log("🟢 [Finalize 1] Called. history length:", history.length, "stage:", stage);
     try {
       const fullTranscript = history.map(h => ({
         stage: stage,
         question: h.question,
         answer: h.answer,
       }));
+      console.log("🟢 [Finalize 2] Calling analyzeHRInterviewResult...");
       const resultData = await analyzeHRInterviewResult({
         candidateName: resumeAnalysis?.personalInfo?.fullName || user?.displayName || "Candidate",
         role: journey?.role || "Software Engineer",
@@ -210,14 +218,22 @@ export default function SpecialHRInterview() {
         resumeSummary: resumeAnalysis?.summary || "",
         transcript: fullTranscript,
       });
+      console.log("🟢 [Finalize 3] Got resultData:", resultData);
       if (journeyRef) {
+        console.log("🟢 [Finalize 4] Writing to Firestore...");
         await updateDoc(journeyRef, {
           specialHRResult: resultData,
           specialHRResultAt: serverTimestamp(),
         });
+        console.log("🟢 [Finalize 5] Firestore write done");
+      } else {
+        console.log("🔴 [Finalize] journeyRef is null!");
       }
+      console.log("🟢 [Finalize 6] Navigating to result page...");
       router.push('/special-hr-interview-result');
-    } catch (err) {
+      console.log("🟢 [Finalize 7] router.push called");
+    } catch (err: any) {
+      console.error("🔴 [Finalize Error]", err?.message || err, err);
       toast({ variant: "destructive", title: "Unable to Generate Results" });
     }
   }, [resumeAnalysis, journey, journeyRef, user, router, toast]);
@@ -284,15 +300,17 @@ export default function SpecialHRInterview() {
   };
 
   const startInterview = async () => {
-    console.log("🟢 [1] startInterview called. status =", status);
-    if (status !== "READY") {
-      console.log("🔴 [ABORT] status is not READY, aborting");
+    console.log("🟢 [1] startInterview called. status =", status, "already started?", interviewStartedRef.current);
+    if (status !== "READY" || interviewStartedRef.current) {
+      console.log("🔴 [ABORT] not ready or already started, aborting");
       return;
     }
+    // लगेच ref सेट कर — जेणेकरून पुढचे क्लिक्स इथेच थांबतील, नवीन overlapping call सुरू होणार नाही
+    interviewStartedRef.current = true;
+  
     console.log("🟢 [2] Calling handleEnableAudio...");
     await handleEnableAudio();
     console.log("🟢 [3] handleEnableAudio done");
-    interviewStartedRef.current = true;
     setInterviewStarted(true);
     console.log("🟢 [4] setInterviewStarted(true) called");
     await processNextTurn("", true);
@@ -438,12 +456,59 @@ export default function SpecialHRInterview() {
                         <div className="w-10 h-10 rounded-xl bg-accent/20 flex items-center justify-center text-accent"><User className="w-5 h-5" /></div>
                         <div><h3 className="text-xs font-black uppercase tracking-widest text-white">AI Interviewer</h3></div>
                      </div>
-                     <Button variant="ghost" size="icon" onClick={stopInterview} className="text-white/20 hover:text-red-400"><X className="w-5 h-5" /></Button>
+                     <Button variant="ghost" onClick={stopInterview} className="h-8 px-3 text-[9px] font-black uppercase tracking-widest text-white/40 hover:text-red-400 hover:bg-red-500/10 rounded-lg flex items-center gap-1.5">
+                       <X className="w-3.5 h-3.5" /> End Session
+                     </Button>
                   </div>
-                  <div className="flex-1 p-8 flex flex-col gap-8 overflow-y-auto">
+                  <div className="flex-1 p-8 flex flex-col gap-6 overflow-y-auto">
                     <div className="space-y-4">
                       <div className="flex items-center gap-2"><Badge variant="outline" className="text-accent text-[8px] uppercase">Turn {questionIndex}</Badge></div>
                       <div className="p-6 glass rounded-3xl border-accent/20 bg-accent/5"><h4 className="text-xl font-medium text-white leading-relaxed">{currentQuestion || "Preparing..."}</h4></div>
+                    </div>
+
+                    <div className="mt-auto space-y-3">
+                      <div className="flex items-center justify-between">
+                        <label className="text-[8px] font-black uppercase text-white/20 tracking-widest">
+                          {isTypeMode ? "Type Your Answer" : "Or type your answer instead"}
+                        </label>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => {
+                            const next = !isTypeMode;
+                            setIsTypeMode(next);
+                            isTypeModeRef.current = next;
+                            if (next) stopListening();
+                          }}
+                          className="h-7 px-3 text-[8px] font-black uppercase tracking-widest text-accent/70 hover:text-accent"
+                        >
+                          <Keyboard className="w-3 h-3 mr-1.5" />
+                          {isTypeMode ? "Use Voice" : "Type Instead"}
+                        </Button>
+                      </div>
+
+                      {isTypeMode && (
+                        <div className="space-y-2">
+                          <Textarea
+                            value={typedAnswer}
+                            onChange={(e) => setTypedAnswer(e.target.value)}
+                            placeholder="Type your answer here..."
+                            className="min-h-[100px] rounded-xl glass border-white/10 bg-transparent p-3 text-sm font-light resize-none focus:border-accent/50 transition-all"
+                          />
+                          <Button
+                            onClick={() => {
+                              if (typedAnswer.trim()) {
+                                handleSubmitAnswer(typedAnswer.trim());
+                                setTypedAnswer("");
+                              }
+                            }}
+                            disabled={isProcessing || !typedAnswer.trim()}
+                            className="w-full h-10 rounded-xl text-[9px] font-black uppercase tracking-widest bg-accent/20 text-accent border border-accent/30 hover:bg-accent hover:text-black transition-all"
+                          >
+                            {isProcessing ? <Loader2 className="w-4 h-4 animate-spin" /> : <>Submit Answer <Send className="w-3.5 h-3.5 ml-1.5" /></>}
+                          </Button>
+                        </div>
+                      )}
                     </div>
                   </div>
                 </motion.div>
