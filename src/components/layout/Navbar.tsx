@@ -268,7 +268,7 @@ export default function Navbar() {
                       <div className="p-4 border-b border-white/5 flex items-center justify-between">
                          <div className="flex items-center gap-2">
                            <Sparkles className="w-3.5 h-3.5 text-accent" />
-                           <span className="text-[10px] font-black uppercase tracking-widest">Neural Notifications</span>
+                           <span className="text-[10px] font-black uppercase tracking-widest">Notifications</span>
                          </div>
                          {unreadCount > 0 && (
                            <Badge className="bg-accent/20 text-accent border-none text-[8px] font-black">{unreadCount} UNREAD</Badge>
