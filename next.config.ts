@@ -20,8 +20,8 @@ const nextConfig: NextConfig = {
     },
   },
   onDemandEntries: {
-    maxInactiveAge: 25 * 1000,
-    pagesBufferLength: 2,
+    maxInactiveAge: 60 * 1000,
+    pagesBufferLength: 4,
   },
   serverExternalPackages: ['puppeteer', 'puppeteer-core'],
   images: {
@@ -34,8 +34,8 @@ const nextConfig: NextConfig = {
     ],
   },
   webpack: (config, { isServer, dev }) => {
-    // Disable persistent caching in development to resolve ENOENT: no such file or directory issues
-    // with corrupted .next/cache/webpack packs in cloud workstation environments.
+    // Disable persistent caching in development to resolve ENOENT issues
+    // and corrupted .next/cache/webpack packs in cloud workstation environments.
     if (dev) {
       config.cache = false;
     }

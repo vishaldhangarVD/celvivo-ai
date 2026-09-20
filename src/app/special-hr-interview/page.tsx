@@ -125,6 +125,7 @@ export default function SpecialHRInterview() {
   }, [journey]);
 
   const handleEnableAudio = async () => {
+    console.log("🟡 [Audio] handleEnableAudio start. video ref exists?", !!agentVideoRef.current);
     const video = agentVideoRef.current;
     if (video) {
       video.muted = false;
@@ -133,7 +134,14 @@ export default function SpecialHRInterview() {
       if (video.srcObject instanceof MediaStream) {
         video.srcObject.getAudioTracks().forEach(track => { track.enabled = true; });
       }
-      await video.play().catch(() => {});
+      try {
+        await video.play();
+        console.log("🟡 [Audio] video.play() succeeded");
+      } catch (e) {
+        console.log("🟡 [Audio] video.play() failed/blocked:", e);
+      }
+    } else {
+      console.log("🔴 [Audio] video ref is null!");
     }
   };
 
@@ -276,11 +284,19 @@ export default function SpecialHRInterview() {
   };
 
   const startInterview = async () => {
-    if (status !== "READY") return;
+    console.log("🟢 [1] startInterview called. status =", status);
+    if (status !== "READY") {
+      console.log("🔴 [ABORT] status is not READY, aborting");
+      return;
+    }
+    console.log("🟢 [2] Calling handleEnableAudio...");
     await handleEnableAudio();
+    console.log("🟢 [3] handleEnableAudio done");
     interviewStartedRef.current = true;
     setInterviewStarted(true);
+    console.log("🟢 [4] setInterviewStarted(true) called");
     await processNextTurn("", true);
+    console.log("🟢 [5] processNextTurn done");
   };
 
   const stopInterview = async () => {

@@ -23,7 +23,7 @@ export function initializeFirebase(): {
         experimentalAutoDetectLongPolling: true,
       });
     } catch {
-      // HMR मुळे आधीच initialize झालेलं असल्यास, existing instance वापरा
+      // If already initialized (common during HMR), use the existing instance
       firestoreInstance = getFirestore(firebaseApp);
     }
   }
