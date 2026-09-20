@@ -3,8 +3,9 @@
 /**
  * @fileOverview HR Interview Result Analyzer.
  * Analyzes a completed Special HR interview transcript and produces
- * a structured evaluation: overall score, strengths, weaknesses,
- * and stage-wise feedback.
+ * a structured evaluation matching the Special HR Interview Result page:
+ * overall score, verdict, category radar scores, strengths, improvements,
+ * and a per-exchange annotated transcript.
  */
 
 import { ai, runWithResilience } from '@/ai/genkit';
@@ -24,20 +25,26 @@ const HRInterviewResultInputSchema = z.object({
   transcript: z.array(TranscriptEntrySchema),
 });
 
+const CategoryScoreSchema = z.object({
+  subject: z.string().describe('Category name shown on the radar chart, e.g. "Communication", "Confidence", "Role Fit".'),
+  score: z.number().min(0).max(100),
+});
+
+const AnnotatedTranscriptEntrySchema = z.object({
+  stage: z.string(),
+  question: z.string(),
+  answer: z.string(),
+  note: z.string().describe('Short evaluator note explaining why this answer was strong or weak.'),
+  tag: z.enum(['strong', 'weak']),
+});
+
 const HRInterviewResultOutputSchema = z.object({
   overallScore: z.number().min(0).max(100).describe('Overall performance score out of 100.'),
-  verdict: z.string().describe('One-line hiring verdict, e.g. "Strong Hire", "Hire", "No Hire".'),
-  summary: z.string().describe('2-3 sentence overall summary of the candidate performance.'),
-  strengths: z.array(z.string()).describe('Key strengths observed during the interview.'),
-  weaknesses: z.array(z.string()).describe('Key weaknesses or areas for improvement.'),
-  communicationScore: z.number().min(0).max(100).describe('Communication skills score.'),
-  confidenceScore: z.number().min(0).max(100).describe('Confidence level score.'),
-  stageWiseFeedback: z.array(
-    z.object({
-      stage: z.string(),
-      feedback: z.string(),
-    })
-  ).describe('Short feedback per interview stage.'),
+  verdict: z.string().describe('One-line hiring verdict, e.g. "Strong Hire", "Hire", "Borderline", "No Hire".'),
+  categoryScores: z.array(CategoryScoreSchema).min(4).max(6).describe('4-6 categories for the radar chart, e.g. Communication, Confidence, Role Fit, Technical Depth, Clarity.'),
+  strengths: z.array(z.string()).min(2).max(5).describe('Key strengths observed during the interview.'),
+  improvements: z.array(z.string()).min(2).max(5).describe('Key areas worth improving.'),
+  annotatedTranscript: z.array(AnnotatedTranscriptEntrySchema).describe('Every question/answer pair from the transcript, each annotated with a short note and a strong/weak tag.'),
 });
 
 export type HRInterviewResult = z.infer<typeof HRInterviewResultOutputSchema>;
@@ -78,6 +85,10 @@ Evaluate the candidate's overall performance based on:
 - Confidence and composure
 - Alignment with the role requirements
 - Depth of experience demonstrated
+
+For categoryScores, pick 4-6 relevant categories (e.g. Communication, Confidence, Role Fit, Technical Depth, Clarity, Structure) and score each 0-100.
+
+For annotatedTranscript, go through EVERY question/answer pair in the transcript above, in order, and for each one write a short evaluator note (1-2 sentences) and tag it "strong" or "weak" based on the quality of that specific answer.
 
 Provide an honest, constructive, and professional evaluation.
 Return ONLY the required JSON structure.`,
