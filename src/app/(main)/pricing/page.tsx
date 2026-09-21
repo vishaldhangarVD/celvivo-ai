@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState } from 'react';
@@ -8,7 +7,6 @@ import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
 import { Zap, Star, Crown, Check, Loader2, CreditCard, Sparkles } from 'lucide-react';
 import { useUser, useFirestore } from '@/firebase';
-import { doc, updateDoc, serverTimestamp, increment } from 'firebase/firestore';
 import { useRouter } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
 import Script from 'next/script';
@@ -37,23 +35,23 @@ export default function PricingPage() {
     if (!user) {
       return router.push('/login?redirectTo=/pricing');
     }
-  
+
     setLoadingId(pack.id);
-  
+
     try {
       const endpoint =
         type === 'order'
           ? '/api/payment/create-order'
           : '/api/payment/create-subscription';
-  
-          const body =
-          type === 'order'
-            ? { packId: pack.id }
-            : {
-                planType: pack.id,
-                userId: user.uid,
-              };
-  
+
+      const body =
+        type === 'order'
+          ? { packId: pack.id }
+          : {
+              planType: pack.id,
+              userId: user.uid,
+            };
+
       const res = await fetch(endpoint, {
         method: 'POST',
         headers: {
@@ -61,9 +59,9 @@ export default function PricingPage() {
         },
         body: JSON.stringify(body),
       });
-  
+
       const data = await res.json();
-  
+
       if (!res.ok) {
         throw new Error(
           data?.details ||
@@ -71,28 +69,28 @@ export default function PricingPage() {
           `Payment failed (${res.status})`
         );
       }
-  
+
       const { orderId, subscriptionId, keyId } = data;
-  
+
       if (!keyId) {
         throw new Error('Razorpay Key ID is missing');
       }
-  
+
       if (type === 'subscription' && !subscriptionId) {
         throw new Error('Razorpay Subscription ID is missing');
       }
-  
+
       if (type === 'order' && !orderId) {
         throw new Error('Razorpay Order ID is missing');
       }
-  
+
       const options = {
         key: keyId,
         amount: type === 'order' ? pack.price * 100 : undefined,
         order_id: orderId,
         subscription_id: subscriptionId,
         name: 'Nexvoro AI',
-  
+
         handler: async (response: any) => {
           try {
             const verifyRes = await fetch('/api/payment/verify', {
@@ -103,11 +101,14 @@ export default function PricingPage() {
               body: JSON.stringify({
                 ...response,
                 type,
+                userId: user.uid,
+                packId: type === 'order' ? pack.id : undefined,
+                planType: type === 'subscription' ? pack.id : undefined,
               }),
             });
-  
+
             const verifyData = await verifyRes.json();
-  
+
             if (!verifyRes.ok) {
               throw new Error(
                 verifyData?.details ||
@@ -115,59 +116,20 @@ export default function PricingPage() {
                 'Payment verification failed'
               );
             }
-  
-            const { verified } = verifyData;
-  
-            if (verified && db) {
-              const userRef = doc(db, 'users', user.uid);
-  
-              if (type === 'order') {
-                const credits =
-                  pack.id === 'bundle_1'
-                    ? {
-                        'credits.aptitude': increment(1),
-                        'credits.coding': increment(1),
-                        'credits.interview': increment(1),
-                      }
-                    : {
-                        [`credits.${pack.id.split('_')[0]}`]: increment(1),
-                      };
-  
-                await updateDoc(userRef, {
-                  ...credits,
-                  updatedAt: serverTimestamp(),
-                });
-              } else {
-                const nextReset = new Date();
-                nextReset.setMonth(nextReset.getMonth() + 1);
-  
-                await updateDoc(userRef, {
-                  subscription: {
-                    plan: pack.id,
-                    status: 'active',
-                    usage: {
-                      aptitude: 0,
-                      coding: 0,
-                      interview: 0,
-                    },
-                    nextResetDate: nextReset,
-                  },
-                  updatedAt: serverTimestamp(),
-                });
-              }
-  
+
+            if (verifyData.verified) {
               toast({
                 title: 'Purchase Success',
                 description: 'Your account has been updated.',
               });
-  
+
               router.push('/dashboard');
             } else {
               throw new Error('Payment could not be verified');
             }
           } catch (error: any) {
             console.error('VERIFICATION ERROR:', error);
-  
+
             toast({
               variant: 'destructive',
               title: 'Verification Error',
@@ -178,33 +140,33 @@ export default function PricingPage() {
             setLoadingId(null);
           }
         },
-  
+
         prefill: {
           email: user.email || '',
         },
-  
+
         theme: {
           color: '#22d3ee',
         },
       };
-  
+
       const Razorpay = (window as any).Razorpay;
-  
+
       if (!Razorpay) {
         throw new Error('Razorpay checkout is not loaded');
       }
-  
+
       new Razorpay(options).open();
     } catch (e: any) {
       console.error('PAYMENT ERROR:', e);
-  
+
       toast({
         variant: 'destructive',
         title: 'Gateway Error',
         description:
           e?.message || 'Payment request failed',
       });
-  
+
       setLoadingId(null);
     }
   };
