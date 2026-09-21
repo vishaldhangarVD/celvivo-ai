@@ -5,3 +5,22 @@ runConfig:
   # Increase this value if you'd like to automatically spin up
   # more instances in response to increased traffic.
   maxInstances: 1
+env:
+  - variable: ADMIN_FIREBASE_PROJECT_ID
+    secret: FIREBASE_PROJECT_ID
+  - variable: ADMIN_FIREBASE_CLIENT_EMAIL
+    secret: FIREBASE_CLIENT_EMAIL
+  - variable: ADMIN_FIREBASE_PRIVATE_KEY
+    secret: FIREBASE_PRIVATE_KEY
+  - variable: RAZORPAY_KEY_SECRET
+    secret: RAZORPAY_KEY_SECRET
+  - variable: RAZORPAY_WEBHOOK_SECRET
+    secret: RAZORPAY_WEBHOOK_SECRET
+  - variable: RAZORPAY_KEY_ID
+    value: rzp_test_TcBF6pbspqR3HV
+  - variable: NEXT_PUBLIC_RAZORPAY_KEY_ID
+    value: rzp_test_TcBF6pbspqR3HV
+  - variable: RAZORPAY_STARTER_PLAN_ID
+    value: plan_TcCyumDEFmetQ3
+  - variable: RAZORPAY_PRO_PLAN_ID
+    value: plan_TcD0zkMwdqgvjd
