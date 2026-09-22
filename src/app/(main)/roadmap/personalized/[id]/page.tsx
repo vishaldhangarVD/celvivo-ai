@@ -239,7 +239,7 @@ export default function PersonalizedRoadmapPage() {
 
               <div className="space-y-4">
                  <Button onClick={() => router.push('/dashboard')} className="w-full h-16 rounded-2xl glass border-white/10 flex gap-4 uppercase tracking-[0.3em] text-[10px] font-bold">
-                    <LayoutDashboard className="w-4 h-4" /> Return to Command
+                    <LayoutDashboard className="w-4 h-4" /> Return to Dashboard
                  </Button>
               </div>
             </div>

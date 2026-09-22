@@ -42,7 +42,7 @@ export default function CareerRoadmapDetail() {
     return (
       <div className="min-h-screen bg-[#050816] flex flex-col items-center justify-center">
         <h1 className="text-2xl font-bold text-white mb-4">Protocol Path Not Found</h1>
-        <Button onClick={() => router.push('/roadmap')}>Return to Command Hub</Button>
+        <Button onClick={() => router.push('/roadmap')}>Return to Dashboard Hub</Button>
       </div>
     );
   }

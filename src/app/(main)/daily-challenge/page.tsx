@@ -231,7 +231,7 @@ export default function DailyChallengePage() {
                         Your professional node for today is synchronized. Return in 24 hours for the next calibration.
                       </p>
                       <Link href="/dashboard">
-                        <Button variant="outline" className="h-14 px-10 rounded-2xl glass border-white/10 text-xs font-bold uppercase tracking-widest">Return to Command Center</Button>
+                        <Button variant="outline" className="h-14 px-10 rounded-2xl glass border-white/10 text-xs font-bold uppercase tracking-widest">Return to Dashboard Center</Button>
                       </Link>
                     </Card>
                   )}

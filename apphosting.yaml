@@ -17,10 +17,10 @@ env:
   - variable: RAZORPAY_WEBHOOK_SECRET
     secret: RAZORPAY_WEBHOOK_SECRET
   - variable: RAZORPAY_KEY_ID
-    value: rzp_test_TcBF6pbspqR3HV
+    value: rzp_live_Tef3EWA2c7NodX
   - variable: NEXT_PUBLIC_RAZORPAY_KEY_ID
-    value: rzp_test_TcBF6pbspqR3HV
+    value: rzp_live_Tef3EWA2c7NodX
   - variable: RAZORPAY_STARTER_PLAN_ID
-    value: plan_TcCyumDEFmetQ3
+    value: plan_TbPyJAsV2gfxgz
   - variable: RAZORPAY_PRO_PLAN_ID
-    value: plan_TcD0zkMwdqgvjd
+    value: plan_TcB2TqLhcjCd2G

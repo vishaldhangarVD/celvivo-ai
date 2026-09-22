@@ -849,7 +849,7 @@ export default function ResumeAtelierPage() {
                       disabled={isAtsModalLoading || (atsTab === 'saved' ? !selectedSavedResume : !uploadedFileUri) || !atsModalJd.trim()}
                       className="w-full h-16 bg-[#c9a24d] text-black hover:bg-white transition-all font-mono text-[11px] uppercase tracking-[0.2em]"
                     >
-                      {isAtsModalLoading ? <Loader2 className="animate-spin" /> : "Run Analysis"}
+                      {isAtsModalLoading ? <Loader2 className="animate-spin" /> : "Check ATS Score"}
                     </Button>
                   </div>
                 )}
@@ -1085,7 +1085,7 @@ export default function ResumeAtelierPage() {
                           disabled={isAtsLoading || !jd.trim()}
                           className="w-full h-12 border border-[#c9a24d] text-[#c9a24d] hover:bg-[#c9a24d] hover:text-black font-mono text-[10px] uppercase"
                         >
-                          {isAtsLoading ? <Loader2 className="animate-spin" /> : "Run Analysis"}
+                          {isAtsLoading ? <Loader2 className="animate-spin" /> : "Check ATS Score"}
                         </Button>
 
                         {atsResult && (

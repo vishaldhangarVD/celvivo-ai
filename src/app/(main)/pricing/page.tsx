@@ -89,7 +89,7 @@ export default function PricingPage() {
         amount: type === 'order' ? pack.price * 100 : undefined,
         order_id: orderId,
         subscription_id: subscriptionId,
-        name: 'Nexvoro AI',
+        name: 'Celvivo AI',
 
         handler: async (response: any) => {
           try {
