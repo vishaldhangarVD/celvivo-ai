@@ -343,7 +343,7 @@ export default function Navbar() {
                         </DropdownMenuItem>
                       )}
                       <DropdownMenuItem onClick={() => router.push('/settings')} className="rounded-xl focus:bg-white/5 focus:text-accent cursor-pointer gap-3 text-[10px] uppercase font-bold tracking-widest py-3">
-                        <Award className="w-4 h-4" /> Certificates & Achievements
+                        <Award className="w-4 h-4" /> Settings
                       </DropdownMenuItem>
                       <DropdownMenuSeparator className="bg-white/5" />
                       <DropdownMenuItem onClick={handleSignOut} className="rounded-xl focus:bg-red-500/10 focus:text-red-400 text-red-400 cursor-pointer gap-3 text-[10px] uppercase font-bold tracking-widest py-3">
@@ -361,7 +361,7 @@ export default function Navbar() {
                   </Link>
                   <Link href="/signup">
                     <Button className="h-10 px-6 btn-premium text-[9px] tracking-[0.2em] uppercase rounded-xl border border-white/10">
-                      SIGN IN
+                      SIGN UP
                     </Button>
                   </Link>
                 </div>
@@ -430,7 +430,7 @@ export default function Navbar() {
                     <Button variant="outline" className="w-full h-16 rounded-2xl glass border-white/10 font-bold uppercase tracking-widest text-xs">LOGIN</Button>
                   </Link>
                   <Link href="/signup" onClick={() => setIsOpen(false)}>
-                    <Button className="w-full h-16 btn-premium font-bold uppercase tracking-widest text-xs">SIGN IN</Button>
+                    <Button className="w-full h-16 btn-premium font-bold uppercase tracking-widest text-xs">SIGN UP</Button>
                   </Link>
                 </>
               )}

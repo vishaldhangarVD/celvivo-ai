@@ -534,9 +534,18 @@ export default function AptitudeEnginePage() {
       <div className="flex-1 flex flex-col min-h-0">
         <header className="h-20 shrink-0 border-b border-white/5 bg-[#0b0e1a]/95 backdrop-blur-xl flex items-center justify-between px-8 z-40">
           <div className="flex items-center gap-6">
-            <div className="w-10 h-10 rounded-xl overflow-hidden flex items-center justify-center border border-white/5">
-              <img src="/LOGO.png" alt="Celvivo AI" className="w-full h-full object-contain" />
-            </div>
+          <button
+  type="button"
+  onClick={() => router.push('/')}
+  aria-label="Go to Celvivo AI home"
+  className="w-10 h-10 rounded-xl overflow-hidden flex items-center justify-center border border-white/5 hover:border-accent/50 transition-all duration-300 cursor-pointer"
+>
+  <img
+    src="/LOGO.png"
+    alt="Celvivo AI"
+    className="w-full h-full object-contain"
+  />
+</button>
             <div>
               <h1 className="text-sm font-black uppercase tracking-widest text-premium">CELVIVO AI</h1>
               <p className="text-[9px] font-black text-white/40 uppercase tracking-widest mt-0.5">APTITUDE TEST IN PROGRESS</p>

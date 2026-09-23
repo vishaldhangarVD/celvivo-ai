@@ -56,7 +56,7 @@ function LoginContent() {
       if (!userDocSnap.exists()) {
         await setDoc(userDocRef, {
           uid: authUser.uid,
-          displayName: customName || authUser.displayName || "Operator",
+          displayName: customName || authUser.displayName || "User",
           email: authUser.email || "",
           photoURL: authUser.photoURL || null,
           jobReadinessScore: 0,
@@ -109,7 +109,7 @@ function LoginContent() {
         if (error.code !== 'auth/no-auth-event' && error.code !== 'auth/cancelled-popup-request') {
           toast({
             variant: "destructive",
-            title: "Authentication Failed",
+            title: "Sign-in Failed",
             description: error.message || "Could not complete the login handshake.",
           });
         }
@@ -218,7 +218,7 @@ function LoginContent() {
           console.error("[Auth] Redirect Fallback Failed:", redirectError);
           toast({
             variant: "destructive",
-            title: "Protocol Failure",
+            title: "Sign-in Failed",
             description: "System could not initialize redirect handshake.",
           });
           setIsLoading(false);
@@ -228,7 +228,7 @@ function LoginContent() {
       } else {
         toast({
           variant: "destructive",
-          title: "Handshake Failed",
+          title: "Google Sign-in Failed",
           description: error.message || "Google authentication encountered a critical fault.",
         });
         setIsLoading(false);
@@ -275,9 +275,9 @@ function LoginContent() {
     setIsResetting(true);
     try {
       await sendPasswordResetEmail(auth, trimmedEmail);
-      toast({ title: "Recovery Protocol Sent", description: "Check your terminal (inbox) for reset instructions." });
+      toast({ title: "Password Reset Email Sent", description: "Please check your email inbox for reset instructions." });
     } catch (error: any) {
-      toast({ variant: "destructive", title: "Transmission Failed", description: error.message });
+      toast({ variant: "destructive", title: "Failed to Send Email", description: error.message });
     } finally {
       setIsResetting(false);
     }
@@ -293,7 +293,7 @@ function LoginContent() {
               <div className="w-2 h-2 bg-accent rounded-full animate-pulse" />
             </div>
           </div>
-          <p className="text-[10px] font-black uppercase tracking-[0.5em] text-accent animate-pulse">Syncing Identity...</p>
+          <p className="text-[10px] font-black uppercase tracking-[0.5em] text-accent animate-pulse">Signing you in...</p>
         </div>
       </div>
     );
@@ -308,7 +308,7 @@ function LoginContent() {
 
       <Link href="/" className="absolute top-12 left-12 z-50 flex items-center gap-3 text-[10px] font-bold tracking-[0.4em] uppercase text-white/40 hover:text-white transition-all group">
         <ArrowLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform text-white/70" />
-        Back to Nexus
+        Back to Home
       </Link>
 
       <div className="w-full max-w-[480px] relative z-10">
@@ -328,10 +328,10 @@ function LoginContent() {
             className="space-y-2"
           >
             <h1 className="text-5xl font-bold tracking-tighter text-premium">
-              {confirmNameMode ? "Final Calibration." : <>Welcome to <span className="text-gradient-purple">CELVIVO AI.</span></>}
+              {confirmNameMode ? "Complete Your Profile" : <>Welcome to <span className="text-gradient-purple">CELVIVO AI.</span></>}
             </h1>
             <p className="text-muted-foreground font-light text-sm uppercase tracking-[0.3em]">
-              {confirmNameMode ? "Complete your professional identity" : "Your Intelligent Career Companion"}
+              {confirmNameMode ? "Please complete your profile" : "Your AI Career Companion"}
             </p>
           </motion.div>
         </header>
@@ -364,7 +364,7 @@ function LoginContent() {
                     </div>
 
                     <div className="space-y-3">
-                      <Label className="text-[9px] font-bold uppercase tracking-[0.4em] text-white/30 ml-2">Full Identity Name</Label>
+                      <Label className="text-[9px] font-bold uppercase tracking-[0.4em] text-white/30 ml-2">Full Name</Label>
                       <Input 
                         value={newName}
                         onChange={(e) => setNewName(e.target.value)}
@@ -379,7 +379,7 @@ function LoginContent() {
                       disabled={isLoading}
                       className="w-full h-18 btn-premium text-[11px] font-black tracking-[0.4em] uppercase shadow-[0_20px_50px_rgba(147,51,234,0.2)]"
                     >
-                      {isLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : "Complete Session Setup"}
+                      {isLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : "Continue"}
                     </Button>
                   </motion.div>
                 ) : (
@@ -410,7 +410,7 @@ function LoginContent() {
 
                     <form onSubmit={handleLogin} className="space-y-6">
                       <div className="space-y-3">
-                        <Label className="text-[9px] font-bold uppercase tracking-[0.4em] text-white/30 ml-2">Identification</Label>
+                        <Label className="text-[9px] font-bold uppercase tracking-[0.4em] text-white/30 ml-2">Email Address</Label>
                         <div className="relative group">
                           <Mail className="absolute left-5 top-1/2 -translate-y-1/2 w-4 h-4 text-white/20 group-focus-within:text-accent transition-colors" />
                           <Input 
@@ -418,7 +418,7 @@ function LoginContent() {
                             value={email}
                             onChange={(e) => setEmail(e.target.value)}
                             placeholder="email@nexus.ai" 
-                            className="h-14 rounded-2xl glass border-white/10 bg-transparent focus:border-accent transition-all text-white font-light" 
+                            className="h-14 pl-14 rounded-2xl glass border-white/10 bg-transparent focus:border-accent transition-all text-white font-light" 
                             required
                           />
                         </div>
@@ -426,14 +426,14 @@ function LoginContent() {
 
                       <div className="space-y-3">
                         <div className="flex justify-between items-center ml-2">
-                          <Label className="text-[9px] font-bold uppercase tracking-[0.4em] text-white/30">Encryption Key</Label>
+                          <Label className="text-[9px] font-bold uppercase tracking-[0.4em] text-white/30">Password</Label>
                           <button 
                             type="button" 
                             onClick={handleForgotPassword}
                             disabled={isResetting}
                             className="text-[9px] font-bold uppercase tracking-widest text-accent hover:text-white transition-colors"
                           >
-                            {isResetting ? "Requesting..." : "Recover?"}
+                            {isResetting ? "Requesting..." : "Forgot Password?"}
                           </button>
                         </div>
                         <div className="relative group">
@@ -466,7 +466,7 @@ function LoginContent() {
                           <Loader2 className="w-5 h-5 animate-spin" />
                         ) : (
                           <div className="flex items-center justify-center gap-3">
-                            <span>Access System</span>
+                            <span>Login</span>
                             <Zap className="w-4 h-4 transition-transform group-hover/submit:scale-110 fill-current" />
                           </div>
                         )}
@@ -475,7 +475,7 @@ function LoginContent() {
 
                     <div className="pt-4 text-center">
                       <p className="text-[10px] font-bold tracking-widest uppercase text-white/30">
-                        New operator? <Link href="/signup" className="text-accent hover:text-white transition-colors underline decoration-accent/20 underline-offset-4">Register Session</Link>
+                      New to CELVIVO AI? <Link href="/signup" className="text-accent hover:text-white transition-colors underline decoration-accent/20 underline-offset-4">Create Account</Link>
                       </p>
                     </div>
                   </motion.div>
@@ -486,9 +486,9 @@ function LoginContent() {
         </motion.div>
 
         <div className="mt-12 flex items-center justify-center gap-6 opacity-30">
-          <div className="flex items-center gap-2 text-[8px] font-bold uppercase tracking-widest"><ShieldCheck className="w-3 h-3" /> Secure Auth</div>
+          <div className="flex items-center gap-2 text-[8px] font-bold uppercase tracking-widest"><ShieldCheck className="w-3 h-3" /> Secure Login</div>
           <div className="w-px h-3 bg-white/20" />
-          <div className="flex items-center gap-2 text-[8px] font-bold uppercase tracking-widest"><Zap className="w-3 h-3" /> Real-time Sync</div>
+          <div className="flex items-center gap-2 text-[8px] font-bold uppercase tracking-widest"><Zap className="w-3 h-3" /> Secure & Fast</div>
         </div>
       </div>
 

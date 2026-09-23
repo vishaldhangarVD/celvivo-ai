@@ -24,7 +24,7 @@ import {
   ArrowUpRight
 } from 'lucide-react';
 import { useUser, useFirestore, useCollection } from '@/firebase';
-import { useState, useMemo, memo, useEffect } from 'react';
+import { useState, useMemo, memo, useEffect, useRef } from 'react';
 import { collection, query, where } from 'firebase/firestore';
 import FeedbackDialog from '@/components/feedback/FeedbackDialog';
 
@@ -101,16 +101,79 @@ const itemVariants = {
 
 const HeroSection = memo(({ onStart, onEnterRoom }: { onStart: () => void, onEnterRoom: () => void }) => {
   const [isVideoMuted, setIsVideoMuted] = useState(true);
-  const [shouldPlayVideo, setShouldPlayVideo] = useState(false);
+const [shouldPlayVideo, setShouldPlayVideo] = useState(false);
+const videoRef = useRef<HTMLVideoElement>(null);
 
-  useEffect(() => {
-    const hasPlayed = sessionStorage.getItem('celvivo_home_video_played');
+useEffect(() => {
+  const PLAYED_KEY = 'celvivo_home_video_played';
+  const LEFT_SITE_KEY = 'celvivo_site_left';
 
+  try {
+    const hasPlayed = sessionStorage.getItem(PLAYED_KEY) === 'true';
+    const siteWasLeft = localStorage.getItem(LEFT_SITE_KEY) === 'true';
+
+    const navigationEntry =
+      performance.getEntriesByType('navigation')[0] as
+        | PerformanceNavigationTiming
+        | undefined;
+
+    const navigationType = navigationEntry?.type;
+
+    // Refresh → don't play
+    if (navigationType === 'reload') {
+      setShouldPlayVideo(false);
+      return;
+    }
+
+    // Completely left website → came back → play
+    if (siteWasLeft) {
+      setShouldPlayVideo(true);
+
+      localStorage.removeItem(LEFT_SITE_KEY);
+      sessionStorage.setItem(PLAYED_KEY, 'true');
+
+      return;
+    }
+
+    // First visit → play
     if (!hasPlayed) {
       setShouldPlayVideo(true);
-      sessionStorage.setItem('celvivo_home_video_played', 'true');
+      sessionStorage.setItem(PLAYED_KEY, 'true');
+
+      return;
     }
-  }, []);
+
+    // Internal navigation → don't play
+    setShouldPlayVideo(false);
+
+  } catch (error) {
+    console.error('Video session logic error:', error);
+  }
+}, []);
+
+useEffect(() => {
+  if (!shouldPlayVideo || !videoRef.current) return;
+
+  const video = videoRef.current;
+
+  video.currentTime = 0;
+  video.muted = true;
+
+  video.play()
+    .then(() => {
+      console.log('[CELVIVO VIDEO] ▶️ Video started');
+
+      setTimeout(() => {
+        if (video && !video.paused) {
+          video.muted = false;
+          setIsVideoMuted(false);
+        }
+      }, 100);
+    })
+    .catch((error) => {
+      console.error('[CELVIVO VIDEO] ❌ Play failed:', error);
+    });
+}, [shouldPlayVideo]);
 
   return (
     <div className="container mx-auto max-w-7xl">
@@ -235,17 +298,14 @@ const HeroSection = memo(({ onStart, onEnterRoom }: { onStart: () => void, onEnt
               <div className="absolute inset-0 bg-gradient-to-br from-accent/10 via-transparent to-transparent opacity-50 z-10" />
               <div className="absolute inset-0">
               <video
+                ref={videoRef}
                 src="/home.mp4"
                 autoPlay={shouldPlayVideo}
                 muted={isVideoMuted}
                 playsInline
                 controls={false}
                 preload="auto"
-                onPlaying={() => {
-                  setTimeout(() => {
-                    setIsVideoMuted(false);
-                  }, 100);
-                }}
+                
                 onEnded={(e) => {
                   const video = e.currentTarget;
                   video.pause();

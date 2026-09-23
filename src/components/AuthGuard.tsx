@@ -27,7 +27,23 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
                         
   const isArenaRoute = pathname.startsWith('/interview/') || 
                        pathname.startsWith('/special-hr-interview');
-
+                       
+                       useEffect(() => {
+                        const markSiteExit = () => {
+                          try {
+                            localStorage.setItem('celvivo_site_left', 'true');
+                          } catch {
+                            // Ignore storage errors
+                          }
+                        };
+                      
+                        window.addEventListener('pagehide', markSiteExit);
+                      
+                        return () => {
+                          window.removeEventListener('pagehide', markSiteExit);
+                        };
+                      }, []);
+                      
   useEffect(() => {
     // If auth state is settled and no user exists on a protected route, redirect to login
     if (!loading && !user && !isPublicRoute && !isArenaRoute) {

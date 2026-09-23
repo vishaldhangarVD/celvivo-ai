@@ -48,7 +48,7 @@ function SignupContent() {
       if (!userDocSnap.exists()) {
         await setDoc(userDocRef, {
           uid: authUser.uid,
-          displayName: authUser.displayName || "Operator",
+          displayName: authUser.displayName || "User",
           email: authUser.email || "",
           photoURL: authUser.photoURL || null,
           jobReadinessScore: 0,
@@ -160,8 +160,8 @@ function SignupContent() {
       await setDoc(doc(db, 'users', userCredential.user.uid), userProfile);
 
       toast({
-        title: "Account Created",
-        description: "Welcome to CELVIVO AI. Your identity has been initialized.",
+        title: "Account created successfully",
+        description: "Welcome to CELVIVO AI. Your Your account is ready..",
       });
       
       router.push(redirectTo);
@@ -204,7 +204,7 @@ function SignupContent() {
       <div className="particles-bg" />
       <Link href="/" className="absolute top-12 left-12 flex items-center gap-3 text-xs font-bold tracking-widest uppercase text-white/40 hover:text-white transition-colors">
         <ArrowLeft className="w-4 h-4" />
-        Back to Nexus
+        Back to Home
       </Link>
 
       <motion.div
@@ -217,7 +217,7 @@ function SignupContent() {
             <img src="/LOGO.png" alt="Celvivo AI" className="w-full h-full object-contain" />
           </div>
           <h1 className="text-4xl font-bold tracking-tighter mb-4">Welcome to CELVIVO AI.</h1>
-          <p className="text-muted-foreground font-light">Join the elite network of performance-ready engineers.</p>
+          <p className="text-muted-foreground font-light">Create your account and start preparing for your career.</p>
         </div>
 
         <Card className="premium-card bg-white/[0.02] border-white/5 p-12">
@@ -333,7 +333,7 @@ function SignupContent() {
               <div className="md:col-span-2 flex items-start gap-4 p-6 glass rounded-2xl border-white/5">
                 <ShieldCheck className="w-6 h-6 text-accent shrink-0 mt-1" />
                 <p className="text-[10px] font-medium leading-relaxed text-white/50 tracking-wider">
-                  By initializing, you agree to our Neural Privacy Policy and Protocol Terms. Your data is encrypted and anonymized for neural training.
+                By creating an account, you agree to our Privacy Policy and Terms.
                 </p>
               </div>
               <Button 

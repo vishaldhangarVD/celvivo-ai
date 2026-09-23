@@ -148,6 +148,13 @@ export default function PricingPage() {
         theme: {
           color: '#22d3ee',
         },
+
+        modal: {
+          ondismiss: () => {
+            // वापरकर्त्याने payment popup बंद केलं (cancel केलं) — loader थांबव
+            setLoadingId(null);
+          },
+        },
       };
 
       const Razorpay = (window as any).Razorpay;

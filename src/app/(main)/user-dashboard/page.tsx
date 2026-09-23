@@ -20,7 +20,8 @@ import {
   Zap,
   LayoutGrid,
   ChevronRight,
-  Clock
+  Clock,
+  Activity
 } from 'lucide-react';
 import Link from 'next/link';
 import { useUser, useFirestore, useCollection } from '@/firebase';
@@ -130,13 +131,13 @@ export default function InterviewHistoryPage() {
           
           <header className="flex flex-col md:flex-row justify-between items-end gap-8">
             <div className="space-y-4">
-              <Badge className="bg-accent/20 text-accent border-none px-4 py-1 text-[10px] tracking-widest font-bold uppercase">Archive Matrix v4.2</Badge>
-              <h1 className="text-6xl font-bold tracking-tighter text-premium">Performance <span className="text-gradient-purple">History.</span></h1>
-              <p className="text-xl text-muted-foreground font-light max-xl mx-auto">Deep-dive into your simulation archives and track your evolution trajectory.</p>
+              <Badge className="bg-accent/20 text-accent border-none px-4 py-1 text-[10px] tracking-widest font-bold uppercase">Interview History</Badge>
+              <h1 className="text-6xl font-bold tracking-tighter text-premium">My Interview <span className="text-gradient-purple">History.</span></h1>
+              <p className="text-xl text-muted-foreground font-light max-xl mx-auto">View your past interviews and track your performance progress.</p>
             </div>
             <Link href="/interview">
               <Button className="h-16 px-10 btn-premium flex gap-3 text-xs font-bold tracking-widest uppercase">
-                <Zap className="w-5 h-5" /> Launch New Simulation
+                <Zap className="w-5 h-5" /> Start New Interview
               </Button>
             </Link>
           </header>
@@ -145,8 +146,8 @@ export default function InterviewHistoryPage() {
           <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
             {[
               { label: "Total Sessions", val: stats.total, icon: History, color: "text-blue-400" },
-              { label: "Master Score", val: `${stats.avg}%`, icon: Trophy, color: "text-accent" },
-              { label: "Best Efficiency", val: `${stats.best}%`, icon: Award, color: "text-orange-400" },
+              { label: "Average Score", val: `${stats.avg}%`, icon: Trophy, color: "text-accent" },
+              { label: "Best Score", val: `${stats.best}%`, icon: Award, color: "text-orange-400" },
               { label: "Avg Readiness", val: `${stats.avgReadiness}%`, icon: Target, color: "text-purple-400" }
             ].map((stat, i) => (
               <motion.div
@@ -171,10 +172,10 @@ export default function InterviewHistoryPage() {
               <Card className="premium-card bg-white/[0.01] border-white/5 p-10">
                 <CardHeader className="p-0 mb-12 flex flex-row items-center justify-between">
                   <CardTitle className="text-2xl font-bold flex items-center gap-4">
-                    <TrendingUp className="w-8 h-8 text-accent" /> Evolution Trajectory
+                    <TrendingUp className="w-8 h-8 text-accent" /> Performance Progress
                   </CardTitle>
                   <div className="flex gap-4">
-                    <Badge variant="outline" className="border-accent/30 text-accent font-bold text-[8px] uppercase tracking-widest px-3 py-1">Score Index</Badge>
+                    <Badge variant="outline" className="border-accent/30 text-accent font-bold text-[8px] uppercase tracking-widest px-3 py-1">Interview Score</Badge>
                     <Badge variant="outline" className="border-purple-500/30 text-purple-400 font-bold text-[8px] uppercase tracking-widest px-3 py-1">Readiness</Badge>
                   </div>
                 </CardHeader>
@@ -206,7 +207,7 @@ export default function InterviewHistoryPage() {
                   ) : (
                     <div className="h-full flex flex-col items-center justify-center text-center space-y-4">
                       <Activity className="w-16 h-16 text-white/5" />
-                      <p className="text-muted-foreground font-light max-w-xs italic">Complete multiple sessions to visualize your neural growth trajectory.</p>
+                      <p className="text-muted-foreground font-light max-w-xs italic">Complete multiple sessions to visualize your performance progress.</p>
                     </div>
                   )}
                 </div>
@@ -250,7 +251,7 @@ export default function InterviewHistoryPage() {
               {interviewsLoading ? (
                 <div className="py-32 flex flex-col items-center gap-6">
                   <Loader2 className="w-12 h-12 text-accent animate-spin" />
-                  <p className="text-[10px] font-bold uppercase tracking-[0.4em] text-accent">Querying Archives...</p>
+                  <p className="text-[10px] font-bold uppercase tracking-[0.4em] text-accent">Loading Interviews...</p>
                 </div>
               ) : filteredInterviews.length > 0 ? (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -279,7 +280,7 @@ export default function InterviewHistoryPage() {
 
                           <div className="grid grid-cols-2 gap-4">
                             <div className="p-4 glass rounded-2xl border-white/5 space-y-2">
-                               <p className="text-[8px] uppercase font-bold text-white/30 tracking-widest">Efficiency</p>
+                               <p className="text-[8px] uppercase font-bold text-white/30 tracking-widest">Interview Score</p>
                                <div className="flex items-end gap-2">
                                  <span className="text-xl font-bold tabular-nums text-white">{session.overallScore}%</span>
                                </div>
@@ -299,7 +300,7 @@ export default function InterviewHistoryPage() {
                             </div>
                             <Link href={`/feedback/${session.id}`} className="block">
                               <Button className="w-full h-12 rounded-xl glass border-white/10 hover:bg-accent hover:text-black group/btn text-[10px] font-bold uppercase tracking-widest transition-all">
-                                Launch Master Audit <ChevronRight className="ml-2 w-4 h-4 group-hover/btn:translate-x-1 transition-transform" />
+                              View Feedback<ChevronRight className="ml-2 w-4 h-4 group-hover/btn:translate-x-1 transition-transform" />
                               </Button>
                             </Link>
                           </div>
@@ -311,9 +312,9 @@ export default function InterviewHistoryPage() {
               ) : (
                 <div className="py-32 text-center glass rounded-[3rem] border-white/5 border-dashed">
                   <LayoutGrid className="w-16 h-16 text-white/5 mx-auto mb-6" />
-                  <h3 className="text-2xl font-bold mb-2">Archive Set Empty</h3>
+                  <h3 className="text-2xl font-bold mb-2">No Interviews Found</h3>
                   <p className="text-muted-foreground font-light max-sm mx-auto">
-                    No session archives found matching your criteria. Initialize a new simulation to begin tracking your trajectory.
+                    No No interviews found matching your search. Start a new interview to track your progress.
                   </p>
                 </div>
               )}
