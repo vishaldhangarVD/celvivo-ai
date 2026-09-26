@@ -18,9 +18,8 @@ import {
   Star,
   Users,
   Lock,
-  Twitter,
-  Linkedin,
-  Github,
+  Instagram,
+  Globe,
   ArrowUpRight
 } from 'lucide-react';
 import { useUser, useFirestore, useCollection } from '@/firebase';
@@ -99,81 +98,69 @@ const itemVariants = {
   }
 };
 
+// Page purn load jhalyavar ekdach true hoto. Site madhe aatun firtana tasach rahto (video chalat nahi).
+// Site sodun parat aala ki page navin load hoto aani he parat false hota (video chalto).
+let videoPlayedInThisVisit = false;
+
+if (typeof window !== 'undefined') {
+  // Back button ne baherun parat aala aani browser ne junach page jasa cha tasa dila tari video chalava
+  window.addEventListener('pageshow', (e) => {
+    if ((e as PageTransitionEvent).persisted) videoPlayedInThisVisit = false;
+  });
+}
+
 const HeroSection = memo(({ onStart, onEnterRoom }: { onStart: () => void, onEnterRoom: () => void }) => {
   const [isVideoMuted, setIsVideoMuted] = useState(true);
-const [shouldPlayVideo, setShouldPlayVideo] = useState(false);
-const videoRef = useRef<HTMLVideoElement>(null);
+  const [shouldPlayVideo, setShouldPlayVideo] = useState(false);
+  const videoRef = useRef<HTMLVideoElement>(null);
 
-useEffect(() => {
-  const PLAYED_KEY = 'celvivo_home_video_played';
-  const LEFT_SITE_KEY = 'celvivo_site_left';
+  // NAVIN useEffect (jya jaga junha PLAYED_KEY / LEFT_SITE_KEY wala hota)
+  useEffect(() => {
+    const nav = performance.getEntriesByType('navigation')[0] as
+      | PerformanceNavigationTiming
+      | undefined;
 
-  try {
-    const hasPlayed = sessionStorage.getItem(PLAYED_KEY) === 'true';
-    const siteWasLeft = localStorage.getItem(LEFT_SITE_KEY) === 'true';
-
-    const navigationEntry =
-      performance.getEntriesByType('navigation')[0] as
-        | PerformanceNavigationTiming
-        | undefined;
-
-    const navigationType = navigationEntry?.type;
-
-    // Refresh → don't play
-    if (navigationType === 'reload') {
-      setShouldPlayVideo(false);
-      return;
+    if (!videoPlayedInThisVisit) {
+      videoPlayedInThisVisit = true;
+      // Refresh (F5) kela tar video chalvu nako. Refresh var pn chalva asel tar ha if kadhun tak.
+      if (nav?.type !== 'reload') setShouldPlayVideo(true);
     }
 
-    // Completely left website → came back → play
-    if (siteWasLeft) {
-      setShouldPlayVideo(true);
+    const onPageShow = (e: PageTransitionEvent) => {
+      if (e.persisted) {
+        videoPlayedInThisVisit = true;
+        setShouldPlayVideo(false);
+        setTimeout(() => setShouldPlayVideo(true), 50);
+      }
+    };
+    window.addEventListener('pageshow', onPageShow);
+    return () => window.removeEventListener('pageshow', onPageShow);
+  }, []);
 
-      localStorage.removeItem(LEFT_SITE_KEY);
-      sessionStorage.setItem(PLAYED_KEY, 'true');
+  // Haa tujha junach dusra useEffect aahe, kahi badal nahi
+  useEffect(() => {
+    if (!shouldPlayVideo || !videoRef.current) return;
 
-      return;
-    }
+    const video = videoRef.current;
 
-    // First visit → play
-    if (!hasPlayed) {
-      setShouldPlayVideo(true);
-      sessionStorage.setItem(PLAYED_KEY, 'true');
+    video.currentTime = 0;
+    video.muted = true;
 
-      return;
-    }
+    video.play()
+      .then(() => {
+        console.log('[CELVIVO VIDEO] ▶️ Video started');
 
-    // Internal navigation → don't play
-    setShouldPlayVideo(false);
-
-  } catch (error) {
-    console.error('Video session logic error:', error);
-  }
-}, []);
-
-useEffect(() => {
-  if (!shouldPlayVideo || !videoRef.current) return;
-
-  const video = videoRef.current;
-
-  video.currentTime = 0;
-  video.muted = true;
-
-  video.play()
-    .then(() => {
-      console.log('[CELVIVO VIDEO] ▶️ Video started');
-
-      setTimeout(() => {
-        if (video && !video.paused) {
-          video.muted = false;
-          setIsVideoMuted(false);
-        }
-      }, 100);
-    })
-    .catch((error) => {
-      console.error('[CELVIVO VIDEO] ❌ Play failed:', error);
-    });
-}, [shouldPlayVideo]);
+        setTimeout(() => {
+          if (video && !video.paused) {
+            video.muted = false;
+            setIsVideoMuted(false);
+          }
+        }, 100);
+      })
+      .catch((error) => {
+        console.error('[CELVIVO VIDEO] ❌ Play failed:', error);
+      });
+  }, [shouldPlayVideo]);
 
   return (
     <div className="container mx-auto max-w-7xl">
@@ -215,7 +202,7 @@ useEffect(() => {
             </Button>
             <Link href="/resume-atelier">
               <Button variant="outline" className="h-14 px-8 glass border-white/10 rounded-2xl text-[10px] font-bold tracking-widest uppercase hover:bg-white/5">
-                🤖 Resume Atelier
+                🤖 Resume Builder
               </Button>
             </Link>
           </div>
@@ -485,7 +472,7 @@ export default function LandingPage() {
             <Badge className="bg-accent/20 text-accent border-none px-6 py-1.5 font-bold tracking-[0.4em] text-[10px] uppercase">Testimonials</Badge>
             <h2 className="text-5xl md:text-6xl font-bold tracking-tighter text-premium">Success <span className="text-gradient-purple">Stories.</span></h2>
             <p className="text-muted-foreground font-light max-w-2xl mx-auto text-lg">
-              Engineers from the world's most innovative companies used CELVIVO AI to master their interviews.
+            See how students and professionals used CELVIVO AI to prepare for their interviews.
             </p>
             <div className="pt-8">
               <FeedbackDialog />
@@ -533,6 +520,57 @@ export default function LandingPage() {
           </motion.div>
         </div>
       </section>
+      {/*
+  ============================================================
+  HE PASTE KAR: Success Stories chya </section> nantar
+  aani <footer className="mt-auto pt-32 ..."> chya ADHI.
+  Kunhi navin import lagat nahi (motion, Rocket, Button already import aahet).
+  onClick madhe tujhach handleStartMockInterview vaparla aahe.
+  ============================================================
+*/}
+
+<section className="px-8 pb-8 relative">
+  <div className="container mx-auto max-w-7xl">
+    <motion.div
+      initial={{ opacity: 0, y: 40 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true, margin: "-80px" }}
+      transition={{ duration: 0.6, ease: "easeOut" }}
+      className="relative overflow-hidden rounded-[28px] border border-white/5 px-8 py-10 md:px-10 flex flex-col md:flex-row md:items-center md:justify-between gap-8"
+      style={{
+        background:
+          "radial-gradient(ellipse 60% 120% at 0% 40%, rgba(45,85,100,0.55), transparent 70%), radial-gradient(ellipse 50% 120% at 100% 60%, rgba(150,110,200,0.28), transparent 70%), #1d2029",
+      }}
+    >
+      <div className="max-w-2xl space-y-4">
+        <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#0b0e14]">
+          <span className="w-2 h-2 rounded-full bg-cyan-500" />
+          <span className="text-[10px] font-mono font-semibold tracking-[0.08em] uppercase text-cyan-300">
+          Try It Free / Starts in 1 Click
+          </span>
+        </div>
+
+        <h2 className="font-headline text-4xl md:text-[40px] font-bold leading-[1.15] tracking-tight text-slate-200">
+        Ready to Crack Your Next IT Interview?
+        </h2>
+
+        <p className="text-sm text-white/60 leading-relaxed max-w-xl">
+        Practice with AI mock interviews, get instant feedback on how you speak, and take coding tests that check your code automatically.
+        </p>
+      </div>
+
+      <motion.div whileHover={{ y: -2, scale: 1.02 }} whileTap={{ scale: 0.97 }} className="shrink-0">
+        <Button
+          onClick={handleStartMockInterview}
+          className="group/cta h-auto w-full md:w-auto px-10 py-5 rounded-[14px] text-base font-medium text-[#2e1065] bg-gradient-to-r from-[#a78bfa] via-[#7c3aed] to-[#e2cfff] hover:from-[#a78bfa] hover:via-[#7c3aed] hover:to-[#e2cfff] shadow-[0_0_34px_rgba(167,139,250,0.55)] hover:shadow-[0_0_46px_rgba(167,139,250,0.75)] transition-shadow"
+        >
+          <Rocket className="mr-2 w-5 h-5 transition-transform group-hover/cta:translate-x-0.5 group-hover/cta:-translate-y-0.5" />
+          Launch Simulation Now
+        </Button>
+      </motion.div>
+    </motion.div>
+  </div>
+</section>
 
       <footer className="mt-auto pt-32 pb-12 px-8 border-t border-white/5 bg-black/20">
         <div className="container mx-auto max-w-7xl">
@@ -550,19 +588,34 @@ export default function LandingPage() {
                 The global standard for high-fidelity technical interview preparation. Calibrated for elite IT performance.
               </p>
               <div className="flex gap-4">
-                {[Twitter, Linkedin, Github].map((Icon, i) => (
-                  <button key={i} className="w-10 h-10 rounded-xl glass border-white/5 flex items-center justify-center text-white/20 hover:text-accent hover:border-accent/20 transition-all">
-                    <Icon className="w-4 h-4" />
-                  </button>
-                ))}
-              </div>
+  <motion.a
+    href="https://www.instagram.com/celvivo.ai?stkn=NGMxODlnNmM5ejlj"
+    target="_blank"
+    rel="noopener noreferrer"
+    whileHover={{ scale: 1.1, rotate: 8 }}
+    whileTap={{ scale: 0.95 }}
+    className="w-14 h-14 rounded-xl flex items-center justify-center bg-gradient-to-br from-yellow-400 via-pink-500 to-purple-600 text-white shadow-lg shadow-pink-500/30 transition-shadow hover:shadow-pink-500/50"
+  >
+    <Instagram className="w-6 h-6" />
+  </motion.a>
+  <motion.a
+    href="https://celvivoai.com/"
+    target="_blank"
+    rel="noopener noreferrer"
+    whileHover={{ scale: 1.1, rotate: -8 }}
+    whileTap={{ scale: 0.95 }}
+    className="w-14 h-14 rounded-xl flex items-center justify-center bg-gradient-to-br from-cyan-400 to-blue-600 text-white shadow-lg shadow-cyan-500/30 transition-shadow hover:shadow-cyan-500/50"
+  >
+    <Globe className="w-6 h-6" />
+  </motion.a>
+</div>
             </div>
 
             <div className="grid grid-cols-2 md:grid-cols-3 md:col-span-3 gap-12">
               <div className="space-y-6">
                 <h4 className="text-[10px] font-black uppercase tracking-[0.4em] text-white">Platform</h4>
                 <ul className="space-y-4">
-                  {['Features', 'Pricing', 'Question Bank', 'About'].map((item) => (
+                {['Pricing', 'About'].map((item) => (
                     <li key={item}>
                       <Link href={`/${item.toLowerCase().replace(' ', '-')}`} className="text-sm text-white/40 hover:text-accent transition-colors flex items-center gap-2 group">
                         {item} <ArrowUpRight className="w-3 h-3 opacity-0 group-hover:opacity-100 transition-all" />
@@ -586,9 +639,9 @@ export default function LandingPage() {
               <div className="space-y-6">
                 <h4 className="text-[10px] font-black uppercase tracking-[0.4em] text-white">Support</h4>
                 <ul className="space-y-4">
-                  {['Documentation', 'Contact', 'Privacy Policy', 'Terms of Service'].map((item) => (
-                    <li key={item}>
-                      <Link href={item === 'Contact' ? '/contact' : '#'} className="text-sm text-white/40 hover:text-accent transition-colors flex items-center gap-2 group">
+                {['Documentation', 'Contact', 'Privacy Policy', 'Terms of Service'].map((item) => (
+  <li key={item}>
+    <Link href={item === 'Contact' ? '/about#contact' : '#'} className="text-sm text-white/40 hover:text-accent transition-colors flex items-center gap-2 group">
                         {item} <ArrowUpRight className="w-3 h-3 opacity-0 group-hover:opacity-100 transition-all" />
                       </Link>
                     </li>

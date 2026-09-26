@@ -326,6 +326,19 @@ export default function ResumeAtelierPage() {
 
   const handleCreateNew = async () => {
     if (!user || !db) return;
+
+    const accessRes = await fetch('/api/usage/consume', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ userId: user.uid, feature: 'resumeBuilder' }),
+    });
+    const accessData = await accessRes.json();
+    if (!accessData.allowed) {
+      toast({ variant: "destructive", title: "Upgrade Required", description: "You've used your free resume. Please purchase a credit or subscribe to continue." });
+      router.push('/pricing');
+      return;
+    }
+
     try {
       const docRef = await addDoc(collection(db, 'users', user.uid, 'resumes_atelier'), {
         ...INITIAL_DATA,

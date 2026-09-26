@@ -1,7 +1,7 @@
 'use client';
 
-import { useState } from 'react';
-import { motion } from 'framer-motion';
+import { useState, useEffect } from 'react';
+import { motion, type Variants } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
@@ -13,16 +13,37 @@ import Script from 'next/script';
 import { cn } from '@/lib/utils';
 
 const CREDIT_PACKS = [
-  { id: 'aptitude_1', name: 'Aptitude Test', price: 15, desc: '1 Aptitude Credit', icon: Star },
-  { id: 'coding_1', name: 'Coding Round', price: 20, desc: '1 Coding Credit', icon: Zap },
-  { id: 'interview_1', name: 'Interview Session', price: 10, desc: '1 Interview Credit', icon: Sparkles },
-  { id: 'bundle_1', name: 'Full Practice Pack', price: 49, desc: '1 of each Credit', icon: Crown, popular: true },
+  {
+    id: 'bundle_1',
+    name: 'Full Practice Pack',
+    price: 49,
+    desc: '1 of each Credit',
+    icon: Crown,
+    popular: true,
+    features: [
+      '1 Special HR Interview',
+      '1 Aptitude Round',
+      '1 Coding Round',
+      '1 Interview Round',
+      '2 Resume Builder',
+    ],
+  },
 ];
 
 const PLANS = [
-  { id: 'starter', name: 'Starter Plan', price: 299, desc: 'For consistent practice', features: ['15 Aptitude Tests', '10 Coding Rounds', '10 AI Interviews'] },
-  { id: 'pro', name: 'Pro Plan', price: 599, desc: 'Unrestricted growth', features: ['Unlimited Aptitude', 'Unlimited Coding', 'Unlimited Interviews'], popular: true },
+  { id: 'starter', name: 'Starter Plan', price: 299, desc: 'For consistent practice', features: ['05 Special HR Interview','15 Aptitude Tests', '10 Coding Rounds', '10 AI Interviews','Resume Builder','Advanced Feedback','Learning Roadmap'] },
+  { id: 'pro', name: 'Pro Plan', price: 599, desc: 'Unrestricted growth', features: ['Everything in Pro','15 Special HR Interview','Unlimited Aptitude', 'Unlimited Coding', 'Unlimited Interviews','Unlimited Resume Builder','Advanced Reports','Confidence Analysis','Communication Analysis','Technical Analysis','Personalized Career Guidance','Premium Support'], popular: true },
 ];
+
+// ── design-only: entrance + hover motion variants ──────────────────────────
+const containerVariants: Variants = {
+  hidden: {},
+  show: { transition: { staggerChildren: 0.12 } },
+};
+const cardVariants: Variants = {
+  hidden: { opacity: 0, y: 16 },
+  show: { opacity: 1, y: 0, transition: { duration: 0.5, ease: 'easeOut' } },
+};
 
 export default function PricingPage() {
   const router = useRouter();
@@ -31,10 +52,9 @@ export default function PricingPage() {
   const { toast } = useToast();
   const [loadingId, setLoadingId] = useState<string | null>(null);
 
-  const handlePurchase = async (pack: any, type: 'order' | 'subscription') => {
-    if (!user) {
-      return router.push('/login?redirectTo=/pricing');
-    }
+  // Yaने actual Razorpay checkout suru hoto — फक्त user already logged-in astana call hoto
+  const startPurchase = async (pack: any, type: 'order' | 'subscription') => {
+    if (!user) return;
 
     setLoadingId(pack.id);
 
@@ -178,60 +198,122 @@ export default function PricingPage() {
     }
   };
 
+  // Yaने button clicks handle hotat — user logged-in nasel tar purchase intent save karून login kade pathavto
+  const handlePurchase = (pack: any, type: 'order' | 'subscription') => {
+    if (!user) {
+      sessionStorage.setItem('pendingPurchase', JSON.stringify({ packId: pack.id, type }));
+      return router.push('/login?redirectTo=/pricing');
+    }
+    return startPurchase(pack, type);
+  };
+
+  // Login nantar pricing page var परत aalyavar, jar pending purchase असेल tar automatically checkout ughad
+  useEffect(() => {
+    if (!user) return;
+    const pending = sessionStorage.getItem('pendingPurchase');
+    if (!pending) return;
+
+    sessionStorage.removeItem('pendingPurchase');
+    try {
+      const { packId, type } = JSON.parse(pending);
+      const fullPack = type === 'order'
+        ? CREDIT_PACKS.find(p => p.id === packId)
+        : PLANS.find(p => p.id === packId);
+      if (fullPack) startPurchase(fullPack, type);
+    } catch (e) {
+      console.error('Failed to resume pending purchase:', e);
+    }
+  }, [user]);
+
   return (
     <div className="min-h-screen bg-[#050816] pt-32 pb-24 px-6">
       <Script src="https://checkout.razorpay.com/v1/checkout.js" />
-      <div className="max-w-7xl mx-auto space-y-20">
+      <div className="max-w-7xl mx-auto space-y-16">
         <div className="text-center space-y-4">
-          <h1 className="text-6xl font-bold tracking-tighter text-premium">Simple <span className="text-gradient-purple">Pricing.</span></h1>
-          <p className="text-muted-foreground font-light max-w-xl mx-auto">Choose flexible credits or monthly plans for your interview preparation.</p>
+          <h1 className="text-6xl font-bold tracking-tighter text-premium">Choose Your <span className="text-gradient-purple">Plan.</span></h1>
+          <p className="text-muted-foreground font-light max-w-xl mx-auto">Buy a one-time pack to try it out, or subscribe monthly for unlimited interview practice.</p>
         </div>
 
-        <div className="grid lg:grid-cols-2 gap-16">
+        {/* asymmetric columns: left column ata card chya rundi itkich (~400px), mule madhla dead space nighun gela */}
+        <div className="grid lg:grid-cols-[minmax(0,400px)_1fr] gap-8 items-start">
           {/* Credits Section */}
           <section className="space-y-8">
             <h2 className="text-xl font-bold flex items-center gap-3"><CreditCard className="text-accent" /> One-Time Credits</h2>
-            <div className="grid sm:grid-cols-2 gap-4">
+            <motion.div
+              className="grid gap-4"
+              variants={containerVariants}
+              initial="hidden"
+              whileInView="show"
+              viewport={{ once: true, amount: 0.3 }}
+            >
               {CREDIT_PACKS.map(pack => (
-                <Card key={pack.id} className="p-6 glass border-white/5 hover:border-accent/30 transition-all">
-                  <div className="flex justify-between items-start mb-4">
-                    <pack.icon className="w-6 h-6 text-accent" />
-                    <span className="text-lg font-bold">₹{pack.price}</span>
-                  </div>
-                  <h3 className="font-bold mb-1">{pack.name}</h3>
-                  <p className="text-[10px] text-white/40 uppercase mb-6">{pack.desc}</p>
-                  <Button onClick={() => handlePurchase(pack, 'order')} disabled={loadingId === pack.id} className="w-full btn-premium h-10 text-[9px]">
-                    {loadingId === pack.id ? <Loader2 className="animate-spin" /> : "Buy Credit"}
-                  </Button>
-                </Card>
+                <motion.div key={pack.id} variants={cardVariants} whileHover={{ y: -4 }} transition={{ type: 'spring', stiffness: 300, damping: 22 }}>
+                  <Card className="p-8 glass border-white/5 hover:border-accent/30 hover:shadow-[0_20px_40px_-24px_rgba(76,111,255,0.5)] transition-all duration-300">
+                    <div className="flex justify-between items-start mb-5">
+                      <div className="w-12 h-12 rounded-lg bg-accent/10 flex items-center justify-center">
+                        <pack.icon className="w-6 h-6 text-accent" />
+                      </div>
+                      <span className="text-2xl font-bold">₹{pack.price}</span>
+                    </div>
+                    <h3 className="text-lg font-bold mb-1">{pack.name}</h3>
+                    <p className="text-xs text-white/40 uppercase mb-6 tracking-wide">{pack.desc}</p>
+                    {pack.features && (
+                      <div className="space-y-3.5 mb-8">
+                        {pack.features.map(f => (
+                          <div key={f} className="flex gap-2.5 text-sm text-white/70">
+                            <Check className="w-4 h-4 text-accent shrink-0 mt-0.5" /> {f}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    <Button onClick={() => handlePurchase(pack, 'order')} disabled={loadingId === pack.id} className="w-full btn-premium h-12 text-sm font-semibold hover:-translate-y-0.5 transition-transform">
+                      {loadingId === pack.id ? <Loader2 className="animate-spin" /> : "Buy Credit"}
+                    </Button>
+                  </Card>
+                </motion.div>
               ))}
-            </div>
+            </motion.div>
           </section>
 
           {/* Subscriptions Section */}
           <section className="space-y-8">
             <h2 className="text-xl font-bold flex items-center gap-3"><Crown className="text-purple-400" /> Monthly Subscriptions</h2>
-            <div className="grid sm:grid-cols-2 gap-4">
+            <motion.div
+              className="grid sm:grid-cols-2 gap-4"
+              variants={containerVariants}
+              initial="hidden"
+              whileInView="show"
+              viewport={{ once: true, amount: 0.3 }}
+            >
               {PLANS.map(plan => (
-                <Card key={plan.id} className={cn("p-8 glass border-white/5 relative", plan.popular && "border-purple-500/40")}>
-                  {plan.popular && <Badge className="absolute -top-3 left-1/2 -translate-x-1/2 bg-purple-500">BEST VALUE</Badge>}
-                  <div className="mb-6">
-                    <h3 className="text-2xl font-bold">{plan.name}</h3>
-                    <p className="text-3xl font-black mt-2">₹{plan.price}<span className="text-sm text-white/40">/mo</span></p>
-                  </div>
-                  <div className="space-y-3 mb-8">
-                    {plan.features.map(f => (
-                      <div key={f} className="flex gap-2 text-[10px] text-white/70">
-                        <Check className="w-3 h-3 text-purple-400" /> {f}
-                      </div>
-                    ))}
-                  </div>
-                  <Button onClick={() => handlePurchase(plan, 'subscription')} disabled={loadingId === plan.id} className="w-full btn-premium h-12 text-[10px]">
-                    {loadingId === plan.id ? <Loader2 className="animate-spin" /> : "Subscribe"}
-                  </Button>
-                </Card>
+                <motion.div key={plan.id} variants={cardVariants} whileHover={{ y: -4 }} transition={{ type: 'spring', stiffness: 300, damping: 22 }}>
+                  <Card className={cn(
+                    "p-8 glass border-white/5 relative transition-all duration-300 hover:shadow-[0_20px_40px_-24px_rgba(76,111,255,0.5)]",
+                    plan.popular ? "border-purple-500/40 hover:border-purple-500/60" : "hover:border-accent/30"
+                  )}>
+                    {plan.popular && (
+                      <Badge className="absolute -top-3.5 left-1/2 -translate-x-1/2 bg-gradient-to-r from-purple-500 to-cyan-400 text-[#0a0d18] border-0 text-xs font-bold px-3 py-1">
+                        BEST VALUE
+                      </Badge>
+                    )}
+                    <div className="mb-7">
+                      <h3 className="text-2xl font-bold">{plan.name}</h3>
+                      <p className="text-4xl font-black mt-2">₹{plan.price}<span className="text-base text-white/40 font-medium">/mo</span></p>
+                    </div>
+                    <div className="space-y-3.5 mb-8">
+                      {plan.features.map(f => (
+                        <div key={f} className="flex gap-2.5 text-sm text-white/70">
+                          <Check className="w-4 h-4 text-purple-400 shrink-0 mt-0.5" /> {f}
+                        </div>
+                      ))}
+                    </div>
+                    <Button onClick={() => handlePurchase(plan, 'subscription')} disabled={loadingId === plan.id} className="w-full btn-premium py-3.5 text-sm font-semibold hover:-translate-y-0.5 transition-transform">
+                      {loadingId === plan.id ? <Loader2 className="animate-spin" /> : "Subscribe"}
+                    </Button>
+                  </Card>
+                </motion.div>
               ))}
-            </div>
+            </motion.div>
           </section>
         </div>
       </div>

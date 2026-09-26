@@ -393,6 +393,19 @@ function CodingEngineContent() {
         return;
       }
 
+      // Access-control gate: coding round never has a free quota
+      const accessRes = await fetch('/api/usage/consume', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: user.uid, feature: 'coding' }),
+      });
+      const accessData = await accessRes.json();
+      if (!accessData.allowed) {
+        toast({ variant: "destructive", title: "Upgrade Required", description: "Please purchase a credit or subscribe to unlock the coding round." });
+        router.push('/pricing');
+        return;
+      }
+
       initLoadingRef.current = true;
       setInitError(null);
 

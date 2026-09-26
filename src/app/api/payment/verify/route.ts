@@ -7,7 +7,7 @@ const PACK_CREDITS: Record<string, Record<string, number>> = {
   aptitude_1: { aptitude: 1 },
   coding_1: { coding: 1 },
   interview_1: { interview: 1 },
-  bundle_1: { aptitude: 1, coding: 1, interview: 1 },
+  bundle_1: { aptitude: 1, coding: 1, interview: 1, specialHR: 1, resumeBuilder: 2 },
 };
 
 export async function POST(req: Request) {

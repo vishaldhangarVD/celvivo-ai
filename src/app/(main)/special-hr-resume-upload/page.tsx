@@ -51,6 +51,21 @@ export default function SpecialHRResumeUpload() {
         return;
       }
 
+      if (!user) return;
+
+      // Access-control gate: Special HR never has a free quota
+      const accessRes = await fetch('/api/usage/consume', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: user.uid, feature: 'specialHR' }),
+      });
+      const accessData = await accessRes.json();
+      if (!accessData.allowed) {
+        toast({ variant: "destructive", title: "Upgrade Required", description: "Special HR Interview requires a credit or subscription." });
+        router.push('/pricing');
+        return;
+      }
+
       setFile(selected);
       setIsUploaded(true);
       toast({ title: "Resume Uploaded Successfully", description: "Your resume has been uploaded and is ready." });

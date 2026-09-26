@@ -326,8 +326,22 @@ export default function InterviewSetupPage() {
       return;
     }
 
-    console.log("🟢 [STEP 2] All checks passed, setting loading state");
-    setLoadingTarget(targetPath);
+        // Access-control gate: free-quota / credit / subscription check
+        const feature = targetPath === 'aptitude' ? 'aptitude' : 'interview';
+        const accessRes = await fetch('/api/usage/consume', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ userId: user.uid, feature }),
+        });
+        const accessData = await accessRes.json();
+        if (!accessData.allowed) {
+          toast({ variant: "destructive", title: "Upgrade Required", description: "You've used your free round. Please purchase a credit or subscribe to continue." });
+          router.push('/pricing');
+          return;
+        }
+    
+        console.log("🟢 [STEP 2] All checks passed, setting loading state");
+        setLoadingTarget(targetPath);
 
     const sessionId = Math.random().toString(36).substring(7);
     console.log("🟢 [STEP 3] Generated sessionId:", sessionId);
