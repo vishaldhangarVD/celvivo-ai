@@ -2,8 +2,8 @@
 
 import { useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
-import { useUser, useFirestore, useDoc } from '@/firebase';
-import { doc } from 'firebase/firestore';
+import { useUser, useFirestore, useDoc, useCollection } from '@/firebase';
+import { doc, collection, query, where, updateDoc, deleteDoc } from 'firebase/firestore';
 import { motion } from 'framer-motion';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -21,7 +21,10 @@ import {
   MessageSquare,
   Lock,
   Flag,
-  ServerCrash
+  ServerCrash,
+  CheckCircle2,
+  XCircle,
+  Star
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
@@ -36,6 +39,22 @@ export default function FounderConsole() {
   }, [db, user?.uid]);
 
   const { data: profile, loading: profileLoading } = useDoc(profileRef);
+  const pendingFeedbackQuery = useMemo(() => {
+    if (!db) return null;
+    return query(collection(db, 'userFeedback'), where('status', '==', 'pending'));
+  }, [db]);
+
+  const { data: pendingFeedback, loading: feedbackLoading } = useCollection(pendingFeedbackQuery);
+
+  const handleApprove = async (id: string) => {
+    if (!db) return;
+    await updateDoc(doc(db, 'userFeedback', id), { status: 'approved' });
+  };
+
+  const handleReject = async (id: string) => {
+    if (!db) return;
+    await deleteDoc(doc(db, 'userFeedback', id));
+  };
 
   useEffect(() => {
     // 1. Wait for auth to initialize
@@ -167,6 +186,65 @@ export default function FounderConsole() {
                       <Badge variant="outline" className="text-[10px] border-green-500/20 text-green-400 font-bold uppercase">{usr.status}</Badge>
                     </div>
                   ))}
+                </CardContent>
+              </Card>
+              <Card className="premium-card bg-white/[0.01] border-white/5 p-10">
+                <CardHeader className="p-0 mb-8 flex flex-row items-center justify-between">
+                  <CardTitle className="text-xl font-bold flex items-center gap-3">
+                    <MessageSquare className="w-6 h-6 text-accent" /> Pending Testimonials
+                  </CardTitle>
+                  <Badge className="bg-accent/20 text-accent border-none font-bold text-[10px]">
+                    {pendingFeedback?.length || 0}
+                  </Badge>
+                </CardHeader>
+                <CardContent className="p-0 space-y-4">
+                  {feedbackLoading ? (
+                    <div className="py-8 flex justify-center"><Loader2 className="w-6 h-6 animate-spin text-accent" /></div>
+                  ) : pendingFeedback && pendingFeedback.length > 0 ? (
+                    pendingFeedback.map((fb: any) => (
+                      <div key={fb.id} className="p-6 glass rounded-[2rem] border-white/5 space-y-4">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-4">
+                            <div className="w-10 h-10 rounded-full bg-accent/20 flex items-center justify-center text-accent font-bold overflow-hidden">
+                              {fb.photoURL ? (
+                                <img src={fb.photoURL} alt={fb.name} className="w-full h-full object-cover" />
+                              ) : (
+                                fb.name?.[0] || '?'
+                              )}
+                            </div>
+                            <div>
+                              <p className="font-bold text-sm">{fb.name}</p>
+                              <p className="text-[10px] text-muted-foreground uppercase tracking-widest">
+                                {fb.role}{fb.company ? ` @ ${fb.company}` : ''}
+                              </p>
+                            </div>
+                          </div>
+                          <div className="flex gap-1">
+                            {Array.from({ length: fb.rating || 0 }).map((_, idx) => (
+                              <Star key={idx} className="w-3 h-3 text-yellow-400 fill-yellow-400" />
+                            ))}
+                          </div>
+                        </div>
+                        <p className="text-sm text-white/70 font-light leading-relaxed">{fb.feedback}</p>
+                        <div className="flex gap-3">
+                          <Button
+                            onClick={() => handleApprove(fb.id)}
+                            className="flex-1 h-10 rounded-xl bg-green-500/10 text-green-400 border border-green-500/20 hover:bg-green-500/20 text-[10px] font-bold uppercase gap-2"
+                          >
+                            <CheckCircle2 className="w-4 h-4" /> Approve
+                          </Button>
+                          <Button
+                            onClick={() => handleReject(fb.id)}
+                            className="flex-1 h-10 rounded-xl bg-red-500/10 text-red-400 border border-red-500/20 hover:bg-red-500/20 text-[10px] font-bold uppercase gap-2"
+                          >
+                            <XCircle className="w-4 h-4" /> Reject
+                          </Button>
+                        </div>
+                      </div>
+                    ))
+                  ) : (
+                    <p className="text-sm text-white/30 text-center py-8">No pending testimonials.</p>
+                  )}
                 </CardContent>
               </Card>
             </div>

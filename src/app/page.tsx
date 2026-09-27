@@ -194,17 +194,17 @@ const HeroSection = memo(({ onStart, onEnterRoom }: { onStart: () => void, onEnt
           </div>
 
           <div className="flex flex-wrap gap-4 pt-2">
-            <Button 
-              onClick={onStart} 
-              className="h-14 px-8 text-xs btn-premium shadow-[0_20px_50px_rgba(147,51,234,0.3)] transition-all hover:scale-105 active:scale-95"
-            >
-              🚀 Start Mock Interview <Zap className="ml-3 w-4 h-4 fill-current" />
-            </Button>
-            <Link href="/resume-atelier">
-              <Button variant="outline" className="h-14 px-8 glass border-white/10 rounded-2xl text-[10px] font-bold tracking-widest uppercase hover:bg-white/5">
-                🤖 Resume Builder
-              </Button>
-            </Link>
+          <Button 
+  onClick={onStart} 
+  className="h-14 px-8 text-xs btn-premium shadow-[0_20px_50px_rgba(147,51,234,0.3)] transition-all hover:scale-105 active:scale-95"
+>
+  <span className="emoji-icon">🚀</span> Start Mock Interview <Zap className="ml-3 w-4 h-4 fill-current" />
+</Button>
+<Link href="/resume-atelier">
+  <Button variant="outline" className="h-14 px-8 glass border-white/10 rounded-2xl text-[10px] font-bold tracking-widest uppercase hover:bg-white/5">
+    <span className="emoji-icon">🤖</span> Resume Builder
+  </Button>
+</Link>
           </div>
 
           <div className="flex items-center gap-8 pt-4 border-t border-white/5">
@@ -272,13 +272,13 @@ const HeroSection = memo(({ onStart, onEnterRoom }: { onStart: () => void, onEnt
               </div>
               
               <button 
-                onClick={onEnterRoom} 
-                className="w-full h-12 btn-orange-premium text-[9px] font-black tracking-[0.4em] uppercase mt-10 rounded-2xl group/btn overflow-hidden"
-              >
-                <span className="relative z-10 flex items-center justify-center">
-                  🚪 Enter Interview Room <ChevronRight className="ml-2 w-3.5 h-3.5 transition-transform group-hover/btn:translate-x-1" />
-                </span>
-              </button>
+  onClick={onEnterRoom} 
+  className="w-full h-12 btn-orange-premium text-[9px] font-black tracking-[0.4em] uppercase mt-10 rounded-2xl group/btn overflow-hidden"
+>
+  <span className="relative z-10 flex items-center justify-center">
+    <span className="emoji-icon">🚪</span> Enter Interview Room <ChevronRight className="ml-2 w-3.5 h-3.5 transition-transform group-hover/btn:translate-x-1" />
+  </span>
+</button>
             </div>
             
             <div className="relative w-full md:w-[50%] min-h-[400px] md:min-h-full overflow-hidden rounded-r-[3rem] bg-black">

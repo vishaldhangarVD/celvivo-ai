@@ -12,6 +12,9 @@ export const metadata: Metadata = {
 
   description:
     "AI-powered mock interviews, resume analysis, and personalized feedback for tech job seekers.",
+    icons: {
+      icon: "/LOGO.png",
+    },
 
   alternates: {
     canonical: "/",
@@ -35,6 +38,22 @@ export default function RootLayout({
         <link
           href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&family=Space+Grotesk:wght@300;400;500;600;700&display=swap"
           rel="stylesheet"
+        />
+                <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify({
+              "@context": "https://schema.org",
+              "@type": "Organization",
+              name: "Celvivo AI",
+              url: "https://celvivoai.com",
+              logo: "https://celvivoai.com/LOGO.png",
+              founder: {
+                "@type": "Person",
+                name: "Vishal Ramchandra Dhangar",
+              },
+            }),
+          }}
         />
       </head>
 

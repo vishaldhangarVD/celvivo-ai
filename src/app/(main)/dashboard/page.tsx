@@ -98,7 +98,7 @@ export default function Dashboard() {
     
     const scoredSessions = allSessions.filter((i: any) => (i.overallScore || 0) > 0);
     const avg = scoredSessions.length > 0 
-      ? Math.round(scoredSessions.reduce((a, b) => a + (b.overallScore || 0), 0) / scoredSessions.length) 
+      ? Math.round(scoredSessions.reduce((a: number, b: any) => a + (b.overallScore || 0), 0) / scoredSessions.length) 
       : 0;
     
     const best = total > 0 ? Math.max(...allSessions.map((i: any) => i.overallScore || 0)) : 0;
