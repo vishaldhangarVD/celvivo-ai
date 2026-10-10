@@ -11,77 +11,41 @@ export interface CertificateData {
   role: string;
   score: number;
   date: string;
-  certId?: string;
+  certId: string;
 }
 
-/**
- * @fileOverview Nexvoro AI Client-Side PDF Generator.
- * Renders the certificate to a hidden DOM node and captures it via html2canvas.
- * Uses React.createElement instead of JSX to remain compatible with the .ts extension.
- */
 export const generateCertificatePDF = async (data: CertificateData) => {
-  // 1. Create a hidden mount point
   const container = document.createElement('div');
-  container.style.position = 'absolute';
+  container.style.position = 'fixed';
   container.style.left = '-9999px';
-  container.style.top = '-9999px';
+  container.style.top = '0';
   document.body.appendChild(container);
+  const root = createRoot(container);
 
   try {
-    // 2. Render the template into the container
-    const root = createRoot(container);
-    
-    // We wrap in a promise to wait for rendering and images to load
-    await new Promise<void>((resolve) => {
-      root.render(
-        React.createElement(React.StrictMode, null,
-          React.createElement(CertificateTemplate, {
-            userName: data.userName,
-            role: data.role,
-            date: data.date,
-            certId: data.certId || 'NEX-CERT-IDENTITY-X'
-          })
-        )
-      );
-      // Wait for React to finish rendering and for any images/fonts to potentially settle
-      setTimeout(resolve, 1000);
-    });
+    root.render(React.createElement(CertificateTemplate, data));
 
-    const target = document.getElementById('certificate-render-node');
-    if (!target) throw new Error("Render node not found");
+    // wait for fonts + images
+    await new Promise((r) => setTimeout(r, 300));
+    if ((document as any).fonts?.ready) await (document as any).fonts.ready;
+    const imgs = Array.from(container.querySelectorAll('img'));
+    await Promise.all(
+      imgs.map((img) =>
+        img.complete ? Promise.resolve() : new Promise((res) => { img.onload = img.onerror = () => res(null); })
+      )
+    );
+    await new Promise((r) => setTimeout(r, 300));
 
-    // 3. Capture with html2canvas
-    const canvas = await html2canvas(target, {
-      scale: 2, // High resolution
-      useCORS: true,
-      logging: false,
-      backgroundColor: null,
-    });
+    const target = container.querySelector('#certificate-render-node') as HTMLElement | null;
+    if (!target) throw new Error('Render node not found');
 
-    const imgData = canvas.toDataURL('image/png');
+    const canvas = await html2canvas(target, { scale: 2, useCORS: true, logging: false, backgroundColor: '#ffffff' });
 
-    // 4. Generate PDF with jsPDF
-    // Proportions: 1180 x 728
-    const pdf = new jsPDF({
-      orientation: 'landscape',
-      unit: 'px',
-      format: [1180, 728],
-    });
-
-    pdf.addImage(imgData, 'PNG', 0, 0, 1180, 728);
-    
-    // 5. Trigger download
-    pdf.save(`Nexvoro_Credential_${data.userName.replace(/\s+/g, '_')}.pdf`);
-
-    // 6. Cleanup
+    const pdf = new jsPDF({ orientation: 'landscape', unit: 'px', format: [1000, 707] });
+    pdf.addImage(canvas.toDataURL('image/png'), 'PNG', 0, 0, 1000, 707);
+    pdf.save(`Celvivo_Certificate_${data.userName.replace(/\s+/g, '_')}.pdf`);
+  } finally {
     root.unmount();
-    document.body.removeChild(container);
-
-  } catch (error) {
-    console.error("[Certificate Generator] Client-side synthesis failed:", error);
-    if (container.parentNode) {
-      document.body.removeChild(container);
-    }
-    throw error;
+    container.remove();
   }
 };

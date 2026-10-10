@@ -55,6 +55,7 @@ export default function Navbar() {
   const isAuthPage = pathname === '/login' || pathname === '/signup';
   const isInterviewArena = pathname.startsWith('/interview/') && pathname !== '/interview/setup' && pathname !== '/interview/aptitude-result' && pathname !== '/interview/coding-result';
   const isSpecialHRArena = pathname === '/special-hr-interview';
+  const isInstitutePage = pathname === '/institute';
   
   const profileRef = useMemo(() => {
     if (!db || !user?.uid) return null;
@@ -107,9 +108,11 @@ export default function Navbar() {
     router.push('/');
   };
 
-  if (isAuthPage || isInterviewArena || isSpecialHRArena) return null;
+  if (isAuthPage || isInterviewArena || isSpecialHRArena || isInstitutePage) return null;
 
   const isFounder = profile?.role === 'founder';
+  const isTpo = profile?.role === 'tpo';
+  const isSpecialHRActive = pathname.startsWith('/special-hr');
 
   const pillClasses = "relative flex items-center gap-2.5 px-4 py-1.5 rounded-full glass border-white/10 text-[9px] font-black uppercase tracking-widest text-white transition-all duration-250 group/pill";
   const pillActiveClasses = "bg-cyan-500/20 border-cyan-500/50 shadow-[0_0_20px_rgba(34,211,238,0.3)]";
@@ -153,24 +156,39 @@ export default function Navbar() {
 
           {user && (
             <>
-              <Link 
-                href="/special-hr-resume-upload" 
-                className={cn(
-                  pillClasses, 
-                  "border-purple-500/30 bg-purple-500/5 hover:border-purple-400 hover:bg-purple-500/10 hover:-translate-y-[3px] hover:scale-[1.05] hover:shadow-[0_0_30px_rgba(168,85,247,0.25)]", 
-                  pathname.startsWith('/special-hr') && "bg-purple-500 border-purple-400 text-white"
-                )}
-              >
-                <div className={cn(
-                  pillIconWrapperClasses, 
-                  "border-purple-500/20 bg-purple-500/10 text-purple-400 group-hover/pill:text-purple-300", 
-                  pathname.startsWith('/special-hr') && "bg-purple-500 border-purple-400 text-white"
-                )}>
-                  <Sparkles className="w-2.5 h-2.5 animate-pulse" />
-                </div>
-                SPECIAL HR INTERVIEW
-                <span className={cn(pillUnderlineClasses, "bg-purple-400 shadow-[0_0_8px_#a855f7]")} />
-              </Link>
+              <Link
+  href="/special-hr-resume-upload"
+  className={cn(
+    pillClasses,
+    "border-amber-400/60 bg-amber-400/10 text-amber-200 shadow-[0_0_18px_rgba(251,191,36,0.15)] hover:border-amber-300 hover:bg-amber-400/15 hover:-translate-y-[3px] hover:scale-[1.05] hover:shadow-[0_0_30px_rgba(251,191,36,0.35)]",
+    isSpecialHRActive && "bg-amber-400 border-amber-300 text-black"
+  )}
+>
+
+  <div
+    className={cn(
+      pillIconWrapperClasses,
+      "border-amber-400/40 bg-amber-400/20 text-amber-300 group-hover/pill:bg-amber-400/30 group-hover/pill:text-amber-200",
+      isSpecialHRActive && "bg-black/20 border-black/30 text-black"
+    )}
+  >
+    <Crown className="w-2.5 h-2.5" />
+  </div>
+
+  SPECIAL HR INTERVIEW
+
+  {/* PREMIUM tag */}
+  <span
+    className={cn(
+      "px-1.5 py-0.5 rounded border border-amber-400/60 text-amber-300 text-[7px] tracking-widest",
+      isSpecialHRActive && "border-black/40 text-black"
+    )}
+  >
+    PREMIUM
+  </span>
+
+  <span className={cn(pillUnderlineClasses, "bg-amber-300 shadow-[0_0_8px_#fbbf24]")} />
+</Link>
 
               <Link 
                 href="/dashboard" 
@@ -213,7 +231,32 @@ export default function Navbar() {
                 ABOUT
                 <span className={pillUnderlineClasses} />
               </Link>
+              {isFounder && (
+                <Link
+                  href="/founder/institutes"
+                  className={cn(pillClasses, pillHoverClasses, "border-purple-500/20", pathname === '/founder/institutes' && "bg-purple-500/20 border-purple-500/50")}
+                >
+                  <div className={cn(pillIconWrapperClasses, "border-purple-500/20 bg-purple-500/10 text-purple-400")}>
+                    <Users className="w-2.5 h-2.5" />
+                  </div>
+                  INSTITUTES
+                  <span className={cn(pillUnderlineClasses, "bg-purple-400 shadow-[0_0_8px_#a855f7]")} />
+                </Link>
+              )}
 
+              {isTpo && (
+                <Link
+                  href="/institute"
+                  className={cn(pillClasses, pillHoverClasses, "border-orange-500/40 bg-orange-500/10")}
+                >
+                  <div className={cn(pillIconWrapperClasses, "border-orange-500/30 bg-orange-500/10 text-orange-400")}>
+                    <Users className="w-2.5 h-2.5" />
+                  </div>
+                  INSTITUTE DASHBOARD
+                  <span className={cn(pillUnderlineClasses, "bg-orange-400")} />
+                </Link>
+              )}
+   
               {isFounder && (
                 <Link 
                   href="/founder" 
@@ -388,12 +431,51 @@ export default function Navbar() {
             </Link>
             {user && (
               <>
-                <Link href="/special-hr-resume-upload" onClick={() => setIsOpen(false)} className="text-2xl font-bold tracking-tighter uppercase text-purple-400 hover:text-purple-300 flex items-center gap-4">
-                  <Sparkles className="w-6 h-6" /> Special HR Interview
-                </Link>
+                <Link
+  href="/special-hr-resume-upload"
+  className={cn(
+    pillClasses,
+    "border-amber-400/60 bg-amber-400/10 text-amber-200 shadow-[0_0_18px_rgba(251,191,36,0.15)] hover:border-amber-300 hover:bg-amber-400/15 hover:-translate-y-[3px] hover:scale-[1.05] hover:shadow-[0_0_30px_rgba(251,191,36,0.35)]",
+    isSpecialHRActive && "bg-amber-400 border-amber-300 text-black"
+  )}
+>
+
+  <div
+    className={cn(
+      pillIconWrapperClasses,
+      "border-amber-400/40 bg-amber-400/20 text-amber-300 group-hover/pill:bg-amber-400/30 group-hover/pill:text-amber-200",
+      isSpecialHRActive && "bg-black/20 border-black/30 text-black"
+    )}
+  >
+    <Crown className="w-2.5 h-2.5" />
+  </div>
+
+  SPECIAL HR INTERVIEW
+
+  <span
+    className={cn(
+      "px-1.5 py-0.5 rounded border border-amber-400/60 text-amber-300 text-[7px] tracking-widest",
+      isSpecialHRActive && "border-black/40 text-black"
+    )}
+  >
+    PREMIUM
+  </span>
+
+  <span className={cn(pillUnderlineClasses, "bg-amber-300 shadow-[0_0_8px_#fbbf24]")} />
+</Link>
                 <Link href="/dashboard" onClick={() => setIsOpen(false)} className="text-2xl font-bold tracking-tighter uppercase text-white hover:text-accent flex items-center gap-4">
                   <LayoutDashboard className="w-6 h-6" /> Dashboard
                 </Link>
+                {isTpo && (
+                  <Link href="/institute" onClick={() => setIsOpen(false)} className="text-2xl font-bold tracking-tighter uppercase text-orange-400 hover:text-orange-300 flex items-center gap-4">
+                    <Users className="w-6 h-6" /> Institute Dashboard
+                  </Link>
+                )}
+                {isFounder && (
+                  <Link href="/founder/institutes" onClick={() => setIsOpen(false)} className="text-2xl font-bold tracking-tighter uppercase text-purple-400 hover:text-purple-300 flex items-center gap-4">
+                    <Users className="w-6 h-6" /> Institutes
+                  </Link>
+                )}
                 {isFounder && (
                   <Link href="/founder" onClick={() => setIsOpen(false)} className="text-2xl font-bold tracking-tighter uppercase text-purple-400 hover:text-purple-300 flex items-center gap-4">
                     <Crown className="w-6 h-6" /> Founder Console

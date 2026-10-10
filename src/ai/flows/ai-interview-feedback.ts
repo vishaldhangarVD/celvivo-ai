@@ -109,7 +109,7 @@ AUDIT REQUIREMENTS:
    - Virtual Interview Evaluation (derived from transcript analysis) represents 60% of the total weight.
    - Calculate a REAL weighted percentage based on the data provided. Do not invent arbitrary numbers.
 2. HIRING RECOMMENDATION: Use Excellent (>85), Good (70-85), Average (50-70), Needs Improvement (<50).
-3. DETAILED ANALYTICS: Provide 0-100 scores for Technical Knowledge, Communication, Confidence, and Problem Solving based EXCLUSIVELY on the candidate's answers in the transcript.
+3. DETAILED ANALYTICS: Provide 0-100 scores for Technical Knowledge, Communication, Confidence, HR Skills, Professionalism and Problem Solving based EXCLUSIVELY on the candidate's answers in the transcript. If the candidate's answers are gibberish, random characters, irrelevant, or one-word non-answers, give 0 for ALL of these scores. Never give a high score for a non-answer.
 4. SKILL GAP: Identify missing nodes based on the target role/company benchmarks and candidate's demonstrated performance.
 5. LEARNING PLAN: Create a high-fidelity 30-day roadmap for remediation based on gaps found in THIS specific transcript.
 
@@ -149,6 +149,48 @@ function generateFallbackFeedback(input: InterviewFeedbackInput): InterviewFeedb
     isOffline: true
   };
 }
+const clamp = (n: number) => Math.max(0, Math.min(100, Math.round(Number(n) || 0)));
+
+// Candidate ne khar uttar dile ka? (80%+ uttare 4 shabdanpeksha chhoti asel tar nahi)
+function isDisengaged(transcript: string): boolean {
+  const answers = transcript
+    .split('\n')
+    .map((l) => l.match(/^\s*(?:candidate|user|you)\s*[:\-]\s*(.+)$/i)?.[1]?.trim())
+    .filter((a): a is string => !!a);
+  if (answers.length < 2) return false; // transcript cha format vegla asel tar skip
+  const short = answers.filter((a) => a.split(/\s+/).filter(Boolean).length < 4).length;
+  return short / answers.length >= 0.8;
+}
+
+// AI cha overallScore var vishwas nahi: code madhun kadhto (40% aptitude+coding, 60% interview)
+function finalizeScores(
+  output: InterviewFeedbackOutput,
+  input: InterviewFeedbackInput
+): InterviewFeedbackOutput {
+  const v = output.virtualInterviewResult;
+  const parts = [
+    v.technicalKnowledge, v.communication, v.confidence,
+    v.hrSkills, v.problemSolving, v.professionalism,
+  ].map(clamp);
+  let interviewScore = parts.reduce((a, b) => a + b, 0) / parts.length;
+  if (isDisengaged(input.interviewTranscript)) interviewScore = Math.min(interviewScore, 15);
+
+  const nodes = [input.aptitudeContext?.overallScore, input.codingContext?.score]
+    .filter((n): n is number => typeof n === 'number');
+  const nodeScore = nodes.length ? nodes.reduce((a, b) => a + b, 0) / nodes.length : null;
+
+  const overall = clamp(nodeScore === null ? interviewScore : 0.4 * nodeScore + 0.6 * interviewScore);
+  const hiring: InterviewFeedbackOutput['hiringRecommendation'] =
+    overall > 85 ? 'Excellent' : overall >= 70 ? 'Good' : overall >= 50 ? 'Average' : 'Needs Improvement';
+
+  return {
+    ...output,
+    overallScore: overall,
+    interviewReadiness: Math.min(clamp(output.interviewReadiness), overall),
+    hiringRecommendation: hiring,
+    isOffline: false,
+  };
+}
 
 const interviewFeedbackFlow = ai.defineFlow(
   {
@@ -160,7 +202,7 @@ const interviewFeedbackFlow = ai.defineFlow(
     try {
       const { output } = await runWithResilience(prompt, input);
       if (!output) return generateFallbackFeedback(input);
-      return { ...output, isOffline: false };
+      return finalizeScores(output, input);
     } catch (error) {
       console.error("Master Audit Synthesis Error:", error);
       return generateFallbackFeedback(input);

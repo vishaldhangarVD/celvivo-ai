@@ -46,6 +46,69 @@ function SignupContent() {
 
   const redirectProcessed = useRef(false);
   const redirectTo = searchParams.get('redirectTo') || '/';
+    // Institute code: URL madhun (/signup?inst=TEST26) kinva typed
+    const [instituteCode, setInstituteCode] = useState('');
+    const [instituteName, setInstituteName] = useState<string | null>(null);
+    const [instituteError, setInstituteError] = useState<string | null>(null);
+    const [checkingCode, setCheckingCode] = useState(false);
+
+    useEffect(() => {
+      const fromUrl = (searchParams.get('inst') || '').trim().toUpperCase();
+      if (fromUrl) {
+        setInstituteCode(fromUrl);
+        sessionStorage.setItem('pendingInstituteCode', fromUrl);
+      } else {
+        setInstituteCode(sessionStorage.getItem('pendingInstituteCode') || '');
+      }
+    }, [searchParams]);
+        // Code takla-takla tapaso (500ms thambun)
+        useEffect(() => {
+          const code = instituteCode.trim();
+          setInstituteName(null);
+          setInstituteError(null);
+          if (!code) {
+            setCheckingCode(false);
+            return;
+          }
+          let cancelled = false;
+          setCheckingCode(true);
+          const t = setTimeout(async () => {
+            try {
+              const res = await fetch(`/api/institute/validate?code=${encodeURIComponent(code)}`);
+              const data = await res.json();
+              if (cancelled) return;
+              if (res.ok && data.valid) setInstituteName(data.name);
+              else setInstituteError('Invalid institute code');
+            } catch {
+              if (!cancelled) setInstituteError('Could not verify the code. Check your connection.');
+            } finally {
+              if (!cancelled) setCheckingCode(false);
+            }
+          }, 500);
+          return () => {
+            cancelled = true;
+            clearTimeout(t);
+          };
+        }, [instituteCode]);
+  
+    const joinInstitute = useCallback(async (authUser: any) => {
+      const code = (sessionStorage.getItem('pendingInstituteCode') || '').trim().toUpperCase();
+      if (!code) return;
+      try {
+        const token = await authUser.getIdToken();
+        const res = await fetch('/api/institute/join', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+          body: JSON.stringify({ code }),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Could not join institute');
+        sessionStorage.removeItem('pendingInstituteCode');
+        toast({ title: 'Institute linked', description: `You have joined ${data.instituteName}.` });
+      } catch (e: any) {
+        toast({ variant: 'destructive', title: 'Institute code failed', description: e.message });
+      }
+    }, [toast]);
 
   const ensureUserProfile = useCallback(async (authUser: any, customName?: string) => {
     if (!db) return;
@@ -71,10 +134,11 @@ function SignupContent() {
           createdAt: serverTimestamp(),
         }, { merge: true });
       }
+      await joinInstitute(authUser);
     } catch (e) {
       console.error("[Profile Sync] Failed to reconcile user dossier:", e);
     }
-  }, [db]);
+  }, [db, joinInstitute]);
 
   // FIX 1: Signup page was missing this entirely. Without it, a user who gets
   // bounced to signInWithRedirect (popup blocked) never has their profile
@@ -120,6 +184,14 @@ function SignupContent() {
 
   const handleGoogleSignup = async () => {
     if (!auth) return;
+    if (instituteCode.trim() && !instituteName) {
+      toast({
+        variant: 'destructive',
+        title: 'Check your institute code',
+        description: instituteError || 'Please wait while we verify the code, or clear the box to continue without one.',
+      });
+      return;
+    }
     const provider = new GoogleAuthProvider();
     provider.setCustomParameters({ prompt: 'select_account' });
     
@@ -211,6 +283,14 @@ function SignupContent() {
       setConfirmError("Passwords do not match.");
       return;
     }
+    if (instituteCode.trim() && !instituteName) {
+      toast({
+        variant: 'destructive',
+        title: 'Check your institute code',
+        description: instituteError || 'Please wait while we verify the code, or clear the box to continue without one.',
+      });
+      return;
+    }
 
     setIsLoading(true);
     setNameError(null);
@@ -238,6 +318,7 @@ function SignupContent() {
       };
       
       await setDoc(doc(db, 'users', userCredential.user.uid), userProfile);
+      await joinInstitute(userCredential.user);
 
       toast({
         title: "Account created successfully",
@@ -353,6 +434,39 @@ function SignupContent() {
                 </motion.div>
               ) : (
                 <motion.div key="signup-form" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-10">
+                                  <div className="space-y-2">
+                    <Label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                      Institute Code (optional)
+                    </Label>
+                    <Input
+                      value={instituteCode}
+                      onChange={(e) => {
+                        const v = e.target.value.toUpperCase();
+                        setInstituteCode(v);
+                        sessionStorage.setItem('pendingInstituteCode', v);
+                      }}
+                      placeholder="e.g. TEST26"
+                      className="h-14 rounded-2xl glass border-white/10 bg-transparent focus:border-accent transition-all text-white px-6 uppercase"
+                    />
+                                        {checkingCode && (
+                      <p className="text-[10px] text-white/40 ml-1">Checking code...</p>
+                    )}
+                    {instituteName && (
+                      <div className="ml-1 space-y-1">
+                        <p className="text-[10px] font-bold uppercase tracking-wider text-emerald-400">
+                          ✓ You will join {instituteName}
+                        </p>
+                        <p className="text-[10px] text-white/50 leading-relaxed">
+                          By joining with this code, your practice activity (scores, interviews and certificates) will be visible to your college&apos;s Training &amp; Placement Cell.
+                        </p>
+                      </div>
+                    )}
+                    {instituteError && (
+                      <p className="text-[10px] font-bold uppercase tracking-wider text-red-400 ml-1 flex items-center gap-1">
+                        <AlertCircle className="w-3 h-3" /> {instituteError}
+                      </p>
+                    )}
+                  </div>
                   <Button 
                     variant="outline" 
                     onClick={handleGoogleSignup}

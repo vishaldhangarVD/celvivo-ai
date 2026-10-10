@@ -88,6 +88,21 @@ export type AiMockInterviewOutput = z.infer<typeof AiMockInterviewOutputSchema>;
 export async function aiMockInterview(input: AiMockInterviewInput): Promise<AiMockInterviewOutput> {
   return aiMockInterviewFlow(input);
 }
+type Stage = AiMockInterviewOutput['stage'];
+
+const STAGE_BY_TURN: Record<number, Stage> = {
+  1: "INTRODUCTION",
+  3: "TECHNICAL",
+  4: "TECHNICAL",
+  5: "FOLLOW_UP",
+  6: "TECHNICAL",
+  7: "SCENARIO",
+  8: "FOLLOW_UP",
+  9: "BEHAVIOUR",
+  10: "RAPID_FIRE",
+  11: "BEHAVIOUR",
+  12: "CLOSING",
+};
 
 const prompt = ai.definePrompt({
   name: 'aiMockInterviewPrompt',
@@ -137,6 +152,14 @@ Ask technical questions that relate to the candidate's demonstrated skills or pr
 
 NODE 4 (ADAPTIVE FOLLOW-UP):
 If the currentStage is FOLLOW_UP, you MUST reference a specific technical detail, decision, or claim from the candidate's LATEST RESPONSE. Probing deeper into "why" or "how" for that specific item.
+NODE 4A (SCENARIO):
+If the currentStage is SCENARIO, present a short realistic workplace or technical situation relevant to the {{{role}}} role and ask how the candidate would handle it.
+
+NODE 4B (BEHAVIOUR):
+If the currentStage is BEHAVIOUR, ask about a past experience: teamwork, conflict, deadlines, failure or learning. Keep it conversational.
+
+NODE 4C (RAPID_FIRE):
+If the currentStage is RAPID_FIRE, ask a quick one-line factual question that can be answered in a sentence or two.
 
 NODE 5 (CLOSING):
 If currentMainQuestionIndex >= 12, finish naturally with: "Thank you for your time. That concludes today's interview. It was nice speaking with you."
@@ -180,14 +203,14 @@ const aiMockInterviewFlow = ai.defineFlow(
     const cleanSummary = input.resumeSummary || "";
 
     // Determine target stage based on turn number if not explicitly set
-    let targetStage = input.currentStage || "INTRODUCTION";
-    if (turnNumber === 1 && input.history.length === 0) {
-      targetStage = "INTRODUCTION";
-    } else if (turnNumber === 2) {
-      targetStage = cleanProjects.length > 0 ? "PROJECT" : "RESUME";
-    } else if (turnNumber >= 12) {
-      targetStage = "CLOSING";
-    }
+    let targetStage: Stage;
+if (turnNumber === 2) {
+  targetStage = cleanProjects.length > 0 ? "PROJECT" : "RESUME";
+} else if (turnNumber >= 12) {
+  targetStage = "CLOSING";
+} else {
+  targetStage = STAGE_BY_TURN[turnNumber] ?? "TECHNICAL";
+}
 
     try {
       const { output } = await runWithResilience(prompt, {
@@ -209,6 +232,7 @@ const aiMockInterviewFlow = ai.defineFlow(
     
       return {
         ...output,
+        stage: targetStage,
         isInterviewComplete: output.isInterviewComplete || turnNumber >= 12,
         _debug: {
           modelUsed: PRIMARY_MODEL,

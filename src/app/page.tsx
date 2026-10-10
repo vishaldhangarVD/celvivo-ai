@@ -20,7 +20,10 @@ import {
   Lock,
   Instagram,
   Globe,
-  ArrowUpRight
+  ArrowUpRight,
+  CheckCircle2,
+  Sparkles,
+  VolumeX
 } from 'lucide-react';
 import { useUser, useFirestore, useCollection } from '@/firebase';
 import { useState, useMemo, memo, useEffect, useRef } from 'react';
@@ -114,7 +117,6 @@ const HeroSection = memo(({ onStart, onEnterRoom }: { onStart: () => void, onEnt
   const [shouldPlayVideo, setShouldPlayVideo] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
 
-  // NAVIN useEffect (jya jaga junha PLAYED_KEY / LEFT_SITE_KEY wala hota)
   useEffect(() => {
     const nav = performance.getEntriesByType('navigation')[0] as
       | PerformanceNavigationTiming
@@ -122,7 +124,6 @@ const HeroSection = memo(({ onStart, onEnterRoom }: { onStart: () => void, onEnt
 
     if (!videoPlayedInThisVisit) {
       videoPlayedInThisVisit = true;
-      // Refresh (F5) kela tar video chalvu nako. Refresh var pn chalva asel tar ha if kadhun tak.
       if (nav?.type !== 'reload') setShouldPlayVideo(true);
     }
 
@@ -137,29 +138,38 @@ const HeroSection = memo(({ onStart, onEnterRoom }: { onStart: () => void, onEnt
     return () => window.removeEventListener('pageshow', onPageShow);
   }, []);
 
-  // Haa tujha junach dusra useEffect aahe, kahi badal nahi
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video) return;
+
+    const sync = () => setIsVideoMuted(video.muted);
+    video.addEventListener('volumechange', sync);
+    return () => video.removeEventListener('volumechange', sync);
+  }, []);
+
   useEffect(() => {
     if (!shouldPlayVideo || !videoRef.current) return;
 
     const video = videoRef.current;
+    const events = ['click', 'touchend', 'keydown'];
+
+    const unmute = () => {
+      video.muted = false;
+      events.forEach((e) => window.removeEventListener(e, unmute));
+    };
 
     video.currentTime = 0;
-    video.muted = true;
+    video.muted = false;
 
-    video.play()
-      .then(() => {
-        console.log('[CELVIVO VIDEO] ▶️ Video started');
+    video.play().catch(() => {
+      video.muted = true;
+      video.play().catch(() => {});
+      events.forEach((e) => window.addEventListener(e, unmute));
+    });
 
-        setTimeout(() => {
-          if (video && !video.paused) {
-            video.muted = false;
-            setIsVideoMuted(false);
-          }
-        }, 100);
-      })
-      .catch((error) => {
-        console.error('[CELVIVO VIDEO] ❌ Play failed:', error);
-      });
+    return () => {
+      events.forEach((e) => window.removeEventListener(e, unmute));
+    };
   }, [shouldPlayVideo]);
 
   return (
@@ -188,8 +198,8 @@ const HeroSection = memo(({ onStart, onEnterRoom }: { onStart: () => void, onEnt
                 <span className="text-gradient-purple">Interview.</span>
               </h1>
               <p className="max-w-md text-xl text-muted-foreground font-light leading-relaxed">
-                Deploy realistic interview simulations designed for modern IT interviews. Turn your skills into interview confidence.
-              </p>
+  100% free aptitude tests, coding rounds and AI mock interviews for modern IT interviews. Turn your skills into interview confidence.
+</p>
             </div>
           </div>
 
@@ -231,7 +241,21 @@ const HeroSection = memo(({ onStart, onEnterRoom }: { onStart: () => void, onEnt
         >
           <div className="absolute inset-0 bg-accent/20 rounded-[3rem] blur-[80px] opacity-0 group-hover:opacity-20 transition-opacity duration-1000" />
           
-          <Card className="premium-card overflow-hidden rounded-[3rem] border border-cyan-500/20 bg-[#0B0F1D] backdrop-blur-xl shadow-[0_0_80px_rgba(0,255,255,0.08)] transition-all duration-500 hover:shadow-[0_0_120px_rgba(59,130,246,0.18)] flex flex-col md:flex-row min-h-[500px]">
+          <Card className="premium-card overflow-visible relative rounded-[3rem] border border-cyan-500/20 bg-[#0B0F1D] backdrop-blur-xl shadow-[0_0_80px_rgba(0,255,255,0.08)] transition-all duration-500 hover:shadow-[0_0_120px_rgba(59,130,246,0.18)] flex flex-col md:flex-row min-h-[500px]">
+            {/* Floating badges — animation uses the existing @keyframes float in globals.css */}
+            <div
+              className="absolute -top-6 right-6 z-30 flex items-center gap-2 px-5 py-2.5 rounded-full bg-[#0f1428]/90 border border-white/10 shadow-2xl text-[10px] font-bold tracking-widest uppercase text-white"
+              style={{ animation: 'float 4s ease-in-out infinite' }}
+            >
+              <CheckCircle2 className="w-3.5 h-3.5 text-green-400" /> Role-Based
+            </div>
+            <div
+              className="absolute -bottom-6 left-6 z-30 flex items-center gap-2 px-5 py-2.5 rounded-full bg-gradient-to-r from-orange-500 to-amber-500 shadow-2xl text-[10px] font-bold tracking-widest uppercase text-white"
+              style={{ animation: 'float 4s ease-in-out infinite 1.3s' }}
+            >
+              <Sparkles className="w-3.5 h-3.5" /> AI Feedback
+            </div>
+
             <div className="md:w-[50%] p-10 flex flex-col justify-between relative z-10">
               <div className="space-y-8">
                 <div className="space-y-1">
@@ -285,24 +309,34 @@ const HeroSection = memo(({ onStart, onEnterRoom }: { onStart: () => void, onEnt
               <div className="absolute inset-0 bg-gradient-to-br from-accent/10 via-transparent to-transparent opacity-50 z-10" />
               <div className="absolute inset-0">
               <video
-                ref={videoRef}
-                src="/home.mp4"
-                autoPlay={shouldPlayVideo}
-                muted={isVideoMuted}
-                playsInline
-                controls={false}
-                preload="auto"
-                
-                onEnded={(e) => {
-                  const video = e.currentTarget;
-                  video.pause();
-                  video.currentTime = 0;
-                }}
-                className="h-full w-full object-cover"
-              />
+  ref={videoRef}
+  src="/home.mp4"
+  muted
+  playsInline
+  controls={false}
+  preload="auto"
+  onEnded={(e) => {
+    const video = e.currentTarget;
+    video.pause();
+  }}
+  className="h-full w-full object-cover"
+/>
                 <div className="absolute inset-0 bg-gradient-to-t from-[#050816]/30 via-transparent to-transparent z-20" />
                 <div className="absolute inset-0 bg-gradient-to-r from-transparent via-cyan-500/5 to-blue-500/10 z-20" />
                 <div className="absolute inset-0 ring-1 ring-cyan-400/10 rounded-r-[3rem] z-20" />
+                {isVideoMuted && shouldPlayVideo && (
+                  <button
+                    onClick={() => {
+                      const v = videoRef.current;
+                      if (!v) return;
+                      v.muted = false;
+                      if (v.paused) v.play().catch(() => {});
+                    }}
+                    className="absolute bottom-4 right-4 z-30 flex items-center gap-2 px-4 py-2 rounded-full bg-black/60 border border-white/20 text-[10px] font-bold tracking-widest uppercase text-white backdrop-blur hover:bg-black/80 transition-colors"
+                  >
+                    <VolumeX className="w-4 h-4" /> Tap to unmute
+                  </button>
+                )}
               </div>
             </div>
           </Card>
@@ -407,7 +441,7 @@ TrustSection.displayName = "TrustSection";
 export default function LandingPage() {
   const router = useRouter();
   const db = useFirestore();
-  const { user, loading: authLoading } = useUser();
+  const { user } = useUser();
 
   const feedbackQuery = useMemo(() => {
     if (!db) return null;
@@ -447,13 +481,7 @@ export default function LandingPage() {
     }
     router.push('/interview/setup');
   };
-
-  if (authLoading) return (
-    <div className="min-h-screen bg-[#050816] flex items-center justify-center">
-      <Loader2 className="w-12 h-12 text-accent animate-spin" />
-    </div>
-  );
-
+  
   return (
     <div className="flex flex-col min-h-screen relative bg-[#050816] overflow-hidden">
       <div className="particles-bg" />
@@ -464,6 +492,65 @@ export default function LandingPage() {
       <section className="relative flex flex-col items-center justify-center pt-32 pb-16 px-8">
         <HeroSection onStart={handleStartMockInterview} onEnterRoom={handleEnterInterviewRoom} />
         <TrustSection />
+      </section>
+      <section className="px-8 pb-16 relative">
+        <div className="container mx-auto max-w-7xl">
+          <motion.div
+            initial={{ opacity: 0, y: 40 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            className="text-center mb-12 space-y-3"
+          >
+            <h2 className="text-4xl md:text-5xl font-bold tracking-tighter text-premium">
+              Practice Aptitude, Coding & Mock Interviews <span className="text-gradient-purple">for Free.</span>
+            </h2>
+            <p className="text-muted-foreground max-w-2xl mx-auto">
+              Everything you need to crack IT company hiring rounds, in one free platform.
+            </p>
+          </motion.div>
+
+          <motion.div
+            variants={containerVariants}
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true, margin: "-50px" }}
+            className="grid grid-cols-1 md:grid-cols-3 gap-4 relative z-10"
+          >
+            {[
+              {
+                icon: BrainCircuit,
+                color: "text-emerald-400",
+                title: "Free Aptitude Test Practice",
+                text: "Practice logical reasoning and numerical aptitude questions asked in campus placements and IT company hiring rounds.",
+              },
+              {
+                icon: Cpu,
+                color: "text-accent",
+                title: "Free Coding Round Practice",
+                text: "Solve programming problems in an online coding test. Your code is checked automatically, just like a real coding round.",
+              },
+              {
+                icon: Sparkles,
+                color: "text-amber-400",
+                title: "Free AI Mock Interviews",
+                text: "Take AI HR and technical mock interviews and get instant feedback on your answers and communication.",
+              },
+            ].map((card, i) => (
+              <motion.div
+                key={i}
+                variants={itemVariants}
+                whileHover={{ translateY: -8, scale: 1.03 }}
+                className="glass rounded-[18px] p-8 border-cyan-500/20 bg-white/[0.02] shadow-[0_0_30px_rgba(34,211,238,0.05)] hover:shadow-[0_0_40px_rgba(34,211,238,0.15)] transition-all duration-300 group/card min-h-[280px] flex flex-col"
+              >
+                <div className="w-16 h-16 rounded-full bg-accent/10 flex items-center justify-center mb-6 group-hover/card:bg-accent/20 transition-colors">
+                  <card.icon className={`w-8 h-8 ${card.color}`} />
+                </div>
+                <h3 className="text-lg font-bold text-white mb-3 group-hover/card:text-accent transition-colors">{card.title}</h3>
+                <p className="text-sm text-white/50 leading-relaxed font-medium">{card.text}</p>
+              </motion.div>
+            ))}
+          </motion.div>
+        </div>
       </section>
 
       <section className="pt-12 pb-32 px-8 relative overflow-hidden">
@@ -565,7 +652,7 @@ export default function LandingPage() {
           className="group/cta h-auto w-full md:w-auto px-10 py-5 rounded-[14px] text-base font-medium text-[#2e1065] bg-gradient-to-r from-[#a78bfa] via-[#7c3aed] to-[#e2cfff] hover:from-[#a78bfa] hover:via-[#7c3aed] hover:to-[#e2cfff] shadow-[0_0_34px_rgba(167,139,250,0.55)] hover:shadow-[0_0_46px_rgba(167,139,250,0.75)] transition-shadow"
         >
           <Rocket className="mr-2 w-5 h-5 transition-transform group-hover/cta:translate-x-0.5 group-hover/cta:-translate-y-0.5" />
-          Launch Simulation Now
+          Enter Interview Room
         </Button>
       </motion.div>
     </motion.div>

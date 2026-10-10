@@ -4,17 +4,22 @@ import { FirebaseClientProvider } from "@/firebase";
 import { Toaster } from "@/components/ui/toaster";
 import Navbar from "@/components/layout/Navbar";
 import AuthGuard from "@/components/AuthGuard";
+import { ActivityTracker } from '@/components/activity-tracker';
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://celvivoai.com"),
 
-  title: "CELVIVO AI - Ace Your Technical Interviews",
+  title: {
+    default: "CELVIVO AI - Free Aptitude, Coding Round & Mock Interview Practice",
+    template: "%s | CELVIVO AI",
+  },
 
   description:
-    "AI-powered mock interviews, resume analysis, and personalized feedback for tech job seekers.",
-    icons: {
-      icon: "/LOGO.png",
-    },
+    "100% free platform to practice aptitude tests, coding rounds and 2 AI mock interviews. Get free resume analysis and personalized feedback to crack tech interviews.",
+
+  icons: {
+    icon: "/LOGO.png",
+  },
 
   alternates: {
     canonical: "/",
@@ -40,21 +45,21 @@ export default function RootLayout({
           rel="stylesheet"
         />
                 <script
-          type="application/ld+json"
-          dangerouslySetInnerHTML={{
-            __html: JSON.stringify({
-              "@context": "https://schema.org",
-              "@type": "Organization",
-              name: "Celvivo AI",
-              url: "https://celvivoai.com",
-              logo: "https://celvivoai.com/LOGO.png",
-              founder: {
-                "@type": "Person",
-                name: "Vishal Ramchandra Dhangar",
-              },
-            }),
-          }}
-        />
+  type="application/ld+json"
+  dangerouslySetInnerHTML={{
+    __html: JSON.stringify({
+      "@context": "https://schema.org",
+      "@type": "Organization",
+      name: "Celvivo AI",
+      url: "https://celvivoai.com",
+      logo: "https://celvivoai.com/LOGO.png",
+      founder: {
+        "@type": "Person",
+        name: "Vishal Ramchandra Dhangar",
+      },
+    }),
+  }}
+/>
       </head>
 
       <body 
@@ -66,6 +71,7 @@ export default function RootLayout({
             <Navbar />
             {children}
           </AuthGuard>
+          <ActivityTracker />
           <Toaster />
         </FirebaseClientProvider>
       </body>

@@ -200,7 +200,7 @@ export default function CertificatesPage() {
   };
 
   const handleShareToLinkedIn = (cert: any) => {
-    const url = `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent('https://celvivo.ai')}`;
+    const url = `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent('https://celvivoai.com')}`;
     window.open(url, '_blank');
   };
 

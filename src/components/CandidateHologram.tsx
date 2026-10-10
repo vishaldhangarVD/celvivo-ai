@@ -234,7 +234,7 @@ export default function CandidateHologram({
                 ? '0 0 20px rgba(245, 208, 97, 0.8), 0 0 10px rgba(245, 208, 97, 0.4), 0 0 5px rgba(255, 255, 255, 0.3)' 
                 : '0 0 5px rgba(245, 208, 97, 0.2)'
             }}>
-              N
+              VD
             </div>
 
             {/* Readout Nodes */}
