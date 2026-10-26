@@ -58,12 +58,27 @@ const hrText = (s: Student) =>
 // Table cell: padding vadhavli
 const td = 'py-5 px-3';
 
+// NEW: filter options for the student table
+type Filter = 'all' | 'week' | 'inactive' | 'high';
+const FILTERS: { key: Filter; label: string }[] = [
+  { key: 'all', label: 'All' },
+  { key: 'week', label: 'Active this week' },
+  { key: 'inactive', label: 'Inactive' },
+  { key: 'high', label: 'High readiness' },
+];
+const DAY = 24 * 60 * 60 * 1000;
+
 export default function InstitutePage() {
   const { user, loading } = useUser();
   const auth = useAuth();
   const router = useRouter();
   const [data, setData] = useState<Stats | null>(null);
   const [error, setError] = useState<string | null>(null);
+  // NEW: search + filter state
+  const [query, setQuery] = useState('');
+  const [filter, setFilter] = useState<Filter>('all');
+  // NEW: remind button state per student
+  const [remind, setRemind] = useState<Record<string, { status: 'sending' | 'sent' | 'error'; msg?: string }>>({});
 
   useEffect(() => {
     if (loading || !user) return;
@@ -88,10 +103,63 @@ export default function InstitutePage() {
     [data]
   );
 
+  // NEW: students who need attention (inactive 7+ days, or low readiness once they have started)
+  const attention = useMemo(() => {
+    if (!data) return [];
+    const now = Date.now();
+    return data.students.filter(
+      (s) =>
+        (s.lastActiveAt !== null && now - s.lastActiveAt > 7 * DAY) ||
+        (s.readiness > 0 && s.readiness < 40)
+    );
+  }, [data]);
+
+  // NEW: readiness distribution (weak / average / ready)
+  const dist = useMemo(() => {
+    const list = data ? data.students : [];
+    return [
+      { label: 'Ready · 70 to 100', count: list.filter((s) => s.readiness >= 70).length, color: '#2FBF71' },
+      { label: 'Average · 40 to 69', count: list.filter((s) => s.readiness >= 40 && s.readiness < 70).length, color: ACCENT },
+      { label: 'Weak · 0 to 39', count: list.filter((s) => s.readiness < 40).length, color: '#E5484D' },
+    ];
+  }, [data]);
+
+  // NEW: filtered list for the table
+  const visible = useMemo(() => {
+    if (!data) return [];
+    const now = Date.now();
+    const q = query.trim().toLowerCase();
+    return data.students.filter((s) => {
+      if (q && !s.name.toLowerCase().includes(q) && !s.email.toLowerCase().includes(q)) return false;
+      if (filter === 'week') return s.lastActiveAt !== null && now - s.lastActiveAt <= 7 * DAY;
+      if (filter === 'inactive') return s.lastActiveAt === null || now - s.lastActiveAt > 7 * DAY;
+      if (filter === 'high') return s.readiness >= 70;
+      return true;
+    });
+  }, [data, query, filter]);
+
   const handleLogout = async () => {
     if (!auth) return;
     await signOut(auth);
     router.push('/');
+  };
+
+  const sendReminder = async (studentUid: string) => {
+    if (!user) return;
+    setRemind((r) => ({ ...r, [studentUid]: { status: 'sending' } }));
+    try {
+      const token = await user.getIdToken();
+      const res = await fetch('/api/institute/remind', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ studentUid }),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error || 'Failed');
+      setRemind((r) => ({ ...r, [studentUid]: { status: 'sent' } }));
+    } catch (e: any) {
+      setRemind((r) => ({ ...r, [studentUid]: { status: 'error', msg: e.message } }));
+    }
   };
 
   const exportCsv = () => {
@@ -183,6 +251,64 @@ export default function InstitutePage() {
           ))}
         </div>
 
+        {/* NEW: Needs attention + Readiness distribution */}
+        {students.length > 0 && (
+          <section className="py-9 border-b border-[#26262C] grid grid-cols-1 lg:grid-cols-2 gap-8">
+            <div>
+              <M>Needs attention · inactive 7+ days or readiness below 40</M>
+              <div className="mt-4">
+                {attention.length === 0 ? (
+                  <p className="text-lg text-[#A8A59C] border-t border-[#26262C] pt-4">Everyone is on track right now.</p>
+                ) : (
+                  attention.map((s) => (
+                    <div key={s.uid} className="flex items-center justify-between gap-4 py-4 border-t border-[#26262C]">
+                      <div>
+                        <div className="text-xl font-medium">{s.name}</div>
+                        <div className="text-[15px] text-[#A8A59C] mt-1">
+                          {ago(s.lastActiveAt)} · readiness {s.readiness}
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <button
+                          onClick={() => sendReminder(s.uid)}
+                          disabled={remind[s.uid]?.status === 'sending' || remind[s.uid]?.status === 'sent'}
+                          className="min-h-11 px-5 rounded-lg border border-[#3A3A42] text-base inline-flex items-center hover:bg-white/5 transition-colors disabled:opacity-60"
+                          style={remind[s.uid]?.status === 'sent' ? { borderColor: '#2FBF71', color: '#2FBF71' } : undefined}
+                        >
+                          {remind[s.uid]?.status === 'sending' ? 'Sending…' : remind[s.uid]?.status === 'sent' ? 'Reminder sent' : 'Remind'}
+                        </button>
+                        {remind[s.uid]?.status === 'error' && (
+                          <div className="text-[13px] mt-1" style={{ color: '#E5484D' }}>{remind[s.uid]?.msg}</div>
+                        )}
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+
+            <div>
+              <M>Readiness distribution</M>
+              <div className="mt-4">
+                {dist.map((d) => (
+                  <div key={d.label} className="py-4 border-t border-[#26262C]">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-lg">{d.label}</span>
+                      <span className={`${cd} text-3xl`}>{d.count}</span>
+                    </div>
+                    <div className="h-2.5 rounded bg-[#26262C] overflow-hidden">
+                      <div
+                        className="h-full"
+                        style={{ width: `${students.length ? Math.round((d.count / students.length) * 100) : 0}%`, background: d.color }}
+                      />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </section>
+        )}
+
         {top.length > 0 && (
           <section className="py-9 border-b border-[#26262C]">
             <M>Top students · readiness score</M>
@@ -210,8 +336,38 @@ export default function InstitutePage() {
               Export CSV
             </button>
           </div>
+
+          {/* NEW: search + filter */}
+          {students.length > 0 && (
+            <div className="flex flex-wrap items-center gap-3 mb-6">
+              <input
+                type="text"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder="Search by name or email"
+                className="min-h-11 flex-1 min-w-[220px] px-4 rounded-lg bg-[#151519] border border-[#3A3A42] text-base placeholder:text-[#6E6B64] outline-none focus:border-[#FF6B1A]"
+              />
+              {FILTERS.map((f) => (
+                <button
+                  key={f.key}
+                  onClick={() => setFilter(f.key)}
+                  className="min-h-11 px-5 rounded-lg border text-base transition-colors hover:bg-white/5"
+                  style={
+                    filter === f.key
+                      ? { borderColor: ACCENT, color: ACCENT }
+                      : { borderColor: '#3A3A42' }
+                  }
+                >
+                  {f.label}
+                </button>
+              ))}
+            </div>
+          )}
+
           {students.length === 0 ? (
             <p className="text-lg text-[#A8A59C]">No students have joined yet. Share your institute code with them.</p>
+          ) : visible.length === 0 ? (
+            <p className="text-lg text-[#A8A59C]">No students match this search. Try another name or filter.</p>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full min-w-[1100px] border-collapse text-[17px]">
@@ -223,7 +379,7 @@ export default function InstitutePage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {students.map((s, i) => (
+                  {visible.map((s, i) => (
                     <tr key={s.uid} className="border-t border-[#26262C] hover:bg-white/[0.03] transition-colors">
                       <td className={`${td} text-[#A8A59C]`}>{i + 1}</td>
                       <td className={`${td} text-[19px]`}>

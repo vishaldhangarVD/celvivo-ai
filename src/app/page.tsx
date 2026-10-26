@@ -75,9 +75,9 @@ const STATIC_TESTIMONIALS = [
     rating: 5
   },
   {
-    name: "ABHINAY CHAUHAN",
+    name: "Khanderao Yelis",
     role: "Full-Stack Software Engineer",
-    company: "Microsoft",
+    company: "Saba Software India Pvt. Ltd.",
     image: "https://ui-avatars.com/api/?name=Abhinay+Chauhan&background=F97316&color=fff&size=200&bold=true",
     text: "As a Full-Stack Software Engineer with AI/ML experience, I found CELVIVO AI’s aptitude, coding, and resume analysis incredibly powerful and accurate.",
     rating: 5

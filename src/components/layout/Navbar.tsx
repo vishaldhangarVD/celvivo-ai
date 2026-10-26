@@ -114,7 +114,7 @@ export default function Navbar() {
   const isTpo = profile?.role === 'tpo';
   const isSpecialHRActive = pathname.startsWith('/special-hr');
 
-  const pillClasses = "relative flex items-center gap-2.5 px-4 py-1.5 rounded-full glass border-white/10 text-[9px] font-black uppercase tracking-widest text-white transition-all duration-250 group/pill";
+  const pillClasses = "relative flex items-center gap-2 px-3 py-1.5 rounded-full glass border-white/10 text-[9px] font-black uppercase tracking-widest text-white transition-all duration-250 group/pill";
   const pillActiveClasses = "bg-cyan-500/20 border-cyan-500/50 shadow-[0_0_20px_rgba(34,211,238,0.3)]";
   const pillHoverClasses = "hover:border-cyan-500/50 hover:bg-white/[0.05] hover:-translate-y-[3px] hover:scale-[1.05] hover:shadow-[0_0_15px_rgba(34,211,238,0.2)]";
   const pillIconWrapperClasses = "w-5 h-5 rounded-full flex items-center justify-center border border-cyan-500/20 bg-cyan-500/10 text-accent group-hover/pill:bg-cyan-500/20 group-hover/pill:text-white transition-all";
@@ -123,7 +123,7 @@ export default function Navbar() {
 
   return (
     <nav className="fixed top-0 z-[100] w-full h-[72px] border-b border-cyan-500/20 bg-[#080c19]/75 backdrop-blur-xl">
-      <div className="container mx-auto px-6 h-full flex items-center justify-between">
+      <div className="w-full max-w-[1800px] mx-auto px-6 h-full flex items-center justify-between gap-4">
         
         <div className="flex items-center gap-6">
           <Link href="/" className="flex items-center gap-4 group">
@@ -142,7 +142,7 @@ export default function Navbar() {
           </Link>
         </div>
 
-        <div className="hidden md:flex items-center gap-4">
+        <div className="hidden md:flex items-center gap-2 lg:gap-3 ml-6">
           <Link 
             href="/" 
             className={cn(pillClasses, pillHoverClasses, pathname === '/' && pillActiveClasses)}
@@ -285,18 +285,7 @@ export default function Navbar() {
           {!loading && (
             <>
               {user ? (
-                <div className="flex items-center gap-6">
-                  <Link href="/user-dashboard" className="hidden lg:flex flex-col items-end group transition-all duration-300">
-                    <span className="text-white font-black tracking-[0.4em] text-xs leading-none group-hover:text-accent transition-colors">
-                      {userFirstName}
-                    </span>
-                    <span className="text-[#22D3EE] font-bold tracking-[0.3em] text-[7px] leading-tight uppercase mt-1 group-hover:drop-shadow-[0_0_8px_rgba(34,211,238,0.5)] transition-all">
-                      IDENTITY
-                    </span>
-                  </Link>
-
-                  <div className="w-px h-6 bg-white/10 hidden lg:block"></div>
-
+                <div className="flex items-center gap-3">
                   <Popover>
                     <PopoverTrigger asChild>
                       <button className="relative p-2 text-white/40 hover:text-accent transition-colors group">
@@ -357,8 +346,6 @@ export default function Navbar() {
                       </ScrollArea>
                     </PopoverContent>
                   </Popover>
-
-                  <div className="w-px h-6 bg-white/10"></div>
 
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
@@ -489,9 +476,6 @@ export default function Navbar() {
                 </Link>
                 <Link href="/about" onClick={() => setIsOpen(false)} className="text-2xl font-bold tracking-tighter uppercase text-white hover:text-accent flex items-center gap-4">
                   <Users className="w-6 h-6" /> About
-                </Link>
-                <Link href="/user-dashboard" onClick={() => setIsOpen(false)} className="text-2xl font-bold tracking-tighter uppercase text-white hover:text-accent flex items-center gap-4">
-                  <ShieldCheck className="w-6 h-6" /> Verified Identity: {userFirstName}
                 </Link>
                 <div className="h-px bg-white/5 my-4"></div>
               </>

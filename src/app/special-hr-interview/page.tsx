@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { AnimatePresence, motion } from "framer-motion";
+import { Playfair_Display } from "next/font/google";
 import {
   Loader2,
   ShieldCheck,
@@ -21,7 +22,10 @@ import {
   Send,
   X,
   User,
-  Cpu
+  Cpu,
+  VideoOff,
+  Video,
+  Crown
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
@@ -32,6 +36,8 @@ import { doc, updateDoc, serverTimestamp } from "firebase/firestore";
 import { useRouter } from "next/navigation";
 
 const MIN_QUESTIONS_BEFORE_COMPLETE = 12;
+
+const serif = Playfair_Display({ subsets: ["latin"], weight: ["500", "600"] });
 
 interface SpeechRecognitionEvent extends Event {
   results: SpeechRecognitionResultList;
@@ -70,22 +76,29 @@ export default function SpecialHRInterview() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [transcript, setTranscript] = useState("");
   const [currentQuestion, setCurrentQuestion] = useState("");
-  const [questionIndex, setQuestionIndex] = useState(0);
-  const [conversationHistory, setConversationHistory] = useState<{ question: string; answer: string }[]>([]);
+  const [questionIndex, setQuestionIndex] = useState(1);
+  // CHANGED: each history entry now also remembers the stage of its question
+  const [conversationHistory, setConversationHistory] = useState<{ question: string; answer: string; stage?: string }[]>([]);
   const [askedQuestions, setAskedQuestions] = useState<string[]>([]);
   const [interviewStage, setInterviewStage] = useState<any>("INTRODUCTION");
   const [interviewDifficulty, setInterviewDifficulty] = useState<any>("MEDIUM");
   const [isComplete, setIsComplete] = useState(false);
-  
+  // NEW: true while the report is being generated (shows the "Generating your report" screen)
+  const [isFinalizing, setIsFinalizing] = useState(false);
+
   const [isTypeMode, setIsTypeMode] = useState(false);
   const [typedAnswer, setTypedAnswer] = useState("");
+
+  // user self-view camera (local only — nothing is recorded or uploaded)
+  const [cameraStatus, setCameraStatus] = useState<"IDLE" | "ON" | "DENIED">("IDLE");
+  const userVideoRef = useRef<HTMLVideoElement>(null);
 
   const agentVideoRef = useRef<HTMLVideoElement>(null);
   const agentManagerRef = useRef<any>(null);
   const agentStreamRef = useRef<MediaStream | null>(null);
   const initializationStartedRef = useRef(false);
   const connectionReadyRef = useRef(false);
-  
+
   const recognitionRef = useRef<SpeechRecognition | null>(null);
   const silenceTimerRef = useRef<NodeJS.Timeout | null>(null);
   const transcriptRef = useRef("");
@@ -96,6 +109,11 @@ export default function SpecialHRInterview() {
   const answerSubmissionPendingRef = useRef(false);
   const isTypeModeRef = useRef(false);
 
+  // NEW: always points to the LATEST handleSubmitAnswer (fixes stale-closure bug in voice mode)
+  const handleSubmitAnswerRef = useRef<(a: string) => void>(() => {});
+  // NEW: live copy of what the speech recognizer has heard so far
+  const liveTranscriptRef = useRef("");
+
   const agentId = "v2_agt_5A5V9r-C";
   const clientKey = "ck_0T9vL02nSJmsHMLHMYLsB";
 
@@ -105,6 +123,12 @@ export default function SpecialHRInterview() {
   }, [db, user?.uid]);
 
   const { data: journey } = useDoc(journeyRef);
+
+  // Special HR has its own company / role / experience (saved on the Special HR setup page).
+  // If they are missing, fall back to the normal interview values, as before.
+  const hrRole: string = (journey as any)?.specialHRRole || journey?.role || "Software Engineer";
+  const hrCompany: string = (journey as any)?.specialHRCompany || journey?.company || "Nexvoro AI";
+  const hrExperience: string = (journey as any)?.specialHRExperience || journey?.experience || "Entry Level";
 
   const resumeAnalysis = useMemo(() => {
     return (journey as any)?.specialHRResumeAnalysis;
@@ -144,7 +168,7 @@ export default function SpecialHRInterview() {
         console.log("🟡 [Audio] video.play() succeeded");
       } catch (e) {
         console.log("🟡 [Audio] video.play() failed/blocked/timed-out:", e);
-        // हा error असूनही पुढे जाऊ दे — ऑडिओ/व्हिडिओ आधीच dिसत असू शकतो, फक्त play() promise अडकलं असेल
+        // हा error असूनही पुढे जाऊ दे — ऑडिओ/व्हिडिओ आधीच दिसत असू शकतो, फक्त play() promise अडकलं असेल
       }
     } else {
       console.log("🔴 [Audio] video ref is null!");
@@ -161,24 +185,34 @@ export default function SpecialHRInterview() {
       recognition.continuous = true;
       recognition.interimResults = true;
       recognition.lang = "en-US";
+
+      // CHANGED: rebuilds the full text of this recognition session every time,
+      // and keeps what was said before an automatic restart.
       recognition.onresult = (event: SpeechRecognitionEvent) => {
-        let interimTranscript = "";
-        let finalTranscriptText = "";
-        for (let i = event.resultIndex; i < event.results.length; ++i) {
-          const transcriptChunk = event.results[i][0].transcript;
-          if (event.results[i][0].confidence > 0 && event.results[i].isFinal) finalTranscriptText += transcriptChunk;
-          else interimTranscript += transcriptChunk;
+        let finalText = "";
+        let interim = "";
+        for (let i = 0; i < event.results.length; i++) {
+          const r = event.results[i];
+          if (r.isFinal) finalText += r[0].transcript + " ";
+          else interim += r[0].transcript;
         }
-        const combined = (transcriptRef.current + " " + finalTranscriptText + interimTranscript).trim();
+        const combined = (transcriptRef.current + " " + finalText + interim).trim();
+        liveTranscriptRef.current = combined;
         setTranscript(combined);
         if (combined.length > 5 && !isTypeModeRef.current) {
           if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
           silenceTimerRef.current = setTimeout(() => {
-            if (!isProcessingRef.current && !isAiSpeakingRef.current && interviewStartedRef.current) handleSubmitAnswer(combined);
+            if (!isProcessingRef.current && !isAiSpeakingRef.current && interviewStartedRef.current) {
+              // CHANGED: use the ref so we always call the latest handleSubmitAnswer
+              handleSubmitAnswerRef.current(combined);
+            }
           }, 1800);
         }
       };
+
       recognition.onend = () => {
+        // NEW: before an automatic restart, remember what was already said
+        if (!isProcessingRef.current) transcriptRef.current = liveTranscriptRef.current;
         setIsListening(false);
         if (interviewStartedRef.current && !isProcessingRef.current && !isAiSpeakingRef.current && !isCompleteRef.current && !isTypeModeRef.current) {
           setTimeout(() => {
@@ -202,21 +236,25 @@ export default function SpecialHRInterview() {
     }
   }, []);
 
-  const finalizeInterviewResult = useCallback(async (history: any[], stage: string) => {
+  const finalizeInterviewResult = useCallback(async (history: { question: string; answer: string; stage?: string }[], stage: string) => {
     console.log("🟢 [Finalize 1] Called. history length:", history.length, "stage:", stage);
+    setIsFinalizing(true); // NEW
     try {
+      // CHANGED: every question keeps ITS OWN stage
       const fullTranscript = history.map(h => ({
-        stage: stage,
+        stage: h.stage ?? stage,
         question: h.question,
         answer: h.answer,
       }));
       console.log("🟢 [Finalize 2] Calling analyzeHRInterviewResult...");
       const resultData = await analyzeHRInterviewResult({
         candidateName: resumeAnalysis?.personalInfo?.fullName || user?.displayName || "Candidate",
-        role: journey?.role || "Software Engineer",
-        targetCompany: journey?.company || "Nexvoro AI",
+        role: hrRole,
+        targetCompany: hrCompany,
         resumeSummary: resumeAnalysis?.summary || "",
         transcript: fullTranscript,
+        userId: user?.uid,
+        sessionId: journey?.sessionId,
       });
       console.log("🟢 [Finalize 3] Got resultData:", resultData);
       if (journeyRef) {
@@ -234,9 +272,10 @@ export default function SpecialHRInterview() {
       console.log("🟢 [Finalize 7] router.push called");
     } catch (err: any) {
       console.error("🔴 [Finalize Error]", err?.message || err, err);
+      setIsFinalizing(false); // NEW
       toast({ variant: "destructive", title: "Unable to Generate Results" });
     }
-  }, [resumeAnalysis, journey, journeyRef, user, router, toast]);
+  }, [resumeAnalysis, journey, journeyRef, user, router, toast, hrRole, hrCompany]);
 
   const handleSubmitAnswer = (answer: string) => {
     if (answerSubmissionPendingRef.current || !answer.trim()) return;
@@ -244,6 +283,8 @@ export default function SpecialHRInterview() {
     stopListening();
     processNextTurn(answer);
   };
+  // NEW: keep the ref pointing at the latest version on every render
+  handleSubmitAnswerRef.current = handleSubmitAnswer;
 
   const processNextTurn = async (userAnswer: string, forceStart = false) => {
     if (isProcessingRef.current || (!interviewStartedRef.current && !forceStart)) return;
@@ -252,16 +293,19 @@ export default function SpecialHRInterview() {
     answerSubmissionPendingRef.current = false;
     try {
       const nextIndex = questionIndex + (userAnswer ? 1 : 0);
-      const history = userAnswer ? [...conversationHistory, { question: currentQuestion, answer: userAnswer }] : conversationHistory;
+      // CHANGED: also store the stage of the question that was just answered
+      const history = userAnswer
+        ? [...conversationHistory, { question: currentQuestion, answer: userAnswer, stage: interviewStage }]
+        : conversationHistory;
       if (userAnswer) setConversationHistory(history);
       const result: AiMockInterviewOutput = await aiMockInterview({
-        role: journey?.role || "Software Engineer",
-        experienceLevel: journey?.experience || "Entry Level",
+        role: hrRole,
+        experienceLevel: hrExperience,
         roundType: "Special HR Interview",
         currentMainQuestionIndex: nextIndex,
         history: history,
         userAnswer: userAnswer,
-        targetCompany: journey?.company || "Nexvoro AI",
+        targetCompany: hrCompany,
         candidateName: resumeAnalysis?.personalInfo?.fullName || user?.displayName || "Candidate",
         resumeSkills: resumeAnalysis?.skillAnalysis?.map((s: any) => s.skill) || [],
         resumeProjects: resumeAnalysis?.sections?.projects || [],
@@ -282,6 +326,7 @@ export default function SpecialHRInterview() {
       setAskedQuestions(prev => [...prev, result.nextQuestion]);
       setTranscript("");
       transcriptRef.current = "";
+      liveTranscriptRef.current = ""; // NEW
       if (result.isInterviewComplete && nextIndex >= MIN_QUESTIONS_BEFORE_COMPLETE) {
         setIsComplete(true);
         isCompleteRef.current = true;
@@ -307,7 +352,7 @@ export default function SpecialHRInterview() {
     }
     // लगेच ref सेट कर — जेणेकरून पुढचे क्लिक्स इथेच थांबतील, नवीन overlapping call सुरू होणार नाही
     interviewStartedRef.current = true;
-  
+
     console.log("🟢 [2] Calling handleEnableAudio...");
     await handleEnableAudio();
     console.log("🟢 [3] handleEnableAudio done");
@@ -318,7 +363,6 @@ export default function SpecialHRInterview() {
   };
 
   const stopInterview = async () => {
-    setInterviewStarted(false);
     interviewStartedRef.current = false;
     stopListening();
     setIsComplete(true);
@@ -392,32 +436,96 @@ export default function SpecialHRInterview() {
     };
   }, [stopListening, startListening]);
 
+  // user self-view camera. Video only (audio: false) — the microphone is already
+  // used by SpeechRecognition, so we never open a second audio capture. Nothing is
+  // recorded, uploaded or stored; the stream is stopped when the interview ends/unmounts.
+  useEffect(() => {
+    if (!interviewStarted || isComplete) return;
+    let cancelled = false;
+    let stream: MediaStream | null = null;
+
+    const startCamera = async () => {
+      if (!navigator.mediaDevices?.getUserMedia) {
+        setCameraStatus("DENIED");
+        return;
+      }
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({
+          video: { width: { ideal: 640 }, height: { ideal: 480 }, facingMode: "user" },
+          audio: false,
+        });
+        if (cancelled) {
+          stream.getTracks().forEach(track => track.stop());
+          return;
+        }
+        const video = userVideoRef.current;
+        if (video) {
+          video.srcObject = stream;
+          video.play().catch(() => {});
+        }
+        setCameraStatus("ON");
+      } catch (err) {
+        console.warn("🟠 [Camera] unavailable or permission denied:", err);
+        if (!cancelled) setCameraStatus("DENIED");
+      }
+    };
+
+    startCamera();
+
+    return () => {
+      cancelled = true;
+      if (stream) stream.getTracks().forEach(track => track.stop());
+      setCameraStatus("IDLE");
+    };
+  }, [interviewStarted, isComplete]);
+
   return (
-    <div className={cn("min-h-screen bg-[#050816] flex flex-col relative overflow-hidden", interviewStarted && "h-screen w-screen")}>
+    <div className={cn("min-h-screen bg-[#07070b] flex flex-col relative overflow-hidden", interviewStarted && "h-screen w-screen")}>
       <div className="particles-bg" />
       <main className={cn("flex-1 relative flex flex-col items-center justify-center", interviewStarted ? "h-screen w-screen p-0 m-0" : "container mx-auto px-6 pt-32 pb-16")}>
-        <div className={cn("bg-black overflow-hidden relative", interviewStarted ? "fixed inset-0 z-0 w-screen h-screen" : "w-full max-w-4xl aspect-[16/10] rounded-[3rem] border border-white/5 shadow-2xl z-10")}>
-          <video ref={agentVideoRef} autoPlay playsInline muted className="w-full h-full object-contain bg-black z-10" />
-          {status !== "READY" && <div className="absolute inset-0 z-[15] bg-[#050816] pointer-events-none" />}
+        <div className={cn("bg-black overflow-hidden relative", interviewStarted ? "fixed inset-0 z-0 w-screen h-screen" : "w-full max-w-4xl aspect-[16/10] rounded-[3rem] border border-amber-400/20 shadow-[0_0_80px_rgba(245,196,81,0.08)] z-10")}>
+          <video ref={agentVideoRef} autoPlay playsInline muted className={cn("w-full h-full bg-black z-10", interviewStarted ? "object-cover" : "object-contain")} />
+          {status !== "READY" && <div className="absolute inset-0 z-[15] bg-[#07070b] pointer-events-none" />}
           {!interviewStarted && (
-            <div className="absolute inset-0 z-20 flex flex-col items-center justify-center p-12 text-center bg-[#050816]/40 backdrop-blur-sm">
+            <div className="absolute inset-0 z-20 flex flex-col items-center justify-center p-12 text-center bg-[#07070b]/40 backdrop-blur-sm">
+              {status === "READY" && (
+                <div className="absolute top-6 left-6 inline-flex items-center gap-2 rounded-full border border-amber-400/40 bg-amber-400/10 px-4 py-1.5">
+                  <Crown className="w-3.5 h-3.5 text-amber-300" />
+                  <span className="text-[10px] font-medium uppercase tracking-[0.22em] text-amber-300">Premium · Special HR</span>
+                </div>
+              )}
               <AnimatePresence mode="wait">
                 {status === "LOADING" ? (
                   <motion.div key="loading" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-6">
                      <div className="relative w-24 h-24 mx-auto">
-                        <div className="absolute inset-0 border-2 border-accent/20 rounded-full animate-ping" />
-                        <Loader2 className="w-full h-full text-accent animate-spin" />
+                        <div className="absolute inset-0 border-2 border-amber-400/20 rounded-full animate-ping" />
+                        <Loader2 className="w-full h-full text-amber-400 animate-spin" />
                      </div>
-                     <p className="text-[10px] font-black uppercase tracking-[0.5em] text-accent animate-pulse">Connecting to Your Interviewer</p>
+                     <p className="text-[10px] font-medium uppercase tracking-[0.5em] text-amber-300 animate-pulse">Connecting to Your Interviewer</p>
                   </motion.div>
                 ) : status === "READY" ? (
-                  <motion.div key="ready" initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} className="space-y-10">
-                     <div className="w-20 h-20 rounded-[2.5rem] bg-accent/20 flex items-center justify-center mx-auto border border-accent/40 shadow-[0_0_50px_rgba(34,211,238,0.2)]"><ShieldCheck className="w-10 h-10 text-accent" /></div>
-                     <div className="space-y-4">
-                       <h3 className="text-3xl font-bold tracking-tighter text-white">You're Ready</h3>
-                       <p className="text-muted-foreground font-light max-xs mx-auto">This interview will feel like a real video interview.</p>
+                  <motion.div key="ready" initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="flex flex-col items-center">
+                     <div className="w-20 h-20 rounded-full bg-amber-400/10 flex items-center justify-center border border-amber-500/60 shadow-[0_0_50px_rgba(245,196,81,0.28)]">
+                       <ShieldCheck className="w-10 h-10 text-amber-300" />
                      </div>
-                     <Button onClick={startInterview} className="h-20 px-12 btn-premium rounded-3xl text-xs font-black uppercase tracking-[0.3em] shadow-2xl hover:scale-105 transition-transform">Start HR Interview <Play className="ml-3 w-5 h-5 fill-current" /></Button>
+                     <h3 className={cn(serif.className, "mt-6 text-4xl font-medium tracking-tight text-white")}>You&apos;re ready.</h3>
+                     <p className="mt-2 max-w-sm text-[15px] leading-relaxed text-[#b4aea0]">This interview will feel like a real video interview. Take a breath and answer naturally.</p>
+
+                     <div className="mt-5 flex flex-wrap items-center justify-center gap-2">
+                       {[hrCompany, hrRole, hrExperience].map((chip) => (
+                         <span key={chip} className="rounded-full border border-amber-900/70 bg-amber-400/10 px-3.5 py-1.5 text-xs text-amber-200">{chip}</span>
+                       ))}
+                     </div>
+
+                     <div className="mt-6 mb-8 flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-[13px] text-stone-400">
+                       <span className="flex items-center gap-2"><Video className="w-4 h-4 text-amber-300" />Keep your camera on</span>
+                       <span className="flex items-center gap-2"><Mic className="w-4 h-4 text-amber-300" />Allow your mic</span>
+                       <span className="flex items-center gap-2"><Volume2 className="w-4 h-4 text-amber-300" />Find a quiet place</span>
+                     </div>
+
+                     <Button onClick={startInterview} className="h-16 px-11 rounded-2xl bg-gradient-to-r from-amber-200 via-amber-400 to-amber-600 text-[15px] font-semibold text-[#1a1204] shadow-[0_10px_40px_rgba(245,196,81,0.35)] hover:brightness-110 hover:scale-[1.03] transition-all">
+                       Start HR interview <Play className="ml-3 w-4 h-4 fill-current" />
+                     </Button>
                   </motion.div>
                 ) : (
                   <motion.div key="error" className="space-y-4 text-red-400">
@@ -441,7 +549,7 @@ export default function SpecialHRInterview() {
                    </div>
                 </div>
                 {transcript && (
-                  <motion.div initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} className="mx-auto w-full max-w-2xl pointer-events-auto mb-12">
+                  <motion.div initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} className="w-full max-w-xl pointer-events-auto mb-12 ml-[360px] mr-auto 2xl:mx-auto">
                      <div className="glass p-6 rounded-3xl border-white/10 bg-black/60 backdrop-blur-xl">
                         <div className="flex items-center gap-3 mb-2 text-accent"><MessageSquare className="w-4 h-4" /><span className="text-[9px] font-black uppercase tracking-widest">Your Answer</span></div>
                         <p className="text-lg font-light text-white/90 italic line-clamp-2">"{transcript}"</p>
@@ -514,9 +622,63 @@ export default function SpecialHRInterview() {
                 </motion.div>
               </div>
             </div>
+
+            {/* small self-view camera box (bottom-left). Local preview only. */}
+            {!isComplete && (
+              <div
+                className={cn(
+                  "absolute left-6 bottom-1 z-[60] w-[240px] h-[188px] rounded-2xl overflow-hidden bg-slate-900 shadow-2xl border-2 transition-colors duration-500",
+                  isListening ? "border-green-500/70" : "border-white/20"
+                )}
+              >
+                <video
+                  ref={userVideoRef}
+                  autoPlay
+                  playsInline
+                  muted
+                  className={cn("w-full h-full object-cover scale-x-[-1]", cameraStatus !== "ON" && "hidden")}
+                />
+                {cameraStatus !== "ON" && (
+                  <div className="w-full h-full flex flex-col items-center justify-center gap-2 text-white/60">
+                    {cameraStatus === "DENIED" ? (
+                      <>
+                        <VideoOff className="w-7 h-7" />
+                        <span className="text-[10px] font-bold text-center px-4 leading-snug">Camera is off. Allow camera access in your browser to show yourself here.</span>
+                      </>
+                    ) : (
+                      <Loader2 className="w-6 h-6 animate-spin" />
+                    )}
+                  </div>
+                )}
+                {cameraStatus === "ON" && (
+                  <div className="absolute top-2.5 left-2.5 flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-black/60">
+                    <span className="w-1.5 h-1.5 rounded-full bg-red-500" />
+                    <span className="text-[9px] font-black uppercase tracking-widest text-white">Live</span>
+                  </div>
+                )}
+                <div className="absolute inset-x-0 bottom-0 flex items-center justify-between px-3 py-2 bg-gradient-to-t from-black/75 to-transparent">
+                  <span className="text-[11px] font-bold text-white">You</span>
+                  <span className={cn("flex items-end gap-0.5 h-3.5", isListening && "animate-pulse")}>
+                    <span className="w-[3px] h-1.5 rounded-sm bg-green-400" />
+                    <span className="w-[3px] h-3 rounded-sm bg-green-400" />
+                    <span className="w-[3px] h-2 rounded-sm bg-green-400" />
+                  </span>
+                </div>
+              </div>
+            )}
           </div>
         )}
       </main>
+
+      {/* NEW: shown while the report is being generated, until the result page opens */}
+      {isFinalizing && (
+        <div className="fixed inset-0 z-[100] bg-[#07070b] flex flex-col items-center justify-center gap-6">
+          <Loader2 className="w-12 h-12 text-amber-400 animate-spin" />
+          <p className="text-[10px] font-medium uppercase tracking-[0.4em] text-amber-300 animate-pulse">
+            Generating your report...
+          </p>
+        </div>
+      )}
     </div>
   );
 }

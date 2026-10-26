@@ -1,9 +1,9 @@
 'use client';
 
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useUser, useFirestore, useDoc, useCollection } from '@/firebase';
-import { doc, collection, query, where, updateDoc, deleteDoc } from 'firebase/firestore';
+import { doc, collection, query, where, updateDoc, deleteDoc, getDocs, serverTimestamp } from 'firebase/firestore';
 import { motion } from 'framer-motion';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -24,13 +24,19 @@ import {
   ServerCrash,
   CheckCircle2,
   XCircle,
-  Star
+  Star,
+  Gift,
+  UserX
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 export default function FounderConsole() {
   const router = useRouter();
-  const { user, loading: authLoading } = useUser();
+
+  // CHANGED: works whether the hook calls the loading flag "loading" or "isLoading"
+  const userResult: any = useUser();
+  const user = userResult.user;
+  const authLoading: boolean = userResult.loading ?? userResult.isUserLoading ?? false;
   const db = useFirestore();
 
   const profileRef = useMemo(() => {
@@ -38,7 +44,10 @@ export default function FounderConsole() {
     return doc(db, 'users', user.uid);
   }, [db, user?.uid]);
 
-  const { data: profile, loading: profileLoading } = useDoc(profileRef);
+  const profileResult: any = useDoc(profileRef);
+  const profile = profileResult.data;
+  const profileLoading: boolean = profileResult.loading ?? profileResult.isLoading ?? false;
+
   const pendingFeedbackQuery = useMemo(() => {
     if (!db) return null;
     return query(collection(db, 'userFeedback'), where('status', '==', 'pending'));
@@ -56,6 +65,70 @@ export default function FounderConsole() {
     await deleteDoc(doc(db, 'userFeedback', id));
   };
 
+  // ---------- NEW: Free Access Control ----------
+  const FEATURES: { key: 'aptitude' | 'coding' | 'interview' | 'specialHR'; label: string }[] = [
+    { key: 'aptitude', label: 'Aptitude' },
+    { key: 'coding', label: 'Coding' },
+    { key: 'interview', label: 'Interview' },
+    { key: 'specialHR', label: 'Special HR' },
+  ];
+
+  const [grantEmail, setGrantEmail] = useState('');
+  const [limits, setLimits] = useState({ aptitude: 3, coding: 3, interview: 3, specialHR: 1 });
+  const [resetUsage, setResetUsage] = useState(false);
+  const [granting, setGranting] = useState(false);
+  const [grantMsg, setGrantMsg] = useState<{ type: 'ok' | 'err'; text: string } | null>(null);
+
+  const freeUsersQuery = useMemo(() => {
+    if (!db) return null;
+    return query(collection(db, 'users'), where('freeGrant.active', '==', true));
+  }, [db]);
+
+  const { data: freeUsers, loading: freeUsersLoading } = useCollection(freeUsersQuery);
+
+  const handleGrantAccess = async () => {
+    const email = grantEmail.trim().toLowerCase();
+    if (!db || !email) return;
+    setGranting(true);
+    setGrantMsg(null);
+    try {
+      const snap = await getDocs(query(collection(db, 'users'), where('email', '==', email)));
+      if (snap.empty) {
+        setGrantMsg({ type: 'err', text: 'No user found with this email. The user must sign up first.' });
+        return;
+      }
+      const target = snap.docs[0];
+      const update: any = {
+        freeGrant: {
+          active: true,
+          limits: { ...limits },
+          grantedAt: serverTimestamp(),
+          grantedBy: user?.uid || '',
+        },
+      };
+      if (resetUsage) {
+        update['usage.aptitude'] = 0;
+        update['usage.coding'] = 0;
+        update['usage.interview'] = 0;
+        update['usage.specialHR'] = 0;
+      }
+      await updateDoc(target.ref, update);
+      setGrantMsg({ type: 'ok', text: `Free access granted to ${email}.` });
+      setGrantEmail('');
+    } catch (err: any) {
+      console.error('Grant free access failed:', err);
+      setGrantMsg({ type: 'err', text: err?.message || 'Could not grant access.' });
+    } finally {
+      setGranting(false);
+    }
+  };
+
+  const handleRevokeAccess = async (uid: string) => {
+    if (!db) return;
+    await updateDoc(doc(db, 'users', uid), { 'freeGrant.active': false });
+  };
+  // ---------- END Free Access Control ----------
+
   useEffect(() => {
     // 1. Wait for auth to initialize
     if (authLoading) return;
@@ -69,13 +142,17 @@ export default function FounderConsole() {
     // 3. Wait for profile to load
     if (profileLoading) return;
 
-    // 4. Redirect if role is not founder
-    if (profile?.role !== 'founder') {
+    // 4. CHANGED: profile has not arrived yet -> wait, do not redirect
+    if (!profile) return;
+
+    // 5. Redirect only when the profile is loaded and the role is not founder
+    if (profile.role !== 'founder') {
       router.replace('/dashboard');
     }
   }, [user, authLoading, profile, profileLoading, router]);
 
-  if (authLoading || profileLoading || (user && profile?.role !== 'founder')) {
+  // CHANGED: keep showing the loader until the profile is loaded AND role is founder
+  if (authLoading || profileLoading || !profile || profile.role !== 'founder') {
     return (
       <div className="min-h-screen bg-[#050816] flex items-center justify-center">
         <div className="flex flex-col items-center gap-4">
@@ -188,6 +265,113 @@ export default function FounderConsole() {
                   ))}
                 </CardContent>
               </Card>
+              {/* NEW: Free Access Control */}
+              <Card className="premium-card bg-white/[0.01] border-white/5 p-10">
+                <CardHeader className="p-0 mb-8 flex flex-row items-center justify-between">
+                  <CardTitle className="text-xl font-bold flex items-center gap-3">
+                    <Gift className="w-6 h-6 text-accent" /> Free Access Control
+                  </CardTitle>
+                  <Badge className="bg-accent/20 text-accent border-none font-bold text-[10px]">
+                    {freeUsers?.length || 0} active
+                  </Badge>
+                </CardHeader>
+                <CardContent className="p-0 space-y-8">
+                  <div className="p-6 glass rounded-[2rem] border-white/5 space-y-5">
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-bold uppercase tracking-widest text-white/40">User Email</label>
+                      <input
+                        type="email"
+                        value={grantEmail}
+                        onChange={(e) => setGrantEmail(e.target.value)}
+                        placeholder="user@gmail.com"
+                        className="w-full h-11 rounded-xl bg-white/5 border border-white/10 px-4 text-sm text-white placeholder:text-white/20 focus:outline-none focus:border-accent/50"
+                      />
+                    </div>
+
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                      {FEATURES.map((f) => (
+                        <div key={f.key} className="space-y-2">
+                          <label className="text-[10px] font-bold uppercase tracking-widest text-white/40">{f.label} limit</label>
+                          <input
+                            type="number"
+                            min={0}
+                            value={limits[f.key]}
+                            onChange={(e) =>
+                              setLimits((prev) => ({ ...prev, [f.key]: Math.max(0, Number(e.target.value) || 0) }))
+                            }
+                            className="w-full h-11 rounded-xl bg-white/5 border border-white/10 px-4 text-sm text-white focus:outline-none focus:border-accent/50"
+                          />
+                        </div>
+                      ))}
+                    </div>
+
+                    <label className="flex items-center gap-3 text-xs text-white/50 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={resetUsage}
+                        onChange={(e) => setResetUsage(e.target.checked)}
+                      />
+                      Reset this user's usage counters to 0
+                    </label>
+
+                    <Button
+                      onClick={handleGrantAccess}
+                      disabled={granting || !grantEmail.trim()}
+                      className="w-full h-12 rounded-xl bg-accent/20 text-accent border border-accent/30 hover:bg-accent hover:text-black text-[10px] font-bold uppercase tracking-widest gap-2"
+                    >
+                      {granting ? <Loader2 className="w-4 h-4 animate-spin" /> : <><Gift className="w-4 h-4" /> Grant Free Access</>}
+                    </Button>
+
+                    {grantMsg && (
+                      <p className={`text-xs ${grantMsg.type === 'ok' ? 'text-green-400' : 'text-red-400'}`}>
+                        {grantMsg.text}
+                      </p>
+                    )}
+                  </div>
+
+                  <div className="space-y-4">
+                    <p className="text-[10px] font-bold uppercase tracking-widest text-white/40">Users with free access</p>
+                    {freeUsersLoading ? (
+                      <div className="py-6 flex justify-center"><Loader2 className="w-6 h-6 animate-spin text-accent" /></div>
+                    ) : freeUsers && freeUsers.length > 0 ? (
+                      freeUsers.map((u: any) => (
+                        <div key={u.id} className="p-6 glass rounded-[2rem] border-white/5 space-y-4">
+                          <div className="flex items-center justify-between gap-4">
+                            <div className="min-w-0">
+                              <p className="font-bold text-sm truncate">{u.displayName || 'Unnamed user'}</p>
+                              <p className="text-[10px] text-muted-foreground tracking-widest truncate">{u.email}</p>
+                            </div>
+                            <Button
+                              onClick={() => handleRevokeAccess(u.id)}
+                              className="h-9 px-4 rounded-xl bg-red-500/10 text-red-400 border border-red-500/20 hover:bg-red-500/20 text-[10px] font-bold uppercase gap-2 shrink-0"
+                            >
+                              <UserX className="w-4 h-4" /> Revoke
+                            </Button>
+                          </div>
+                          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                            {FEATURES.map((f) => {
+                              const used = u.usage?.[f.key] ?? 0;
+                              const max = u.freeGrant?.limits?.[f.key] ?? 0;
+                              const full = used >= max;
+                              return (
+                                <div key={f.key} className="p-3 rounded-xl bg-white/[0.03] border border-white/5">
+                                  <p className="text-[9px] font-bold uppercase tracking-widest text-white/40">{f.label}</p>
+                                  <p className={`text-lg font-bold tabular-nums ${full ? 'text-red-400' : 'text-white'}`}>
+                                    {used} / {max}
+                                  </p>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      ))
+                    ) : (
+                      <p className="text-sm text-white/30 text-center py-6">No free-access users yet.</p>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+
               <Card className="premium-card bg-white/[0.01] border-white/5 p-10">
                 <CardHeader className="p-0 mb-8 flex flex-row items-center justify-between">
                   <CardTitle className="text-xl font-bold flex items-center gap-3">

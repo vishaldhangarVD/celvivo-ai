@@ -168,7 +168,57 @@ export default function SpecialHRInterviewResult() {
     );
   }
 
-  const { overallScore, verdict, categoryScores, strengths, improvements, annotatedTranscript } = result;
+  // NEW: not enough real answers -> no score is shown
+  if (result.status === "insufficient") {
+    return (
+      <div style={{ minHeight: "100vh", background: bg, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 20, padding: 24, textAlign: "center" }}>
+        <ShieldCheck color="rgba(255,255,255,0.2)" size={48} />
+        <p style={{ color: "rgba(255,255,255,0.6)", fontSize: 14, maxWidth: 380 }}>
+          Not enough answers were captured ({result.answeredCount ?? 0} of {result.totalQuestions ?? 0}) to generate a reliable report. Please complete the interview and answer the questions to see your score.
+        </p>
+        <button
+          onClick={() => router.push('/dashboard')}
+          style={{
+            height: 48, padding: "0 28px", borderRadius: 14, background: `linear-gradient(90deg, ${primary}, ${secondary})`,
+            border: "none", color: bg, fontSize: 11, fontWeight: 900, textTransform: "uppercase", letterSpacing: "0.1em", cursor: "pointer"
+          }}
+        >
+          Go to Dashboard
+        </button>
+      </div>
+    );
+  }
+
+  // NEW: older reports (created before the real evaluation) have no `status` field
+  if (!result.status) {
+    return (
+      <div style={{ minHeight: "100vh", background: bg, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 20, padding: 24, textAlign: "center" }}>
+        <ShieldCheck color="rgba(255,255,255,0.2)" size={48} />
+        <p style={{ color: "rgba(255,255,255,0.6)", fontSize: 14, maxWidth: 380 }}>
+          This is an older report generated before our improved evaluation. Please retake the Special HR interview to get an accurate, answer-based report.
+        </p>
+        <button
+          onClick={() => router.push('/dashboard')}
+          style={{
+            height: 48, padding: "0 28px", borderRadius: 14, background: `linear-gradient(90deg, ${primary}, ${secondary})`,
+            border: "none", color: bg, fontSize: 11, fontWeight: 900, textTransform: "uppercase", letterSpacing: "0.1em", cursor: "pointer"
+          }}
+        >
+          Go to Dashboard
+        </button>
+      </div>
+    );
+  }
+
+  // CHANGED: safe defaults so the page never crashes
+  const overallScore: number = result.overallScore ?? 0;
+  const verdict: string = result.verdict ?? "";
+  const categoryScores: any[] = result.categoryScores ?? [];
+  const strengths: string[] = result.strengths ?? [];
+  const improvements: string[] = result.improvements ?? [];
+  const annotatedTranscript: any[] = result.annotatedTranscript ?? [];
+  const answeredCount: number = result.answeredCount ?? annotatedTranscript.length;
+  const totalQuestions: number = result.totalQuestions ?? annotatedTranscript.length;
 
   return (
     <div style={{ minHeight: "100vh", width: "100%", background: bg, color: "#fff", position: "relative", overflow: "hidden", fontFamily: "Inter, system-ui, sans-serif" }}>
@@ -223,6 +273,11 @@ export default function SpecialHRInterviewResult() {
               <span style={{ fontSize: 9, fontWeight: 900, textTransform: "uppercase", letterSpacing: "0.15em" }}>What landed well</span>
             </div>
             <ul style={{ listStyle: "none", margin: 0, padding: 0, display: "flex", flexDirection: "column", gap: 12 }}>
+              {strengths.length === 0 && (
+                <li style={{ fontSize: 14, color: "rgba(255,255,255,0.4)", fontWeight: 300, lineHeight: 1.6 }}>
+                  No standout strengths were observed in this session yet.
+                </li>
+              )}
               {strengths.map((s: string, i: number) => (
                 <li key={i} style={{ display: "flex", gap: 12, fontSize: 14, color: "rgba(255,255,255,0.7)", fontWeight: 300, lineHeight: 1.6 }}>
                   <span style={{ color: green }}>·</span>{s}
@@ -236,6 +291,11 @@ export default function SpecialHRInterviewResult() {
               <span style={{ fontSize: 9, fontWeight: 900, textTransform: "uppercase", letterSpacing: "0.15em" }}>Worth sharpening</span>
             </div>
             <ul style={{ listStyle: "none", margin: 0, padding: 0, display: "flex", flexDirection: "column", gap: 12 }}>
+              {improvements.length === 0 && (
+                <li style={{ fontSize: 14, color: "rgba(255,255,255,0.4)", fontWeight: 300, lineHeight: 1.6 }}>
+                  No specific improvement areas were identified.
+                </li>
+              )}
               {improvements.map((s: string, i: number) => (
                 <li key={i} style={{ display: "flex", gap: 12, fontSize: 14, color: "rgba(255,255,255,0.7)", fontWeight: 300, lineHeight: 1.6 }}>
                   <span style={{ color: weak }}>·</span>{s}
@@ -248,7 +308,7 @@ export default function SpecialHRInterviewResult() {
         <div style={{ marginBottom: 56 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 20, color: "rgba(255,255,255,0.4)" }}>
             <Mic size={16} />
-            <span style={{ fontSize: 9, fontWeight: 900, textTransform: "uppercase", letterSpacing: "0.15em" }}>Full Session Transcript · {annotatedTranscript.length} of {annotatedTranscript.length} exchanges</span>
+            <span style={{ fontSize: 9, fontWeight: 900, textTransform: "uppercase", letterSpacing: "0.15em" }}>Full Session Transcript · Answered {answeredCount} of {totalQuestions} questions</span>
           </div>
           <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
             {annotatedTranscript.map((item: any, i: number) => (
